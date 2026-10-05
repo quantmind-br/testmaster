@@ -1,0 +1,23 @@
+{
+  "name": "@testmaster/runner",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@testmaster/contracts": "workspace:*",
+    "@testmaster/domain": "workspace:*",
+    "playwright-core": "1.63.0",
+    "undici": "8.11.2"
+  }
+}

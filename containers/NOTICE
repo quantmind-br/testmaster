@@ -1,0 +1,33 @@
+Security profiles: Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Copyright Microsoft Corporation (Playwright); Copyright Docker/Moby contributors (Docker default).
+
+Pinned upstream sources (vendored byte-identically):
+Playwright v1.63.0:
+https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json
+SHA-256 cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849
+Original Docker baseline d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3:
+https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json
+SHA-256 50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274
+Current engine-matched moby/profiles seccomp/v0.2.3:
+https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json
+SHA-256 536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74
+Module pin evidence: https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod
+
+Run node containers/generate-seccomp.mjs to reproduce seccomp_profile.json.
+The generator proves the entire Playwright profile equals the original Docker baseline plus exactly
+an unconditional SCMP_ACT_ALLOW for clone, setns, unshare (empty args/includes/excludes).
+It applies that proven delta plus an explicit SEC-014 chroot allow; all other default rules are preserved.
+Allowing chroot grants no capability: the kernel still requires CAP_SYS_CHROOT in the caller's user namespace.
+The cap-dropped non-root container process gets EPERM; Chromium can shrink its own namespace filesystem.
+The Docker suite checks both this EPERM denial and Chromium startup with chromiumSandbox:true.
+This avoids the historical profile's runc 1.5.2/libpathrs 0.2.6 initialization crash without disabling seccomp.
+Profile and input hashes are recorded in seccomp/provenance.json and each images.lock.json entry.
+
+M0 runner image tooling
+Until the M1 protocol harness is available, build.mjs stages forwarder/tooling.js as dist/harness.js.
+This entrypoint starts the TCP-to-unix forwarder and runs the supplied verification command.
+It is test harness tooling, not an execution harness: no command returns CAPABILITY_UNAVAILABLE (M1).
+The Python layout likewise refuses execution until its M1 protocol adapter replaces harness.py.
+Images install no runtime dependencies and attempts must never invoke npm, pip or uv installers.
+Build contexts are staged under the OS temporary directory and deleted even on build failure.
+Build input hashes cover every staged file (including dependency contents and Dockerfile), with sorted relative paths and length-delimited framing.

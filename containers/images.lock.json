@@ -1,0 +1,52 @@
+{
+  "testmaster-runner": {
+    "imageId": "sha256:532ac51aab5d956912167e85c18cd105c3126c987c2ba8617d33858aaa048ecc",
+    "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+    "buildInputsHash": "d0f1b2042fa2df2abf9a12e5c45194d854c539c6f0f6a599aa421ac1a1c8ee78",
+    "seccomp": {
+      "engineVersion": "29.8.1",
+      "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+      "profileModuleVersion": "v0.2.3",
+      "inputs": {
+        "engineDefault": {
+          "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+          "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+        },
+        "originalDefault": {
+          "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+          "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+        },
+        "playwright": {
+          "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+          "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+        }
+      },
+      "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+    }
+  },
+  "testmaster-runner-python": {
+    "imageId": "sha256:fc3a1dfbc209920a127212b2e5a5f909df863e0b3ca05a4fa1a5a30c8794d375",
+    "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+    "buildInputsHash": "e66e50c5a11d433cda7d9228ad3a12fe660b1991a40b88e26aba22e1b065cf8d",
+    "seccomp": {
+      "engineVersion": "29.8.1",
+      "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+      "profileModuleVersion": "v0.2.3",
+      "inputs": {
+        "engineDefault": {
+          "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+          "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+        },
+        "originalDefault": {
+          "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+          "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+        },
+        "playwright": {
+          "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+          "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+        }
+      },
+      "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+    }
+  }
+}
