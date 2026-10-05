@@ -4,7 +4,8 @@ import { constants } from "node:fs";
 import { type FileHandle, link, mkdir, open, readdir, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { ContractError, type SecretReference } from "@testmaster/contracts";
-import type { EntityDocument } from "@testmaster/persistence";
+import { semanticHash } from "@testmaster/domain";
+import { type EntityDocument, IdempotencyRepository } from "@testmaster/persistence";
 import type { SecretRelease } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, type ServiceContext } from "./context.js";
@@ -116,7 +117,7 @@ async function keychain(
 
 // Pin every directory through an open FD. /proc/self/fd paths keep subsequent operations
 // confined even if an ancestor is renamed; O_NOFOLLOW prevents symlink substitution.
-async function privateDirectory(path: string): Promise<FileHandle> {
+export async function privateDirectory(path: string): Promise<FileHandle> {
   let handle = await open("/", constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
   try {
     const segments = resolve(path).split("/").filter(Boolean);
@@ -406,10 +407,35 @@ export class SecretsService {
   async set(
     name: string,
     value: string,
-    options: { ephemeral?: boolean; allowedOrigins?: string[] } = {},
+    options: { ephemeral?: boolean; allowedOrigins?: string[]; idempotencyKey?: string } = {},
   ): Promise<SecretMetadata> {
     this.ctx.authorize("W");
     validateValue(value);
+    const body = {
+      name,
+      valueHash: semanticHash(value),
+      allowedOrigins: options.allowedOrigins ?? [],
+      ephemeral: options.ephemeral ?? false,
+    };
+    if (options.idempotencyKey) {
+      if (options.idempotencyKey.length < 16 || options.idempotencyKey.length > 128)
+        throw new ContractError("INVALID_ARGUMENT", "Idempotency key must have 16–128 characters");
+      const row = this.ctx.database.get(
+        "SELECT request_hash,response_json,expires_at FROM idempotency_receipts WHERE workspace_id=? AND actor_scope=? AND operation=? AND key=?",
+        this.ctx.workspaceId,
+        this.ctx.principalId,
+        "secret.set",
+        options.idempotencyKey,
+      );
+      if (row && String(row.expires_at) > new Date().toISOString()) {
+        if (row.request_hash !== semanticHash(body))
+          throw new ContractError(
+            "IDEMPOTENCY_CONFLICT",
+            "Idempotency key has another secret request",
+          );
+        return JSON.parse(String(row.response_json)) as SecretMetadata;
+      }
+    }
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name))
       throw new ContractError("INVALID_ARGUMENT", "Secret name must be a bounded identifier");
     if (
@@ -426,7 +452,7 @@ export class SecretsService {
     }) as SecretMetadata;
     reference.provider = await this.persist(reference, value, options.ephemeral === true);
     try {
-      this.ctx.database.withTx(() => {
+      const commit = () => {
         if (
           (allEntities(this.ctx, "SecretReference") as SecretMetadata[]).some(
             (entry) => entry.locator === name && !entry.revokedAt,
@@ -434,7 +460,20 @@ export class SecretsService {
         )
           throw new ContractError("REVISION_CONFLICT", "Secret name already exists");
         this.ctx.entities.insert("SecretReference", reference);
-      });
+        return reference;
+      };
+      if (options.idempotencyKey)
+        return new IdempotencyRepository(this.ctx.database).execute(
+          {
+            workspaceId: this.ctx.workspaceId,
+            actorScope: this.ctx.principalId,
+            operation: "secret.set",
+            key: options.idempotencyKey,
+            body,
+          },
+          commit,
+        ).receipt;
+      this.ctx.database.withTx(commit);
     } catch (error) {
       this.ephemeral.delete(`${reference.id}:1`);
       await erase(this.config, reference).catch(() => {});
@@ -494,25 +533,41 @@ export class SecretsService {
     await erase(this.config, previous).catch(() => {});
     return next;
   }
-  async remove(idOrName: string): Promise<SecretMetadata> {
+  async remove(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
     this.ctx.authorize("W");
     const previous = this.lookup(idOrName);
-    if (previous.revokedAt) return previous;
+    if (previous.revokedAt && !idempotencyKey) return previous;
     const next = {
       ...previous,
       revokedAt: new Date().toISOString(),
       version: previous.version + 1,
     };
-    this.ctx.entities.update(
-      "SecretReference",
-      this.ctx.workspaceId,
-      previous.id,
-      previous.version,
-      next,
-    );
+    const commit = () => {
+      if (previous.revokedAt) return previous;
+      this.ctx.entities.update(
+        "SecretReference",
+        this.ctx.workspaceId,
+        previous.id,
+        previous.version,
+        next,
+      );
+      return next;
+    };
+    const receipt = idempotencyKey
+      ? new IdempotencyRepository(this.ctx.database).execute(
+          {
+            workspaceId: this.ctx.workspaceId,
+            actorScope: this.ctx.principalId,
+            operation: `secret.remove:${idOrName}`,
+            key: idempotencyKey,
+            body: {},
+          },
+          commit,
+        ).receipt
+      : this.ctx.database.withTx(commit);
     this.ephemeral.delete(`${previous.id}:${previous.secretVersion}`);
     await erase(this.config, previous).catch(() => {});
-    return next;
+    return receipt;
   }
   async release(id: string): Promise<SecretRelease> {
     this.ctx.authorize("X");

@@ -13,6 +13,7 @@ import {
 } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 
+import type { ProviderConfig } from "@testmaster/model-gateway";
 export interface ProfilePolicy {
   limits: ExecutionLimits;
   security: { allowUnsafeProcessExecution: boolean };
@@ -29,6 +30,7 @@ export interface ResolvedConfig {
   home: string;
   effectiveConfig: EffectiveConfig;
   profilePolicy: ProfilePolicy;
+  modelProviders: ProviderConfig[];
 }
 export interface ResolveConfigOptions {
   cwd?: string;
@@ -52,6 +54,7 @@ interface ProfileInput {
   policy?: PolicyInput;
   endpoint?: string;
   projectId?: string;
+  modelProviders?: ProviderConfig[];
 }
 
 function object(value: unknown, label: string): ObjectValue {
@@ -229,9 +232,95 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
       if (!Object.hasOwn(profiles, name))
         throw new ContractError("NOT_FOUND", "Selected profile does not exist");
       const candidate = object(profiles[name], "Profile");
-      knownKeys(candidate, ["config", "policy", "endpoint", "projectId"], "Profile");
+      knownKeys(
+        candidate,
+        ["config", "policy", "endpoint", "projectId", "modelProviders"],
+        "Profile",
+      );
       if (candidate.config !== undefined) validate("ProjectConfig", candidate.config);
       if (candidate.policy !== undefined) policy(candidate.policy);
+      if (candidate.modelProviders !== undefined) {
+        if (!Array.isArray(candidate.modelProviders))
+          throw new ContractError("INVALID_ARGUMENT", "Model providers must be an array");
+        for (const entry of candidate.modelProviders) {
+          const provider = object(entry, "Model provider");
+          knownKeys(
+            provider,
+            ["id", "kind", "baseUrl", "apiKeyEnv", "models", "prices"],
+            "Model provider",
+          );
+          if (
+            typeof provider.id !== "string" ||
+            !provider.id ||
+            provider.kind !== "openai-compatible" ||
+            typeof provider.baseUrl !== "string" ||
+            (provider.apiKeyEnv !== undefined && typeof provider.apiKeyEnv !== "string") ||
+            !Array.isArray(provider.models) ||
+            !provider.models.length
+          )
+            throw new ContractError("INVALID_ARGUMENT", "Invalid model provider configuration");
+          provider.apiKeyEnv ??= "TESTMASTER_MODEL_API_KEY";
+          let endpoint: URL;
+          try {
+            endpoint = new URL(provider.baseUrl);
+          } catch {
+            throw new ContractError("INVALID_ARGUMENT", "Provider endpoint must be an HTTP URL");
+          }
+          if (
+            !["http:", "https:"].includes(endpoint.protocol) ||
+            endpoint.username ||
+            endpoint.password
+          )
+            throw new ContractError(
+              "INVALID_ARGUMENT",
+              "Provider endpoint must be credential-free HTTP",
+            );
+          for (const entry of provider.models) {
+            const model = object(entry, "Model");
+            knownKeys(model, ["id", "capabilities"], "Model");
+            if (
+              typeof model.id !== "string" ||
+              !model.id ||
+              !model.capabilities ||
+              typeof model.capabilities !== "object"
+            )
+              throw new ContractError("INVALID_ARGUMENT", "Invalid declared model");
+            const capabilities = object(model.capabilities, "Model capabilities");
+            knownKeys(
+              capabilities,
+              [
+                "structuredJson",
+                "toolCalls",
+                "vision",
+                "contextTokens",
+                "maxOutputTokens",
+                "reasoningControls",
+              ],
+              "Model capabilities",
+            );
+            for (const key of ["structuredJson", "toolCalls", "vision", "reasoningControls"])
+              if (capabilities[key] !== undefined && typeof capabilities[key] !== "boolean")
+                throw new ContractError(
+                  "INVALID_ARGUMENT",
+                  "Model capability flags must be boolean",
+                );
+            for (const key of ["contextTokens", "maxOutputTokens"])
+              if (
+                capabilities[key] !== undefined &&
+                (!Number.isSafeInteger(capabilities[key]) || Number(capabilities[key]) < 1)
+              )
+                throw new ContractError(
+                  "INVALID_ARGUMENT",
+                  "Model token ceilings must be positive integers",
+                );
+          }
+        }
+        if (
+          new Set(candidate.modelProviders.map((entry) => entry.id)).size !==
+          candidate.modelProviders.length
+        )
+          throw new ContractError("INVALID_ARGUMENT", "Duplicate model provider IDs");
+      }
       if (candidate.endpoint !== undefined && typeof candidate.endpoint !== "string")
         throw new ContractError("INVALID_ARGUMENT", "Profile endpoint must be a URL");
       if (candidate.projectId !== undefined && typeof candidate.projectId !== "string")
@@ -365,6 +454,7 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
     home,
     dataDir: resolve(cwd, env.TESTMASTER_DATA_DIR ?? ".testmaster"),
     effectiveConfig: { config: effective, origins, policyHash: semanticHash(profilePolicy) },
+    modelProviders: structuredClone(selected.modelProviders ?? []),
     profilePolicy,
   };
 }

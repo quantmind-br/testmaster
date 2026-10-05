@@ -178,11 +178,40 @@ export class ApprovalsService {
           return owner.projectId === projectId;
         },
       );
-      if (!revision)
-        throw new ContractError(
-          "NOT_FOUND",
-          "Approval revision digest does not belong to this project",
+      let resourceDigestValid = false;
+      if (value.actionSet.length === 1 && value.actionSet[0]?.startsWith("cleanup:")) {
+        const resourceId = value.actionSet[0].slice("cleanup:".length);
+        const resource = requireEntity(this.ctx, "ResourceRecord", resourceId);
+        const attempt = requireEntity(this.ctx, "Attempt", String(resource.creatorAttemptId));
+        const run = requireEntity(this.ctx, "Run", String(attempt.runId));
+        const test = requireEntity(this.ctx, "TestCase", String(run.testId));
+        this.ctx.authorize("W", String(test.projectId));
+        const env = requireEntity(
+          this.ctx,
+          "EnvironmentRevision",
+          String(run.environmentRevisionId),
         );
+        const cell = run.matrixCell as Record<string, unknown>;
+        const cleanup = resource.cleanupPlan as { declaration?: unknown };
+        const digest = semanticHash({
+          resourceId,
+          creatorAttemptId: resource.creatorAttemptId,
+          ownerProof: resource.ownerProof,
+          cleanup: cleanup.declaration,
+          environmentRevisionId: env.id,
+          networkPolicy: {
+            allowedOrigins: env.targetOrigins,
+            baseUrl: cell.baseUrl,
+            networkProfile: env.networkProfile,
+          },
+        });
+        resourceDigestValid =
+          test.projectId === projectId &&
+          env.id === value.environmentRevisionId &&
+          digest === value.revisionHash;
+      }
+      if (!revision && !resourceDigestValid)
+        throw new ContractError("NOT_FOUND", "Approval digest does not belong to this project");
       this.ctx.entities.insert("Approval", value);
       this.audit("approval.created", value.id, null, semanticHash(value));
       return value;
@@ -232,6 +261,13 @@ export class ApprovalsService {
     },
     test: TestCase,
     env: EnvironmentRevision,
+    cleanup?: {
+      approvalId?: string;
+      resourceId: string;
+      digest: string;
+      origins: string[];
+      policyHash: string;
+    },
   ): Stored<Approval> | null {
     this.ctx.authorize("X", test.projectId);
     return authoringTransaction(this.ctx, () => {
@@ -257,11 +293,58 @@ export class ApprovalsService {
           "INVALID_ARGUMENT",
           "Approval revision/environment binding does not match the run",
         );
-      if (!revision.plan)
+      if (cleanup) {
+        const approval = cleanup.approvalId
+          ? (requireEntity(this.ctx, "Approval", cleanup.approvalId) as Stored<Approval>)
+          : null;
+        if (
+          !approval ||
+          approval.actorId !== this.ctx.principalId ||
+          approval.revisionHash !== cleanup.digest ||
+          approval.environmentRevisionId !== environment.id ||
+          approval.policyHash !== cleanup.policyHash ||
+          !approval.actionSet.includes(`cleanup:${cleanup.resourceId}`) ||
+          approval.revokedAt ||
+          Date.parse(approval.expiresAt) <= Date.now() ||
+          cleanup.origins.some((origin) => !approval.originSet.includes(origin))
+        )
+          throw new ContractError(
+            "POLICY_DENIED",
+            "Manual compensation requires resource-bound approval",
+            { reasonCode: "approval_required" },
+          );
+        const reviewer = requireEntity(this.ctx, "Principal", approval.reviewerId);
+        if (reviewer.kind !== "human" || reviewer.disabledAt)
+          throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled");
+        const consumed = {
+          ...approval,
+          revokedAt: new Date().toISOString(),
+          version: Number(approval.version) + 1,
+        };
+        this.ctx.entities.update(
+          "Approval",
+          this.ctx.workspaceId,
+          approval.id,
+          Number(approval.version),
+          consumed,
+        );
+        this.audit(
+          "approval.consumed",
+          approval.id,
+          semanticHash(approval),
+          semanticHash(consumed),
+        );
+        return approval;
+      }
+      if (!revision.plan) {
+        const policy = run.gatePolicy as Record<string, unknown>;
+        if (!environment.production && revision.codeRef && policy.executor === "docker")
+          return null;
         throw new ContractError(
           "POLICY_DENIED",
-          "Imported code requires a separately approved execution policy",
+          "Production or unsafe code execution requires a separately approved policy",
         );
+      }
       const actions = planRiskActions(revision.plan).filter((action) => action.risk !== "read");
       if (!environment.production || !actions.length) return null;
       const policy =

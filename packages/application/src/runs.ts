@@ -53,6 +53,8 @@ export function captureDeclarations(plan: ExecutablePlan) {
       if (step.operation === "request")
         for (const capture of step.input.capture ?? [])
           captures.push({ ...capture, stepId: step.id });
+      if (step.operation === "request" && step.input.resource)
+        captures.push({ stepId: step.id, name: "handle", valueType: "string", sensitive: true });
     }
   };
   visit(plan.steps);
@@ -107,11 +109,8 @@ export class RunsService {
   prepare(request: RunRequest, batchId: string | null = null): EntityDocument {
     validate("RunRequest", request);
     this.ctx.authorize("X");
-    if (request.mode && request.mode !== "replay")
-      throw new ContractError("CAPABILITY_UNAVAILABLE", "Agent execution is unavailable", {
-        capability: "agent-run",
-        milestone: "M2",
-      });
+    if (request.mode && !["replay", "agent"].includes(request.mode))
+      throw new ContractError("INVALID_ARGUMENT", "Invalid execution mode");
     const test = requireEntity(this.ctx, "TestCase", request.testId);
     this.ctx.authorize("X", String(test.projectId));
     if (test.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Test is archived");
@@ -120,11 +119,24 @@ export class RunsService {
       "TestRevision",
       request.revisionId ?? String(test.activeRevisionId),
     );
-    if (revision.testId !== test.id || !revision.plan)
+    if (revision.testId !== test.id || (!revision.plan && !revision.codeRef))
       throw new ContractError(
         "PRECONDITION_FAILED",
         "Revision does not belong to test or has no executable plan",
       );
+    if (request.mode === "agent") {
+      const proposalId = (revision.extensions as Record<string, unknown> | undefined)?.[
+        "testmaster:proposalId"
+      ];
+      const proposal =
+        typeof proposalId === "string" ? requireEntity(this.ctx, "Proposal", proposalId) : null;
+      if (revision.origin !== "generated" || proposal?.state !== "accepted" || !revision.plan)
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Agent mode requires an accepted generated proposal",
+        );
+      this.ctx.authorize("W", String(test.projectId));
+    }
     const environment = requireEntity(this.ctx, "Environment", request.environmentId);
     if (environment.projectId !== test.projectId || environment.archivedAt)
       throw new ContractError("PRECONDITION_FAILED", "Environment is not active in this project");
@@ -198,7 +210,7 @@ export class RunsService {
         maxConcurrency,
         executor,
       },
-      mode: "replay",
+      mode: request.mode ?? "replay",
       phase: "queued",
       status: "queued",
       outcome: null,
@@ -244,15 +256,15 @@ export class RunsService {
       const run = prepared.get(key)!;
       const request = requests.get(key)!;
       const revision = requireEntity(this.ctx, "TestRevision", String(run.revisionId));
-      const plan = validate<ExecutablePlan>("ExecutablePlan", revision.plan);
+      const plan = revision.plan ? validate<ExecutablePlan>("ExecutablePlan", revision.plan) : null;
       const dependencies: DagNode["dependencies"][number][] = [];
       nodes.set(key, {
         id: key,
-        outputs: captureDeclarations(plan).map((capture) => capture.name),
+        outputs: plan ? captureDeclarations(plan).map((capture) => capture.name) : [],
         dependencies,
       });
       const bindings: ResolvedDependency[] = [];
-      for (const binding of plan.dependsOn ?? []) {
+      for (const binding of plan?.dependsOn ?? []) {
         if (!binding.required) continue;
         if (binding.permittedEnvironment !== request.environmentId)
           throw new ContractError(
@@ -411,8 +423,10 @@ export class RunsService {
           request.revisionId ??
             String(requireEntity(this.ctx, "TestCase", request.testId).activeRevisionId),
         );
-        const plan = validate<ExecutablePlan>("ExecutablePlan", revision.plan);
-        if (!(plan.dependsOn ?? []).some((binding) => binding.required))
+        const plan = revision.plan
+          ? validate<ExecutablePlan>("ExecutablePlan", revision.plan)
+          : null;
+        if (!(plan?.dependsOn ?? []).some((binding) => binding.required))
           return this.insert(this.prepare(request), key);
         const receipt = new BatchesService(this.ctx, this).insertPrepared(
           { selection: [request] },

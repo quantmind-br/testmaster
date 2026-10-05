@@ -579,6 +579,22 @@ export class RevisionsService {
       active(project(this.ctx, current.projectId));
       active(current);
       expected(current, expectedVersion);
+      if (
+        (revision.extensions as Record<string, unknown> | undefined)?.[
+          "testmaster:verificationRequired"
+        ] === true &&
+        !allEntities(this.ctx, "Run").some(
+          (run) =>
+            run.revisionId === id &&
+            run.mode === "replay" &&
+            run.outcome === "passed" &&
+            run.gate === "passed",
+        )
+      )
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Generated candidate requires a passing deterministic replay before promotion",
+        );
       const next = { ...current, activeRevisionId: id, version: expectedVersion + 1 };
       this.ctx.entities.update("TestCase", this.ctx.workspaceId, current.id, expectedVersion, next);
       return next;

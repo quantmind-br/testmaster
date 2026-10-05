@@ -19,6 +19,18 @@ import {
   type ImageLock,
   verifyImageLock,
 } from "@testmaster/sandbox";
+import { AgentSkillsService } from "./agent-skills/service.js";
+import { AgentModeService } from "./ai/agent-mode.js";
+import { CodeExportService } from "./ai/code-export.js";
+import { CodeGenerationService } from "./ai/code-generation.js";
+import { CodeImportService } from "./ai/code-import.js";
+import { DiscoveryService } from "./ai/discovery.js";
+import { ExploreService } from "./ai/explore.js";
+import { ModelService } from "./ai/model.js";
+import { ProposalsService } from "./ai/proposals.js";
+import { RequirementsService } from "./ai/requirements.js";
+import { SourcesService, UploadsService } from "./ai/sources.js";
+import { UsageService } from "./ai/usage.js";
 import { ApprovalsService } from "./approvals.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
 import {
@@ -30,6 +42,7 @@ import {
 import { BackupsService } from "./backups.js";
 import { type ResolveConfigOptions, type ResolvedConfig, resolveConfig } from "./config.js";
 import { entity, type Scope, type ServiceContext } from "./context.js";
+import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
 import { SecretsService } from "./secrets.js";
@@ -65,6 +78,20 @@ export class Application {
   readonly worker: WorkerService;
   readonly artifacts: ArtifactsService;
   readonly reports: ReportsService;
+  readonly agentSkills: AgentSkillsService;
+  readonly model: ModelService;
+  readonly uploads: UploadsService;
+  readonly sources: SourcesService;
+  readonly discovery: DiscoveryService;
+  readonly requirements: RequirementsService;
+  readonly proposals: ProposalsService;
+  readonly usage: UsageService;
+  readonly explore: ExploreService;
+  readonly agentMode: AgentModeService;
+  readonly codeImport: CodeImportService;
+  readonly codeExport: CodeExportService;
+  readonly codeGeneration: CodeGenerationService;
+  readonly resources: ResourcesService;
   readonly seccompPath = fileURLToPath(
     new URL("../../../containers/seccomp_profile.json", import.meta.url),
   );
@@ -118,6 +145,27 @@ export class Application {
     this.artifacts = new ArtifactsService(this.context, config, this.runs);
     this.reports = new ReportsService(this.context, config, this.runs, this.artifacts);
     this.backups = new BackupsService(this.context, config);
+    this.agentSkills = new AgentSkillsService(this.context, config.cwd);
+    this.model = new ModelService(this.context, config);
+    this.uploads = new UploadsService(this.context, config);
+    this.sources = new SourcesService(this.context, config, this.uploads);
+    this.discovery = new DiscoveryService(this.context, config, this.sources);
+    this.requirements = new RequirementsService(this.context, this.model, this.sources);
+    this.proposals = new ProposalsService(this.context, this.model, this.requirements);
+    this.usage = new UsageService(this.context);
+    this.explore = new ExploreService(this.context, config);
+    this.agentMode = new AgentModeService(this.context, config);
+    this.codeImport = new CodeImportService(this.context, config);
+    this.codeExport = new CodeExportService(this.context, config);
+    this.codeGeneration = new CodeGenerationService(this.context, config);
+    this.resources = new ResourcesService(this.context, {
+      config,
+      runs: this.runs,
+      approvals: this.approvals,
+      secrets: this.secrets,
+      images: () => this.images(),
+      seccompPath: this.seccompPath,
+    });
   }
   readonly backups: BackupsService;
   readonly retention: RetentionService;
@@ -130,6 +178,10 @@ export class Application {
       await PersistenceDatabase.open(join(config.dataDir, "testmaster.db")),
       options.identity,
     );
+  }
+  /** Request-scoped services borrowing this application's database; do not close the view. */
+  withIdentity(identity: AuthorizationIdentity): Application {
+    return new Application(this.config, this.database, identity);
   }
   close(): void {
     this.database.close();

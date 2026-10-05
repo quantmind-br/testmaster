@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, rm, statfs } from "node:fs/promises";
+import { lstat, mkdir, readFile, rm, statfs, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import {
@@ -32,6 +32,8 @@ import {
   StaleFenceError,
 } from "@testmaster/persistence";
 import { AttemptExecutor, DockerExecutor, type ImageLock } from "@testmaster/sandbox";
+import { AgentModeService } from "./ai/agent-mode.js";
+import { CodeImportService } from "./ai/code-import.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, requireEntity, type ServiceContext } from "./context.js";
 import { captureDeclarations, type ResolvedDependency, type RunsService } from "./runs.js";
@@ -113,8 +115,8 @@ export class WorkerService {
       ),
     );
   }
-  private observations(runId: string, plan: ExecutablePlan): AttemptObservation[] {
-    const steps = planSteps(plan);
+  private observations(runId: string, plan: ExecutablePlan | null): AttemptObservation[] {
+    const steps = plan ? planSteps(plan) : [];
     return this.ctx.database
       .all(
         "SELECT * FROM attempts WHERE workspace_id=? AND run_id=? ORDER BY number",
@@ -149,7 +151,9 @@ export class WorkerService {
               event.payload.status === "pending" || event.payload.status === "running"
                 ? "inconclusive"
                 : event.payload.status,
-            assertion: step?.kind === "assertion" || Boolean(step && "expectation" in step),
+            assertion: plan
+              ? step?.kind === "assertion" || Boolean(step && "expectation" in step)
+              : event.payload.stepId === "imported-code",
             reliable: event.payload.status === "passed" || event.payload.status === "failed",
             ...(event.payload.reasonCode ? { reasonCode: event.payload.reasonCode } : {}),
           });
@@ -307,7 +311,7 @@ export class WorkerService {
     const run = this.host.runs.get(fence.runId);
     const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
     const env = requireEntity(this.ctx, "EnvironmentRevision", run.environmentRevisionId);
-    const plan = validate<ExecutablePlan>("ExecutablePlan", revision.plan);
+    const plan = revision.plan ? validate<ExecutablePlan>("ExecutablePlan", revision.plan) : null;
     const cell = run.matrixCell as Record<string, unknown>;
     const limits = cell.limits as Record<string, number>;
     const effective = validate<EffectiveConfig>("EffectiveConfig", cell.effectiveConfig);
@@ -332,11 +336,15 @@ export class WorkerService {
     const inputDir = join(this.host.config.dataDir, "cache", "attempt-input", fence.attemptId);
     let activeStepId: string | undefined;
     const snapshotId = entity(this.ctx, "snp", {}).id;
-    const required = planSteps(plan).filter((step) => step.required !== false);
+    const required = plan ? planSteps(plan).filter((step) => step.required !== false) : [];
     const assertions = required
       .filter((step) => step.kind === "assertion" || "expectation" in step)
       .map((step) => step.id);
     const requiredSteps = required.map((step) => step.id);
+    if (!plan) {
+      assertions.push("imported-code");
+      requiredSteps.push("imported-code");
+    }
     try {
       let variables: Record<string, { value: unknown; sensitive: boolean }>;
       try {
@@ -367,6 +375,18 @@ export class WorkerService {
         return;
       }
       await mkdir(inputDir, { recursive: true, mode: 0o755 });
+      const imported = !plan
+        ? await new CodeImportService(this.ctx, this.host.config).readBundle(revision.id)
+        : null;
+      if (imported) {
+        if (cell.executor === "process")
+          throw new ContractError("POLICY_DENIED", "Imported code requires Docker isolation");
+        for (const [path, text] of Object.entries(imported.bundle.files)) {
+          const destination = join(inputDir, "code", path);
+          await mkdir(join(destination, ".."), { recursive: true, mode: 0o755 });
+          await writeFile(destination, text, { mode: 0o644, flag: "wx" });
+        }
+      }
       execution.progress(fence, "running");
       const lock = cell.executor === "process" ? null : await this.host.images();
       const secretIds = new Set<string>();
@@ -382,6 +402,24 @@ export class WorkerService {
       const origins = Array.from(
         new Set([...(env.targetOrigins as string[]), new URL(String(cell.baseUrl)).origin]),
       );
+      const agent =
+        run.mode === "agent"
+          ? new AgentModeService(this.ctx, this.host.config).session(
+              revision.id,
+              origins,
+              controller.signal,
+            )
+          : null;
+      if (agent && cell.executor === "process")
+        throw new ContractError("POLICY_DENIED", "Agent execution requires Docker isolation");
+      if (
+        imported &&
+        lock?.[imported.dependencyLock.image].imageId !== imported.dependencyLock.imageId
+      )
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Imported dependency lock image is not current",
+        );
       for (const id of secretIds) {
         const secret = this.host.secrets.get(id);
         if (origins.some((origin) => !secret.allowedOrigins.includes(origin)))
@@ -403,10 +441,19 @@ export class WorkerService {
           attemptId: fence.attemptId,
           revisionId: run.revisionId,
           snapshotId,
-          kind: plan.runner === "http" ? "http" : "browser",
-          imageId: lock?.["testmaster-runner"].imageId ?? `sha256:${"0".repeat(64)}`,
+          kind:
+            imported?.bundle.format === "pytest"
+              ? "python"
+              : plan?.runner === "http"
+                ? "http"
+                : "browser",
+          imageId:
+            imported?.dependencyLock.imageId ??
+            lock?.["testmaster-runner"].imageId ??
+            `sha256:${"0".repeat(64)}`,
           inputDir,
-          plan,
+          ...(plan ? { plan } : {}),
+          ...(agent ? { resolveAction: agent.resolveAction } : {}),
           networkPolicy: {
             allowedOrigins: origins,
             networkProfile: env.networkProfile as "local-loopback" | "private" | "public",
@@ -414,6 +461,16 @@ export class WorkerService {
           },
           secretRefs: releases,
           runnerInput: {
+            ...(agent ? { agent: agent.runnerInput } : {}),
+            ...(imported
+              ? imported.bundle.format === "pytest"
+                ? {
+                    files: [imported.bundle.entrypoint],
+                    codeRoot: "/run/testmaster/input/code",
+                    imageId: imported.dependencyLock.imageId,
+                  }
+                : { imported: { files: [imported.bundle.entrypoint] } }
+              : {}),
             baseUrl: String(cell.baseUrl),
             variables,
             locale: env.locale,
@@ -453,7 +510,7 @@ export class WorkerService {
           onEvent: async (event) => {
             if (event.type === "step.started") activeStepId = event.payload.stepId;
             if (event.type === "variable.captured") {
-              const declaration = captureDeclarations(plan).find(
+              const declaration = (plan ? captureDeclarations(plan) : []).find(
                 (capture) => capture.stepId === activeStepId && capture.name === event.payload.name,
               );
               if (!declaration || declaration.valueType !== event.payload.valueType)
@@ -546,7 +603,7 @@ export class WorkerService {
                         stepId: activeStepId ?? null,
                         correlationKey: payload.correlationKey,
                         declaration:
-                          plan.cleanup?.find((cleanup) => cleanup.resourceRef === activeStepId) ??
+                          plan?.cleanup?.find((cleanup) => cleanup.resourceRef === activeStepId) ??
                           null,
                       },
                       state: "planned",
@@ -709,11 +766,29 @@ export class WorkerService {
       const terminal = result.events.findLast((event) => event.type === "runner.finished");
       const cleanupOutcome = terminal?.payload.cleanupOutcome ?? "not_required";
       const gate = evaluateGate(reduced.outcome, cleanupOutcome, {
-        cleanupRequired: Boolean(plan.cleanup?.length),
+        cleanupRequired: Boolean(plan?.cleanup?.length),
         requiredEvidenceComplete: evidenceComplete,
         policySatisfied: true,
         requiredDependenciesPassed: true,
       });
+      if (agent && result.outcome === "passed") {
+        leases.assertCurrent(fence);
+        const candidate = agent.candidate(run.id);
+        if (candidate)
+          database.withTx(() =>
+            new OutboxRepository(database).append(
+              this.ctx.workspaceId,
+              run.id,
+              "run.agent_candidate",
+              {
+                candidateRevisionId: candidate.id,
+                verificationRequired: true,
+                deterministicAssertions: assertions,
+                semanticJudgments: [],
+              },
+            ),
+          );
+      }
       execution.finalize(fence, {
         ...run,
         phase: "completed",
@@ -820,7 +895,7 @@ export class WorkerService {
     for (const job of pending) {
       const run = this.host.runs.get(String(job.resource_id));
       const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
-      const plan = validate<ExecutablePlan>("ExecutablePlan", revision.plan);
+      const plan = revision.plan ? validate<ExecutablePlan>("ExecutablePlan", revision.plan) : null;
       const attempts = this.observations(run.id, plan);
       const last = attempts.at(-1);
       const cell = run.matrixCell as Record<string, unknown>;
@@ -828,7 +903,9 @@ export class WorkerService {
       if (last && canRetry(last, limits.maxAttempts ?? 2) && !this.cancelled(run.id))
         leases.resume(this.ctx.workspaceId, String(job.id), Number(job.fence));
       else {
-        const required = planSteps(plan).filter((step) => step.required !== false);
+        const required = plan
+          ? planSteps(plan).filter((step) => step.required !== false)
+          : [{ id: "imported-code", kind: "assertion" }];
         const reduced = reduceOutcome(
           attempts,
           required

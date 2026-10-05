@@ -1,6 +1,7 @@
 import { mkdir, open, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import {
+  type ArtifactManifest,
   type Attempt,
   ContractError,
   type RunResult,
@@ -19,6 +20,10 @@ import {
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 import type { RunsService } from "./runs.js";
+export interface ArtifactStream {
+  entry: ArtifactManifest["entries"][number];
+  stream: AsyncIterable<Uint8Array>;
+}
 export class ArtifactsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -109,6 +114,92 @@ export class ArtifactsService {
       return { bundleDir: out, sourceBundleDir: bundleDir, manifest, meta: bundle.meta };
     }
     return { bundleDir, manifest, meta: bundle.meta };
+  }
+  async read(
+    runId: string,
+    relativePath: string,
+    options: { attemptId?: string; offset?: number; maxBytes?: number } = {},
+  ) {
+    const offset = options.offset ?? 0;
+    const maxBytes = options.maxBytes ?? 65536;
+    if (
+      !Number.isSafeInteger(offset) ||
+      offset < 0 ||
+      !Number.isSafeInteger(maxBytes) ||
+      maxBytes < 1 ||
+      maxBytes > 262144
+    )
+      throw new ContractError("INVALID_ARGUMENT", "Invalid artifact page bounds");
+    const bundle = await this.get(runId, options.attemptId ? { attemptId: options.attemptId } : {});
+    const entry = bundle.manifest.entries.find((item) => item.relativePath === relativePath);
+    if (entry?.state !== "available")
+      throw new ContractError("NOT_FOUND", "Artifact is unavailable");
+    if (entry.redactionStatus === "restrictedRaw")
+      throw new ContractError("FORBIDDEN", "Restricted raw evidence is not exposed to MCP");
+    if (offset > entry.sizeBytes)
+      throw new ContractError("INVALID_ARGUMENT", "Artifact offset exceeds its size");
+    const bytes = Buffer.alloc(Math.min(maxBytes, entry.sizeBytes - offset));
+    let position = 0;
+    let written = 0;
+    for await (const chunk of streamBundleArtifact(
+      { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
+      relativePath,
+    )) {
+      const start = Math.max(0, offset - position);
+      const count = Math.min(chunk.length - start, bytes.length - written);
+      if (count > 0) {
+        bytes.set(chunk.subarray(start, start + count), written);
+        written += count;
+      }
+      position += chunk.length;
+      if (written === bytes.length) break;
+    }
+    return {
+      bytes,
+      entry,
+      nextOffset: offset + written < entry.sizeBytes ? offset + written : null,
+    };
+  }
+  async stream(
+    artifactId: string,
+    options: { range?: { start: number; end: number }; allowRestrictedRaw?: boolean } = {},
+  ): Promise<ArtifactStream> {
+    const artifact = requireEntity(this.ctx, "Artifact", artifactId);
+    const attempt = requireEntity(this.ctx, "Attempt", String(artifact.attemptId));
+    const bundle = await this.get(String(attempt.runId), { attemptId: attempt.id });
+    const entry = bundle.manifest.entries.find((item) => item.artifactId === artifactId);
+    if (entry?.state !== "available") throw new ContractError("NOT_FOUND", "Artifact unavailable");
+    if (entry.redactionStatus === "restrictedRaw")
+      throw new ContractError(
+        "FORBIDDEN",
+        "Restricted raw evidence requires separate authorization",
+      );
+    const start = options.range?.start ?? 0;
+    const end = options.range?.end ?? entry.sizeBytes - 1;
+    if (
+      options.range &&
+      (!Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        start < 0 ||
+        end < start ||
+        end >= entry.sizeBytes)
+    )
+      throw new ContractError("INVALID_ARGUMENT", "Invalid artifact range");
+    const relativePath = entry.relativePath;
+    async function* chunks() {
+      let position = 0;
+      for await (const chunk of streamBundleArtifact(
+        { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
+        relativePath,
+      )) {
+        const from = Math.max(0, start - position);
+        const to = Math.min(chunk.length, end + 1 - position);
+        if (to > from) yield chunk.subarray(from, to);
+        position += chunk.length;
+        if (position > end) break;
+      }
+    }
+    return { entry, stream: chunks() };
   }
 }
 export class ReportsService {
