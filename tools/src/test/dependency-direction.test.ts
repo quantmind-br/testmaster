@@ -16,13 +16,15 @@ const layers: Record<string, number> = {
   planner: 3,
   reporting: 3,
   application: 4,
-  cli: 5,
-  server: 5,
+  // apps: MCP is mounted by the server; the CLI hosts both (`server start`, `mcp serve`).
   mcp: 5,
-  web: 5,
+  server: 6,
+  cli: 7,
+  web: 7,
   runner: 1,
   "reference-shop": 0,
-  tools: 6,
+  tools: 8,
+  validation: 8,
 };
 const allowedRunner: Record<string, true> = {
   "@testmaster/contracts": true,

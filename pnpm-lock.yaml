@@ -182,11 +182,53 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@24.10.1)(vite@8.3.2(@types/node@24.10.1)(yaml@2.9.1))
 
+  apps/cli:
+    dependencies:
+      '@testmaster/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@testmaster/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@testmaster/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      commander:
+        specifier: 15.0.0
+        version: 15.0.0
+
   fixtures/reference-shop:
     devDependencies:
       playwright-core:
         specifier: 1.63.0
         version: 1.63.0
+
+  packages/application:
+    dependencies:
+      '@testmaster/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@testmaster/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@testmaster/evidence':
+        specifier: workspace:*
+        version: link:../evidence
+      '@testmaster/model-gateway':
+        specifier: workspace:*
+        version: link:../model-gateway
+      '@testmaster/persistence':
+        specifier: workspace:*
+        version: link:../persistence
+      '@testmaster/planner':
+        specifier: workspace:*
+        version: link:../planner
+      '@testmaster/reporting':
+        specifier: workspace:*
+        version: link:../reporting
+      '@testmaster/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
 
   packages/contracts:
     dependencies:
@@ -365,6 +407,27 @@ importers:
       '@babel/parser':
         specifier: 7.29.9
         version: 7.29.9
+
+  validation:
+    devDependencies:
+      '@testmaster/application':
+        specifier: workspace:*
+        version: link:../packages/application
+      '@testmaster/cli':
+        specifier: workspace:*
+        version: link:../apps/cli
+      '@testmaster/contracts':
+        specifier: workspace:*
+        version: link:../packages/contracts
+      '@testmaster/domain':
+        specifier: workspace:*
+        version: link:../packages/domain
+      '@testmaster/persistence':
+        specifier: workspace:*
+        version: link:../packages/persistence
+      '@testmaster/reference-shop':
+        specifier: workspace:*
+        version: link:../fixtures/reference-shop
 
 packages:
 
@@ -857,6 +920,10 @@ packages:
 
   character-entities@2.0.2:
     resolution: {integrity: sha512-shx7oQ0Awen/BRIdkjkvz54PnEEI/EjwXDSIZp86/KKdbafHh1Df/RYGBhn4hbe2+uKC9FnT5UCEdyPz3ai9hQ==}
+
+  commander@15.0.0:
+    resolution: {integrity: sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==}
+    engines: {node: '>=22.12.0'}
 
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
@@ -1788,6 +1855,8 @@ snapshots:
   chai@6.3.0: {}
 
   character-entities@2.0.2: {}
+
+  commander@15.0.0: {}
 
   debug@4.4.3:
     dependencies:
