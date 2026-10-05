@@ -81,6 +81,19 @@ function assertNfc(value: unknown, path = ""): void {
       assertNfc(child, `${path}/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`);
     }
 }
+/** Validate an admitted source-revision JSON Schema with the shared validator. */
+export function validateAgainstSchema<T = unknown>(
+  schema: Record<string, unknown>,
+  value: unknown,
+): T {
+  assertNfc(value);
+  const validator = ajv.compile(schema);
+  if (!validator(value))
+    throw new ContractError("INVALID_ARGUMENT", "Response does not match source schema", {
+      issues: validator.errors ?? [],
+    });
+  return value as T;
+}
 export function validate<T = unknown>(name: string, value: unknown): T {
   assertNfc(value);
   let validator = compiled.get(name);
@@ -216,7 +229,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         "textContains",
         "valueEquals",
         "enabled",
-        "countEquals",
+        // countEquals accepts either a browser locator or an HTTP JSON array.
         "visualMatches",
         "accessibilityViolations",
       ];
@@ -228,6 +241,16 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         reject(`${path}/input`, "predicateInput", "Predicate requires browser locator");
       if (responsePredicates.includes(predicate) && !("responseStepId" in input))
         reject(`${path}/input`, "predicateInput", "Predicate requires responseStepId");
+      if (
+        predicate === "countEquals" &&
+        !("responseStepId" in input) &&
+        !("locator" in input && plan.runner === "playwright")
+      )
+        reject(
+          `${path}/input`,
+          "predicateInput",
+          "Count requires browser locator or responseStepId",
+        );
       if (
         "responseStepId" in input &&
         !seenResponses.has(String(input.responseStepId)) &&

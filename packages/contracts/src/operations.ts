@@ -198,6 +198,7 @@ export const CancelReceipt = Obj({
 });
 export const ArtifactManifest = Obj({
   schemaVersion: Type.Literal("1.0.0"),
+  workspaceId: Type.Optional(id("ws")),
   runId: id("run"),
   attemptId: id("att"),
   revisionId: id("rev"),
@@ -220,6 +221,7 @@ export const ArtifactManifest = Obj({
 });
 export const BundleMeta = Obj({
   schemaVersion: Type.Literal("1.0.0"),
+  workspaceId: Type.Optional(id("ws")),
   runId: id("run"),
   attemptId: id("att"),
   revisionId: id("rev"),

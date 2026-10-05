@@ -35,11 +35,11 @@ import {
 } from "./primitives.js";
 import { reasonCodes } from "./registries.js";
 
-const nullable = (schema: TSchema) => Type.Union([schema, Type.Null()]);
+const nullable = <T extends TSchema>(schema: T) => Type.Union([schema, Type.Null()]);
 const refs = Type.Array(EvidenceRef);
 const names = Type.Array(Name);
 const digest = nullable(ContentDigest);
-const entity = (prefix: EntityPrefix, fields: Record<string, TSchema>) =>
+const entity = <F extends Record<string, TSchema>>(prefix: EntityPrefix, fields: F) =>
   Obj({
     id: id(prefix),
     workspaceId: Type.Optional(id("ws")),
