@@ -1,0 +1,901 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j03-m2-live-subset-review",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "observedAt": "2026-10-05T22:52:41.578Z",
+  "passed": true,
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j03-m2-live-subset-review",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9153cfcd-b1cd-4e0c-9f47-e287300e8b99",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6283e4fd-c2e1-45be-aa6d-f97213d142b4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6dc1bc5a-4052-4590-afcd-1e3d7cd5cbcf",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "three-requirements.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fea1dcc0-ef71-4b26-8012-a548959c18f5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a10e44-63a0-72df-a722-5c6177d59450",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_47f4a0ec-ba36-4003-9d38-9d86b261a352",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a10e44-9453-70e8-8806-1cd39a6b4781",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3a4e72c7-3b2b-461b-bc1f-438c356b2170",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a10e44-9458-77f1-9eff-23af43016fb4",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cf6d5652-1251-4160-b9e4-2167e4f79a90",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a10e44-9458-77f1-9eff-2775bbcc7663",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ac8311ff-b781-43ad-a516-bfc61bd17e6f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "generate",
+        "--type",
+        "backend",
+        "--requirement",
+        "req_01a10e44-9453-70e8-8806-1cd39a6b4781",
+        "--requirement",
+        "req_01a10e44-9458-77f1-9eff-23af43016fb4",
+        "--requirement",
+        "req_01a10e44-9458-77f1-9eff-2775bbcc7663",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bb1b1410-eeae-4066-b050-0aeab9f24f78",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e8a9c0a8-2b5e-4327-b364-a608930578d4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--only",
+        "pro_01900000-0000-7000-8000-000000000001",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "unknown-candidate",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_9768ea58-906e-4d9f-a9f4-b07474697f43",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Unknown or already decided proposal",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--only",
+        "pro_01a10e44-d5d4-7368-bca4-425bc3e20d89",
+        "pro_01a10e44-d5d3-7756-b586-52599255956d",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "journey-accept-a-and-b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2d79509d-3e10-415d-9e3e-c86cd7821eea",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--only",
+        "pro_01a10e44-d5d4-7368-bca4-425bc3e20d89",
+        "pro_01a10e44-d5d3-7756-b586-52599255956d",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "journey-accept-a-and-b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82b83280-8e21-4ae9-bfed-7c25ead104fc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--only",
+        "pro_01a10e44-d5d4-7368-bca4-425bc3e20d89",
+        "pro_01a10e44-d5d3-7756-b586-52599255956d",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "journey-accept-a-and-b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b1c289a2-19bb-4812-a7ed-2c18d3fde2c4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3052ceb0-8c05-428c-a63f-4f862ed16202",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_49287038-fbd0-4587-87af-a67e3acd5aaa",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "edit",
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3",
+        "--plan",
+        "/tmp/tm-m1-xUUDFe/repo/edited-c.json",
+        "--expected-version",
+        "3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6c7bfcc9-9d18-441b-8520-e3deaf0485c4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "edit",
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3",
+        "--plan",
+        "/tmp/tm-m1-xUUDFe/repo/edited-c.json",
+        "--expected-version",
+        "3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_7d623358-be24-456b-82b9-f83f1388240e",
+      "error": {
+        "code": "REVISION_CONFLICT",
+        "message": "Proposal changed",
+        "details": {
+          "diff": {
+            "expectedVersion": 3,
+            "currentVersion": 4,
+            "submitted": {
+              "kind": "executable",
+              "name": "health-endpoint-returns-http-200 reviewed C",
+              "requirementRefs": [
+                "req_01a10e44-9453-70e8-8806-1cd39a6b4781"
+              ],
+              "runner": "http",
+              "schemaVersion": "1.0.0",
+              "steps": [
+                {
+                  "description": "Request GET /health using the approved relative path segment 'health'.",
+                  "id": "get_health",
+                  "input": {
+                    "method": "GET",
+                    "pathSegments": [
+                      {
+                        "literal": "health"
+                      }
+                    ]
+                  },
+                  "kind": "action",
+                  "operation": "request",
+                  "required": true,
+                  "timeoutMs": 30000
+                },
+                {
+                  "description": "Assert the /health response status is exactly HTTP 200, which fails if the endpoint is missing, erroring, or returning any other status.",
+                  "expectation": {
+                    "predicate": "statusIn",
+                    "values": [
+                      200
+                    ]
+                  },
+                  "id": "assert_health_status_200",
+                  "input": {
+                    "responseStepId": "get_health"
+                  },
+                  "kind": "assertion",
+                  "operation": "assert",
+                  "required": true,
+                  "timeoutMs": 30000
+                }
+              ],
+              "type": "backend",
+              "dependsOn": [],
+              "cleanup": [],
+              "tags": [],
+              "priority": "normal"
+            },
+            "current": {
+              "cleanup": [],
+              "dependsOn": [],
+              "kind": "executable",
+              "name": "health-endpoint-returns-http-200 reviewed C",
+              "priority": "normal",
+              "requirementRefs": [
+                "req_01a10e44-9453-70e8-8806-1cd39a6b4781"
+              ],
+              "runner": "http",
+              "schemaVersion": "1.0.0",
+              "steps": [
+                {
+                  "description": "Request GET /health using the approved relative path segment 'health'.",
+                  "id": "get_health",
+                  "input": {
+                    "method": "GET",
+                    "pathSegments": [
+                      {
+                        "literal": "health"
+                      }
+                    ]
+                  },
+                  "kind": "action",
+                  "operation": "request",
+                  "required": true,
+                  "timeoutMs": 30000
+                },
+                {
+                  "description": "Assert the /health response status is exactly HTTP 200, which fails if the endpoint is missing, erroring, or returning any other status.",
+                  "expectation": {
+                    "predicate": "statusIn",
+                    "values": [
+                      200
+                    ]
+                  },
+                  "id": "assert_health_status_200",
+                  "input": {
+                    "responseStepId": "get_health"
+                  },
+                  "kind": "assertion",
+                  "operation": "assert",
+                  "required": true,
+                  "timeoutMs": 30000
+                }
+              ],
+              "tags": [],
+              "type": "backend"
+            }
+          }
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--only",
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3",
+        "--expected-version",
+        "2",
+        "--idempotency-key",
+        "journey-stale-batch",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_d099c730-cf93-408d-86ae-a0c40da11aae",
+      "error": {
+        "code": "REVISION_CONFLICT",
+        "message": "Proposal batch changed",
+        "details": {
+          "diff": {
+            "expectedVersion": 2,
+            "currentVersion": 3,
+            "proposals": [
+              {
+                "batchId": "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+                "createdAt": "2026-10-05T22:52:34.644Z",
+                "evidenceRefs": [
+                  {
+                    "contentHash": "240f90e55af40ffc43b6cfe50b1a66f78c95759d0338eacee768337b0d479307",
+                    "length": 142,
+                    "offset": 332,
+                    "relativePath": "three-requirements.md",
+                    "sourceRevisionId": "svr_01a10e44-63a0-72df-a722-5c6177d59450"
+                  }
+                ],
+                "extensions": {
+                  "testmaster:candidateRevisionId": "rev_01a10e44-db54-73ea-bfbc-3165bde287ca",
+                  "testmaster:testId": "tst_01a10e44-db4f-70f0-84b3-ab2d60d28498"
+                },
+                "id": "pro_01a10e44-d5d4-7368-bca4-425bc3e20d89",
+                "plan": {
+                  "kind": "executable",
+                  "name": "health-endpoint-service-identity",
+                  "requirementRefs": [
+                    "req_01a10e44-9458-77f1-9eff-2775bbcc7663"
+                  ],
+                  "runner": "http",
+                  "schemaVersion": "1.0.0",
+                  "steps": [
+                    {
+                      "description": "Request GET /health using the approved relative path segment 'health'.",
+                      "id": "get_health",
+                      "input": {
+                        "method": "GET",
+                        "pathSegments": [
+                          {
+                            "literal": "health"
+                          }
+                        ]
+                      },
+                      "kind": "action",
+                      "operation": "request"
+                    },
+                    {
+                      "description": "Assert JSON pointer /service in the /health response body equals the string 'reference-shop', which fails if the identity is missing, renamed, or a different type.",
+                      "expectation": {
+                        "predicate": "jsonEquals",
+                        "value": {
+                          "literal": "reference-shop"
+                        }
+                      },
+                      "id": "assert_service_identity",
+                      "input": {
+                        "jsonPointer": "/service",
+                        "responseStepId": "get_health"
+                      },
+                      "kind": "assertion",
+                      "operation": "assert"
+                    }
+                  ],
+                  "type": "backend"
+                },
+                "requirementRefs": [
+                  "req_01a10e44-9458-77f1-9eff-2775bbcc7663"
+                ],
+                "state": "accepted",
+                "validation": "valid",
+                "version": 2,
+                "warnings": [],
+                "workspaceId": "ws_01a10e44-5fd2-702c-8099-d1c42465a6c2"
+              },
+              {
+                "batchId": "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+                "createdAt": "2026-10-05T22:52:34.643Z",
+                "evidenceRefs": [
+                  {
+                    "contentHash": "d979529b683610a8a5b99f62f98b5479a4ace5ef9e086779349582149859ffee",
+                    "length": 123,
+                    "offset": 184,
+                    "relativePath": "three-requirements.md",
+                    "sourceRevisionId": "svr_01a10e44-63a0-72df-a722-5c6177d59450"
+                  }
+                ],
+                "extensions": {
+                  "testmaster:candidateRevisionId": "rev_01a10e44-dd19-75ef-9cf2-5f024d762e8d",
+                  "testmaster:testId": "tst_01a10e44-dd19-75ef-9cf2-591bcea250b0"
+                },
+                "id": "pro_01a10e44-d5d3-7756-b586-52599255956d",
+                "plan": {
+                  "kind": "executable",
+                  "name": "health-endpoint-body-healthy-true",
+                  "requirementRefs": [
+                    "req_01a10e44-9458-77f1-9eff-23af43016fb4"
+                  ],
+                  "runner": "http",
+                  "schemaVersion": "1.0.0",
+                  "steps": [
+                    {
+                      "description": "Request GET /health using the approved relative path segment 'health'.",
+                      "id": "get_health",
+                      "input": {
+                        "method": "GET",
+                        "pathSegments": [
+                          {
+                            "literal": "health"
+                          }
+                        ]
+                      },
+                      "kind": "action",
+                      "operation": "request"
+                    },
+                    {
+                      "description": "Assert JSON pointer /healthy in the /health response body equals boolean true, which fails if the field is absent, false, or a different type.",
+                      "expectation": {
+                        "predicate": "jsonEquals",
+                        "value": {
+                          "literal": true
+                        }
+                      },
+                      "id": "assert_healthy_true",
+                      "input": {
+                        "jsonPointer": "/healthy",
+                        "responseStepId": "get_health"
+                      },
+                      "kind": "assertion",
+                      "operation": "assert"
+                    }
+                  ],
+                  "type": "backend"
+                },
+                "requirementRefs": [
+                  "req_01a10e44-9458-77f1-9eff-23af43016fb4"
+                ],
+                "state": "accepted",
+                "validation": "valid",
+                "version": 2,
+                "warnings": [],
+                "workspaceId": "ws_01a10e44-5fd2-702c-8099-d1c42465a6c2"
+              },
+              {
+                "batchId": "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+                "createdAt": "2026-10-05T22:52:34.376Z",
+                "evidenceRefs": [
+                  {
+                    "contentHash": "4a96cbe6a0043f8f49fd330bd8bc152b6feb08e43039432a777fdbccfbd6c2db",
+                    "length": 83,
+                    "offset": 77,
+                    "relativePath": "three-requirements.md",
+                    "sourceRevisionId": "svr_01a10e44-63a0-72df-a722-5c6177d59450"
+                  }
+                ],
+                "id": "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3",
+                "plan": {
+                  "cleanup": [],
+                  "dependsOn": [],
+                  "kind": "executable",
+                  "name": "health-endpoint-returns-http-200 reviewed C",
+                  "priority": "normal",
+                  "requirementRefs": [
+                    "req_01a10e44-9453-70e8-8806-1cd39a6b4781"
+                  ],
+                  "runner": "http",
+                  "schemaVersion": "1.0.0",
+                  "steps": [
+                    {
+                      "description": "Request GET /health using the approved relative path segment 'health'.",
+                      "id": "get_health",
+                      "input": {
+                        "method": "GET",
+                        "pathSegments": [
+                          {
+                            "literal": "health"
+                          }
+                        ]
+                      },
+                      "kind": "action",
+                      "operation": "request",
+                      "required": true,
+                      "timeoutMs": 30000
+                    },
+                    {
+                      "description": "Assert the /health response status is exactly HTTP 200, which fails if the endpoint is missing, erroring, or returning any other status.",
+                      "expectation": {
+                        "predicate": "statusIn",
+                        "values": [
+                          200
+                        ]
+                      },
+                      "id": "assert_health_status_200",
+                      "input": {
+                        "responseStepId": "get_health"
+                      },
+                      "kind": "assertion",
+                      "operation": "assert",
+                      "required": true,
+                      "timeoutMs": 30000
+                    }
+                  ],
+                  "tags": [],
+                  "type": "backend"
+                },
+                "requirementRefs": [
+                  "req_01a10e44-9453-70e8-8806-1cd39a6b4781"
+                ],
+                "state": "proposed",
+                "validation": "valid",
+                "version": 4,
+                "warnings": [],
+                "workspaceId": "ws_01a10e44-5fd2-702c-8099-d1c42465a6c2"
+              }
+            ]
+          }
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "edit",
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3",
+        "--plan",
+        "invalid-c.json",
+        "--expected-version",
+        "4",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_dd44c0da-dcdf-4e2f-8a37-94cfb1c5b95c",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps",
+              "rule": "minItems",
+              "message": "must NOT have fewer than 1 items"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_308df0f4-a3ad-494f-b83c-2a18f0ee12ea",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "reject",
+        "pbt_01a10e44-d4c4-75a0-8b34-70d8b8fc3cc8",
+        "--only",
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3",
+        "--expected-version",
+        "3",
+        "--idempotency-key",
+        "journey-reject-candidate-c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c9c3c0cb-9c8a-4614-89ee-115f80cafda6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ed4cdc62-3e17-4277-9d2a-f3c365113c98",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "revoke",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3554bdf7-f649-4c9f-b5e4-f742cb5597fd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8da0fea0-0829-4dc0-aa4e-3b2ae1870e44",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "atomicSubsetAcceptance",
+      "proposalIds": [
+        "pro_01a10e44-d5d4-7368-bca4-425bc3e20d89",
+        "pro_01a10e44-d5d3-7756-b586-52599255956d",
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3"
+      ],
+      "acceptedTestIds": [
+        "tst_01a10e44-db4f-70f0-84b3-ab2d60d28498",
+        "tst_01a10e44-dd19-75ef-9cf2-591bcea250b0"
+      ],
+      "revisionIds": [
+        "rev_01a10e44-dd19-75ef-9cf2-5f024d762e8d",
+        "rev_01a10e44-db54-73ea-bfbc-3165bde287ca"
+      ],
+      "retainedAfterAcceptance": [
+        "pro_01a10e44-d4c8-76f5-9b54-0b4d0ea8f0f3"
+      ],
+      "idempotencyKey": "journey-accept-a-and-b",
+      "revisionCount": 2,
+      "auditEventIds": [
+        "aud_01a10e44-d5d4-7368-bca4-45c0cd846893",
+        "aud_01a10e44-dd1e-7729-954f-cb2d07f2123e",
+        "aud_01a10e44-ed92-76fb-9c21-410b8f8959a6"
+      ],
+      "modelCalls": [
+        {
+          "id": "mdl_01a10e44-944d-741c-8014-cfce8b046d22",
+          "provider": "quantforge",
+          "model": "deepseek-v4.1-flash",
+          "purpose": "normalize",
+          "usage": {
+            "inputTokens": 3157,
+            "outputTokens": 1692,
+            "reasoningTokens": 1215
+          },
+          "cost": "unknown",
+          "responseHash": "606628aa09c0d4267ebfbb6d59d9ef84bba41084368698b47449f896ca7ae179"
+        },
+        {
+          "id": "mdl_01a10e44-d2ba-71d9-abcf-dcbea617271f",
+          "provider": "quantforge",
+          "model": "deepseek-v4.1-flash",
+          "purpose": "plan",
+          "usage": {
+            "inputTokens": 10188,
+            "outputTokens": 2501,
+            "reasoningTokens": 1497
+          },
+          "cost": "unknown",
+          "responseHash": "f19a2d98562b04c9ebc72949fb5d3b2a6cee981085a163d535a2b23564281c0c"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Live model generation and authoring only; no execution or passing-test claim."
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "W4-A-server-api",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-05T23:10:45.670Z",
+  "passed": true,
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "W4-A-server-api",
+        "--base-url",
+        "http://127.0.0.1:37193",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d506f5a1-c373-4393-8e77-0e6c2ef9b936",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "server",
+        "start",
+        "--port",
+        "38163",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d1a06148-4f6b-4784-b1fa-84ada9b5a797",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a10e55-77d9-75b2-9312-44f51ea2abe1"
+  ],
+  "oracleVerdicts": [
+    {
+      "api": {
+        "runId": "run_01a10e55-77d9-75b2-9312-44f51ea2abe1",
+        "terminal": "passed",
+        "events": [
+          "event: run.accepted",
+          "event: attempt.claimed",
+          "event: run.phase_changed",
+          "event: step.started",
+          "event: step.finished",
+          "event: step.started",
+          "event: step.finished",
+          "event: step.started",
+          "event: step.finished",
+          "event: runner.finished",
+          "event: run.phase_changed",
+          "event: run.completed",
+          "event: run.reduced"
+        ],
+        "artifactId": "art_01a10e55-7ad4-7105-8f44-6cdcccd3fdfb"
+      },
+      "tokenLocationOnly": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

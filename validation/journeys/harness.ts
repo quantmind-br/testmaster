@@ -133,6 +133,15 @@ export async function diskSnapshot(directory: string): Promise<Record<string, st
   return snapshot;
 }
 
+export interface JourneyMetadata {
+  class: string;
+  runner: string;
+  externalDependency: string;
+  limitations: string[];
+  provider?: string;
+  model?: string;
+}
+
 export class Journey {
   readonly commands: CommandResult[] = [];
   readonly runIds: string[] = [];
@@ -146,6 +155,7 @@ export class Journey {
     readonly cwd: string,
     readonly home: string,
     readonly dataDir: string,
+    readonly metadata: JourneyMetadata,
   ) {
     this.env = {
       ...process.env,
@@ -166,13 +176,21 @@ export class Journey {
     delete this.env.DOCKER_HOST;
     delete this.env.DOCKER_CONTEXT;
   }
-  static async create(name: string): Promise<Journey> {
+  static async create(
+    name: string,
+    metadata: JourneyMetadata = {
+      class: "deterministic-e2e",
+      runner: "real-docker",
+      externalDependency: "local-reference-shop",
+      limitations: ["Chromium and declarative HTTP only; no LLM or SaaS claim."],
+    },
+  ): Promise<Journey> {
     const temporary = await mkdtemp(join(tmpdir(), "tm-m1-"));
     const cwd = join(temporary, "repo");
     const home = join(temporary, "home");
     await mkdir(cwd);
     await mkdir(home);
-    return new Journey(name, temporary, cwd, home, join(cwd, ".testmaster"));
+    return new Journey(name, temporary, cwd, home, join(cwd, ".testmaster"), metadata);
   }
   start(args: string[], env: NodeJS.ProcessEnv = {}, cwd = this.cwd): RunningCommand {
     const secretEnvIndex = args.indexOf("--from-env");
@@ -390,9 +408,11 @@ export class Journey {
           {
             schemaVersion: "1.0.0",
             journey: this.name,
-            class: "deterministic-e2e",
-            runner: "real-docker",
-            externalDependency: "local-reference-shop",
+            class: this.metadata.class,
+            runner: this.metadata.runner,
+            externalDependency: this.metadata.externalDependency,
+            ...(this.metadata.provider ? { provider: this.metadata.provider } : {}),
+            ...(this.metadata.model ? { model: this.metadata.model } : {}),
             observedAt: new Date().toISOString(),
             passed: error === undefined,
             ...(error === undefined ? {} : { error: String(error) }),
@@ -412,7 +432,7 @@ export class Journey {
             runIds: this.runIds,
             oracleVerdicts: this.oracles,
             ...(error === undefined ? {} : { failureDiagnostics }),
-            limitations: ["Chromium and declarative HTTP only; no LLM or SaaS claim."],
+            limitations: this.metadata.limitations,
           },
           null,
           2,
@@ -438,8 +458,9 @@ export function workerReady(status: Json): boolean {
 export async function journey(
   name: string,
   body: (session: Journey) => Promise<void>,
+  metadata?: JourneyMetadata,
 ): Promise<void> {
-  const session = await Journey.create(name);
+  const session = await Journey.create(name, metadata);
   let error: unknown;
   try {
     await body(session);

@@ -67,7 +67,7 @@ both `--unsafe-local` and operator authorization and is labelled `isolation: non
 
 Configuration precedence is flag, `TESTMASTER_*`, project config, selected user profile,
 defaults. `resolveConfig` exposes each leaf origin and the policy digest. The user profile
-file is `{defaultProfile?, profiles: {name: {config?, policy?, endpoint?, projectId?}}}`.
+file is `{defaultProfile?, profiles: {name: {config?, policy?, endpoint?, projectId?, modelProviders?}}}`.
 Operator ceilings/grants live in `~/.config/testmaster/policy.json`; profile policy narrows
 them. Repo config cannot enable model providers, uploads or unsafe execution. `CI=true`
 restricts healing, and offline keeps authorized loopback targets usable without model calls.
@@ -114,8 +114,44 @@ real retention, and proves foreign Run/Attempt snapshot substitution is denied.
 M1 journeys use the built CLI and real reference app in `validation/journeys/`. They write
 observed JSON summaries under `validation/results/`. The separately exercised manual quickstart
 transcript is `validation/results/quickstart-m1.md`.
-M2 command groups are registered but unavailable until their application surfaces are enabled;
+M2 source/discovery/requirement/proposal/usage commands share application services. Declare
+OpenAI-compatible `modelProviders` only in the selected user profile, grant their IDs in the
+operator policy's `allowedModelProviders`, then explicitly `consent grant --provider ID
+--data-class documents requirements` for the project before normalization/planning. Revocation
+is durable and audited. Repo content cannot configure providers or tools. Model costs without
+prices remain `unknown`; a monetary ceiling refuses unknown reservations rather than assuming zero.
+
+Sources retain immutable bytes/hash/parser revisions and expose `invalid` or `needs_input`
+instead of empty successful input. Discovery uses AST-only summaries, confines its repo root,
+requires explicit diff base/head (or base plus working tree), and resumes only the same complete
+input fingerprint. Deterministic discovery is labelled partial until observed exploration grounds it.
+Requirements preserve conflicting source refs; reviewers adjudicate conflicts and explicitly approve
+selected requirements. Generated executable proposals need typed nontrivial assertions and grounded
+refs. `plan accept --only ... --expected-version N --idempotency-key KEY` atomically creates only
+selected generated revisions and preserves retained proposals. Edits are CAS and return a diff on
+conflict. J02/J03 live journeys record their exercised evidence in `validation/results/`.
 M3–M6 groups report their milestone rather than returning successful placeholders.
+
+`server start --port 7331` owns the foreground worker and publishes `/v1` plus `/mcp` only on
+`127.0.0.1`. The startup receipt reports the private token file, not its contents; `--print-token`
+is an explicit opt-in. Token hashes, workspace binding, scopes, expiry and revocation live in
+SQLite; the plaintext file is a descriptor-confined regular file with mode `0600`. Browser Origins
+are denied unless explicitly supplied with repeatable `--origin`; non-browser clients omit Origin.
+Every protected request and stream reconnect resolves the token identity, and services recheck
+scopes. `--mode server` remains unavailable until M4.
+
+HTTP mutations require `Idempotency-Key` (16–128 characters); authoring updates require quoted
+`If-Match` versions. Collection pages use signed workspace/filter-bound keyset cursors with a
+five-minute expiry. Run SSE uses signed `Last-Event-ID` cursors and 15-second heartbeats;
+slow clients disconnect and reattach instead of dropping terminal events. Upload byte streams
+use `application/octet-stream` and `X-Upload-Token` in addition to the bearer installation token;
+only explicit completion after exact size/hash verification permits ingestion. OpenAPI is served
+at `/v1/openapi.json`. M3+ routes return `CAPABILITY_UNAVAILABLE` with their milestone. Manual
+resource compensation is available through `resource get` (approval binding), `approval create`,
+and `resource cleanup --approval ID --expected-version N --idempotency-key KEY`. It replays only
+the recorded compensation inside a fresh hardened sandbox with the original environment policy,
+protected handle, ownership proof and a consumed resource-bound approval. Failed or uncertain
+compensation preserves the owning Run's original verdict and records a separate cleanup event.
 
 ### Service integration notes
 
@@ -140,4 +176,53 @@ M3–M6 groups report their milestone rather than returning successful placehold
   mutation approval to the exact admitted revision, environment and policy.
 - Replay modules do not import the model gateway. M2 services may build on this boundary
   without introducing model loading into deterministic execution.
+- `CodeImportService(context, {cwd, dataDir}).import({projectId, path, format, name?})`
+  admits confined `.ts` Playwright or `.py` pytest code after parse-only AST checks. Relative
+  code helpers are bundled; imports outside the runner allowlist, shell/eval/install access,
+  disabled timeouts and empty/constant/self-comparison assertions are refused. Python parsing
+  uses isolated `python3 -I -S` with CPU, address-space, output and wall-time limits, never import
+  or execution of submitted source. Static validation is not a sandbox or behavioral proof.
+- Code revisions have `plan: null`, a `CodeReference`, immutable authored bundle/lock Artifacts,
+  and `origin`/`trustLevel` of imported or generated. Authored artifacts have null Run/Attempt/
+  Snapshot provenance; migration 0002 enforces all-or-none execution provenance. `readBundle`
+  verifies ownership, source/bundle hashes and revision linkage before runner materialization.
+  Its bundle stores `files` (relative UTF-8 source bytes), `sourceHashes`, `entrypoint`, `format`,
+  validator version, discovered test names and limitations. The separate dependency lock pins
+  image ID/build-input hash and forbids runtime installs. Both harnesses emit a real aggregate
+  `imported-code` assertion from reporter/process outcome; no declarative plan is synthesized.
+- `createRevision(testId, codeRef, parentId?, idempotencyKey?)` and
+  `createTestFromReference({projectId, codeRef, name?, idempotencyKey?})` recheck owned same-project
+  code references and ASTs. `createGeneratedRevision(testId, {code, format, parentId?})` creates
+  a checked candidate without promotion; none of these methods claims execution passed.
 
+- `explore --url URL --env ENV` uses a hardened browser Attempt and returns a partial feature
+  map with sealed observation evidence. Its controller-enumerated links are the only model
+  choices; requests/time/model-call budgets and an empty mutation allowlist are enforced
+  independently of page text. `ExploreService.begin` exposes a durable job receipt, completion,
+  read/resume and cancellation for API/MCP callers.
+- `test run --mode agent --revision REV` requires an accepted generated proposal. Resolution
+  flags name existing action steps; the model chooses only typed actions grounded in sanitized
+  browser observations. Assertions remain deterministic and immutable. A passing agent Attempt
+  produces a separate generated candidate event; a passing replay and explicit revision promotion
+  are required before that candidate becomes active. Semantic judgments are listed separately
+  (none are used as replacements for deterministic assertions).
+- `test export ID --format playwright|pytest --out DIR` writes a confined standalone project
+  with pinned dependencies and configuration-driven base URL. `test import --path FILE --format
+  playwright|pytest` and `test create --code FILE --runner playwright|python` admit checked source
+  bundles and execute only inside the matching pinned Docker image. Generated-code candidates
+  likewise require AST validation and replay verification; compilation never establishes passing.
+- `CodeExportService(context, {cwd, dataDir}).export(testId, {format, out?, revisionId?, async?})`
+  reads an immutable authorized revision and returns `files` plus deterministic metadata without
+  a model call or secret release. Writing requires W scope and a new directory confined beneath
+  the workspace, outside application data. Plan exports include `package-lock.json` for pinned
+  Playwright 1.63.0 or `pyproject.toml` plus a real `uv.lock` for Python 3.12 pytest/requests and
+  sync/async Playwright. Unsupported predicates and unresolved source schemas fail explicitly.
+- Configure exported projects through `BASE_URL`, `TEST_INPUTS_JSON` (variables, artifact
+  manifest and popup aliases), `SECRET_<secretRef>`, and `INPUT_DIR`. Exact text/JSON Pointer
+  assertions are retained, including independent assertions after navigation/reload. Producer
+  outputs are supplied explicitly; export never queries earlier runs for convenient bindings.
+  Imported code exports preserve authored bytes and the admitted `runtime-lock.json`; format
+  translation is refused, and authored harness-specific fixtures still require that harness.
+  Standalone projects do not implement supervisor grants/approval/egress/redaction: use an
+  authorized target and external isolation. Docker export tests exercise byte-identical generated
+  helpers through `AttemptExecutor` against healthy and semantic-mutant fixtures.

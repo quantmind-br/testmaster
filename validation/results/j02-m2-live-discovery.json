@@ -1,0 +1,495 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j02-m2-live-discovery",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "observedAt": "2026-10-05T22:53:29.077Z",
+  "passed": true,
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j02-m2-live-discovery",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_81ccc5c4-a789-48a8-b8ac-874c48e1ca22",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_60d6b6aa-4886-45e4-a36e-1a5743e082b6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fdac6fa4-60f4-433b-a188-c793440de7d5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "prd.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_85722b39-eedd-40c1-bf0a-462b46f0074a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "api.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4309f4c1-7316-4076-ae42-f1fd9fbfcc1a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a10e44-f5df-70fa-a111-67c6cdbe37b8",
+        "--source-revision",
+        "svr_01a10e44-f709-70de-8fe3-b52c25125e0a",
+        "--exclude",
+        "excluded.js",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fadf6dc6-927a-48cd-90b3-f092104720ae",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a10e44-f5df-70fa-a111-67c6cdbe37b8",
+        "--source-revision",
+        "svr_01a10e44-f709-70de-8fe3-b52c25125e0a",
+        "--exclude",
+        "excluded.js",
+        "--resume",
+        "dsc_01a10e44-f863-73c0-a9ff-37cbd69e6646",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1beaba46-19f6-4dc1-bd17-eaac3a0c5742",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_6999641d-7ce0-4b86-8863-881d180e7237",
+      "error": {
+        "code": "PRECONDITION_REQUIRED",
+        "message": "Diff discovery requires --base and --head or --working-tree",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "c08a010086a36a530c7e8cf4b6aa0f93452933e7",
+        "--head",
+        "1bb8cce6a7919ba1a0c415ffb15e92809ec9f818",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_90951960-4c95-446b-8aa3-f753575f55ac",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "1bb8cce6a7919ba1a0c415ffb15e92809ec9f818",
+        "--working-tree",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a82c020b-6632-4633-8873-af9fea56ce74",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a10e44-f5df-70fa-a111-67c6cdbe37b8",
+        "svr_01a10e44-f709-70de-8fe3-b52c25125e0a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_154c3631-a7e2-444f-99fd-d7102e6915a4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "adjudicate",
+        "conflict-1",
+        "--selected-requirement",
+        "req_01a10e45-5301-725a-a187-cbe93b958acd",
+        "--reason",
+        "Reviewer chooses explicit PRD status 200 over formal status 503",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_91cbecc8-73eb-481c-92e2-07acee27aef7",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "get",
+        "req_01a10e45-5301-725a-a187-cbe93b958acd",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_80c19b12-6c2f-498b-9776-9a5565fb7a84",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "update",
+        "req_01a10e45-5301-725a-a187-cbe93b958acd",
+        "--text",
+        "The GET /health endpoint MUST return HTTP 200.",
+        "--criterion",
+        "GET /health returns exactly HTTP status 200",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8f3c2f8e-8019-4281-a24c-3f628930a1ee",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fe8f559d-e8af-4034-9bcb-6c012bd9c4f5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a10e45-5301-725a-a187-cbe93b958acd",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d0a44290-35d8-4802-ad5f-d3c50a84c0eb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "generate",
+        "--type",
+        "backend",
+        "--requirement",
+        "req_01a10e45-5301-725a-a187-cbe93b958acd",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8bf19f95-1b55-4786-9868-3b0f28baf41d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a10e45-a069-76da-9306-a507a7e8809e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4159251f-4e9c-4437-a260-8cdb9174015d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "malformed.json",
+        "--role",
+        "prd",
+        "--format",
+        "prd-json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_94389843-c1cf-49cc-958a-c92978b02700",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "injected-provider",
+        "--data-class",
+        "documents",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_80279173-9fcd-453d-a4fd-dd435dde4c47",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Provider is not authorized by the user profile",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1d1b2359-d11b-475d-b979-96e4afadc5a5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "get",
+        "src_01a10e45-a3d0-738c-a6b7-f3c75e423ee4",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a4c17043-47af-40c4-a354-471234e26501",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "archive",
+        "src_01a10e45-a3d0-738c-a6b7-f3c75e423ee4",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1d9853a1-b97d-4aef-a044-089690792ba0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7ab7285a-3a1d-4655-bc73-993f402dedb5",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "groundedConflictAndPolicy",
+      "sourceHashes": [
+        "14622fa9de2df66ff8ab04419943fc97786c42bce91de2b20abcfdc9b74bdd7f",
+        "f26554bc4b28c9a56d57c45a55bdf2e7d893b6daf28d1888858dde2bb23b82ee"
+      ],
+      "conflictId": "conflict-1",
+      "selectedRequirementId": "req_01a10e45-5301-725a-a187-cbe93b958acd",
+      "base": "c08a010086a36a530c7e8cf4b6aa0f93452933e7",
+      "head": "1bb8cce6a7919ba1a0c415ffb15e92809ec9f818",
+      "proposalIds": [
+        "pro_01a10e45-a06d-74d4-b648-4549b0930147"
+      ],
+      "preservedProviderPolicy": true
+    }
+  ],
+  "limitations": [
+    "Live model generation and authoring only; no execution or passing-test claim."
+  ]
+}
