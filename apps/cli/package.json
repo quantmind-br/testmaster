@@ -1,0 +1,26 @@
+{
+  "name": "@testmaster/cli",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "testmaster": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@testmaster/contracts": "workspace:*",
+    "@testmaster/domain": "workspace:*",
+    "@testmaster/application": "workspace:*",
+    "commander": "15.0.0"
+  }
+}
