@@ -1,0 +1,1170 @@
+{
+  "label": "experimental",
+  "nPlanned": 8,
+  "independentFamilies": 1,
+  "primary": {
+    "status": "measured",
+    "successes": 0,
+    "n": 8,
+    "estimate": 0,
+    "lower": 0,
+    "upper": 0.3244156195108769
+  },
+  "conditional": {
+    "status": "measured",
+    "successes": 0,
+    "n": 8,
+    "estimate": 0,
+    "lower": 0,
+    "upper": 0.3244156195108769
+  },
+  "healthyFalseFailure": {
+    "status": "insufficientData",
+    "successes": 0,
+    "n": 0,
+    "estimate": null,
+    "lower": null,
+    "upper": null
+  },
+  "healthyUnavailable": 0,
+  "proposalValidity": {
+    "status": "insufficientData",
+    "successes": 0,
+    "n": 0,
+    "estimate": null,
+    "lower": null,
+    "upper": null
+  },
+  "strata": {
+    "development": {
+      "status": "measured",
+      "successes": 0,
+      "n": 6,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.3903430336530645
+    },
+    "business-calculation": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "authentication": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "persistence": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "contract": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "pagination": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "idempotency": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "holdout": {
+      "status": "measured",
+      "successes": 0,
+      "n": 2,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.6576280471103807
+    },
+    "health": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "authorization": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    }
+  },
+  "exclusions": [],
+  "errors": [
+    {
+      "trialId": "trial-01",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e59-4267-743d-b49d-7e92eb8f490e",
+          "svr_01a10e59-43aa-7730-ac0b-f3c1ea8738c2"
+        ],
+        "startedAt": "2026-10-05T23:14:53.883Z",
+        "durationMs": 120883.28559500001,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_f8c0092f-649c-42cc-9039-97f92d32fcf5",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_f8c0092f-649c-42cc-9039-97f92d32fcf5\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-01",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-rRxNVI/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-rRxNVI/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-02",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e5b-23bf-743a-a82f-42db65122832",
+          "svr_01a10e5b-24e0-77cf-990f-48f4f069d66e"
+        ],
+        "startedAt": "2026-10-05T23:16:57.065Z",
+        "durationMs": 127844.389858,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_bcf058ee-fd4a-479c-89ec-48d4acad5661",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_bcf058ee-fd4a-479c-89ec-48d4acad5661\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-02",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-PvRMiP/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-PvRMiP/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-03",
+      "phase": "review",
+      "code": "no_approved_requirements",
+      "message": "No requirements passed fixed review policy",
+      "evidence": {
+        "requirements": [
+          {
+            "id": "req_01a10e5e-3bd8-73e1-8210-e2248682a902",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.160Z",
+            "version": 1,
+            "text": "Submitting an empty password shows exactly \"Password is required\" and creates no authenticated session.",
+            "acceptanceCriteria": [
+              "An empty password submission displays exactly the message \"Password is required\".",
+              "No authenticated session is created as a result of that submission."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-AUTH-001",
+              "testmaster:reason": "Stated verbatim as SHOP-AUTH-001 in the PRD Authentication section."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdc-77f3-abf4-65d42389c139",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.164Z",
+            "version": 1,
+            "text": "Orders require a bearer token and return HTTP 401 without it.",
+            "acceptanceCriteria": [
+              "Order endpoints are protected by bearerAuth security.",
+              "A request without a bearer token returns HTTP 401."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "jsonPointer": "/paths/~1api~1orders/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              },
+              {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-AUTH-002",
+              "testmaster:reason": "Stated as SHOP-AUTH-002 and corroborated by bearerAuth plus 401 responses on /api/orders operations."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-a732b0fca55f",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "All prices are integer cents; three Precision Widgets at 1005 cents each total 3015 cents.",
+            "acceptanceCriteria": [
+              "Prices are represented as integer cents.",
+              "Three items priced at 1005 cents each total 3015 cents."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-PRICE-001",
+              "testmaster:reason": "Stated verbatim as SHOP-PRICE-001 in the PRD Catalog and checkout section."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-aabb4a4c4427",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Products expose id, name and priceCents.",
+            "acceptanceCriteria": [
+              "Product payloads include id, name and priceCents.",
+              "priceCents is an integer with minimum 0."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "jsonPointer": "/components",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-SCHEMA-001",
+              "testmaster:reason": "Stated as SHOP-SCHEMA-001 and matched by the Product schema in the OpenAPI components."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-afca5c786249",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Offset pagination enumerates every product exactly once.",
+            "acceptanceCriteria": [
+              "Offset pagination returns each product exactly once across the full enumeration.",
+              "Pagination parameters limit and offset are honoured."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "jsonPointer": "/paths/~1api~1products/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-PAGING-001",
+              "testmaster:reason": "Stated as SHOP-PAGING-001 and reflected by limit/offset parameters with nextOffset and total on listProducts."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-b380904cee70",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "A successful checkout persists an order that remains visible after a page reload.",
+            "acceptanceCriteria": [
+              "A successful checkout persists an order.",
+              "The persisted order remains visible after a page reload."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-ORDER-001",
+              "testmaster:reason": "Stated verbatim as SHOP-ORDER-001 in the PRD Catalog and checkout section."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-b783c2dfa19b",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Repeating an order Idempotency-Key returns the original order and never duplicates it.",
+            "acceptanceCriteria": [
+              "Repeating a request with the same Idempotency-Key returns the original order.",
+              "No duplicate order is created for a repeated Idempotency-Key."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-IDEMPOTENCY-001",
+              "testmaster:reason": "Stated as SHOP-IDEMPOTENCY-001 and supported by the required Idempotency-Key header with 200 replay and 201 persisted responses on createOrder."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-b9fbecc7796d",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Empty-cart checkout returns HTTP 400 (PRD statement).",
+            "acceptanceCriteria": [
+              "A checkout attempt with an empty cart returns HTTP 400."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-EMPTY-001.prd-400",
+              "testmaster:reason": "PRD states SHOP-EMPTY-001 empty-cart checkout returns HTTP 400; retained as one side of a deliberate unadjudicated conflict."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-bc7ae932d228",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Empty-cart checkout returns HTTP 422 (OpenAPI declaration).",
+            "acceptanceCriteria": [
+              "A checkout attempt with an empty cart returns HTTP 422 as declared in the OpenAPI operation."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-EMPTY-001.openapi-422",
+              "testmaster:reason": "The OpenAPI createOrder operation declares a 422 \"Empty cart\" response; retained as the other side of the deliberate conflict."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-c3057a33873b",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "GET /health returns HTTP 200 with status \"ok\".",
+            "acceptanceCriteria": [
+              "GET /health responds with HTTP 200.",
+              "The response body contains status \"ok\"."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "jsonPointer": "/paths/~1health/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-HEALTH-001",
+              "testmaster:reason": "Stated as SHOP-HEALTH-001 and matched by getHealth's 200 response schema with status const \"ok\"."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-c44bf78981e0",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Checkout exposes data-testid=\"checkout-button\"; renaming the hook is nonfunctional drift, not a business regression.",
+            "acceptanceCriteria": [
+              "The checkout control exposes data-testid=\"checkout-button\".",
+              "Renaming the hook is treated as nonfunctional drift rather than a business regression."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-HOOK-001",
+              "testmaster:reason": "Stated verbatim as SHOP-HOOK-001 in the PRD Other flows section."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-ca31060cb5f0",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Catalog readiness is explicit via data-testid=\"catalog-ready\" after asynchronous loading, and navigation is SPA with browser history.",
+            "acceptanceCriteria": [
+              "After asynchronous loading the catalog signals readiness via data-testid=\"catalog-ready\".",
+              "Navigation behaves as a SPA and integrates with browser history."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.9,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-CATALOG-READY-001",
+              "testmaster:reason": "Stated in PRD prose without a requirement identifier; wording is explicit but unnumbered, so confidence is slightly below certainty."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-ce48efe70f0d",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Profile files are uploaded as raw bytes and downloaded without changes.",
+            "acceptanceCriteria": [
+              "Upload accepts raw binary bytes.",
+              "Download returns the uploaded bytes unchanged."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "jsonPointer": "/paths/~1api~1profile~1file/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              },
+              {
+                "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+                "jsonPointer": "/paths/~1api~1profile~1file/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.9,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-PROFILE-FILE-001",
+              "testmaster:reason": "Stated in PRD prose without an identifier and corroborated by the octet-stream upload and download OpenAPI operations."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-d0638cba4f95",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "Terms open in a popup.",
+            "acceptanceCriteria": [
+              "Selecting terms opens them in a popup."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.85,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-TERMS-POPUP-001",
+              "testmaster:reason": "Stated briefly in PRD prose without an identifier; acceptance behaviour is only partially specified."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-d774da7a04a5",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "A same-origin delivery iframe supports Standard and Express.",
+            "acceptanceCriteria": [
+              "The delivery iframe is same-origin.",
+              "The iframe supports both Standard and Express delivery options."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.85,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-DELIVERY-IFRAME-001",
+              "testmaster:reason": "Stated in PRD prose without an identifier; same-origin and delivery-option details are given but not enumerated as criteria."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-d8d7a38c39d9",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "The intentional status conflict requires two independent reviewers, source locations and a recorded adjudication before benchmark classification.",
+            "acceptanceCriteria": [
+              "The status conflict is reviewed by two independent reviewers.",
+              "Source locations are recorded for each side of the conflict.",
+              "A recorded adjudication exists before any benchmark classification."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+                "length": 253,
+                "offset": 1558,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.9,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-REVIEW-CONFLICT-PROCESS-001",
+              "testmaster:reason": "Stated in the PRD Review section as the adjudication process for the intentional conflict."
+            }
+          },
+          {
+            "id": "req_01a10e5e-3bdd-77aa-9408-dfad1c7b47b5",
+            "workspaceId": "ws_01a10e5d-1d37-75d3-a50c-fed965fb1ed9",
+            "createdAt": "2026-10-05T23:20:19.165Z",
+            "version": 1,
+            "text": "The application is a synthetic local-only application with no real customer data, and no production execution or personal data is allowed.",
+            "acceptanceCriteria": [
+              "Only synthetic data is used; no real customer data is present.",
+              "No production execution or personal data is used."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+                "length": 106,
+                "offset": 39,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+                "length": 253,
+                "offset": 1558,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.95,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e5d-1d42-7187-819f-13f41af3891a",
+              "testmaster:key": "SHOP-LOCAL-ONLY-001",
+              "testmaster:reason": "Stated in the PRD header paragraph and repeated as a constraint in the Review section."
+            }
+          }
+        ],
+        "conflicts": [
+          {
+            "id": "conflict-1",
+            "requirementIds": [
+              "req_01a10e5e-3bdd-77aa-9408-b9fbecc7796d",
+              "req_01a10e5e-3bdd-77aa-9408-bc7ae932d228"
+            ],
+            "reason": "The PRD states empty-cart checkout returns HTTP 400 while the OpenAPI createOrder operation declares HTTP 422 with description \"Empty cart\". The PRD marks this as a deliberate conflict for adjudication and requires both sources to be retained; neither is authoritative until reviewer approval.",
+            "sourceRefs": [
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a10e5d-1f8d-73e7-855f-44e16c6d5da4"
+              },
+              {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a10e5d-20b9-761a-be6d-e97697974af1"
+              }
+            ],
+            "resolution": null
+          }
+        ],
+        "openQuestions": [
+          "The repository license is stated as UNLICENSED and is pending a maintainer decision; no final license is specified.",
+          "Independent human labeling of the corpus is explicitly pending in the corpus manifest, so benchmark classification and any model-quality claim remain open.",
+          "Whether empty-cart checkout should ultimately return HTTP 400 or HTTP 422 is unadjudicated pending two independent reviewers, recorded source locations and a recorded adjudication."
+        ],
+        "version": 1,
+        "fingerprint": "aab922a5e7393bf29e0dd666f0564304db1b90d27babd15c9363ab69c96503e2"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-03",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-oU5jr5/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-oU5jr5/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-04",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e5e-4180-72ba-b77a-3a5eebe47157",
+          "svr_01a10e5e-42b2-763b-b0e5-b93434c5c95f"
+        ],
+        "startedAt": "2026-10-05T23:20:21.295Z",
+        "durationMs": 131778.825641,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_deb1161c-76b5-4d6f-adbf-67e3bf0a6e29",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_deb1161c-76b5-4d6f-adbf-67e3bf0a6e29\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-04",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-kcTIwE/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-kcTIwE/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-05",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e60-4f28-767f-8dac-8387d0af8bc7",
+          "svr_01a10e60-5097-7449-8bb8-8139b1ee3321"
+        ],
+        "startedAt": "2026-10-05T23:22:35.936Z",
+        "durationMs": 122254.41368400003,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_6a60e426-6244-42e9-b519-2bfdddf8fd72",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_6a60e426-6244-42e9-b519-2bfdddf8fd72\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-05",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-RWZ8jD/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-RWZ8jD/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-06",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e62-355c-7483-b5a0-6af4dfebc9df",
+          "svr_01a10e62-367f-70ed-afe0-2d18daaa803f"
+        ],
+        "startedAt": "2026-10-05T23:24:40.314Z",
+        "durationMs": 120434.285562,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_598cb4de-446b-48c3-bc42-ea0888b07cd2",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_598cb4de-446b-48c3-bc42-ea0888b07cd2\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-06",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-cEUHn2/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-cEUHn2/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-07",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e64-142a-7757-935d-6e372ff9c550",
+          "svr_01a10e64-1566-7291-9da0-5c72a32056d5"
+        ],
+        "startedAt": "2026-10-05T23:26:42.918Z",
+        "durationMs": 125358.93787200004,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_62be87ed-9424-4055-a442-9cfe0e955252",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_62be87ed-9424-4055-a442-9cfe0e955252\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-07",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-7sXmUo/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-7sXmUo/repo/.testmaster"
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-08",
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Provider returned invalid output after two repairs",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a10e66-0ad7-70a1-8141-e4bff5490161",
+          "svr_01a10e66-0c52-759d-8491-e7f161619e7d"
+        ],
+        "startedAt": "2026-10-05T23:28:51.695Z",
+        "durationMs": 117335.97544900002,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_11d55a87-9f88-48cd-a884-095d587619af",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Provider returned invalid output after two repairs",
+            "details": {
+              "repairs": 2,
+              "candidateStatus": "invalid"
+            },
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_11d55a87-9f88-48cd-a884-095d587619af\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Provider returned invalid output after two repairs\",\"details\":{\"repairs\":2,\"candidateStatus\":\"invalid\"},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "trialId": "trial-08",
+      "phase": "evidence",
+      "code": "evidence_copy_unavailable",
+      "message": "Error: ENOENT: no such file or directory, lstat '/tmp/tm-eval-RAhmXB/repo/.testmaster/runs'",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-RAhmXB/repo/.testmaster"
+      },
+      "exclusion": null
+    }
+  ],
+  "scores": [
+    {
+      "trialId": "trial-01",
+      "caseId": "shop-defect-004",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-02",
+      "caseId": "shop-defect-001",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-03",
+      "caseId": "shop-defect-002",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-04",
+      "caseId": "shop-defect-006",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-05",
+      "caseId": "shop-defect-007",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-06",
+      "caseId": "shop-defect-008",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-07",
+      "caseId": "shop-defect-003",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-08",
+      "caseId": "shop-defect-005",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    }
+  ],
+  "runId": "m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z",
+  "preregistrationCommit": "f37c3604399446e34a97c763dd0a507b4349660f",
+  "preregistrationSha256": "b4b5acff70fe4c288d289807f73fbd2ef0e400b202796e11536df1e35bebff19",
+  "class": "live-model-evaluation",
+  "runner": "real-cli-docker",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "chargedTokens": 542771,
+  "tokens": {
+    "inputTokens": 356423,
+    "outputTokens": 186348,
+    "reasoningTokens": 138426
+  },
+  "measuredCosts": [],
+  "unknownCostCalls": 23,
+  "cost": "unknown",
+  "durationMs": 957731.472174,
+  "stopReason": "planned_trials_recorded",
+  "observedExecution": {
+    "oracleConfirmedPairs": 8,
+    "normalizationPipelinesAttempted": 8,
+    "normalizationPipelinesSucceeded": 1,
+    "normalizationPipelinesFailedAfterRepairs": 7,
+    "modelCalls": 23,
+    "invalidModelCalls": 22,
+    "repairCalls": 15,
+    "transportRetries": 0,
+    "invalidCallsAt8192OutputTokens": 22,
+    "planGenerationCommands": 0,
+    "acceptedGeneratedTests": 0,
+    "generatedReplayRuns": 0,
+    "dockerAttempts": 0,
+    "interpretation": "End-to-end pipeline yield only; generated-test defect sensitivity was not measured because generation/replay was never reached. real-cli-docker denotes intended execution design, not observed Docker coverage.",
+    "collectorErrors": "Eight evidence_copy_unavailable errors: no Run created a runs directory; no executed replay evidence was lost.",
+    "reviewMismatch": {
+      "trialId": "trial-03",
+      "normalizedRequirements": 17,
+      "observedOriginKind": "explicit",
+      "preregisteredRequiredOriginKind": "user_spec",
+      "approvedRequirements": 0,
+      "classification": "Preregistered evaluator restriction/contract mismatch, not proven product defect; retained end-to-end miss without exclusion or rerun."
+    },
+    "outputBudgetObservation": "All 22 invalid calls consumed 8192 output tokens. Budget pressure is plausible but truncation causality is unproven without retained raw completions/finish reasons.",
+    "mutations": "No product or preregistration changes, trial replacements or post-result policy relaxation."
+  },
+  "limitations": [
+    "Single application family; mutant-level holdout only; correlated trials",
+    "Pending independent human labels and conflict adjudication",
+    "External rule-based review, not independent human semantic intent review",
+    "Descriptive Wilson intervals; insufficient n for parity or graduation",
+    "Provider snapshot and monetary tariff unavailable"
+  ],
+  "trialLedgerDirectory": "evals/results/m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z"
+}
