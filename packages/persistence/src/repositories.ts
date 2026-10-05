@@ -296,6 +296,7 @@ export class LeaseRepository {
     leaseMs?: number;
     seed?: number;
     now?: string;
+    runIds?: readonly string[];
   }): (Fence & { runId: string; expiresAt: string; number: number }) | null {
     return this.database.withTx(() => {
       if (
@@ -305,11 +306,16 @@ export class LeaseRepository {
         return null;
       const now = request.now ?? new Date().toISOString();
       const expiresAt = new Date(Date.parse(now) + (request.leaseMs ?? 30000)).toISOString();
+      if (request.runIds?.length === 0) return null;
+      const runFilter = request.runIds
+        ? ` AND j.resource_id IN (${request.runIds.map(() => "?").join(",")})`
+        : "";
       const job = this.database.get(
-        "SELECT j.* FROM job_leases j JOIN runs r ON r.workspace_id=j.workspace_id AND r.id=j.resource_id WHERE j.workspace_id=? AND j.queue=? AND j.dispatchable=1 AND j.state='queued' AND j.available_at<=? AND r.phase<>'completed' ORDER BY j.priority DESC,j.available_at,j.id LIMIT 1",
+        `SELECT j.* FROM job_leases j JOIN runs r ON r.workspace_id=j.workspace_id AND r.id=j.resource_id WHERE j.workspace_id=? AND j.queue=? AND j.dispatchable=1 AND j.state='queued' AND j.available_at<=? AND r.phase<>'completed'${runFilter} ORDER BY j.priority DESC,j.available_at,j.id LIMIT 1`,
         request.workspaceId,
         request.queue,
         now,
+        ...(request.runIds ?? []),
       );
       if (!job) return null;
       const fence = Number(job.fence) + 1;
