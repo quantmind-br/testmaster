@@ -1,0 +1,26 @@
+{
+  "name": "@testmaster/persistence",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "dependencies": {
+    "@testmaster/contracts": "workspace:*",
+    "@testmaster/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "pg": "8.23.1",
+    "@types/pg": "8.23.1"
+  }
+}
