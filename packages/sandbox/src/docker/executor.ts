@@ -17,6 +17,7 @@ export interface DockerAttempt {
   inputDir: string;
   socketsDir: string;
   seccompPath: string;
+  entrypoint?: readonly string[];
   command?: readonly string[];
   user?: string;
   attemptTimeoutMs?: number;
@@ -143,7 +144,9 @@ export function dockerCreateArgs(options: DockerAttempt): string[] {
     `type=bind,src=${options.inputDir},dst=/run/testmaster/input,readonly`,
     "--mount",
     `type=bind,src=${options.socketsDir},dst=/run/testmaster/sockets,readonly`,
+    ...(options.entrypoint?.[0] ? ["--entrypoint", options.entrypoint[0]] : []),
     options.imageId,
+    ...(options.entrypoint?.slice(1) ?? []),
     ...(options.command ?? []),
   ];
 }

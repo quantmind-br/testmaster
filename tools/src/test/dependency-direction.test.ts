@@ -28,6 +28,8 @@ const allowedRunner: Record<string, true> = {
   "@testmaster/contracts": true,
   "@testmaster/domain": true,
   "playwright-core": true,
+  // Reporter API host for imported @playwright/test projects (plan D8).
+  "@playwright/test": true,
   undici: true,
 };
 const testFrameworks: Record<string, true> = { vitest: true, "fast-check": true };

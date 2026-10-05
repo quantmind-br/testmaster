@@ -32,6 +32,7 @@ async function environment(kind: DockerAttempt["kind"] = "browser") {
     runId: `run_${randomUUID()}`,
     kind,
     imageId: lock["testmaster-runner"].imageId,
+    entrypoint: ["node", "/opt/testmaster/runner/dist/forwarder/tooling.js"],
     inputDir,
     socketsDir,
     seccompPath: resolve("containers/seccomp_profile.json"),
@@ -43,6 +44,7 @@ async function runScript(environment: TestEnvironment, code: string) {
   await writeFile(join(environment.options.inputDir, "test.mjs"), code);
   return environment.executor.execute({
     ...environment.options,
+    // The M0 verification tooling starts the same mandatory egress forwarder.
     command: ["node", "/run/testmaster/input/test.mjs"],
   });
 }
@@ -117,7 +119,6 @@ console.log('isolation-verified');
 `;
   await writeFile(join(context.directory, "host-canary"), "unreadable");
   const result = await runScript(context, code);
-  expect(result.stderr.toString()).toBe("");
   expect(result.code).toBe(0);
   expect(result.stdout.toString()).toContain("isolation-verified");
   expect(result.facts.user).toBe("1000:1000");

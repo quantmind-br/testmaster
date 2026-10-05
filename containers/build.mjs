@@ -56,39 +56,93 @@ async function digest(directory) {
   }
   return hash.digest("hex");
 }
-command("pnpm", ["exec", "tsc", "-b", "packages/runner"]);
+const args = process.argv.slice(2);
+const only =
+  args.length === 0
+    ? null
+    : args.length === 2 && args[0] === "--only" && Object.hasOwn(bases, args[1])
+      ? args[1]
+      : undefined;
+if (only === undefined)
+  throw new Error("Usage: build.mjs [--only testmaster-runner|testmaster-runner-python]");
+if (only !== "testmaster-runner-python") command("pnpm", ["exec", "tsc", "-b", "packages/runner"]);
 const temporary = await mkdtemp(join(tmpdir(), "testmaster-images-"));
 try {
   const runner = join(temporary, "node");
   const python = join(temporary, "python");
-  await mkdir(join(runner, "runner/node_modules"), { recursive: true });
-  await mkdir(join(python, "python"), { recursive: true });
-  await cp(join(root, "containers/runner/Dockerfile"), join(runner, "Dockerfile"));
-  await cp(join(root, "containers/python/Dockerfile"), join(python, "Dockerfile"));
-  await cp(join(root, "packages/runner/dist"), join(runner, "runner/dist"), {
-    recursive: true,
-    dereference: true,
-  });
-  await writeFile(join(runner, "runner/package.json"), '{"type":"module","private":true}\n');
-  try {
+  if (only !== "testmaster-runner-python") {
+    await mkdir(join(runner, "runner/node_modules"), { recursive: true });
+    await cp(join(root, "containers/runner/Dockerfile"), join(runner, "Dockerfile"));
+    await cp(join(root, "packages/runner/dist"), join(runner, "runner/dist"), {
+      recursive: true,
+      dereference: true,
+    });
+    await writeFile(join(runner, "runner/package.json"), '{"type":"module","private":true}\n');
     await access(join(runner, "runner/dist/harness.js"));
-  } catch {
-    // Preserve its original relative imports when staged as harness.js.
-    await writeFile(join(runner, "runner/dist/harness.js"), 'import "./forwarder/tooling.js";\n');
+    for (const dependency of ["playwright-core", "undici", "@playwright/test", "playwright"]) {
+      await cp(
+        dependency === "playwright"
+          ? join(root, "node_modules/.pnpm/playwright@1.63.0/node_modules/playwright")
+          : join(root, "packages/runner/node_modules", dependency),
+        join(runner, "runner/node_modules", dependency),
+        { recursive: true, dereference: true },
+      );
+    }
+    for (const dependency of [
+      "fast-deep-equal",
+      "uri-js",
+      "require-from-string",
+      "json-schema-traverse",
+      "fast-uri",
+    ]) {
+      const matches = (await readdir(join(root, "node_modules/.pnpm"))).filter((entry) =>
+        entry.startsWith(`${dependency}@`),
+      );
+      const match = matches[0];
+      if (!match) continue;
+      await cp(
+        join(root, "node_modules/.pnpm", match, "node_modules", dependency),
+        join(runner, "runner/node_modules", dependency),
+        { recursive: true, dereference: true },
+      );
+    }
+    for (const packageName of ["contracts", "domain"]) {
+      const destination = join(runner, "runner/node_modules/@testmaster", packageName);
+      await cp(join(root, "packages", packageName, "dist"), join(destination, "dist"), {
+        recursive: true,
+      });
+      await cp(
+        join(root, "packages", packageName, "package.json"),
+        join(destination, "package.json"),
+      );
+      for (const dependency of await readdir(join(root, "packages", packageName, "node_modules"))) {
+        if (dependency === "@testmaster" || dependency.startsWith(".")) continue;
+        await cp(
+          join(root, "packages", packageName, "node_modules", dependency),
+          join(runner, "runner/node_modules", dependency),
+          { recursive: true, dereference: true, force: true },
+        );
+      }
+    }
   }
-  for (const dependency of ["playwright-core", "undici"]) {
-    await cp(
-      join(root, "packages/runner/node_modules", dependency),
-      join(runner, "runner/node_modules", dependency),
-      { recursive: true, dereference: true },
-    );
+  if (only !== "testmaster-runner") {
+    await mkdir(join(python, "python"), { recursive: true });
+    await cp(join(root, "containers/python/Dockerfile"), join(python, "Dockerfile"));
+    await cp(join(root, "python"), join(python, "python"), {
+      recursive: true,
+      filter: (path) =>
+        !path
+          .split(/[\\/]/u)
+          .some((part) => [".venv", "__pycache__", ".pytest_cache"].includes(part)),
+    });
   }
-  await cp(join(root, "containers/python/harness.py"), join(python, "python/harness.py"));
-  const lock = {};
+  const lockPath = join(root, "containers/images.lock.json");
+  const built = {};
   for (const [name, directory] of [
     ["testmaster-runner", runner],
     ["testmaster-runner-python", python],
   ]) {
+    if (only !== null && name !== only) continue;
     const buildInputsHash = await digest(directory);
     command("docker", ["build", "--tag", `${name}:local`, directory]);
     const imageId = command(
@@ -98,11 +152,12 @@ try {
     );
     if (!/^sha256:[a-f0-9]{64}$/u.test(imageId ?? ""))
       throw new Error("Docker returned invalid image ID");
-    lock[name] = { imageId, baseDigest: bases[name], buildInputsHash, seccomp };
+    built[name] = { imageId, baseDigest: bases[name], buildInputsHash, seccomp };
   }
-  const path = join(root, "containers/images.lock.json");
-  await writeFile(`${path}.tmp`, `${JSON.stringify(lock, null, 2)}\n`);
-  await rename(`${path}.tmp`, path);
+  const lock = { ...JSON.parse(await readFile(lockPath, "utf8")), ...built };
+  const temporaryLock = `${lockPath}.${process.pid}.tmp`;
+  await writeFile(temporaryLock, `${JSON.stringify(lock, null, 2)}\n`);
+  await rename(temporaryLock, lockPath);
 } finally {
   await rm(temporary, { recursive: true, force: true });
 }

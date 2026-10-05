@@ -333,6 +333,10 @@ importers:
       undici:
         specifier: 8.11.2
         version: 8.11.2
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.63.0
+        version: 1.63.0
 
   packages/sandbox:
     dependencies:
@@ -342,6 +346,9 @@ importers:
       '@testmaster/domain':
         specifier: workspace:*
         version: link:../domain
+      '@testmaster/evidence':
+        specifier: workspace:*
+        version: link:../evidence
       ipaddr.js:
         specifier: 2.5.0
         version: 2.5.0
@@ -468,6 +475,11 @@ packages:
 
   '@oxc-project/types@0.152.0':
     resolution: {integrity: sha512-oM/5rLBm2tPkg0iBgkH/FOeR3PCDpY19GTgAZjMFM8h9WI9VW7cLgzp6nwtarYKmovavIQZ+Fe/RKX/8C8O/Rw==}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@readme/better-ajv-errors@2.4.0':
     resolution: {integrity: sha512-9WODaOAKSl/mU+MYNZ2aHCrkoRSvmQ+1YkLj589OEqqjOAhbn8j7Z+ilYoiTu/he6X63/clsxxAB4qny9/dDzg==}
@@ -1224,6 +1236,11 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1522,6 +1539,10 @@ snapshots:
   '@nodable/entities@3.1.0': {}
 
   '@oxc-project/types@0.152.0': {}
+
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
 
   '@readme/better-ajv-errors@2.4.0(ajv@8.20.0)':
     dependencies:
@@ -2261,6 +2282,10 @@ snapshots:
   picomatch@4.0.7: {}
 
   playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   postcss@8.5.28:
     dependencies:
