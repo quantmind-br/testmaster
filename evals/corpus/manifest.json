@@ -1,0 +1,473 @@
+{
+  "schemaVersion": "1.0.0",
+  "corpusVersion": "1.0.0",
+  "licenseDecision": "Pending maintainer decision; no redistribution license granted",
+  "groundTruthPolicy": {
+    "modelInput": "Artifacts and approved requirements only; mutant labels and oracle results excluded",
+    "holdout": "No holdout exists yet; allocate a separate application/defect family before evaluation",
+    "adjudication": "Two independent reviewers decide the intentional PRD/OpenAPI empty-cart status conflict"
+  },
+  "cases": [
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-baseline-001",
+      "mutant": "healthy",
+      "violatedRequirement": null,
+      "failureCategory": "healthy",
+      "observableEffect": "All business invariants satisfied",
+      "activationSteps": ["Execute each independent check on a fresh instance"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "allChecks"
+      },
+      "expectedFailingStep": null,
+      "expectedAssertions": ["All independent checks return healthy"],
+      "label": "healthy"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-001",
+      "mutant": "no-password-validation",
+      "violatedRequirement": "SHOP-AUTH-001",
+      "failureCategory": "authentication",
+      "observableEffect": "Empty password creates an authenticated session and navigates to catalog without validation",
+      "activationSteps": ["Submit login with an empty password"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "passwordValidation",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-error",
+      "expectedAssertions": ["No session is created; explicit password error"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-002",
+      "mutant": "toast-without-persist",
+      "violatedRequirement": "SHOP-ORDER-001",
+      "failureCategory": "persistence",
+      "observableEffect": "Checkout returns success and a toast but creates no persisted order; reloaded orders list is empty",
+      "activationSteps": ["Login", "Add p1 to cart", "Checkout", "Reload orders"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "orderPersistence",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-orders-after-reload",
+      "expectedAssertions": ["Order exists in independent SQLite read and after reload"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-003",
+      "mutant": "health-degraded",
+      "violatedRequirement": "SHOP-HEALTH-001",
+      "failureCategory": "health",
+      "observableEffect": "Health endpoint returns HTTP 200 with status degraded",
+      "activationSteps": ["GET /health"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "serviceHealth",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-health",
+      "expectedAssertions": ["HTTP 200 and status ok"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-004",
+      "mutant": "price-rounding",
+      "violatedRequirement": "SHOP-PRICE-001",
+      "failureCategory": "business-calculation",
+      "observableEffect": "Three 1005-cent items are rounded to 1000 cents each, storing and returning a wrong 3000-cent total",
+      "activationSteps": ["Login", "Add three p1 units", "Checkout"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "exactPrice",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-order-total",
+      "expectedAssertions": ["Response and persisted total equal 3015 cents"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-005",
+      "mutant": "orders-auth-bypass",
+      "violatedRequirement": "SHOP-AUTH-002",
+      "failureCategory": "authorization",
+      "observableEffect": "Unauthenticated orders request returns HTTP 200 and exposes the persisted buyer order",
+      "activationSteps": ["Create a persisted order", "GET orders without credentials"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "ordersAuthorization",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-orders-auth",
+      "expectedAssertions": ["HTTP 401 and no order disclosure"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-006",
+      "mutant": "schema-field-renamed",
+      "violatedRequirement": "SHOP-SCHEMA-001",
+      "failureCategory": "contract",
+      "observableEffect": "Product list replaces required priceCents with costCents",
+      "activationSteps": ["GET products"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "productSchema",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-product-schema",
+      "expectedAssertions": ["Every product includes integer priceCents matching stored state"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-007",
+      "mutant": "pagination-skip",
+      "violatedRequirement": "SHOP-PAGING-001",
+      "failureCategory": "pagination",
+      "observableEffect": "Second pagination page skips p3, so traversal misses a stored product",
+      "activationSteps": ["Read all pages with limit 2"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "paginationContinuity",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-pagination-continuity",
+      "expectedAssertions": ["Every stored ID appears exactly once in ascending order"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-008",
+      "mutant": "idempotency-ignored",
+      "violatedRequirement": "SHOP-IDEMPOTENCY-001",
+      "failureCategory": "idempotency",
+      "observableEffect": "Repeating an Idempotency-Key creates a second persisted order with a different ID",
+      "activationSteps": ["Create order", "Repeat identical Idempotency-Key"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "orderIdempotency",
+        "kind": "raw-http-and-readonly-sqlite"
+      },
+      "expectedFailingStep": "check-idempotency",
+      "expectedAssertions": ["Same order ID and one stored order"],
+      "label": "defective"
+    },
+    {
+      "applicationFamily": "reference-shop",
+      "baseline": {
+        "mutant": "healthy",
+        "digestAlgorithm": "sha256",
+        "digest": "bf1ebcb332a701c6af33a254a1e5652dc0ddb46fbf8605e0fb0adde0e898fb7d",
+        "files": [
+          "fixtures/reference-shop/src/index.js",
+          "fixtures/reference-shop/src/shop.html",
+          "fixtures/reference-shop/src/server.js"
+        ]
+      },
+      "license": "UNLICENSED",
+      "dataRisk": "synthetic-only",
+      "labeling": {
+        "status": "pending-independent-review",
+        "reviewers": [],
+        "adjudication": null
+      },
+      "reviewerFields": {
+        "primary": null,
+        "independent": null,
+        "reviewedAt": null,
+        "decision": null,
+        "reason": null
+      },
+      "split": "development",
+      "limits": [
+        "Single synthetic local app family; no generalization claim",
+        "Pending independent label review; not yet benchmark eligible"
+      ],
+      "id": "shop-defect-009",
+      "mutant": "selector-drift",
+      "violatedRequirement": "SHOP-HOOK-001",
+      "failureCategory": "nonfunctional-drift",
+      "observableEffect": "Original hook absent; role-based checkout and business persistence still correct",
+      "activationSteps": ["Login", "Add p1", "Open cart"],
+      "oracle": {
+        "path": "fixtures/reference-shop/oracle/index.js",
+        "checkName": "checkoutSelector",
+        "kind": "browser"
+      },
+      "expectedFailingStep": "checkout",
+      "expectedAssertions": [
+        "Original hook absent; role-based checkout and business persistence still correct"
+      ],
+      "label": "nonfunctional-drift"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Reference Shop</title><style>body{font:1rem system-ui;max-width:60rem;margin:2rem auto;padding:1rem}nav{display:flex;gap:1rem}label{display:block;margin:1rem 0}[role=alert]{color:#a00}table{width:100%;border-collapse:collapse}td,th{padding:1rem;text-align:left}iframe{height:8rem}</style></head>
+<body><h1>Reference Shop</h1><nav aria-label="Shop"><a href="/login">Login</a><a href="/catalog">Catalog</a><a href="/cart">Cart</a><a href="/orders">Orders</a><a href="/profile">Profile</a><a href="/terms" target="_blank" rel="noopener">Terms</a></nav><main id="view" aria-live="polite"></main><p role="status" data-testid="toast"></p>
+<script type="module">
+const view = document.querySelector('#view');
+let token = sessionStorage.getItem('shop-token');
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+async function api(path, options = {}) {
+  const response = await fetch(`/api${path}`, {...options, headers:{...(token ? {authorization:`Bearer ${token}`} : {}), ...options.headers}});
+  if (response.status === 401 && path !== '/auth/token') throw new Error('Please sign in');
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error);
+  return value;
+}
+const send = (path, value, headers = {}) => api(path,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
+function toast(value) { document.querySelector('[data-testid=toast]').textContent = value; }
+async function render() {
+  toast('');
+  const path = location.pathname;
+  if (path === '/login' || path === '/') {
+    view.innerHTML = '<h2>Sign in</h2><form novalidate><label>Email<input name="email" type="email" value="demo@example.test" autocomplete="username" data-testid="email"></label><label>Password<input name="password" type="password" autocomplete="current-password" data-testid="password"></label><p role="alert" data-testid="password-error"></p><button type="submit">Sign in</button></form>';
+    view.querySelector('form').onsubmit = async event => {
+      event.preventDefault();
+      const email = view.querySelector('[name=email]').value;
+      const password = view.querySelector('[name=password]').value;
+      try {
+        const result = await send('/auth/token',{email,password});
+        token = result.token; sessionStorage.setItem('shop-token',token); navigate('/catalog');
+      } catch { view.querySelector('[data-testid=password-error]').textContent = !password ? 'Password is required' : 'Invalid credentials'; }
+    };
+    return;
+  }
+  if (path === '/catalog') {
+    view.innerHTML = '<h2>Catalog</h2><p data-testid="catalog-loading">Loading catalog</p>';
+    await new Promise(resolve => setTimeout(resolve,40));
+    const {items} = await api('/products?limit=100');
+    view.innerHTML = `<h2>Catalog</h2><table data-testid="catalog-ready"><caption>Products</caption><thead><tr><th>Product</th><th>Price</th><th>Action</th></tr></thead><tbody>${items.map(item => `<tr data-testid="product-${escapeHtml(item.id)}"><td>${escapeHtml(item.name)}</td><td>${((item.priceCents ?? item.costCents)/100).toFixed(2)}</td><td><button data-product="${escapeHtml(item.id)}" data-testid="add-${escapeHtml(item.id)}">Add ${escapeHtml(item.name)}</button></td></tr>`).join('')}</tbody></table>`;
+    for (const button of view.querySelectorAll('[data-product]')) button.onclick = async () => { await send('/cart',{productId:button.dataset.product,quantity:1}); toast('Added to cart'); };
+  } else if (path === '/cart') {
+    const {items} = await api('/cart');
+    const {checkoutHook} = await fetch('/config').then(response => response.json());
+    view.innerHTML = `<h2>Cart</h2><ul data-testid="cart-items">${items.map(item => `<li>${escapeHtml(item.name)} × ${item.quantity}</li>`).join('')}</ul><button data-testid="${checkoutHook}" ${!items.length?'disabled':''}>Checkout</button><iframe title="Delivery options" src="/widget"></iframe>`;
+    view.querySelector('button').onclick = async () => { const order = await send('/orders',{}, {'idempotency-key':Array.from(crypto.getRandomValues(new Uint32Array(4)),part=>part.toString(16)).join('-')}); toast(`Order created: ${order.id}`); };
+  } else if (path === '/orders') {
+    const {items} = await api('/orders');
+    view.innerHTML = `<h2>Orders</h2><ul data-testid="orders-list">${items.map(item => `<li data-testid="order">Order ${escapeHtml(item.id)} — ${(item.totalCents/100).toFixed(2)}</li>`).join('')}</ul><p data-testid="order-count">${items.length}</p>`;
+  } else if (path === '/profile') {
+    view.innerHTML = '<h2>Profile</h2><label>Profile file<input type="file" data-testid="profile-upload"></label><button data-testid="profile-download">Download profile file</button><p data-testid="upload-size"></p>';
+    view.querySelector('input').onchange = async event => { const file = event.target.files[0]; if (!file) return; const result = await api('/profile/file',{method:'POST',body:file}); view.querySelector('[data-testid=upload-size]').textContent = String(result.size); };
+    view.querySelector('button').onclick = async () => { const response = await fetch('/api/profile/file',{headers:{authorization:`Bearer ${token}`}}); if (!response.ok) return toast('No profile file'); const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a');link.href=url;link.download='profile.bin';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000); };
+  }
+}
+function navigate(path) { history.pushState({},'',path); render().catch(error => { view.textContent=error.message; }); }
+document.querySelector('nav').onclick = event => { const link = event.target.closest('a'); if (!link || link.target) return; event.preventDefault();navigate(link.pathname); };
+addEventListener('popstate',()=>render().catch(error=>{view.textContent=error.message;}));
+render().catch(error=>{view.textContent=error.message;});
+</script></body></html>
