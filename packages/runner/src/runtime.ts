@@ -5,6 +5,9 @@ export interface RunnerInput {
   attemptId: string;
   nonce: string;
   baseUrl: string;
+  locale?: string;
+  timezone?: string;
+  browser?: { viewport?: { width: number; height: number }; testIdAttributes?: string[] };
   plan?: ExecutablePlan;
   networkPolicy: NetworkPolicy;
   secrets: { secretRef: string; secretVersion: number }[];

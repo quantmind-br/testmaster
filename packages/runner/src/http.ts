@@ -1,4 +1,4 @@
-import { createCipheriv, createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import { closeSync, constants, openSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { isIP } from "node:net";
@@ -295,7 +295,6 @@ export class HttpEngine {
   private dispatcher: Dispatcher | undefined;
   private readonly ownsDispatcher: boolean;
   private readonly startedAt = performance.now();
-  private readonly captureKey = randomBytes(32);
   constructor(
     readonly runtime: Runtime,
     options: HttpEngineOptions = {},
@@ -664,29 +663,12 @@ export class HttpEngine {
       });
       if (entry.sensitive) {
         addSensitive(this.runtime, entry.value);
-        const iv = randomBytes(12);
-        const cipher = createCipheriv("aes-256-gcm", this.captureKey, iv);
-        const ciphertext = Buffer.concat([
-          cipher.update(JSON.stringify(entry.value), "utf8"),
-          cipher.final(),
-        ]);
-        const encryptedValueRef = `captures/${stepId}-${entry.name}.bin`;
-        await this.runtime.artifact(
-          encryptedValueRef,
-          "sensitive-capture",
-          "application/octet-stream",
-          Buffer.concat([iv, cipher.getAuthTag(), ciphertext]),
-        );
+        // This trusted IPC value is encrypted by the supervisor before durable observations.
         await this.runtime.emit("variable.captured", {
           name: entry.name,
           valueType: entry.valueType,
           sensitive: true,
-          encryptedValueRef,
-        });
-        await this.runtime.emit("log", {
-          level: "warn",
-          message:
-            "Sensitive capture is available only in this Attempt; its evidence is encrypted with an ephemeral key and cannot be used as a durable dependency binding.",
+          value: { literal: entry.value },
         });
       } else {
         await this.runtime.emit("variable.captured", {
@@ -744,7 +726,6 @@ export class HttpEngine {
     return { ...result, cleanupOutcome: outcome };
   }
   async close(): Promise<void> {
-    this.captureKey.fill(0);
     if (this.ownsDispatcher) await this.dispatcher?.close();
   }
 }

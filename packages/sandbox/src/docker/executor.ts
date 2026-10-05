@@ -347,7 +347,8 @@ export class DockerExecutor {
         try {
           const execution = await this.execute({
             ...probe,
-            command: ["node", "-e", "process.exit(0)"],
+            entrypoint: ["node"],
+            command: ["-e", "process.exit(0)"],
             attemptTimeoutMs: 10000,
             cancellationGraceMs: 0,
           });

@@ -11,6 +11,7 @@ import {
   type PlanStep,
   type RunnerEvent,
   validate,
+  validateRunnerWireEvent,
 } from "@testmaster/contracts";
 import { Agent } from "undici";
 import { afterEach, expect, it, vi } from "vitest";
@@ -57,7 +58,7 @@ function fixture(baseUrl: string, extra: Partial<RunnerInput> = {}) {
     controller,
     emit: async (type: string, payload: unknown) => {
       events.push(
-        validate<RunnerEvent>("RunnerEvent", {
+        validateRunnerWireEvent({
           protocolVersion: "1.0.0",
           seq: events.length,
           attemptId: ATTEMPT,
@@ -221,7 +222,7 @@ it("evaluates header/count/schema expectations against named snapshot schemas", 
   ).rejects.toMatchObject({ reasonCode: "assertion_mismatch" });
 });
 
-it("captures declared types and keeps sensitive values out of events and artifacts", async () => {
+it("sends typed sensitive captures only over trusted IPC and keeps artifacts redacted", async () => {
   const base = await serve((_req, res) => {
     res.setHeader("X-Count", "7");
     res.end('{"token":"captured-canary","public":"ok"}');
@@ -246,7 +247,9 @@ it("captures declared types and keeps sensitive values out of events and artifac
     sensitive: true,
   });
   expect(runtime.variables.get("count")).toEqual({ value: 7, sensitive: false });
-  expect(JSON.stringify(events)).not.toContain("captured-canary");
+  expect(
+    JSON.stringify(events.filter((event) => event.type !== "variable.captured")),
+  ).not.toContain("captured-canary");
   for (const bytes of artifacts.values())
     expect(Buffer.from(bytes).toString()).not.toContain("captured-canary");
   expect(
@@ -254,7 +257,9 @@ it("captures declared types and keeps sensitive values out of events and artifac
       (event) =>
         event.type === "variable.captured" &&
         event.payload.sensitive &&
-        event.payload.encryptedValueRef,
+        event.payload.value &&
+        "literal" in event.payload.value &&
+        event.payload.value.literal === "captured-canary",
     ),
   ).toBe(true);
   await expect(
@@ -296,7 +301,13 @@ it("propagates request taint into captures even when capture.sensitive is false"
     }),
   );
   expect(runtime.variables.get("echo")?.sensitive).toBe(true);
-  expect(JSON.stringify(events)).not.toContain("request-canary");
+  expect(events.find((event) => event.type === "variable.captured")?.payload).toMatchObject({
+    sensitive: true,
+    value: { literal: "Bearer request-canary" },
+  });
+  expect(
+    JSON.stringify(events.filter((event) => event.type !== "variable.captured")),
+  ).not.toContain("request-canary");
 });
 
 it("strips authorization/cookies/API keys on allowed cross-origin redirects", async () => {

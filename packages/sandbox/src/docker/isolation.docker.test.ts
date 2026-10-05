@@ -48,6 +48,13 @@ async function runScript(environment: TestEnvironment, code: string) {
     command: ["node", "/run/testmaster/input/test.mjs"],
   });
 }
+it("doctor starts the hardened image even when its default entrypoint requires a runner session", async () => {
+  const context = await environment("http");
+  const { entrypoint: _entrypoint, ...probe } = context.options;
+  const result = await context.executor.doctor(probe);
+  expect(result.available).toBe(true);
+  expect(result.diagnostics).toEqual([]);
+}, 30000);
 it("reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access", async () => {
   const context = await environment();
   const target = http.createServer((_request, response) => response.end("approved-fixture"));

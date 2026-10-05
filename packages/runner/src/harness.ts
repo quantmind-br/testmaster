@@ -9,6 +9,7 @@ import { type RunnerInput, type RunnerResult, Runtime } from "./runtime.js";
 
 async function readInput(): Promise<RunnerInput> {
   const candidates = [
+    ...(process.env.TESTMASTER_INPUT_PATH ? [process.env.TESTMASTER_INPUT_PATH] : []),
     "/run/testmaster/input/snapshot.json",
     "/run/testmaster/input/input.json",
     "/run/testmaster/input/python.json",
@@ -29,12 +30,16 @@ function resultFromError(error: unknown): RunnerResult {
 }
 export async function runHarness(): Promise<RunnerResult> {
   const input = await readInput();
-  const forwarder = await startForwarder("/run/testmaster/sockets/egress.sock");
+  const forwarder = await startForwarder(
+    process.env.TESTMASTER_EGRESS_SOCKET ?? "/run/testmaster/sockets/egress.sock",
+  );
   process.env.TESTMASTER_EGRESS_PROXY = `http://127.0.0.1:${forwarder.port}`;
   process.env.HTTP_PROXY = process.env.TESTMASTER_EGRESS_PROXY;
   process.env.HTTPS_PROXY = process.env.TESTMASTER_EGRESS_PROXY;
   const protocol = new ProtocolClient(input.attemptId, input.nonce);
-  await protocol.open("/run/testmaster/sockets/protocol.sock");
+  await protocol.open(
+    process.env.TESTMASTER_PROTOCOL_SOCKET ?? "/run/testmaster/sockets/protocol.sock",
+  );
   const runtime = new Runtime(input, protocol);
   const hardDeadline = setTimeout(() => process.exit(1), (input.timeoutMs ?? 300000) + 10000);
   hardDeadline.unref();

@@ -173,8 +173,25 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     if (spec.frame) root = await frameFrom(await locate(spec.frame, timeout, root), timeout);
     if (spec.container) root = await unique(await locate(spec.container, timeout, root), timeout);
     switch (spec.by) {
-      case "testId":
-        return root.getByTestId(spec.value);
+      case "testId": {
+        const attributes = runtime.input.browser?.testIdAttributes ?? ["data-testid"];
+        if (attributes.some((attribute) => !/^[a-zA-Z_][a-zA-Z0-9_.:-]*$/u.test(attribute)))
+          throw new RuntimeError(
+            "security_precondition_failed",
+            "Invalid test identifier attribute",
+          );
+        if (attributes.length === 1 && attributes[0] === "data-testid")
+          return root.getByTestId(spec.value);
+        const value = [...spec.value]
+          .map((character) => {
+            const code = character.codePointAt(0) ?? 0;
+            return code < 32 || code === 127 || character === "\\" || character === '"'
+              ? `\\${code.toString(16)} `
+              : character;
+          })
+          .join("");
+        return root.locator(attributes.map((attribute) => `[${attribute}="${value}"]`).join(","));
+      }
       case "role": {
         if (!("role" in spec))
           throw new RuntimeError(
@@ -742,9 +759,9 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
     context = await browser.newContext({
-      viewport: { width: 1280, height: 720 },
-      locale: "en-US",
-      timezoneId: "UTC",
+      viewport: runtime.input.browser?.viewport ?? { width: 1280, height: 720 },
+      locale: runtime.input.locale ?? "en-US",
+      timezoneId: runtime.input.timezone ?? "UTC",
       permissions: [],
       serviceWorkers: "block",
       acceptDownloads: policy.allowDownloads === true,

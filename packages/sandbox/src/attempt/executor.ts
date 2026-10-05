@@ -11,6 +11,8 @@ import {
 } from "@testmaster/contracts";
 import type { ArtifactWriter, EvidenceStore } from "@testmaster/evidence";
 import {
+  type CommandResult,
+  type DockerAttempt,
   DockerExecutor,
   type ExecutorKind,
   type InspectFacts,
@@ -50,6 +52,9 @@ export interface AttemptInput {
   seccompPath: string;
   imageCommand?: readonly string[];
   redactionPolicyHash?: string;
+  protectCapture?: (
+    capture: Extract<RunnerEvent, { type: "variable.captured" }>["payload"],
+  ) => Promise<Extract<RunnerEvent, { type: "variable.captured" }>["payload"]>;
   onEvent?: (event: RunnerEvent) => Promise<void>;
 }
 export interface AttemptResult {
@@ -60,10 +65,16 @@ export interface AttemptResult {
   logDropped: number;
   events: RunnerEvent[];
 }
+export interface AttemptRuntimeExecutor {
+  execute(
+    input: DockerAttempt,
+    signal?: AbortSignal,
+  ): Promise<CommandResult & { facts?: InspectFacts }>;
+}
 export class AttemptExecutor {
   constructor(
     private readonly evidence: EvidenceStore,
-    private readonly docker = new DockerExecutor(),
+    private readonly docker: AttemptRuntimeExecutor = new DockerExecutor(),
     private readonly runtimeDir?: string,
   ) {}
   async execute(input: AttemptInput, signal?: AbortSignal): Promise<AttemptResult> {
@@ -123,6 +134,7 @@ export class AttemptExecutor {
       ...(input.bodyBytes ? { maxBodyBytes: input.bodyBytes } : {}),
     });
     const validator = new RunnerSessionValidator({ attemptId: input.attemptId, nonce });
+    let captureStorageUnavailable = false;
     const events: RunnerEvent[] = [];
     const writers = new Map<
       string,
@@ -161,6 +173,28 @@ export class AttemptExecutor {
       controller.abort();
     };
     const processEvent = async (event: RunnerEvent) => {
+      if (
+        event.type === "variable.captured" &&
+        event.payload.sensitive &&
+        event.payload.value &&
+        "literal" in event.payload.value
+      ) {
+        const literal = event.payload.value.literal;
+        const captureSecrets = (value: unknown): void => {
+          if (typeof value === "string" && value) values.add(value);
+          else if (value && typeof value === "object")
+            for (const item of Object.values(value)) captureSecrets(item);
+        };
+        captureSecrets(literal);
+        try {
+          if (!input.protectCapture) throw new Error("sensitive_capture_storage_unavailable");
+          event = { ...event, payload: await input.protectCapture(event.payload) };
+        } catch {
+          captureStorageUnavailable = true;
+          throw new Error("sensitive_capture_storage_unavailable");
+        }
+        if (event.payload.value) throw new Error("sensitive_capture_plaintext_retained");
+      }
       if (event.type === "secret.request") {
         const secret = input.secretRefs?.find(
           (candidate) =>
@@ -182,13 +216,9 @@ export class AttemptExecutor {
               kind: event.payload.kind,
               mimeType: event.payload.mimeType,
               declaredSizeBytes: event.payload.sizeBytes,
-              sensitivity:
-                input.runnerInput?.policy &&
-                typeof input.runnerInput.policy === "object" &&
-                "restrictedRaw" in input.runnerInput.policy &&
-                input.runnerInput.policy.restrictedRaw
-                  ? "restricted"
-                  : "internal",
+              sensitivity: event.payload.kind.startsWith("restrictedRaw.")
+                ? "restricted"
+                : "internal",
             }),
             path: event.payload.relativePath,
             declared: event.payload.sizeBytes,
@@ -365,6 +395,10 @@ export class AttemptExecutor {
       server.close();
       await proxy.close().catch(() => {});
       await queue;
+    }
+    if (captureStorageUnavailable) {
+      runnerOutcome = "blocked";
+      runnerReason = "missing_secret";
     }
     for (const artifact of writers.values()) await artifact.writer.abort("partial").catch(() => {});
     const artifact = async (path: string, kind: string, mime: string, data: string) => {

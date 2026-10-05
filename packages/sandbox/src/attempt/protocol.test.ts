@@ -3,13 +3,16 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { RunnerEvent } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { FileEvidenceStore } from "@testmaster/evidence";
 import { expect, it } from "vitest";
 import { type DockerCommand, DockerExecutor } from "../docker/executor.js";
 import { AttemptExecutor } from "./executor.js";
 
-async function scenario(mode: "valid" | "regressive" | "missing" | "second" | "quota") {
+async function scenario(
+  mode: "valid" | "regressive" | "missing" | "second" | "quota" | "capture" | "capture-missing",
+) {
   const root = await mkdtemp(join(tmpdir(), "protocol-test-"));
   const runtime = join(root, "runtime");
   const inputDir = join(root, "input");
@@ -68,6 +71,15 @@ async function scenario(mode: "valid" | "regressive" | "missing" | "second" | "q
           `${JSON.stringify({ protocolVersion: "1.0.0", seq, attemptId: ids.attemptId, occurredAt: new Date().toISOString(), type, payload })}\n`,
         );
       send(0, "runner.hello", { nonce: input.nonce });
+      if (mode === "capture" || mode === "capture-missing") {
+        send(1, "variable.captured", {
+          name: "token",
+          valueType: "string",
+          sensitive: true,
+          value: { literal: "protocol-capture-canary" },
+        });
+        send(2, "runner.finished", { outcome: "passed", reasonCode: "assertions_satisfied" });
+      }
       if (mode === "second") {
         const second = connect(join(runtime, "testmaster", ids.attemptId, "protocol.sock"));
         second.on("error", () => {});
@@ -82,7 +94,7 @@ async function scenario(mode: "valid" | "regressive" | "missing" | "second" | "q
           mimeType: "text/plain",
           sizeBytes: 100,
         });
-      else if (mode !== "missing")
+      else if (mode !== "missing" && mode !== "capture" && mode !== "capture-missing")
         send(mode === "regressive" ? 0 : 1, "runner.finished", {
           outcome: "passed",
           reasonCode: "assertions_satisfied",
@@ -109,6 +121,21 @@ async function scenario(mode: "valid" | "regressive" | "missing" | "second" | "q
         baseUrl: "http://127.0.0.1:1",
       },
       seccompPath: join(process.cwd(), "containers/seccomp_profile.json"),
+      ...(mode === "capture"
+        ? {
+            protectCapture: async (
+              capture: Extract<RunnerEvent, { type: "variable.captured" }>["payload"],
+            ) => {
+              expect(capture.value).toEqual({ literal: "protocol-capture-canary" });
+              return {
+                name: capture.name,
+                valueType: capture.valueType,
+                sensitive: true,
+                encryptedValueRef: "encrypted-capture-ref",
+              };
+            },
+          }
+        : {}),
     });
     return { result, secondClosed, removed };
   } finally {
@@ -125,4 +152,18 @@ it("refuses a second socket without changing the authenticated attempt", async (
   const { result, secondClosed } = await scenario("second");
   expect(secondClosed).toBe(true);
   expect(result.outcome).toBe("passed");
+});
+it("removes sensitive capture plaintext before public events", async () => {
+  const { result } = await scenario("capture");
+  expect(result.outcome).toBe("passed");
+  expect(JSON.stringify(result.events)).not.toContain("protocol-capture-canary");
+  expect(result.events.find((event) => event.type === "variable.captured")?.payload).toMatchObject({
+    encryptedValueRef: "encrypted-capture-ref",
+  });
+});
+it("refuses sensitive captures when encrypted storage is unavailable", async () => {
+  const { result } = await scenario("capture-missing");
+  expect(result.outcome).toBe("blocked");
+  expect(result.reasonCode).toBe("missing_secret");
+  expect(JSON.stringify(result.events)).not.toContain("protocol-capture-canary");
 });

@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { connect, type Socket } from "node:net";
-import { type RunnerEvent, type SupervisorEvent, validate } from "@testmaster/contracts";
+import {
+  type RunnerEvent,
+  type SupervisorEvent,
+  validate,
+  validateRunnerWireEvent,
+} from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 
 export class ProtocolClient {
@@ -66,7 +71,7 @@ export class ProtocolClient {
   }
   emit(type: string, payload: unknown): Promise<void> {
     const operation = this.queue.then(async () => {
-      const event = validate<RunnerEvent>("RunnerEvent", {
+      const event = validateRunnerWireEvent({
         protocolVersion: "1.0.0",
         seq: this.seq++,
         attemptId: this.attemptId,
