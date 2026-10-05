@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { connect, type Socket } from "node:net";
 import {
-  type RunnerEvent,
+  type PlanStep,
   type SupervisorEvent,
   validate,
   validateRunnerWireEvent,
@@ -14,6 +14,14 @@ export class ProtocolClient {
   private readonly pending = new Map<
     string,
     { resolve(value: string): void; reject(error: Error): void }
+  >();
+  private readonly actions = new Map<
+    string,
+    {
+      promise: Promise<PlanStep | null>;
+      resolve(value: PlanStep | null): void;
+      reject(error: Error): void;
+    }
   >();
   private socket: Socket | undefined;
   private queue: Promise<void> = Promise.resolve();
@@ -31,6 +39,9 @@ export class ProtocolClient {
       for (const request of this.pending.values())
         request.reject(new Error("protocol_socket_closed"));
       this.pending.clear();
+      for (const request of this.actions.values())
+        request.reject(new Error("protocol_socket_closed"));
+      this.actions.clear();
     });
     let buffer = Buffer.alloc(0);
     let supervisorSeq = 0;
@@ -53,6 +64,12 @@ export class ProtocolClient {
           if (event.seq !== supervisorSeq++) throw new Error("supervisor_sequence_mismatch");
           if (event.type === "control.cancel")
             this.controller.abort(new Error(event.payload.reasonCode));
+          if (event.type === "agent.action") {
+            const request = this.actions.get(event.payload.stepId);
+            if (!request) throw new Error("unsolicited_agent_action");
+            this.actions.delete(event.payload.stepId);
+            request.resolve(event.payload.action);
+          }
           if (event.type === "secret.value") {
             const request = this.pending.get(event.payload.requestId);
             if (!request) throw new Error("unsolicited_secret");
@@ -95,6 +112,13 @@ export class ProtocolClient {
     this.pending.set(requestId, value);
     await this.emit("secret.request", { requestId, secretRef, secretVersion });
     return value.promise;
+  }
+  async agent(stepId: string, observation: unknown): Promise<PlanStep | null> {
+    if (this.actions.has(stepId)) throw new Error("duplicate_agent_request");
+    const action = Promise.withResolvers<PlanStep | null>();
+    this.actions.set(stepId, action);
+    await this.emit("agent.request", { stepId, observation });
+    return action.promise;
   }
   async artifact(
     relativePath: string,

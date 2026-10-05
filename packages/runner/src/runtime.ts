@@ -27,6 +27,13 @@ export interface RunnerInput {
   stepTimeoutMs?: number;
   bodyBytes?: number;
   imported?: { files: string[]; codeRoot?: string };
+  agent?: {
+    resolveSteps: string[];
+    exploration?: boolean;
+    mutationStepIds: string[];
+    maxRequests: number;
+    mutationActions?: PlanStep[];
+  };
 }
 export interface RunnerResult {
   outcome: "passed" | "failed" | "blocked" | "cancelled" | "inconclusive";

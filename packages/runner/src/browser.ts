@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Locator as LocatorSpec, PlanStep } from "@testmaster/contracts";
+import { type Locator as LocatorSpec, type PlanStep, validate } from "@testmaster/contracts";
 import {
   type Browser,
   type BrowserContext,
@@ -73,6 +73,10 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   let expectedDownloadPage: Page | undefined;
   let result: RunnerResult = { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
   const started = performance.now();
+  let agentRequests = 0;
+  let activeAgentStep: string | undefined;
+  let activeMutationAllowed = false;
+  let explorationStopped = false;
   const abort = () => {
     void context?.close().catch(() => undefined);
     void browser?.close().catch(() => undefined);
@@ -689,6 +693,101 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         .catch(() => undefined);
     }
   }
+  async function resolveAgentStep(step: PlanStep): Promise<PlanStep | null> {
+    const agent = runtime.input.agent;
+    if (!agent?.resolveSteps.includes(step.id)) return step;
+    if (step.kind !== "action" || ++agentRequests > agent.maxRequests)
+      throw new RuntimeError(
+        "security_precondition_failed",
+        "Agent request budget or action boundary exceeded",
+      );
+    if (explorationStopped) return null;
+    const observed = await page.evaluate(() => ({
+      title: document.title,
+      text: Array.from(document.querySelectorAll("h1,h2,h3,p,label,a,button"))
+        .filter((node) => !node.closest("[data-sensitive],form"))
+        .map((node) => node.textContent ?? "")
+        .join("\n")
+        .slice(0, 12000),
+      elements: Array.from(
+        document.querySelectorAll(
+          "a[href],button,input:not([type=password]),textarea,select,[data-testid]",
+        ),
+      )
+        .slice(0, 100)
+        .map((node) => ({
+          tag: node.tagName.toLowerCase(),
+          testId: node.getAttribute("data-testid"),
+          label: node.getAttribute("aria-label"),
+          text: (node.textContent ?? "").slice(0, 200),
+          href: node instanceof HTMLAnchorElement ? node.href : null,
+        })),
+    }));
+    const actions: PlanStep[] = [];
+    for (const element of observed.elements) {
+      const locator: LocatorSpec | undefined = element.testId
+        ? { by: "testId", value: element.testId }
+        : element.label
+          ? { by: "label", value: element.label, exact: true }
+          : element.tag === "button" && element.text
+            ? { by: "role", role: "button", name: element.text, exact: true }
+            : undefined;
+      if (agent.exploration) {
+        if (locator)
+          for (const approved of agent.mutationActions ?? []) {
+            if (
+              approved.kind === "action" &&
+              "locator" in approved.input &&
+              JSON.stringify(approved.input.locator) === JSON.stringify(locator)
+            )
+              actions.push({ ...approved, id: step.id });
+          }
+        if (!element.href) continue;
+        try {
+          const target = authorizeUrl(runtime, element.href);
+          if (target.href === page.url()) continue;
+          actions.push({
+            id: step.id,
+            kind: "action",
+            operation: "navigate",
+            description: `Observed link ${element.text || target.pathname}`,
+            input: { path: target.href },
+          });
+        } catch {
+          /* Forbidden links are observations, never tools. */
+        }
+      } else if (locator && "locator" in step.input) {
+        actions.push(validate<PlanStep>("Step", { ...step, input: { ...step.input, locator } }));
+      } else if (step.operation === "navigate") actions.push(step);
+    }
+    const observation = {
+      url: page.url(),
+      title: runtime.scrub(observed.title),
+      text: runtime.scrub(observed.text),
+      actions,
+    };
+    await runtime.artifact(
+      `browser/steps/${step.id}-observation.json`,
+      "dom",
+      "application/json",
+      Buffer.from(JSON.stringify(observation)),
+    );
+    const selected = await runtime.protocol.agent(step.id, observation);
+    if (selected === null) {
+      explorationStopped = true;
+      return null;
+    }
+    validate("Step", selected);
+    if (
+      selected.id !== step.id ||
+      !actions.some((action) => JSON.stringify(action) === JSON.stringify(selected))
+    )
+      throw new RuntimeError(
+        "security_precondition_failed",
+        "Controller action is not grounded in this observation",
+      );
+    return selected;
+  }
   async function withEvidence(step: PlanStep): Promise<void> {
     // Resolve known secret references before either screenshot can expose them.
     if (step.operation === "fill") await runtime.resolve(step.input.value);
@@ -703,11 +802,19 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         if ("value" in choice) await runtime.resolve(choice.value);
         else if ("label" in choice) await runtime.resolve(choice.label);
       }
-    await evidence(step, "before");
+    const selected = await resolveAgentStep(step);
+    if (!selected) return;
+    activeAgentStep = selected.id;
+    activeMutationAllowed = (runtime.input.agent?.mutationActions ?? []).some(
+      (action) => JSON.stringify({ ...action, id: selected.id }) === JSON.stringify(selected),
+    );
+    await evidence(selected, "before");
     try {
-      await perform(step);
+      await perform(selected);
     } finally {
-      await evidence(step, "after");
+      await evidence(selected, "after");
+      activeAgentStep = undefined;
+      activeMutationAllowed = false;
     }
   }
   function attachPage(target: Page): void {
@@ -769,6 +876,17 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       ...(policy.video === true ? { recordVideo: { dir: tempDirectory } } : {}),
     });
     await context.route("**/*", async (route) => {
+      if (
+        runtime.input.agent &&
+        !["GET", "HEAD", "OPTIONS"].includes(route.request().method()) &&
+        (!activeAgentStep ||
+          (!activeMutationAllowed &&
+            !runtime.input.agent.mutationStepIds.includes(activeAgentStep)))
+      ) {
+        await route.abort("blockedbyclient").catch(() => undefined);
+        deny("Agent mutation is not explicitly authorized");
+        return;
+      }
       try {
         authorizeUrl(runtime, route.request().url());
         await route.continue();

@@ -74,6 +74,7 @@ def run(input_path: str | None) -> int:
     threading.Thread(target=listen, daemon=True).start()
     forwarder = None
     try:
+        protocol.emit("step.started", {"stepId": "imported-code", "index": 1000000})
         versions = {name: importlib.metadata.version(name) for name in ("pytest", "pytest-asyncio", "requests", "playwright")}
         metadata = {"imageId": data["imageId"], "python": platform.python_version(), "packages": versions,
                     "trustLevel": "imported", "limitations": ["Uninstrumented assertions and arbitrary imported code use the pytest process-exit contract; a passing process is not independent business-oracle proof."]}
@@ -107,14 +108,17 @@ def run(input_path: str | None) -> int:
             outcome, reason = "passed", "assertions_satisfied"
         else:
             outcome, reason = "inconclusive", "insufficient_evidence"
+        protocol.emit("step.finished", {"stepId": "imported-code", "index": 1000000, "status": outcome, "reasonCode": reason, "durationMs": 0, "evidencePaths": []})
         protocol.emit("runner.finished", {"outcome": outcome, "reasonCode": reason, "cleanupOutcome": "not_required"})
         return int(code) if outcome != "blocked" else 8
     except (importlib.metadata.PackageNotFoundError, ModuleNotFoundError) as exc:
         protocol.emit("log", {"level": "error", "message": f"missing_package: {exc}; runtime dependency downloads are forbidden"})
+        protocol.emit("step.finished", {"stepId": "imported-code", "index": 1000000, "status": "blocked", "reasonCode": "unsupported_capability", "durationMs": 0, "evidencePaths": []})
         protocol.emit("runner.finished", {"outcome": "blocked", "reasonCode": "unsupported_capability"})
         return 8
     except Exception as exc:
         protocol.emit("log", {"level": "error", "message": str(exc)[:8000]})
+        protocol.emit("step.finished", {"stepId": "imported-code", "index": 1000000, "status": "inconclusive", "reasonCode": "insufficient_evidence", "durationMs": 0, "evidencePaths": []})
         protocol.emit("runner.finished", {"outcome": "inconclusive", "reasonCode": "insufficient_evidence"})
         return 1
     finally:

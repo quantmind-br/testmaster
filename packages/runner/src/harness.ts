@@ -1,5 +1,5 @@
 import { fork } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { runBrowser } from "./browser.js";
 import { startForwarder } from "./forwarder/index.js";
@@ -55,8 +55,19 @@ export async function runHarness(): Promise<RunnerResult> {
   timeout.unref();
   let result: RunnerResult;
   try {
-    if (input.imported) result = await runImported(runtime);
-    else if (!input.plan) throw new Error("attempt_plan_missing");
+    if (input.imported) {
+      await runtime.emit("step.started", { stepId: "imported-code", index: 1000000 });
+      result = await runImported(runtime);
+      if (!runtime.signal.aborted)
+        await runtime.emit("step.finished", {
+          stepId: "imported-code",
+          index: 1000000,
+          status: result.outcome,
+          reasonCode: result.reasonCode,
+          durationMs: 0,
+          evidencePaths: [],
+        });
+    } else if (!input.plan) throw new Error("attempt_plan_missing");
     else if (input.plan.runner === "playwright") result = await runBrowser(runtime);
     else result = await runHttp(runtime);
     if (!runtime.signal.aborted)
@@ -70,6 +81,15 @@ export async function runHarness(): Promise<RunnerResult> {
     result = resultFromError(error);
     if (!runtime.signal.aborted) {
       try {
+        if (input.imported)
+          await runtime.emit("step.finished", {
+            stepId: "imported-code",
+            index: 1000000,
+            status: result.outcome,
+            reasonCode: result.reasonCode,
+            durationMs: 0,
+            evidencePaths: [],
+          });
         await runtime.emit("runner.finished", {
           outcome: result.outcome,
           reasonCode: result.reasonCode,
@@ -96,8 +116,16 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   )
     throw new Error("imported_path_denied");
   await mkdir("/tmp/imported", { recursive: true });
+  const stagedRoot = "/tmp/imported/code";
+  await cp(root, stagedRoot, {
+    recursive: true,
+    dereference: false,
+    errorOnExist: true,
+    force: false,
+  });
+  await symlink("/opt/testmaster/runner/node_modules", "/tmp/imported/node_modules", "dir");
   const config = {
-    testDir: root,
+    testDir: stagedRoot,
     testMatch: imported.files,
     timeout: runtime.input.stepTimeoutMs ?? 30000,
     workers: 1,
@@ -118,9 +146,9 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   let failures = 0;
   let queue = Promise.resolve();
   const child = fork(
-    resolve("/opt/testmaster/runner/node_modules/playwright/cli.js"),
+    resolve("/opt/testmaster/runner/node_modules/@playwright/test/cli.js"),
     ["test", "--config", "/tmp/imported/config.json"],
-    { cwd: root, stdio: ["ignore", "pipe", "pipe", "ipc"] },
+    { cwd: stagedRoot, stdio: ["ignore", "pipe", "pipe", "ipc"] },
   );
   child.on("message", (message: unknown) => {
     queue = queue.then(async () => {
@@ -155,6 +183,12 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       if (logBytes < 10485760) {
         logBytes += chunk.length;
         process.stderr.write(runtime.scrub(chunk.toString()).slice(0, 16384));
+        queue = queue.then(() =>
+          runtime.emit("log", {
+            level: "error",
+            message: runtime.scrub(chunk.toString()).slice(0, 16384),
+          }),
+        );
       }
     });
   try {

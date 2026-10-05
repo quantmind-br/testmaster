@@ -561,9 +561,21 @@ export class HttpEngine {
                 "Creation response lacks ownership evidence",
                 "inconclusive",
               );
+            if (typeof handle !== "string" && typeof handle !== "number")
+              throw new RuntimeError(
+                "oracle_uncertain",
+                "Resource handle must be scalar",
+                "inconclusive",
+              );
             resource.handleRef = `${stepId}.handle`;
-            runtime.variables.set(resource.handleRef, { value: handle, sensitive: true });
-            addSensitive(runtime, handle);
+            runtime.variables.set(resource.handleRef, { value: String(handle), sensitive: true });
+            addSensitive(runtime, String(handle));
+            await runtime.emit("variable.captured", {
+              name: "handle",
+              valueType: "string",
+              sensitive: true,
+              value: { literal: String(handle) },
+            });
             resource.ownerProof = {
               sha256: createHash("sha256").update(JSON.stringify(proof)).digest("hex"),
             };

@@ -6,6 +6,7 @@ import time
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from typing import Any, Iterator
+from urllib.parse import urljoin
 
 import pytest
 import pytest_asyncio
@@ -70,19 +71,35 @@ class PythonPlugin:
         self.emit_step_start(nodeid)
 
     def _diagnose(self, report: Any) -> bool:
-        text = getattr(report, "longreprtext", "")
-        if "ModuleNotFoundError" in text or "ImportError" in text:
+        # Source listings can contain imports or launch calls unrelated to the failure.
+        crash = getattr(getattr(report, "longrepr", None), "reprcrash", None)
+        text = getattr(crash, "message", "")
+        if text.startswith(("ModuleNotFoundError:", "ImportError:")):
             self.missing_package = True
             self.protocol.emit("log", {"level": "error", "message": "missing_package: runtime dependency downloads are forbidden"})
             return True
-        if "chromium.launch" in text or "BrowserType.launch" in text:
+        if text.startswith(("playwright._impl._errors.Error: BrowserType.launch:", "Error: BrowserType.launch:", "playwright._impl._errors.TimeoutError: BrowserType.launch:", "TimeoutError: BrowserType.launch:")):
             self.security_failure = True
             return True
         return False
 
     def pytest_collectreport(self, report: Any) -> None:
         if report.failed:
-            self._diagnose(report)
+            if self._diagnose(report):
+                return
+            # Pytest wraps module import failures in CollectError, whose report
+            # has no reprcrash. Inspect terminal exception lines, not source text.
+            lines = getattr(report, "longreprtext", "").splitlines()
+            if any(line.strip().removeprefix("E").lstrip().startswith(("ModuleNotFoundError:", "ImportError:")) for line in lines):
+                self.missing_package = True
+                self.protocol.emit("log", {"level": "error", "message": "missing_package: runtime dependency downloads are forbidden"})
+
+    def pytest_exception_interact(self, node: Any, call: Any, report: Any) -> None:
+        # Collection reports may render a traceback without reprcrash. The exception
+        # object retains its type, unlike unrelated import text in source listings.
+        if call.excinfo is not None and call.excinfo.errisinstance(ImportError):
+            self.missing_package = True
+            self.protocol.emit("log", {"level": "error", "message": "missing_package: runtime dependency downloads are forbidden"})
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         self._reports.setdefault(report.nodeid, []).append(report)
@@ -139,7 +156,14 @@ class PythonPlugin:
     def fixture_request(self) -> Any:
         import requests
 
-        session = requests.Session()
+        base_url = self.input_data.get("baseUrl")
+
+        class ConfiguredSession(requests.Session):
+            def request(self, method: str, url: str, **kwargs: Any) -> Any:
+                target = urljoin(base_url, url) if isinstance(base_url, str) else url
+                return super().request(method, target, **kwargs)
+
+        session = ConfiguredSession()
         session.trust_env = True
         try:
             yield session

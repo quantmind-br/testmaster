@@ -4,6 +4,7 @@ import { createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import {
   type NetworkPolicy,
+  type PlanStep,
   type RunnerEvent,
   RunnerSessionValidator,
   type SupervisorEvent,
@@ -56,6 +57,7 @@ export interface AttemptInput {
     capture: Extract<RunnerEvent, { type: "variable.captured" }>["payload"],
   ) => Promise<Extract<RunnerEvent, { type: "variable.captured" }>["payload"]>;
   onEvent?: (event: RunnerEvent) => Promise<void>;
+  resolveAction?: (stepId: string, observation: unknown) => Promise<PlanStep | null>;
 }
 export interface AttemptResult {
   outcome: "passed" | "failed" | "blocked" | "cancelled" | "inconclusive";
@@ -167,6 +169,7 @@ export class AttemptExecutor {
         );
     };
     const fail = (error: unknown) => {
+      if (malformed) return;
       malformed = true;
       protocolError = error instanceof Error ? error.message : "protocol_invalid";
       socket?.destroy();
@@ -207,6 +210,10 @@ export class AttemptExecutor {
         if (!value) throw new Error("missing_secret");
         values.add(value);
         await send("secret.value", { ...event.payload, value });
+      } else if (event.type === "agent.request") {
+        if (!input.resolveAction) throw new Error("agent_resolution_not_authorized");
+        const action = await input.resolveAction(event.payload.stepId, event.payload.observation);
+        await send("agent.action", { stepId: event.payload.stepId, action });
       } else if (event.type === "artifact.begin") {
         if (writers.has(event.payload.artifactId)) throw new Error("duplicate_artifact");
         try {

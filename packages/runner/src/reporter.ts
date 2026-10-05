@@ -12,6 +12,12 @@ export default class TestMasterReporter implements Reporter {
       return Promise.resolve();
     });
   }
+  onError(error: { message?: string; stack?: string }): void {
+    this.send("log", {
+      level: "error",
+      message: (error.stack ?? error.message ?? "Imported test collection failed").slice(0, 16384),
+    });
+  }
   onTestBegin(test: TestCase): void {
     const index = this.index++;
     const data = { stepId: `imported-test-${index}`, index };
@@ -36,6 +42,9 @@ export default class TestMasterReporter implements Reporter {
   }
   onStepBegin(_test: TestCase, _result: TestResult, step: TestStep): void {
     if (step.category !== "test.step" && step.category !== "expect") return;
+    // Nested expect probes are provisional (for example expect.poll); only their outer
+    // assertion has an oracle verdict after its bounded retry deadline.
+    if (step.parent?.category === "expect") return;
     const index = this.index++;
     const data = { stepId: `imported-step-${index}`, index };
     this.steps.set(step, data);
@@ -48,6 +57,14 @@ export default class TestMasterReporter implements Reporter {
       ...data,
       status: step.error ? "failed" : "passed",
       ...(step.error ? { reasonCode: "assertion_mismatch" } : {}),
+      ...(step.error
+        ? {
+            error: {
+              code: "assertion_mismatch",
+              message: (step.error.message ?? "Imported assertion failed").slice(0, 16384),
+            },
+          }
+        : {}),
       durationMs: step.duration,
       evidencePaths: [],
     });
