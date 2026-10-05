@@ -1,0 +1,166 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "m2-reference-shop-2026-10-05",
+  "status": "preregistered-not-executed",
+  "label": "experimental",
+  "dataset": {
+    "manifest": "evals/corpus/manifest.json",
+    "sha256": "016dfc28cb5030abac53839c279b3161952e663b0dac9fa02e6a64776ec79e16",
+    "applicationFamilies": ["reference-shop"],
+    "splitSeed": "testmaster-m2-eval-2026-10-05",
+    "splitAlgorithm": "Sort defective case IDs by ascending hex SHA-256(seed + ':' + caseId); first six development, last two mutant-level holdout. Trial order is this same fixed order.",
+    "development": [
+      "shop-defect-004",
+      "shop-defect-001",
+      "shop-defect-002",
+      "shop-defect-006",
+      "shop-defect-007",
+      "shop-defect-008"
+    ],
+    "holdout": ["shop-defect-003", "shop-defect-005"],
+    "outOfScope": [
+      {
+        "caseId": "shop-defect-009",
+        "reason": "M3 nonfunctional selector drift; not a business-defect evaluation"
+      },
+      {
+        "caseId": "shop-baseline-001",
+        "reason": "Paired fresh healthy controls, not an independent defect trial"
+      }
+    ],
+    "limitations": [
+      "One application family: holdout across families is NOT possible. Mutant holdout shares application, PRD, OpenAPI and generation procedure; it does not establish unseen-family generalization.",
+      "Corpus human labeling and two-reviewer empty-cart adjudication are pending. This is an exploratory independent-code-oracle evaluation, not a release-eligible human-adjudicated benchmark.",
+      "No prompt, case, selection or threshold tuning after any trial. Holdout labels/oracle observations never enter model requests; all trials use the same complete documents."
+    ]
+  },
+  "provider": {
+    "id": "quantforge",
+    "kind": "openai-compatible",
+    "baseUrl": "https://api.quantforge.com.br/v1",
+    "apiKeyEnv": "QUANTFORGE_API_KEY",
+    "model": "deepseek-v4.1-flash",
+    "prices": null,
+    "snapshot": "Unavailable: provider can change remote weights without a versioned snapshot"
+  },
+  "decoding": {
+    "temperature": 0,
+    "max_tokens": 8192,
+    "response_format": { "type": "json_object" },
+    "omitted": ["top_p", "seed", "tools", "reasoning_effort"],
+    "deadlineMs": 180000,
+    "maxInputBytes": 1048576,
+    "maxInputTokens": 100000,
+    "maxStructuralRepairs": 2,
+    "maxTransportRetriesPerRepair": 1,
+    "transportRetryCondition": "Only without a usable response",
+    "localValidation": "Strict shared Ajv schema plus proposal semantic validation",
+    "cache": "Fresh project/HOME per trial; no shared cache"
+  },
+  "promptVersions": { "normalize": "normalize-1", "plan": "plan-1", "schemaVersion": "1.0.0" },
+  "frozenFiles": {
+    "fixtures/reference-shop/artifacts/PRD.md": "77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b",
+    "fixtures/reference-shop/artifacts/openapi.yaml": "a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881",
+    "fixtures/reference-shop/oracle/index.js": "c2923499f9f20653ab0be8ac296039fd2b3f8f21a7cfc05acf0a1d888499d531",
+    "packages/application/src/ai/model.ts": "dacaa4dac99724c37566f17262ce5adf149dc620ea01276c940ba1ecf68caaad",
+    "packages/model-gateway/src/gateway.ts": "beca8a94bc65e405143409c8a1c52f14d4a34d001362ee008bece865a99c6db0",
+    "packages/application/src/ai/requirements.ts": "77b2e1087e6aa692b1582f128a4e8ef3d53e9920a54561cf377cc4ef9e04ebc9",
+    "packages/application/src/ai/proposals.ts": "260f8c4b85ccca3a8d5ca297178724d0d0e834a0cdc3ac0428171ddccff06358"
+  },
+  "pipeline": {
+    "runner": "Built real CLI, hardened Docker executor, deterministic replay only",
+    "steps": [
+      "independent oracle on separate fresh healthy and mutant instances before live generation; verdicts never enter model input",
+      "init fresh project/HOME and user-level provider/consent",
+      "source add unchanged full PRD and OpenAPI",
+      "discover --scope codebase with source revisions and NO application source, mutant labels or oracle code",
+      "requirement normalize both sources",
+      "separate rule-based evaluator checks explicit origin, source-revision grounding and acceptance criteria; inferred requirements and all conflicting requirements stay unapproved",
+      "approve qualifying nonconflicting user_spec requirements",
+      "plan generate --type backend once per approved requirement",
+      "accept every valid executable proposal without editing, selecting by outcomes or weakening assertions",
+      "replay each accepted immutable revision on a fresh healthy instance and a fresh mutant instance",
+      "usage, step results, events and sealed artifact manifests retained in per-trial ledger"
+    ],
+    "review": "Authorized external rule-based evaluator, not generating model, checks nonconflicting user_spec origin, source-revision membership and nonempty acceptance criteria. Shared local proposal validation checks deterministic nontrivial assertions and allowed operations. This is NOT independent human semantic intent review; unsupported intent remains a stated limitation. Independent raw-HTTP/read-only-SQLite oracle plus paired replay decides final behavioral credit. No knowledge of a proposal's run outcomes at its acceptance. Decisions and retained items are recorded. Conflicts are not adjudicated without the required two independent human reviewers.",
+    "selection": "All nonconflicting grounded originKind=user_spec requirements, sorted by text then id, first 12 at most. Excess recorded as scope truncation before generation. Never filter by target mutant labels. Plan each separately to avoid multi-proposal output-length confounding; no regeneration or proposal edits.",
+    "execution": {
+      "concurrency": 1,
+      "maxAttempts": 1,
+      "mode": "replay",
+      "healing": "off",
+      "attemptTimeoutMs": 120000,
+      "executionTimeoutMs": 150000,
+      "stepTimeoutMs": 5000,
+      "locale": "en-US",
+      "timezone": "UTC"
+    }
+  },
+  "sample": {
+    "plannedTrials": 8,
+    "trialsPerMutant": 1,
+    "independentApplicationFamilies": 1,
+    "justification": "Census of eight M0-M2 business mutants in available corpus; feasibility/coverage pilot only. Below normative exploratory 30-family and comparative 100-case/3-trial guidance. Trials are correlated within one application and Wilson intervals are descriptive, not population generalization bounds."
+  },
+  "budget": {
+    "maxTokens": 12000000,
+    "maxWallTimeMs": 7200000,
+    "perModelCommandConservativeTokens": 649152,
+    "accounting": "Reserve 6*(100000+8192) input+output tokens before each normalize or plan command, covering repairs/retries. Settle to provider input+output usage; missing usage retains the full conservative charge. Reasoning is reported separately and not added again to completion tokens. No prices: monetary cost remains unknown, never zero. Reserve only if measured/conservatively charged spend plus reservation is within cap.",
+    "stop": "All eight scheduled trials recorded, or budget/wall deadline, missing key, or unsafe condition. Never stop on good/bad scores. Unstarted trials receive not_started ledgers and remain in end-to-end denominator; no replacements. No outer transport/pipeline retries; gateway's bounded retries remain recorded."
+  },
+  "metrics": {
+    "primary": "Detected mutant / all 8 planned trials. Detected iff independent oracle verifies healthy=true and mutant defective=true AND at least one same accepted immutable generated revision passes healthy (outcome and gate passed) and fails mutant with a reliable required assertion failure. Action/transport/timeout failure alone never earns detection credit.",
+    "conditional": "Detected / oracle-confirmed trials excluding only predeclared infrastructure exclusions; all exclusions and misses remain in primary denominator.",
+    "secondary": [
+      "Healthy false-failure rate: failed healthy generated replays / healthy replays with passed or failed business outcome; unavailable replay outcomes reported separately",
+      "Proposal validity: valid returned proposals / all returned proposals; failed generation with no returned proposals is an error, not an invented proposal denominator; raw invalid response proposal count may be unavailable",
+      "Measured input/output/reasoning tokens, conservative budget charge, unknown usage calls, known/unknown monetary cost",
+      "Monotonic command/trial/wall latency; no p95/p99 population claim",
+      "Per-mutant, failure category, development and mutant-level holdout strata"
+    ]
+  },
+  "exclusions": {
+    "conditionalOnly": [
+      "oracle_error",
+      "oracle_mismatch",
+      "sandbox_unavailable",
+      "worker_lost",
+      "provider_transport",
+      "provider_timeout",
+      "budget_exhausted",
+      "wall_time_exhausted",
+      "missing_key",
+      "not_started"
+    ],
+    "neverExclude": [
+      "invalid_model_output",
+      "invalid_proposal",
+      "no_approved_requirements",
+      "no_accepted_tests",
+      "healthy_assertion_failure",
+      "generated_action_failure",
+      "policy_denial",
+      "unresolved_conflict",
+      "inconclusive_without_proven_infrastructure_cause"
+    ],
+    "rule": "Exclusions need explicit structured error/verdict evidence, not exit code alone. Any exclusion blocks detection credit. Unknown INTERNAL/PRECONDITION failures are misses unless independently substantiated. Record all errors with phase, code, reason, command index and classification, including gateway retries and repair outcomes. Equivalent/invalid mutant reclassification requires independent review, cannot be inferred from a passing generated test."
+  },
+  "analysis": {
+    "interval": "Two-sided Wilson 95%, z=1.96",
+    "zeroDenominator": "insufficientData; estimate and bounds null",
+    "effectiveN": "8 planned defect cases, at most 8 completed trials, 1 application-family cluster; repeated proposals and calls never increase primary n",
+    "comparisons": "No model comparison or parity claim; stratified descriptive results only"
+  },
+  "graduation": {
+    "minIndependentFamilies": 30,
+    "minIndependentCases": 100,
+    "minTrialsPerCase": 3,
+    "minPrimaryWilsonLower": 0.8,
+    "minHoldoutWilsonLower": 0.8,
+    "maxHealthyFalseFailureWilsonUpper": 0.05,
+    "requiresIndependentHumanLabels": true,
+    "requiresNoCriticalSafetyFailure": true,
+    "decision": "This single-family eight-trial pilot cannot meet prerequisites; capabilities remain experimental regardless of observed scores."
+  }
+}
