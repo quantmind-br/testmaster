@@ -22,6 +22,13 @@ export interface ReportRun {
   steps: readonly StepResult[];
   attempts: readonly Attempt[];
   durationMs: number;
+  /** Read-time context comparison; never modifies the committed verdict or evidence seal. */
+  freshness?: {
+    state: "current" | "stale";
+    reasons: readonly ("test_revision_changed" | "environment_revision_changed")[];
+    currentRevisionId: string;
+    currentEnvironmentRevisionId: string;
+  };
 }
 export interface ReportSnapshot {
   schemaVersion: "1.0.0";
@@ -144,6 +151,11 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
       `Run: ${markdown(item.run.id)}; revision: ${markdown(item.run.revisionId)}; environment: ${markdown(item.environment)}`,
       `Outcome: ${item.result.outcome ?? "nonterminal"}; gate: ${item.result.gate}; cleanup: ${item.result.cleanupOutcome}`,
       `First attempt: ${item.result.firstAttemptOutcome ?? "unknown"}; passed on retry: ${item.result.passedOnRetry}`,
+      ...(item.freshness
+        ? [
+            `Context: ${item.freshness.state}${item.freshness.reasons.length ? ` (${item.freshness.reasons.join(", ")})` : ""}`,
+          ]
+        : []),
       ...missing(item).map((reason) => `- Evidence: ${markdown(reason)}`),
     );
   for (const cell of snapshot.selection.notDispatched)
@@ -161,7 +173,9 @@ export function exportHtml(snapshot: ReportSnapshot): string {
           item,
         )
           .map((reason) => `<li>Evidence: ${xml(reason)}</li>`)
-          .join("")}</ul></section>`,
+          .join(
+            "",
+          )}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul></section>`,
     )
     .join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"><title>${xml(snapshot.title)}</title></head><body><h1>${xml(snapshot.title)}</h1><p>Gate: ${reportGate(snapshot)}</p><p>Snapshot: ${xml(snapshot.snapshotId)}; completeness: ${snapshot.completeness.state}</p><p>Selection: ${snapshot.selection.requested}; not dispatched: ${snapshot.selection.notDispatched.length}; excluded: ${snapshot.selection.excluded.length}</p>${snapshot.runs.length ? runs : `<p>No tests executed: ${xml(snapshot.selection.emptyReason ?? "selection empty without authorization")}</p>`}<ul>${[...snapshot.completeness.reasons, ...snapshot.selection.notDispatched.map((cell) => `Not dispatched: ${cell.memberKey}: ${cell.reasonCode}`), ...snapshot.selection.excluded.map((cell) => `Excluded: ${cell.memberKey}: ${cell.reasonCode}`)].map((reason) => `<li>${xml(reason)}</li>`).join("")}</ul></body></html>`;
