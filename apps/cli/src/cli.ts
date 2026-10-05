@@ -1,18 +1,28 @@
 import { ContractError } from "@testmaster/contracts";
 import { Command, CommanderError, Option } from "commander";
+import { agentCommands } from "./agents.js";
+import { explorationCommands } from "./ai-execution.js";
 import { approvalCommands } from "./approvals.js";
 import { artifactCommands } from "./artifacts.js";
 import { backupCommands } from "./backups.js";
 import { databaseCommands } from "./database.js";
+import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
+import { mcpCommands } from "./mcp.js";
+import { planCommands } from "./plans.js";
 import { projectCommands } from "./projects.js";
 import { reportCommands } from "./reports.js";
+import { requirementCommands } from "./requirements.js";
+import { resourceCommands } from "./resources.js";
 import { runCommands } from "./runs.js";
 import { Runtime, seconds } from "./runtime.js";
 import { secretCommands } from "./secrets.js";
+import { serverCommands } from "./server.js";
 import { setupCommands } from "./setup.js";
+import { sourceCommands } from "./sources.js";
 import { testCommands } from "./tests.js";
 import { unavailableCommands } from "./unavailable.js";
+import { usageCommands } from "./usage.js";
 import { workerCommands } from "./workers.js";
 
 export function createCli(runtime: Runtime): Command {
@@ -46,6 +56,16 @@ export function createCli(runtime: Runtime): Command {
   backupCommands(program, runtime);
   databaseCommands(program, runtime);
   approvalCommands(program, runtime);
+  agentCommands(program, runtime);
+  sourceCommands(program, runtime);
+  discoveryCommands(program, runtime);
+  requirementCommands(program, runtime);
+  planCommands(program, runtime);
+  usageCommands(program, runtime);
+  explorationCommands(program, runtime);
+  mcpCommands(program, runtime);
+  serverCommands(program, runtime);
+  resourceCommands(program, runtime);
   unavailableCommands(program, runtime);
   return program;
 }

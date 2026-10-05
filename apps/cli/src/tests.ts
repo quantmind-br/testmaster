@@ -1,6 +1,8 @@
 import { scaffoldPlan } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
+import { importCode as validateCode } from "@testmaster/planner";
 import type { Command } from "commander";
+import { codeCommands, codeFormat, importCode } from "./ai-execution.js";
 import { revisionCommands } from "./revisions.js";
 import {
   collect,
@@ -80,7 +82,7 @@ export function testCommands(program: Command, runtime: Runtime): void {
       if (string(options, "code")) {
         if (string(options, "plan"))
           throw new ContractError("INVALID_ARGUMENT", "--plan and --code are mutually exclusive");
-        unavailable("code-import");
+        return { data: await importCode(rt, options) };
       }
       const plan = await rt.plan(required(options, "plan"));
       return {
@@ -92,7 +94,16 @@ export function testCommands(program: Command, runtime: Runtime): void {
       };
     },
     async (rt, _args, options) => {
-      if (string(options, "code")) unavailable("code-import");
+      if (string(options, "code")) {
+        if (string(options, "plan"))
+          throw new ContractError("INVALID_ARGUMENT", "--plan and --code are mutually exclusive");
+        await validateCode({
+          root: rt.path("."),
+          path: required(options, "code"),
+          format: codeFormat(options),
+        });
+        return { data: null };
+      }
       await rt.plan(required(options, "plan"));
       metadata(options);
       return { data: null };
@@ -146,15 +157,11 @@ export function testCommands(program: Command, runtime: Runtime): void {
     }),
   );
   runtime.bind(
-    group.command("import").allowUnknownOption().allowExcessArguments(),
-    () => unavailable("code-import"),
-    () => unavailable("code-import"),
-  );
-  runtime.bind(
     group.command("flaky [id]").allowUnknownOption().allowExcessArguments(),
     () => unavailable("flake-study"),
     () => unavailable("flake-study"),
   );
   revisionCommands(group, runtime);
   testExecutionCommands(group, runtime);
+  codeCommands(group, runtime);
 }

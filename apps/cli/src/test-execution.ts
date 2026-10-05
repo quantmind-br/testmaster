@@ -24,9 +24,8 @@ function admissionOptions(options: Options) {
   };
 }
 function replayOptions(options: Options): void {
-  if (options.mode === "agent") unavailable("agent-mode");
-  if (options.mode !== "replay")
-    throw new ContractError("INVALID_ARGUMENT", "Only replay mode is supported");
+  if (options.mode !== "replay" && options.mode !== "agent")
+    throw new ContractError("INVALID_ARGUMENT", "Mode must be replay or agent");
   if (options.heal !== "off") unavailable("healing");
   if (string(options, "executor") === "remote" || string(options, "tunnel"))
     unavailable("distributed");
@@ -127,7 +126,7 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
       const selection: RunRequest[] = ids.map((testId) => ({
         testId,
         environmentId: envId,
-        mode: "replay",
+        mode: options.mode === "agent" ? "agent" : "replay",
         healingPolicy: "off",
         origin: "cli",
         ...(revision ? { revisionId: revision } : {}),
@@ -304,7 +303,7 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
           const request: RunRequest = {
             testId: id,
             environmentId: envId,
-            mode: "replay",
+            mode: options.mode === "agent" ? "agent" : "replay",
             healingPolicy: "off",
             origin: "cli",
             ...(revisionId ? { revisionId } : {}),
