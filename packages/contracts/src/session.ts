@@ -1,6 +1,6 @@
 import type { RunnerEvent } from "./protocol.js";
 import { ContractError } from "./registries.js";
-import { parseAndValidate } from "./validation.js";
+import { parseStrictJson, validateRunnerWireEvent } from "./validation.js";
 export interface RunnerSessionOptions {
   attemptId: string;
   nonce: string;
@@ -21,7 +21,7 @@ export class RunnerSessionValidator {
         reasonCode: "insufficient_evidence",
       });
     try {
-      const event = parseAndValidate<RunnerEvent>("RunnerEvent", line, 262144);
+      const event = validateRunnerWireEvent(parseStrictJson(line, 262144));
       if (event.attemptId !== this.attemptId || event.seq !== this.#nextSequence)
         throw new ContractError("INVALID_ARGUMENT", "Runner attempt or sequence mismatch");
       if (

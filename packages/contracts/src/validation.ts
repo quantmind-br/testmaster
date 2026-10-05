@@ -3,6 +3,7 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { schemaCatalog } from "./catalog.js";
 import type { ExecutablePlan, PlanStep } from "./plans.js";
+import type { RunnerEvent } from "./protocol.js";
 import { ContractError, requireCapability, type ValidationIssue } from "./registries.js";
 
 export const ajv = new Ajv2020({ strict: true, allErrors: true, validateFormats: true });
@@ -162,6 +163,34 @@ export function validate<T = unknown>(name: string, value: unknown): T {
       throw new ContractError("INVALID_ARGUMENT", "Nonpass step requires reasonCode");
   }
   return value as T;
+}
+/** Trusted socket-only DTO; durable/public RunnerEvent validation still rejects plaintext captures. */
+export function validateRunnerWireEvent(value: unknown): RunnerEvent {
+  assertNfc(value);
+  let validator = compiled.get("RunnerEvent");
+  if (!validator) {
+    validator = ajv.compile(jsonSchema("RunnerEvent"));
+    compiled.set("RunnerEvent", validator);
+  }
+  if (!validator(value))
+    throw new ContractError("INVALID_ARGUMENT", "Invalid RunnerEvent", {
+      issues: validator.errors ?? [],
+    });
+  const event = value as RunnerEvent;
+  if (
+    event.type === "variable.captured" &&
+    event.payload.sensitive &&
+    event.payload.value &&
+    "literal" in event.payload.value
+  ) {
+    const { value: _value, ...payload } = event.payload;
+    validate("RunnerEvent", {
+      ...event,
+      payload: { ...payload, encryptedValueRef: "supervisor-protection-pending" },
+    });
+    return event;
+  }
+  return validate<RunnerEvent>("RunnerEvent", event);
 }
 export function parseAndValidate<T = unknown>(
   name: string,
