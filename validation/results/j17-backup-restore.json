@@ -1,0 +1,240 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j17-backup-restore",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-05T21:48:22.198Z",
+  "passed": true,
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j17-backup-restore",
+        "--base-url",
+        "http://127.0.0.1:35383",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_927664bf-3806-4030-b697-958a5b849672",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-prrP9h/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c2c0fc75-c5cb-444b-8545-d8c6288c5ad0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a10e09-ff7e-7656-bc8c-4e828d002c47",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ad4f4372-43f5-4a36-bec8-68562376ccc9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a10e0a-023f-712f-80fb-4001844b917e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b8db2c22-d984-4d1b-a4d2-54d47a411f9c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "backup",
+        "create",
+        "--out",
+        "/tmp/tm-m1-prrP9h/backup",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a41df927-80e2-4f6f-a13e-53590618d363",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "backup",
+        "restore",
+        "/tmp/tm-m1-prrP9h/backup",
+        "--out",
+        "/tmp/tm-m1-prrP9h/restored-data",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7c37156b-ce81-42ff-a8b3-002eedae5bb0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a10e0a-023f-712f-80fb-4001844b917e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b204eec0-d598-4453-a37f-e82065591001",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "project",
+        "get",
+        "prj_01a10e09-fdff-7210-a6c6-28c015736633",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ee7fc8b0-ee9c-4adb-998d-8916aa7b4a03",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "get",
+        "tst_01a10e09-ff7e-7656-bc8c-4e828d002c47",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_033270ea-4830-4e47-8519-11bb64f897de",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a10e0a-023f-712f-80fb-4001844b917e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9f8f0800-e572-4078-94f1-9a67f3dadb99",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a10e09-ff7e-7656-bc8c-4e828d002c47",
+        "--env",
+        "env_01a10e09-fe00-71d9-b2bf-22c534e872d4",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_7f8dc92d-691a-42b6-878a-8bcb48a45880",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Database admission is suspended pending restore review",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a10e0a-023f-712f-80fb-4001844b917e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d84399d8-cf8a-405c-bdc3-5ab7b61a271b",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a10e0a-023f-712f-80fb-4001844b917e"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "isolatedRestoreRetainsIdsWithoutEffects",
+      "healthy": true,
+      "runId": "run_01a10e0a-023f-712f-80fb-4001844b917e",
+      "workspaceId": "ws_01a10e09-fdf7-70f5-bb8d-e0c2a41f5b15",
+      "projectId": "prj_01a10e09-fdff-7210-a6c6-28c015736633",
+      "originalHash": "90854d7e5a854f62516f50f16888a3be56e22ebf9ca6024e66ef8435c25c6ca1",
+      "targetRequestsAfterRestore": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cli-003-readonly-home",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-05T21:48:53.830Z",
+  "passed": true,
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "Read-only home",
+        "--base-url",
+        "http://127.0.0.1:43210",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f416a220-6465-4f3b-abef-2be7d142e806",
+      "warnings": [
+        "User profile cannot be persisted; session-only setup"
+      ],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "readonlyHomeSessionNotice",
+      "healthy": true,
+      "sessionOnly": true,
+      "notice": "User profile cannot be persisted; session-only setup"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
