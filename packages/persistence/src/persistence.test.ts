@@ -164,7 +164,7 @@ function child(script: string, args: string[]): Promise<string> {
 describe("SQLite persistence", () => {
   it("applies immutable checksummed migrations and refuses altered bytes", async () => {
     const db = await createDatabase();
-    expect(db.status().currentVersion).toBe(1);
+    expect(db.status().currentVersion).toBe((await loadMigrations()).length);
     const dir = join(directories[0] ?? "", "tampered");
     await mkdir(dir);
     const migration = (await loadMigrations())[0];
@@ -176,16 +176,102 @@ describe("SQLite persistence", () => {
     const db = await createDatabase();
     const dir = join(directories[0] ?? "", "upgrade");
     await mkdir(dir);
-    const first = (await loadMigrations())[0];
-    if (!first) throw new Error("missing migration");
-    await writeFile(join(dir, "0001_initial.sql"), first.sql);
+    const migrations = await loadMigrations();
+    const before = db.status().currentVersion;
+    for (const migration of migrations)
+      await writeFile(
+        join(dir, `${String(migration.version).padStart(4, "0")}_${migration.name}.sql`),
+        migration.sql,
+      );
     await writeFile(
-      join(dir, "0002_failure.sql"),
+      join(dir, `${String(before + 1).padStart(4, "0")}_failure.sql`),
       "CREATE TABLE transient(x INTEGER); INSERT INTO missing VALUES(1);",
     );
     await expect(db.migrate(dir)).rejects.toThrow();
-    expect(db.status().currentVersion).toBe(1);
+    expect(db.status().currentVersion).toBe(before);
     expect(db.get("SELECT name FROM sqlite_master WHERE name='transient'")).toBeUndefined();
+    expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
+  });
+  it("upgrades populated evidence while preserving code artifact foreign keys", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "tm-artifact-upgrade-"));
+    directories.push(directory);
+    const initialDirectory = join(directory, "initial");
+    await mkdir(initialDirectory);
+    const initial = (await loadMigrations())[0];
+    if (!initial) throw new Error("missing initial migration");
+    await writeFile(
+      join(initialDirectory, `${String(initial.version).padStart(4, "0")}_${initial.name}.sql`),
+      initial.sql,
+    );
+    const db = await PersistenceDatabase.open(join(directory, "testmaster.db"), {
+      migrationsDir: initialDirectory,
+    });
+    connections.push(db);
+    db.withTx(() => {
+      for (const statement of constraintSeed) db.run(statement);
+      db.run(
+        "INSERT INTO artifacts(workspace_id,id,created_at,run_id,attempt_id,revision_id,snapshot_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-existing','2026-10-05T00:00:00.000Z','run-a','att-a','rev-a','snp-a','hash',1,'existing','available','not_applicable')",
+      );
+      db.run(
+        "INSERT INTO test_revisions(workspace_id,id,created_at,test_id,ordinal,content_hash,runner_kind,origin,code_artifact_id) VALUES('ws-a','rev-code','2026-10-05T00:00:00.000Z','tst-a',2,'hash','playwright','imported','art-existing')",
+      );
+    });
+    await db.migrate();
+    expect(
+      db.get("SELECT code_artifact_id FROM test_revisions WHERE id='rev-code'")?.code_artifact_id,
+    ).toBe("art-existing");
+    expect(db.get("SELECT storage_key FROM artifacts WHERE id='art-existing'")?.storage_key).toBe(
+      "existing",
+    );
+    expect(db.all("PRAGMA foreign_key_check")).toEqual([]);
+    expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
+    db.withTx(() =>
+      db.run(
+        "INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-authored-new','2026-10-05T00:00:00.000Z','rev-code','hash',1,'authored','available','not_applicable')",
+      ),
+    );
+  });
+  it("rolls back an invalid rebuild upgrade and restores runtime foreign keys", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "tm-invalid-upgrade-"));
+    directories.push(directory);
+    const initialDirectory = join(directory, "initial");
+    const upgradeDirectory = join(directory, "upgrade");
+    await mkdir(initialDirectory);
+    await mkdir(upgradeDirectory);
+    const migrations = await loadMigrations();
+    const initial = migrations[0];
+    if (!initial) throw new Error("missing initial migration");
+    await writeFile(join(initialDirectory, "0001_initial.sql"), initial.sql);
+    for (const migration of migrations)
+      await writeFile(
+        join(
+          upgradeDirectory,
+          `${String(migration.version).padStart(4, "0")}_${migration.name}.sql`,
+        ),
+        migration.sql,
+      );
+    await writeFile(
+      join(
+        upgradeDirectory,
+        `${String(migrations.length + 1).padStart(4, "0")}_invalid_reference.sql`,
+      ),
+      "INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('missing-ws','bad','2026-10-05T00:00:00.000Z','missing-project','Invalid')",
+    );
+    const db = await PersistenceDatabase.open(join(directory, "testmaster.db"), {
+      migrationsDir: initialDirectory,
+    });
+    connections.push(db);
+    await expect(db.migrate(upgradeDirectory)).rejects.toThrow("foreign key violation");
+    expect(db.status().currentVersion).toBe(1);
+    expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
+    expect(db.get("SELECT id FROM tests WHERE id='bad'")).toBeUndefined();
+    expect(() =>
+      db.withTx(() =>
+        db.run(
+          "INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('missing-ws','bad','2026-10-05T00:00:00.000Z','missing-project','Invalid')",
+        ),
+      ),
+    ).toThrow();
   });
   it("same key replays the original receipt, changed request conflicts", async () => {
     const { db, ws } = await createSeeded();

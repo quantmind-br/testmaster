@@ -134,29 +134,51 @@ export class PersistenceDatabase {
   }
   async migrate(directory?: string): Promise<void> {
     const available = await loadMigrations("sqlite", directory);
-    this.withTx((db) => {
-      db.exec(
-        "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL)",
-      );
-      const applied = this.all<{ version: number; name: string; checksum: string }>(
-        "SELECT version,name,checksum FROM schema_migrations ORDER BY version",
-      );
-      for (const row of applied) {
-        const migration = available[row.version - 1];
-        if (!migration || migration.name !== row.name || migration.checksum !== row.checksum)
-          throw new MigrationChecksumError(
-            row.version,
-            row.checksum,
-            migration?.checksum ?? "missing",
-          );
-      }
-      for (const migration of available.slice(applied.length)) {
-        db.exec(migration.sql);
-        db.prepare(
-          "INSERT INTO schema_migrations(version,name,checksum,applied_at) VALUES(?,?,?,?)",
-        ).run(migration.version, migration.name, migration.checksum, new Date().toISOString());
-      }
-    });
+    if (this.db.isTransaction) throw new Error("Database migrations require their own transaction");
+    const hasMigrationTable = this.get(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
+    );
+    const currentVersion = hasMigrationTable
+      ? Number(
+          this.get("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations")?.version,
+        )
+      : 0;
+    // SQLite's documented table-rebuild procedure disables enforcement before BEGIN.
+    // Validate every foreign key before COMMIT and restore enforcement on every exit.
+    const rebuildsArtifacts = available.some(
+      (migration) =>
+        migration.version > currentVersion && migration.name === "authored_code_artifacts",
+    );
+    if (rebuildsArtifacts) this.db.exec("PRAGMA foreign_keys=OFF");
+    try {
+      this.withTx((db) => {
+        db.exec(
+          "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL)",
+        );
+        const applied = this.all<{ version: number; name: string; checksum: string }>(
+          "SELECT version,name,checksum FROM schema_migrations ORDER BY version",
+        );
+        for (const row of applied) {
+          const migration = available[row.version - 1];
+          if (!migration || migration.name !== row.name || migration.checksum !== row.checksum)
+            throw new MigrationChecksumError(
+              row.version,
+              row.checksum,
+              migration?.checksum ?? "missing",
+            );
+        }
+        for (const migration of available.slice(applied.length)) {
+          db.exec(migration.sql);
+          db.prepare(
+            "INSERT INTO schema_migrations(version,name,checksum,applied_at) VALUES(?,?,?,?)",
+          ).run(migration.version, migration.name, migration.checksum, new Date().toISOString());
+        }
+        if (rebuildsArtifacts && this.all("PRAGMA foreign_key_check").length)
+          throw new Error("Migration produced a foreign key violation");
+      });
+    } finally {
+      if (rebuildsArtifacts) this.db.exec("PRAGMA foreign_keys=ON");
+    }
     this.migrations = available;
   }
   status(): DatabaseStatus {

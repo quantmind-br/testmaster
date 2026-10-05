@@ -134,6 +134,27 @@ export const constraintFixtures: ConstraintFixture[] = [
     ],
     expected: "accept",
   },
+  {
+    name: "authored code artifact without execution provenance",
+    statements: [
+      `INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-authored','${time}','rev-a','hash',1,'authored-code/code.json','available','not_applicable')`,
+    ],
+    expected: "accept",
+  },
+  {
+    name: "partial execution artifact provenance",
+    statements: [
+      `INSERT INTO artifacts(workspace_id,id,created_at,run_id,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-partial','${time}','run-a','rev-a','hash',1,'a','available','not_applicable')`,
+    ],
+    expected: "check",
+  },
+  {
+    name: "authored artifact cross-workspace revision",
+    statements: [
+      `INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-b','art-cross','${time}','rev-a','hash',1,'a','available','not_applicable')`,
+    ],
+    expected: "foreign_key",
+  },
 ];
 export function constraintErrorClass(error: unknown): ConstraintFixture["expected"] {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error);

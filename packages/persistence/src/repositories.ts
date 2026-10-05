@@ -121,9 +121,12 @@ export class EntityRepository {
     id: string,
     expectedVersion: number,
     next: EntityDocument,
+    relations: Record<string, SQLInputValue> = {},
   ): void {
     if (!this.database.db.isTransaction) {
-      this.database.withTx(() => this.update(kind, workspaceId, id, expectedVersion, next));
+      this.database.withTx(() =>
+        this.update(kind, workspaceId, id, expectedVersion, next, relations),
+      );
       return;
     }
     if (
@@ -141,7 +144,7 @@ export class EntityRepository {
       throw new ContractError("INVALID_ARGUMENT", "Identity cannot change");
     const fields = tableCatalog[kind].fields;
     const values = fields.map((field) => {
-      const raw = next[field] ?? null;
+      const raw = relations[field] ?? next[field] ?? null;
       return typeof raw === "boolean" ? Number(raw) : (raw as SQLInputValue);
     });
     const result = this.database.run(
