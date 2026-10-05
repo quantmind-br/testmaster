@@ -7,13 +7,18 @@ const common = {
 
 export default defineConfig({
   test: {
+    // Third-party packages that publish a `source` export condition pointing at raw TypeScript
+    // inside node_modules must be transformed by Vite, since Node refuses to strip types there.
+    server: {
+      deps: { inline: [/@modelcontextprotocol\/sdk/, /eventsource-parser/, /eventsource/] },
+    },
     projects: [
       {
         extends: true,
         ...common,
         test: {
           name: "unit",
-          include: ["{packages,apps,fixtures,tools}/**/*.test.ts"],
+          include: ["{packages,apps,fixtures,tools,validation}/**/*.test.ts"],
           exclude: ["**/node_modules/**", "**/dist/**", "**/*.docker.test.ts", "**/*.live.test.ts"],
           testTimeout: 20_000,
         },
