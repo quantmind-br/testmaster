@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "testmaster-runner"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "requests==2.34.2",
+  "playwright==1.63.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = ["tests/unit"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["testmaster_runner"]
