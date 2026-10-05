@@ -1,0 +1,27 @@
+{
+  "name": "@testmaster/evidence",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@testmaster/contracts": "workspace:*",
+    "@testmaster/domain": "workspace:*",
+    "yauzl": "3.4.0",
+    "tar-stream": "3.2.2"
+  },
+  "devDependencies": {
+    "@types/yauzl": "3.4.0",
+    "@types/tar-stream": "3.1.5"
+  }
+}
