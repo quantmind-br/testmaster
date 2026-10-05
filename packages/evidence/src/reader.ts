@@ -14,6 +14,8 @@ export class BundleIntegrityError extends Error {
 }
 export interface BundleExpectations extends AttemptIds {
   manifestSha256?: string;
+  /** Supervisor-authorized tombstones; never supplied directly by download clients. */
+  expiredArtifactIds?: readonly string[];
 }
 export interface VerifiedBundle {
   rootDir: string;
@@ -90,6 +92,7 @@ export async function verifyBundle(
       total += entry.sizeBytes;
       if (entry.sizeBytes > maxObjectBytes || total > 256 * 1024 * 1024)
         throw new BundleIntegrityError("Bundle exceeds quota");
+      if (expected.expiredArtifactIds?.includes(entry.artifactId)) continue;
       const file = await root.openFile(entry.relativePath);
       try {
         const actual = await hashHandle(file, entry.sizeBytes);
@@ -99,6 +102,15 @@ export async function verifyBundle(
         await file.close();
       }
     }
+    if (expected.expiredArtifactIds?.length)
+      manifest = {
+        ...manifest,
+        entries: manifest.entries.map((entry) =>
+          expected.expiredArtifactIds?.includes(entry.artifactId)
+            ? { ...entry, state: "expired", omissionReason: "artifact_expired" }
+            : entry,
+        ),
+      };
     return { rootDir, manifest, meta };
   } finally {
     root.close();

@@ -33,6 +33,33 @@ async function fixture() {
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
+it("permits only supervisor-authorized expired object IDs after authenticating the sealed manifest", async () => {
+  const { rootDir, ids } = await fixture();
+  const stage = await new FileEvidenceStore({ rootDir }).openAttempt(ids);
+  const writer = await stage.beginArtifact({
+    relativePath: "result.txt",
+    kind: "log",
+    mimeType: "text/plain",
+  });
+  await writer.write(Buffer.from("retained"));
+  const entry = await writer.end();
+  const committed = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
+  await rm(join(committed.bundleDir, "result.txt"));
+  await expect(verifyBundle(committed.bundleDir, ids)).rejects.toThrow();
+  const expired = await verifyBundle(committed.bundleDir, {
+    ...ids,
+    manifestSha256: committed.manifestSha256,
+    expiredArtifactIds: [entry.artifactId],
+  });
+  expect(expired.manifest.entries[0]?.state).toBe("expired");
+  await expect(
+    verifyBundle(committed.bundleDir, {
+      ...ids,
+      manifestSha256: "f".repeat(64),
+      expiredArtifactIds: [entry.artifactId],
+    }),
+  ).rejects.toThrow("Manifest hash mismatch");
+});
 describe("evidence integrity boundaries", () => {
   it("commits manifest and streams validated bytes, rejects tamper/foreign IDs", async () => {
     const { rootDir, ids } = await fixture();
