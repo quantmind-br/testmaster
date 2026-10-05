@@ -7795,6 +7795,41 @@
           "type": "string"
         }
       ]
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/T0"
+              }
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "$ref": "#/$defs/T0"
+                }
+              }
+            }
+          ]
+        }
+      }
     }
   },
   "$defs": {

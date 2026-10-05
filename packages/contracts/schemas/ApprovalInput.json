@@ -1,0 +1,57 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "actionSet",
+    "revisionHash",
+    "environmentRevisionId",
+    "originSet",
+    "policyHash"
+  ],
+  "properties": {
+    "actorId": {
+      "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "reviewerId": {
+      "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "actionSet": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "revisionHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "environmentRevisionId": {
+      "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "originSet": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "policyHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ApprovalInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

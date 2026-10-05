@@ -1680,6 +1680,86 @@
           }
         }
       }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "agent.request",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "stepId",
+            "observation"
+          ],
+          "properties": {
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "observation": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {

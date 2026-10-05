@@ -46,6 +46,9 @@ const entity = <F extends Record<string, TSchema>>(prefix: EntityPrefix, fields:
     createdAt: Type.Optional(Timestamp),
     version: Type.Optional(Version),
     ...fields,
+    extensions: Type.Optional(
+      Type.Record(Type.String({ pattern: "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$" }), Json),
+    ),
   });
 export const entities = {
   Workspace: entity("ws", {
@@ -261,10 +264,10 @@ export const entities = {
     ownerProof: nullable(EvidenceRef),
   }),
   Artifact: entity("art", {
-    runId: id("run"),
-    attemptId: id("att"),
+    runId: nullable(id("run")),
+    attemptId: nullable(id("att")),
     revisionId: id("rev"),
-    snapshotId: id("snp"),
+    snapshotId: nullable(id("snp")),
     kind: Name,
     hash: digest,
     bytes: Nonnegative,

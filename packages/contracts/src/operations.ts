@@ -170,6 +170,7 @@ export const BatchCounts = Obj({
 });
 export const BatchReceipt = Obj({
   batchId: id("bat"),
+  jobId: Type.Optional(id("bat")),
   requested: Nonnegative,
   accepted: Nonnegative,
   notDispatched: Type.Array(Obj({ memberKey: Name, reasonCode: Enum(reasonCodes) })),

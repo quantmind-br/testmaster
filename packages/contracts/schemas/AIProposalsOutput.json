@@ -1,322 +1,90 @@
 {
-  "anyOf": [
-    {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "protocolVersion",
-        "seq",
-        "attemptId",
-        "occurredAt",
-        "type",
-        "payload"
-      ],
-      "properties": {
-        "protocolVersion": {
-          "const": "1.0.0",
-          "type": "string"
-        },
-        "seq": {
-          "minimum": 0,
-          "type": "integer"
-        },
-        "attemptId": {
-          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "occurredAt": {
-          "format": "date-time",
-          "pattern": "Z$",
-          "type": "string"
-        },
-        "type": {
-          "const": "secret.value",
-          "type": "string"
-        },
-        "payload": {
-          "additionalProperties": false,
-          "type": "object",
-          "required": [
-            "requestId",
-            "secretRef",
-            "secretVersion",
-            "value"
-          ],
-          "properties": {
-            "requestId": {
-              "minLength": 1,
-              "maxLength": 200,
-              "type": "string"
-            },
-            "secretRef": {
-              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-              "type": "string"
-            },
-            "secretVersion": {
-              "minimum": 1,
-              "type": "integer"
-            },
-            "value": {
-              "type": "string"
-            }
-          }
-        }
-      }
-    },
-    {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "protocolVersion",
-        "seq",
-        "attemptId",
-        "occurredAt",
-        "type",
-        "payload"
-      ],
-      "properties": {
-        "protocolVersion": {
-          "const": "1.0.0",
-          "type": "string"
-        },
-        "seq": {
-          "minimum": 0,
-          "type": "integer"
-        },
-        "attemptId": {
-          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "occurredAt": {
-          "format": "date-time",
-          "pattern": "Z$",
-          "type": "string"
-        },
-        "type": {
-          "const": "control.cancel",
-          "type": "string"
-        },
-        "payload": {
-          "additionalProperties": false,
-          "type": "object",
-          "required": [
-            "reasonCode",
-            "deadlineMs"
-          ],
-          "properties": {
-            "reasonCode": {
-              "anyOf": [
-                {
-                  "const": "assertions_satisfied",
-                  "type": "string"
-                },
-                {
-                  "const": "assertion_mismatch",
-                  "type": "string"
-                },
-                {
-                  "const": "assertion_timeout",
-                  "type": "string"
-                },
-                {
-                  "const": "missing_secret",
-                  "type": "string"
-                },
-                {
-                  "const": "credential_revoked",
-                  "type": "string"
-                },
-                {
-                  "const": "manual_auth_required",
-                  "type": "string"
-                },
-                {
-                  "const": "auth_checkpoint_expired",
-                  "type": "string"
-                },
-                {
-                  "const": "upstream_failed",
-                  "type": "string"
-                },
-                {
-                  "const": "dependency_cycle",
-                  "type": "string"
-                },
-                {
-                  "const": "ambiguous_producer",
-                  "type": "string"
-                },
-                {
-                  "const": "unsupported_capability",
-                  "type": "string"
-                },
-                {
-                  "const": "security_precondition_failed",
-                  "type": "string"
-                },
-                {
-                  "const": "approval_required",
-                  "type": "string"
-                },
-                {
-                  "const": "egress_denied",
-                  "type": "string"
-                },
-                {
-                  "const": "worker_lost",
-                  "type": "string"
-                },
-                {
-                  "const": "worker_lease_expired",
-                  "type": "string"
-                },
-                {
-                  "const": "execution_deadline",
-                  "type": "string"
-                },
-                {
-                  "const": "attempt_timeout",
-                  "type": "string"
-                },
-                {
-                  "const": "insufficient_evidence",
-                  "type": "string"
-                },
-                {
-                  "const": "oracle_uncertain",
-                  "type": "string"
-                },
-                {
-                  "const": "retry_unsafe_external_effect",
-                  "type": "string"
-                },
-                {
-                  "const": "user_cancelled",
-                  "type": "string"
-                },
-                {
-                  "const": "deadline_cancelled",
-                  "type": "string"
-                },
-                {
-                  "const": "tunnel_lost",
-                  "type": "string"
-                },
-                {
-                  "const": "artifact_limit_exceeded",
-                  "type": "string"
-                },
-                {
-                  "const": "storage_unavailable",
-                  "type": "string"
-                },
-                {
-                  "const": "artifact_expired",
-                  "type": "string"
-                },
-                {
-                  "const": "redaction_failed",
-                  "type": "string"
-                },
-                {
-                  "const": "budget_exhausted",
-                  "type": "string"
-                },
-                {
-                  "const": "quota_exceeded",
-                  "type": "string"
-                },
-                {
-                  "const": "schedule_misfire",
-                  "type": "string"
-                },
-                {
-                  "const": "schedule_overlap",
-                  "type": "string"
-                },
-                {
-                  "const": "owner_revoked",
-                  "type": "string"
-                },
-                {
-                  "const": "cleanup_failed",
-                  "type": "string"
-                },
-                {
-                  "const": "cleanup_inconclusive",
-                  "type": "string"
-                },
-                {
-                  "const": "optional_step_skipped",
-                  "type": "string"
-                },
-                {
-                  "const": "stopped_after_failure",
-                  "type": "string"
-                },
-                {
-                  "const": "cancelled_before_step",
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "proposals"
+  ],
+  "properties": {
+    "proposals": {
+      "minItems": 1,
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan",
+          "requirementRefs",
+          "evidenceRefs",
+          "warnings"
+        ],
+        "properties": {
+          "plan": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "kind",
+              "name",
+              "type",
+              "runner",
+              "requirementRefs",
+              "steps"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "const": "1.0.0",
+                "type": "string"
+              },
+              "kind": {
+                "const": "executable",
+                "type": "string"
+              },
+              "name": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "type": {
+                "anyOf": [
+                  {
+                    "const": "frontend",
+                    "type": "string"
+                  },
+                  {
+                    "const": "backend",
+                    "type": "string"
+                  },
+                  {
+                    "const": "integration",
+                    "type": "string"
+                  }
+                ]
+              },
+              "runner": {
+                "anyOf": [
+                  {
+                    "const": "playwright",
+                    "type": "string"
+                  },
+                  {
+                    "const": "http",
+                    "type": "string"
+                  }
+                ]
+              },
+              "requirementRefs": {
+                "type": "array",
+                "items": {
+                  "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                   "type": "string"
                 }
-              ]
-            },
-            "deadlineMs": {
-              "minimum": 0,
-              "type": "integer"
-            }
-          }
-        }
-      }
-    },
-    {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "protocolVersion",
-        "seq",
-        "attemptId",
-        "occurredAt",
-        "type",
-        "payload"
-      ],
-      "properties": {
-        "protocolVersion": {
-          "const": "1.0.0",
-          "type": "string"
-        },
-        "seq": {
-          "minimum": 0,
-          "type": "integer"
-        },
-        "attemptId": {
-          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-          "type": "string"
-        },
-        "occurredAt": {
-          "format": "date-time",
-          "pattern": "Z$",
-          "type": "string"
-        },
-        "type": {
-          "const": "agent.action",
-          "type": "string"
-        },
-        "payload": {
-          "additionalProperties": false,
-          "type": "object",
-          "required": [
-            "stepId",
-            "action"
-          ],
-          "properties": {
-            "stepId": {
-              "minLength": 1,
-              "maxLength": 200,
-              "type": "string"
-            },
-            "action": {
-              "anyOf": [
-                {
+              },
+              "steps": {
+                "minItems": 1,
+                "maxItems": 200,
+                "type": "array",
+                "items": {
                   "anyOf": [
                     {
                       "additionalProperties": false,
@@ -5874,17 +5642,2044 @@
                       }
                     }
                   ]
-                },
-                {
-                  "type": "null"
                 }
-              ]
+              },
+              "dependsOn": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "producerTestId",
+                    "outputName",
+                    "consumerInput",
+                    "type",
+                    "required",
+                    "sensitive",
+                    "maximumAge",
+                    "permittedEnvironment"
+                  ],
+                  "properties": {
+                    "producerTestId": {
+                      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "producerRevisionId": {
+                      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "producerCell": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/T0"
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "$ref": "#/$defs/T0"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "outputName": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "consumerInput": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "type": {
+                      "anyOf": [
+                        {
+                          "const": "string",
+                          "type": "string"
+                        },
+                        {
+                          "const": "number",
+                          "type": "string"
+                        },
+                        {
+                          "const": "boolean",
+                          "type": "string"
+                        },
+                        {
+                          "const": "object",
+                          "type": "string"
+                        },
+                        {
+                          "const": "array",
+                          "type": "string"
+                        },
+                        {
+                          "const": "null",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "sensitive": {
+                      "type": "boolean"
+                    },
+                    "maximumAge": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "permittedEnvironment": {
+                      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "cleanup": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "resourceRef",
+                    "operation",
+                    "input",
+                    "successPredicate",
+                    "deadlineMs",
+                    "required"
+                  ],
+                  "properties": {
+                    "resourceRef": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "operation": {
+                      "const": "request",
+                      "type": "string"
+                    },
+                    "input": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "method",
+                        "pathSegments"
+                      ],
+                      "properties": {
+                        "method": {
+                          "anyOf": [
+                            {
+                              "const": "GET",
+                              "type": "string"
+                            },
+                            {
+                              "const": "HEAD",
+                              "type": "string"
+                            },
+                            {
+                              "const": "POST",
+                              "type": "string"
+                            },
+                            {
+                              "const": "PUT",
+                              "type": "string"
+                            },
+                            {
+                              "const": "PATCH",
+                              "type": "string"
+                            },
+                            {
+                              "const": "DELETE",
+                              "type": "string"
+                            },
+                            {
+                              "const": "OPTIONS",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "pathSegments": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "literal"
+                                ],
+                                "properties": {
+                                  "literal": {
+                                    "anyOf": [
+                                      {
+                                        "type": "null"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "$ref": "#/$defs/T0"
+                                        }
+                                      },
+                                      {
+                                        "type": "object",
+                                        "patternProperties": {
+                                          "^(.*)$": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "secretRef"
+                                ],
+                                "properties": {
+                                  "secretRef": {
+                                    "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "variableRef"
+                                ],
+                                "properties": {
+                                  "variableRef": {
+                                    "minLength": 1,
+                                    "maxLength": 200,
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "artifactRef"
+                                ],
+                                "properties": {
+                                  "artifactRef": {
+                                    "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "query": {
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "value"
+                            ],
+                            "properties": {
+                              "name": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "literal"
+                                    ],
+                                    "properties": {
+                                      "literal": {
+                                        "anyOf": [
+                                          {
+                                            "type": "null"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          },
+                                          {
+                                            "type": "object",
+                                            "patternProperties": {
+                                              "^(.*)$": {
+                                                "$ref": "#/$defs/T0"
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "secretRef"
+                                    ],
+                                    "properties": {
+                                      "secretRef": {
+                                        "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "variableRef"
+                                    ],
+                                    "properties": {
+                                      "variableRef": {
+                                        "minLength": 1,
+                                        "maxLength": 200,
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "artifactRef"
+                                    ],
+                                    "properties": {
+                                      "artifactRef": {
+                                        "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "literal"
+                                    ],
+                                    "properties": {
+                                      "literal": {
+                                        "anyOf": [
+                                          {
+                                            "type": "null"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          },
+                                          {
+                                            "type": "object",
+                                            "patternProperties": {
+                                              "^(.*)$": {
+                                                "$ref": "#/$defs/T0"
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "secretRef"
+                                    ],
+                                    "properties": {
+                                      "secretRef": {
+                                        "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "variableRef"
+                                    ],
+                                    "properties": {
+                                      "variableRef": {
+                                        "minLength": 1,
+                                        "maxLength": 200,
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "artifactRef"
+                                    ],
+                                    "properties": {
+                                      "artifactRef": {
+                                        "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "headers": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "body": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "value"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "json",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "literal"
+                                      ],
+                                      "properties": {
+                                        "literal": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "secretRef"
+                                      ],
+                                      "properties": {
+                                        "secretRef": {
+                                          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "variableRef"
+                                      ],
+                                      "properties": {
+                                        "variableRef": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "artifactRef"
+                                      ],
+                                      "properties": {
+                                        "artifactRef": {
+                                          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "value"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "text",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "literal"
+                                      ],
+                                      "properties": {
+                                        "literal": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "secretRef"
+                                      ],
+                                      "properties": {
+                                        "secretRef": {
+                                          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "variableRef"
+                                      ],
+                                      "properties": {
+                                        "variableRef": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "artifactRef"
+                                      ],
+                                      "properties": {
+                                        "artifactRef": {
+                                          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "fields"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "form",
+                                  "type": "string"
+                                },
+                                "fields": {
+                                  "type": "array",
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "name",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "name": {
+                                        "anyOf": [
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "literal"
+                                            ],
+                                            "properties": {
+                                              "literal": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "null"
+                                                  },
+                                                  {
+                                                    "type": "boolean"
+                                                  },
+                                                  {
+                                                    "type": "number"
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "$ref": "#/$defs/T0"
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "object",
+                                                    "patternProperties": {
+                                                      "^(.*)$": {
+                                                        "$ref": "#/$defs/T0"
+                                                      }
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "secretRef"
+                                            ],
+                                            "properties": {
+                                              "secretRef": {
+                                                "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                                "type": "string"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "variableRef"
+                                            ],
+                                            "properties": {
+                                              "variableRef": {
+                                                "minLength": 1,
+                                                "maxLength": 200,
+                                                "type": "string"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "artifactRef"
+                                            ],
+                                            "properties": {
+                                              "artifactRef": {
+                                                "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "value": {
+                                        "anyOf": [
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "literal"
+                                            ],
+                                            "properties": {
+                                              "literal": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "null"
+                                                  },
+                                                  {
+                                                    "type": "boolean"
+                                                  },
+                                                  {
+                                                    "type": "number"
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "$ref": "#/$defs/T0"
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "object",
+                                                    "patternProperties": {
+                                                      "^(.*)$": {
+                                                        "$ref": "#/$defs/T0"
+                                                      }
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "secretRef"
+                                            ],
+                                            "properties": {
+                                              "secretRef": {
+                                                "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                                "type": "string"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "variableRef"
+                                            ],
+                                            "properties": {
+                                              "variableRef": {
+                                                "minLength": 1,
+                                                "maxLength": 200,
+                                                "type": "string"
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "type": "object",
+                                            "required": [
+                                              "artifactRef"
+                                            ],
+                                            "properties": {
+                                              "artifactRef": {
+                                                "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                                "type": "string"
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "artifactRef",
+                                "mimeType"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "artifact",
+                                  "type": "string"
+                                },
+                                "artifactRef": {
+                                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "minLength": 1,
+                                  "maxLength": 200,
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "capture": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "name",
+                                  "from",
+                                  "pointer",
+                                  "valueType",
+                                  "sensitive"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "minLength": 1,
+                                    "maxLength": 200,
+                                    "type": "string"
+                                  },
+                                  "from": {
+                                    "const": "jsonPointer",
+                                    "type": "string"
+                                  },
+                                  "pointer": {
+                                    "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                                    "type": "string"
+                                  },
+                                  "valueType": {
+                                    "anyOf": [
+                                      {
+                                        "const": "string",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "number",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "boolean",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "object",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "array",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "null",
+                                        "type": "string"
+                                      }
+                                    ]
+                                  },
+                                  "sensitive": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "name",
+                                  "from",
+                                  "header",
+                                  "valueType",
+                                  "sensitive"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "minLength": 1,
+                                    "maxLength": 200,
+                                    "type": "string"
+                                  },
+                                  "from": {
+                                    "const": "header",
+                                    "type": "string"
+                                  },
+                                  "header": {
+                                    "minLength": 1,
+                                    "maxLength": 200,
+                                    "type": "string"
+                                  },
+                                  "valueType": {
+                                    "anyOf": [
+                                      {
+                                        "const": "string",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "number",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "const": "boolean",
+                                        "type": "string"
+                                      }
+                                    ]
+                                  },
+                                  "sensitive": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "resource": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "resourceType",
+                            "correlationKey"
+                          ],
+                          "properties": {
+                            "resourceType": {
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "type": "string"
+                            },
+                            "correlationKey": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "handle": {
+                              "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                              "type": "string"
+                            },
+                            "ownerProof": {
+                              "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "successPredicate": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "visible",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "hidden",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "enabled",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "textEquals",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "textContains",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "valueEquals",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "urlEquals",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "jsonEquals",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "countEquals",
+                              "type": "string"
+                            },
+                            "value": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "values"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "statusIn",
+                              "type": "string"
+                            },
+                            "values": {
+                              "minItems": 1,
+                              "uniqueItems": true,
+                              "type": "array",
+                              "items": {
+                                "minimum": 100,
+                                "maximum": 599,
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "header",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "headerEquals",
+                              "type": "string"
+                            },
+                            "header": {
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "sourceRevisionId",
+                            "pointer"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "jsonSchema",
+                              "type": "string"
+                            },
+                            "sourceRevisionId": {
+                              "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "pointer": {
+                              "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "outputName"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "downloadMatches",
+                              "type": "string"
+                            },
+                            "outputName": {
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "type": "string"
+                            },
+                            "sha256": {
+                              "pattern": "^[0-9a-f]{64}$",
+                              "type": "string"
+                            },
+                            "mimeType": {
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "type": "string"
+                            },
+                            "sizeBytes": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "baselineId"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "visualMatches",
+                              "type": "string"
+                            },
+                            "baselineId": {
+                              "pattern": "^vbl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            "threshold": {
+                              "minimum": 0,
+                              "maximum": 1,
+                              "type": "number"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "maximum"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "accessibilityViolations",
+                              "type": "string"
+                            },
+                            "maximum": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "deadlineMs": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              },
+              "priority": {
+                "anyOf": [
+                  {
+                    "const": "critical",
+                    "type": "string"
+                  },
+                  {
+                    "const": "high",
+                    "type": "string"
+                  },
+                  {
+                    "const": "normal",
+                    "type": "string"
+                  },
+                  {
+                    "const": "low",
+                    "type": "string"
+                  }
+                ]
+              }
+            }
+          },
+          "requirementRefs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          "evidenceRefs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
             }
           }
         }
       }
     }
-  ],
+  },
   "$defs": {
     "T2": {
       "anyOf": [
@@ -11623,6 +13418,6 @@
       ]
     }
   },
-  "$id": "urn:testmaster:SupervisorEvent",
+  "$id": "urn:testmaster:AIProposalsOutput",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

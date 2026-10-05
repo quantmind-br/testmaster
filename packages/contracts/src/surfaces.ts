@@ -71,6 +71,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET,DELETE", "/sources/{id}", "sources:R/W", "M2", "Empty", "Source"],
   ["POST", "/projects/{id}/discovery", "discovery:X", "M2", "DiscoveryRequest", "DiscoveryJob"],
   ["GET", "/discovery/{id}", "discovery:R", "M2", "Empty", "DiscoveryResult"],
+  ["GET", "/discovery/{id}/events", "discovery:R", "M2", "Empty", "DiscoveryJob"],
   ["POST", "/discovery/{id}/retry", "discovery:X", "M2", "DiscoveryRetryInput", "DiscoveryJob"],
   ["POST", "/discovery/{id}/cancel", "discovery:X", "M2", "Empty", "DiscoveryJob"],
   [
@@ -231,7 +232,16 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
         path,
         scope: resolvedScope,
         milestone,
-        requestSchema: method === "GET" || method === "DELETE" ? "Empty" : requestSchema,
+        requestSchema:
+          method === "GET" || method === "DELETE"
+            ? "Empty"
+            : method === "PATCH" && path === "/projects/{id}"
+              ? "ProjectPatchInput"
+              : method === "PATCH" && path === "/environments/{id}"
+                ? "EnvironmentPatchInput"
+                : method === "POST" && path === "/approvals"
+                  ? "ApprovalInput"
+                  : requestSchema,
         responseSchema,
       };
     }),
@@ -266,6 +276,8 @@ export const mcpTools = {
       envId: id("env"),
       featureIds: Type.Array(id("fea")),
       budget: Json,
+      jobId: Type.Optional(id("dsc")),
+      wait: Type.Optional(Type.Boolean()),
     }),
     output: "DiscoveryJob",
   },
@@ -306,10 +318,22 @@ export const mcpTools = {
       environmentId: id("env"),
       mode: Name,
       limits: Type.Optional(Json),
+      jobId: Type.Optional(id("bat")),
+      idempotencyKey: Type.Optional(Type.String({ minLength: 16, maxLength: 128 })),
+      wait: Type.Optional(Type.Boolean()),
+      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 1800000 })),
     }),
     output: "BatchReceipt",
   },
-  testmaster_get_run: { milestone: "M1", input: Obj({ runId: id("run") }), output: "RunResult" },
+  testmaster_get_run: {
+    milestone: "M1",
+    input: Obj({
+      runId: id("run"),
+      wait: Type.Optional(Type.Boolean()),
+      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 1800000 })),
+    }),
+    output: "RunResult",
+  },
   testmaster_get_evidence: {
     milestone: "M1",
     input: Obj({
@@ -317,6 +341,7 @@ export const mcpTools = {
       attemptId: Type.Optional(id("att")),
       failedOnly: Type.Optional(Type.Boolean()),
       maxBytes: Type.Optional(Type.Integer({ minimum: 1, maximum: 67108864 })),
+      cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
     }),
     output: "EvidenceSummary",
   },

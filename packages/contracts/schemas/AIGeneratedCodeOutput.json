@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "code",
+    "format"
+  ],
+  "properties": {
+    "code": {
+      "minLength": 1,
+      "maxLength": 1048576,
+      "type": "string"
+    },
+    "format": {
+      "anyOf": [
+        {
+          "const": "playwright",
+          "type": "string"
+        },
+        {
+          "const": "pytest",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AIGeneratedCodeOutput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

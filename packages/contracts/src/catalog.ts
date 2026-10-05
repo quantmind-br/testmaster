@@ -8,6 +8,39 @@ import { ErrorEnvelope, mcpTools, SuccessEnvelope } from "./surfaces.js";
 
 const names = Type.Array(P.Name);
 const supplemental = {
+  AIRequirementsOutput: P.Obj({
+    requirements: Type.Array(
+      P.Obj({
+        key: P.Name,
+        text: P.Description,
+        acceptanceCriteria: Type.Array(P.Description, { minItems: 1 }),
+        sourceRefs: Type.Array(P.EvidenceRef, { minItems: 1 }),
+        originKind: P.Enum(["explicit", "user_spec", "inferred", "observed"]),
+        confidence: Type.Union([Type.Number({ minimum: 0, maximum: 1 }), Type.Null()]),
+        reason: P.Description,
+      }),
+      { minItems: 1, maxItems: 100 },
+    ),
+    conflicts: Type.Array(
+      P.Obj({
+        keys: Type.Array(P.Name, { minItems: 2 }),
+        reason: P.Description,
+        sourceRefs: Type.Array(P.EvidenceRef, { minItems: 2 }),
+      }),
+    ),
+    openQuestions: Type.Array(P.Description),
+  }),
+  AIProposalsOutput: P.Obj({
+    proposals: Type.Array(
+      P.Obj({
+        plan: Plans.ExecutablePlan,
+        requirementRefs: Type.Array(P.id("req"), { minItems: 1 }),
+        evidenceRefs: Type.Array(P.EvidenceRef, { minItems: 1 }),
+        warnings: names,
+      }),
+      { minItems: 1, maxItems: 50 },
+    ),
+  }),
   Empty: P.Obj({}),
   Binary: Type.String({ contentEncoding: "base64" }),
   Health: P.Obj({ status: P.Enum(["alive", "ready", "unavailable"]) }),
@@ -161,11 +194,25 @@ const supplemental = {
   }),
   EvidenceSummary: P.Obj({
     manifest: Ops.ArtifactManifest,
-    resources: Type.Array(P.Name),
+    resources: Type.Array(Type.String({ minLength: 1, maxLength: 8192 })),
     integrity: P.Enum(["verified", "partial", "invalid"]),
     nextCursor: Type.Union([Type.String(), Type.Null()]),
   }),
   ReportLocation: P.Obj({ location: Type.String() }),
+};
+const httpInputs = {
+  ProjectPatchInput: Type.Partial(supplemental.ProjectInput),
+  EnvironmentPatchInput: Type.Partial(supplemental.EnvironmentInput),
+  ApprovalInput: P.Obj({
+    actorId: Type.Optional(P.id("usr")),
+    reviewerId: Type.Optional(P.id("usr")),
+    actionSet: names,
+    revisionHash: P.ContentDigest,
+    environmentRevisionId: P.id("evr"),
+    originSet: names,
+    expiresAt: Type.Optional(P.Timestamp),
+    policyHash: P.ContentDigest,
+  }),
 };
 export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   EntityId: P.EntityId,
@@ -176,6 +223,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   EvidenceRef: P.EvidenceRef,
   Pagination: P.Pagination,
   ExecutablePlan: Plans.ExecutablePlan,
+  Step: Plans.Step,
   IntentPlan: Plans.IntentPlan,
   TestRevisionInput: Plans.TestRevisionInput,
   CodeReference: Plans.CodeReference,
@@ -212,10 +260,13 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ModelResponse: Entities.ModelResponse,
   RunnerEvent: Protocol.RunnerEvent,
   SupervisorEvent: Protocol.SupervisorEvent,
+  AgentActionSelection: Protocol.AgentActionSelection,
+  AIGeneratedCodeOutput: Protocol.AIGeneratedCodeOutput,
   CapabilityManifest: Protocol.CapabilityManifest,
   ErrorEnvelope,
   SuccessEnvelope: SuccessEnvelope(P.Json),
   ...supplemental,
+  ...httpInputs,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

@@ -129,9 +129,14 @@ export function validate<T = unknown>(name: string, value: unknown): T {
     if ("proposals" in candidate) validateNestedPlans(candidate.proposals);
   };
   if (
-    ["ExecutablePlan", "TestRevisionInput", "TestRevision", "Proposal", "ProposalBatch"].includes(
-      name,
-    )
+    [
+      "ExecutablePlan",
+      "TestRevisionInput",
+      "TestRevision",
+      "Proposal",
+      "ProposalBatch",
+      "AIProposalsOutput",
+    ].includes(name)
   )
     validateNestedPlans(value);
   if (name === "StepResult") {
@@ -227,6 +232,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
           captures.add(capture.name);
           captures.add(`${step.id}.${capture.name}`);
         }
+      if (step.operation === "request" && step.input.resource) captures.add(`${step.id}.handle`);
     });
   };
   visit(plan.steps, "/steps");

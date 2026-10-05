@@ -1,5 +1,6 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { VariableCapture } from "./operations.js";
+import { Step } from "./plans.js";
 import {
   ContentDigest,
   Description,
@@ -108,6 +109,7 @@ export const RunnerEvent = Type.Union([
     "secret.request",
     Obj({ requestId: Name, secretRef: id("sec"), secretVersion: Type.Integer({ minimum: 1 }) }),
   ),
+  event("agent.request", Obj({ stepId: Name, observation: Json })),
 ]);
 export const SupervisorEvent = Type.Union([
   event(
@@ -120,7 +122,13 @@ export const SupervisorEvent = Type.Union([
     }),
   ),
   event("control.cancel", Obj({ reasonCode: Enum(reasonCodes), deadlineMs: Nonnegative })),
+  event("agent.action", Obj({ stepId: Name, action: Type.Union([Step, Type.Null()]) })),
 ]);
+export const AgentActionSelection = Obj({ index: Type.Union([Nonnegative, Type.Null()]) });
+export const AIGeneratedCodeOutput = Obj({
+  code: Type.String({ minLength: 1, maxLength: 1048576 }),
+  format: Enum(["playwright", "pytest"]),
+});
 export const CapabilityManifest = Obj({
   schemaVersion: Type.Literal("1.0.0"),
   apiVersion: Name,
