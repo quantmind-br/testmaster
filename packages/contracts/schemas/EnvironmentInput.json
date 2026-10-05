@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "name",
+    "baseUrl",
+    "networkProfile"
+  ],
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "baseUrl": {
+      "format": "uri",
+      "type": "string"
+    },
+    "networkProfile": {
+      "anyOf": [
+        {
+          "const": "public",
+          "type": "string"
+        },
+        {
+          "const": "private",
+          "type": "string"
+        },
+        {
+          "const": "local-loopback",
+          "type": "string"
+        }
+      ]
+    },
+    "authRefs": {
+      "type": "array",
+      "items": {
+        "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "production": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:EnvironmentInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

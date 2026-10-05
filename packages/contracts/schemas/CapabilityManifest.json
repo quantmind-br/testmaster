@@ -1,0 +1,166 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "apiVersion",
+    "runnerVersion",
+    "protocolVersion",
+    "capabilities",
+    "limits"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "apiVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "runnerVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "protocolVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "enabled",
+          "milestone",
+          "disabledReason"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "milestone": {
+            "anyOf": [
+              {
+                "const": "M0",
+                "type": "string"
+              },
+              {
+                "const": "M1",
+                "type": "string"
+              },
+              {
+                "const": "M2",
+                "type": "string"
+              },
+              {
+                "const": "M3",
+                "type": "string"
+              },
+              {
+                "const": "M4",
+                "type": "string"
+              },
+              {
+                "const": "M5",
+                "type": "string"
+              },
+              {
+                "const": "M6",
+                "type": "string"
+              }
+            ]
+          },
+          "disabledReason": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experimental": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "limits": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:CapabilityManifest",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "priority": {
+      "anyOf": [
+        {
+          "const": "critical",
+          "type": "string"
+        },
+        {
+          "const": "high",
+          "type": "string"
+        },
+        {
+          "const": "normal",
+          "type": "string"
+        },
+        {
+          "const": "low",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:TestMetadataInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

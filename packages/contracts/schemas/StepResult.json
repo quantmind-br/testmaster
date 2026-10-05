@@ -1,0 +1,402 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "attemptId",
+    "planStepId",
+    "index",
+    "status",
+    "expected",
+    "observed",
+    "error",
+    "durationMs",
+    "evidenceRefs"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^stp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "attemptId": {
+      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "planStepId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "index": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "running",
+          "type": "string"
+        },
+        {
+          "const": "passed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "blocked",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        },
+        {
+          "const": "skipped",
+          "type": "string"
+        },
+        {
+          "const": "not_run",
+          "type": "string"
+        },
+        {
+          "const": "inconclusive",
+          "type": "string"
+        }
+      ]
+    },
+    "reasonCode": {
+      "anyOf": [
+        {
+          "const": "assertions_satisfied",
+          "type": "string"
+        },
+        {
+          "const": "assertion_mismatch",
+          "type": "string"
+        },
+        {
+          "const": "assertion_timeout",
+          "type": "string"
+        },
+        {
+          "const": "missing_secret",
+          "type": "string"
+        },
+        {
+          "const": "credential_revoked",
+          "type": "string"
+        },
+        {
+          "const": "manual_auth_required",
+          "type": "string"
+        },
+        {
+          "const": "auth_checkpoint_expired",
+          "type": "string"
+        },
+        {
+          "const": "upstream_failed",
+          "type": "string"
+        },
+        {
+          "const": "dependency_cycle",
+          "type": "string"
+        },
+        {
+          "const": "ambiguous_producer",
+          "type": "string"
+        },
+        {
+          "const": "unsupported_capability",
+          "type": "string"
+        },
+        {
+          "const": "security_precondition_failed",
+          "type": "string"
+        },
+        {
+          "const": "approval_required",
+          "type": "string"
+        },
+        {
+          "const": "egress_denied",
+          "type": "string"
+        },
+        {
+          "const": "worker_lost",
+          "type": "string"
+        },
+        {
+          "const": "worker_lease_expired",
+          "type": "string"
+        },
+        {
+          "const": "execution_deadline",
+          "type": "string"
+        },
+        {
+          "const": "attempt_timeout",
+          "type": "string"
+        },
+        {
+          "const": "insufficient_evidence",
+          "type": "string"
+        },
+        {
+          "const": "oracle_uncertain",
+          "type": "string"
+        },
+        {
+          "const": "retry_unsafe_external_effect",
+          "type": "string"
+        },
+        {
+          "const": "user_cancelled",
+          "type": "string"
+        },
+        {
+          "const": "deadline_cancelled",
+          "type": "string"
+        },
+        {
+          "const": "tunnel_lost",
+          "type": "string"
+        },
+        {
+          "const": "artifact_limit_exceeded",
+          "type": "string"
+        },
+        {
+          "const": "storage_unavailable",
+          "type": "string"
+        },
+        {
+          "const": "artifact_expired",
+          "type": "string"
+        },
+        {
+          "const": "redaction_failed",
+          "type": "string"
+        },
+        {
+          "const": "budget_exhausted",
+          "type": "string"
+        },
+        {
+          "const": "quota_exceeded",
+          "type": "string"
+        },
+        {
+          "const": "schedule_misfire",
+          "type": "string"
+        },
+        {
+          "const": "schedule_overlap",
+          "type": "string"
+        },
+        {
+          "const": "owner_revoked",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_failed",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_inconclusive",
+          "type": "string"
+        },
+        {
+          "const": "optional_step_skipped",
+          "type": "string"
+        },
+        {
+          "const": "stopped_after_failure",
+          "type": "string"
+        },
+        {
+          "const": "cancelled_before_step",
+          "type": "string"
+        }
+      ]
+    },
+    "expected": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "observed": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "error": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "message": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "durationMs": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "minProperties": 1,
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "sourceRevisionId": {
+            "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "snapshotId": {
+            "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "relativePath": {
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+            "type": "string"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "length": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "jsonPointer": {
+            "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+            "type": "string"
+          },
+          "contentHash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:StepResult",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

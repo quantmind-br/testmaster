@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "binding",
+    "ttlMs",
+    "host",
+    "port"
+  ],
+  "properties": {
+    "binding": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "ttlMs": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "host": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "port": {
+      "minimum": 1,
+      "maximum": 65535,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:TunnelInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

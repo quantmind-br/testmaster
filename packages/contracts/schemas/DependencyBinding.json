@@ -1,0 +1,140 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "producerTestId",
+    "outputName",
+    "consumerInput",
+    "type",
+    "required",
+    "sensitive",
+    "maximumAge",
+    "permittedEnvironment"
+  ],
+  "properties": {
+    "producerTestId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "producerRevisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "producerCell": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "outputName": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "consumerInput": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "const": "string",
+          "type": "string"
+        },
+        {
+          "const": "number",
+          "type": "string"
+        },
+        {
+          "const": "boolean",
+          "type": "string"
+        },
+        {
+          "const": "object",
+          "type": "string"
+        },
+        {
+          "const": "array",
+          "type": "string"
+        },
+        {
+          "const": "null",
+          "type": "string"
+        }
+      ]
+    },
+    "required": {
+      "type": "boolean"
+    },
+    "sensitive": {
+      "type": "boolean"
+    },
+    "maximumAge": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "permittedEnvironment": {
+      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:DependencyBinding",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

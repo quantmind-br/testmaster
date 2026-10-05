@@ -1,0 +1,84 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "workspaceId",
+    "principalId",
+    "role",
+    "projectRestrictions"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^mem_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "principalId": {
+      "anyOf": [
+        {
+          "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "pattern": "^svc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      ]
+    },
+    "role": {
+      "anyOf": [
+        {
+          "const": "org_owner",
+          "type": "string"
+        },
+        {
+          "const": "org_admin",
+          "type": "string"
+        },
+        {
+          "const": "maintainer",
+          "type": "string"
+        },
+        {
+          "const": "runner",
+          "type": "string"
+        },
+        {
+          "const": "reviewer",
+          "type": "string"
+        },
+        {
+          "const": "viewer",
+          "type": "string"
+        },
+        {
+          "const": "service_account",
+          "type": "string"
+        }
+      ]
+    },
+    "projectRestrictions": {
+      "type": "array",
+      "items": {
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Membership",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

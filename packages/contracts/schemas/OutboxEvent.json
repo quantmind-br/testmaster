@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "aggregateId",
+    "seq",
+    "type",
+    "payloadRef",
+    "deliveryState"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "aggregateId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "seq": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "type": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "payloadRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "deliveryState": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "delivered",
+          "type": "string"
+        },
+        {
+          "const": "dead_letter",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:OutboxEvent",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

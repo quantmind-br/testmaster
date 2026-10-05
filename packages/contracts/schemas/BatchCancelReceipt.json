@@ -1,0 +1,107 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "batchId",
+    "members"
+  ],
+  "properties": {
+    "batchId": {
+      "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runId",
+          "result",
+          "status"
+        ],
+        "properties": {
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "const": "requested",
+                "type": "string"
+              },
+              {
+                "const": "already_terminal",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "queued",
+                    "type": "string"
+                  },
+                  {
+                    "const": "preparing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "running",
+                    "type": "string"
+                  },
+                  {
+                    "const": "collecting",
+                    "type": "string"
+                  },
+                  {
+                    "const": "analyzing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "completed",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:BatchCancelReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

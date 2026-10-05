@@ -1,0 +1,298 @@
+{
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "by",
+        "value"
+      ],
+      "properties": {
+        "by": {
+          "const": "testId",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "container": {
+          "$ref": "#/$defs/T1"
+        },
+        "frame": {
+          "$ref": "#/$defs/T1"
+        },
+        "pageAlias": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "by",
+        "role"
+      ],
+      "properties": {
+        "by": {
+          "const": "role",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "exact": {
+          "type": "boolean"
+        },
+        "container": {
+          "$ref": "#/$defs/T1"
+        },
+        "frame": {
+          "$ref": "#/$defs/T1"
+        },
+        "pageAlias": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "by",
+        "value"
+      ],
+      "properties": {
+        "by": {
+          "anyOf": [
+            {
+              "const": "label",
+              "type": "string"
+            },
+            {
+              "const": "text",
+              "type": "string"
+            },
+            {
+              "const": "placeholder",
+              "type": "string"
+            }
+          ]
+        },
+        "value": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "exact": {
+          "type": "boolean"
+        },
+        "container": {
+          "$ref": "#/$defs/T1"
+        },
+        "frame": {
+          "$ref": "#/$defs/T1"
+        },
+        "pageAlias": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "by",
+        "value"
+      ],
+      "properties": {
+        "by": {
+          "const": "css",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "container": {
+          "$ref": "#/$defs/T1"
+        },
+        "frame": {
+          "$ref": "#/$defs/T1"
+        },
+        "pageAlias": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "T1": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "by",
+            "value"
+          ],
+          "properties": {
+            "by": {
+              "const": "testId",
+              "type": "string"
+            },
+            "value": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "container": {
+              "$ref": "#/$defs/T1"
+            },
+            "frame": {
+              "$ref": "#/$defs/T1"
+            },
+            "pageAlias": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "by",
+            "role"
+          ],
+          "properties": {
+            "by": {
+              "const": "role",
+              "type": "string"
+            },
+            "role": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "exact": {
+              "type": "boolean"
+            },
+            "container": {
+              "$ref": "#/$defs/T1"
+            },
+            "frame": {
+              "$ref": "#/$defs/T1"
+            },
+            "pageAlias": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "by",
+            "value"
+          ],
+          "properties": {
+            "by": {
+              "anyOf": [
+                {
+                  "const": "label",
+                  "type": "string"
+                },
+                {
+                  "const": "text",
+                  "type": "string"
+                },
+                {
+                  "const": "placeholder",
+                  "type": "string"
+                }
+              ]
+            },
+            "value": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "exact": {
+              "type": "boolean"
+            },
+            "container": {
+              "$ref": "#/$defs/T1"
+            },
+            "frame": {
+              "$ref": "#/$defs/T1"
+            },
+            "pageAlias": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "by",
+            "value"
+          ],
+          "properties": {
+            "by": {
+              "const": "css",
+              "type": "string"
+            },
+            "value": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "container": {
+              "$ref": "#/$defs/T1"
+            },
+            "frame": {
+              "$ref": "#/$defs/T1"
+            },
+            "pageAlias": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:Locator",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

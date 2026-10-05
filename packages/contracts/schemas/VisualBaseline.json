@@ -1,0 +1,67 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "revisionId",
+    "matrixDigest",
+    "artifactId",
+    "maskPolicyHash",
+    "thresholdVersion",
+    "approval"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^vbl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "revisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "matrixDigest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "artifactId": {
+      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "maskPolicyHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "thresholdVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:VisualBaseline",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

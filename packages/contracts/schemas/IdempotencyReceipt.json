@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "tenant",
+    "actorScope",
+    "operation",
+    "key",
+    "requestHash",
+    "responseRef",
+    "expiresAt"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^idr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "tenant": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "actorScope": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "operation": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "key": {
+      "minLength": 16,
+      "maxLength": 128,
+      "type": "string"
+    },
+    "requestHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "responseRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:IdempotencyReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

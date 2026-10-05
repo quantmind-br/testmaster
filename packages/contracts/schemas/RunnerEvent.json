@@ -1,0 +1,1719 @@
+{
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "runner.hello",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "nonce"
+          ],
+          "properties": {
+            "nonce": {
+              "minLength": 32,
+              "maxLength": 256,
+              "type": "string"
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "step.started",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "stepId",
+            "index"
+          ],
+          "properties": {
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "index": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "step.finished",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "stepId",
+            "index",
+            "status",
+            "durationMs",
+            "evidencePaths"
+          ],
+          "properties": {
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "index": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "const": "pending",
+                  "type": "string"
+                },
+                {
+                  "const": "running",
+                  "type": "string"
+                },
+                {
+                  "const": "passed",
+                  "type": "string"
+                },
+                {
+                  "const": "failed",
+                  "type": "string"
+                },
+                {
+                  "const": "blocked",
+                  "type": "string"
+                },
+                {
+                  "const": "cancelled",
+                  "type": "string"
+                },
+                {
+                  "const": "skipped",
+                  "type": "string"
+                },
+                {
+                  "const": "not_run",
+                  "type": "string"
+                },
+                {
+                  "const": "inconclusive",
+                  "type": "string"
+                }
+              ]
+            },
+            "reasonCode": {
+              "anyOf": [
+                {
+                  "const": "assertions_satisfied",
+                  "type": "string"
+                },
+                {
+                  "const": "assertion_mismatch",
+                  "type": "string"
+                },
+                {
+                  "const": "assertion_timeout",
+                  "type": "string"
+                },
+                {
+                  "const": "missing_secret",
+                  "type": "string"
+                },
+                {
+                  "const": "credential_revoked",
+                  "type": "string"
+                },
+                {
+                  "const": "manual_auth_required",
+                  "type": "string"
+                },
+                {
+                  "const": "auth_checkpoint_expired",
+                  "type": "string"
+                },
+                {
+                  "const": "upstream_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "dependency_cycle",
+                  "type": "string"
+                },
+                {
+                  "const": "ambiguous_producer",
+                  "type": "string"
+                },
+                {
+                  "const": "unsupported_capability",
+                  "type": "string"
+                },
+                {
+                  "const": "security_precondition_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "approval_required",
+                  "type": "string"
+                },
+                {
+                  "const": "egress_denied",
+                  "type": "string"
+                },
+                {
+                  "const": "worker_lost",
+                  "type": "string"
+                },
+                {
+                  "const": "worker_lease_expired",
+                  "type": "string"
+                },
+                {
+                  "const": "execution_deadline",
+                  "type": "string"
+                },
+                {
+                  "const": "attempt_timeout",
+                  "type": "string"
+                },
+                {
+                  "const": "insufficient_evidence",
+                  "type": "string"
+                },
+                {
+                  "const": "oracle_uncertain",
+                  "type": "string"
+                },
+                {
+                  "const": "retry_unsafe_external_effect",
+                  "type": "string"
+                },
+                {
+                  "const": "user_cancelled",
+                  "type": "string"
+                },
+                {
+                  "const": "deadline_cancelled",
+                  "type": "string"
+                },
+                {
+                  "const": "tunnel_lost",
+                  "type": "string"
+                },
+                {
+                  "const": "artifact_limit_exceeded",
+                  "type": "string"
+                },
+                {
+                  "const": "storage_unavailable",
+                  "type": "string"
+                },
+                {
+                  "const": "artifact_expired",
+                  "type": "string"
+                },
+                {
+                  "const": "redaction_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "budget_exhausted",
+                  "type": "string"
+                },
+                {
+                  "const": "quota_exceeded",
+                  "type": "string"
+                },
+                {
+                  "const": "schedule_misfire",
+                  "type": "string"
+                },
+                {
+                  "const": "schedule_overlap",
+                  "type": "string"
+                },
+                {
+                  "const": "owner_revoked",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_inconclusive",
+                  "type": "string"
+                },
+                {
+                  "const": "optional_step_skipped",
+                  "type": "string"
+                },
+                {
+                  "const": "stopped_after_failure",
+                  "type": "string"
+                },
+                {
+                  "const": "cancelled_before_step",
+                  "type": "string"
+                }
+              ]
+            },
+            "expected": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            },
+            "observed": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            },
+            "error": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "message": {
+                  "maxLength": 8000,
+                  "type": "string"
+                }
+              }
+            },
+            "durationMs": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "evidencePaths": {
+              "type": "array",
+              "items": {
+                "minLength": 1,
+                "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "artifact.begin",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "artifactId",
+            "relativePath",
+            "kind",
+            "mimeType",
+            "sizeBytes"
+          ],
+          "properties": {
+            "artifactId": {
+              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "relativePath": {
+              "minLength": 1,
+              "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+              "type": "string"
+            },
+            "kind": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "mimeType": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "sizeBytes": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "artifact.chunk",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "artifactId",
+            "data"
+          ],
+          "properties": {
+            "artifactId": {
+              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "data": {
+              "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+              "maxLength": 174764,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "artifact.end",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "artifactId",
+            "sha256",
+            "sizeBytes"
+          ],
+          "properties": {
+            "artifactId": {
+              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "sizeBytes": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "resource.intent",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "resourceId",
+            "resourceType",
+            "correlationKey",
+            "state"
+          ],
+          "properties": {
+            "resourceId": {
+              "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "resourceType": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "correlationKey": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "handleRef": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "ownerProof": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            },
+            "state": {
+              "anyOf": [
+                {
+                  "const": "planned",
+                  "type": "string"
+                },
+                {
+                  "const": "created",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_pending",
+                  "type": "string"
+                },
+                {
+                  "const": "cleaned",
+                  "type": "string"
+                },
+                {
+                  "const": "orphaned",
+                  "type": "string"
+                },
+                {
+                  "const": "uncertain",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "resource.created",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "resourceId",
+            "resourceType",
+            "correlationKey",
+            "state"
+          ],
+          "properties": {
+            "resourceId": {
+              "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "resourceType": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "correlationKey": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "handleRef": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "ownerProof": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            },
+            "state": {
+              "anyOf": [
+                {
+                  "const": "planned",
+                  "type": "string"
+                },
+                {
+                  "const": "created",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_pending",
+                  "type": "string"
+                },
+                {
+                  "const": "cleaned",
+                  "type": "string"
+                },
+                {
+                  "const": "orphaned",
+                  "type": "string"
+                },
+                {
+                  "const": "uncertain",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "resource.uncertain",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "resourceId",
+            "resourceType",
+            "correlationKey",
+            "state"
+          ],
+          "properties": {
+            "resourceId": {
+              "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "resourceType": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "correlationKey": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "handleRef": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "ownerProof": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            },
+            "state": {
+              "anyOf": [
+                {
+                  "const": "planned",
+                  "type": "string"
+                },
+                {
+                  "const": "created",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_pending",
+                  "type": "string"
+                },
+                {
+                  "const": "cleaned",
+                  "type": "string"
+                },
+                {
+                  "const": "orphaned",
+                  "type": "string"
+                },
+                {
+                  "const": "uncertain",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "resource.cleanup",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "resourceId",
+            "resourceType",
+            "correlationKey",
+            "state"
+          ],
+          "properties": {
+            "resourceId": {
+              "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "resourceType": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "correlationKey": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "handleRef": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "ownerProof": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            },
+            "state": {
+              "anyOf": [
+                {
+                  "const": "planned",
+                  "type": "string"
+                },
+                {
+                  "const": "created",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_pending",
+                  "type": "string"
+                },
+                {
+                  "const": "cleaned",
+                  "type": "string"
+                },
+                {
+                  "const": "orphaned",
+                  "type": "string"
+                },
+                {
+                  "const": "uncertain",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "variable.captured",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "name",
+            "valueType",
+            "sensitive"
+          ],
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "valueType": {
+              "anyOf": [
+                {
+                  "const": "string",
+                  "type": "string"
+                },
+                {
+                  "const": "number",
+                  "type": "string"
+                },
+                {
+                  "const": "boolean",
+                  "type": "string"
+                },
+                {
+                  "const": "object",
+                  "type": "string"
+                },
+                {
+                  "const": "array",
+                  "type": "string"
+                },
+                {
+                  "const": "null",
+                  "type": "string"
+                }
+              ]
+            },
+            "sensitive": {
+              "type": "boolean"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "literal"
+                  ],
+                  "properties": {
+                    "literal": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/T0"
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "$ref": "#/$defs/T0"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "secretRef"
+                  ],
+                  "properties": {
+                    "secretRef": {
+                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "variableRef"
+                  ],
+                  "properties": {
+                    "variableRef": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "artifactRef"
+                  ],
+                  "properties": {
+                    "artifactRef": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "encryptedValueRef": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "log",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "level",
+            "message"
+          ],
+          "properties": {
+            "level": {
+              "anyOf": [
+                {
+                  "const": "debug",
+                  "type": "string"
+                },
+                {
+                  "const": "info",
+                  "type": "string"
+                },
+                {
+                  "const": "warn",
+                  "type": "string"
+                },
+                {
+                  "const": "error",
+                  "type": "string"
+                }
+              ]
+            },
+            "message": {
+              "maxLength": 16384,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "runner.finished",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "outcome",
+            "reasonCode"
+          ],
+          "properties": {
+            "outcome": {
+              "anyOf": [
+                {
+                  "const": "passed",
+                  "type": "string"
+                },
+                {
+                  "const": "failed",
+                  "type": "string"
+                },
+                {
+                  "const": "blocked",
+                  "type": "string"
+                },
+                {
+                  "const": "cancelled",
+                  "type": "string"
+                },
+                {
+                  "const": "inconclusive",
+                  "type": "string"
+                }
+              ]
+            },
+            "reasonCode": {
+              "anyOf": [
+                {
+                  "const": "assertions_satisfied",
+                  "type": "string"
+                },
+                {
+                  "const": "assertion_mismatch",
+                  "type": "string"
+                },
+                {
+                  "const": "assertion_timeout",
+                  "type": "string"
+                },
+                {
+                  "const": "missing_secret",
+                  "type": "string"
+                },
+                {
+                  "const": "credential_revoked",
+                  "type": "string"
+                },
+                {
+                  "const": "manual_auth_required",
+                  "type": "string"
+                },
+                {
+                  "const": "auth_checkpoint_expired",
+                  "type": "string"
+                },
+                {
+                  "const": "upstream_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "dependency_cycle",
+                  "type": "string"
+                },
+                {
+                  "const": "ambiguous_producer",
+                  "type": "string"
+                },
+                {
+                  "const": "unsupported_capability",
+                  "type": "string"
+                },
+                {
+                  "const": "security_precondition_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "approval_required",
+                  "type": "string"
+                },
+                {
+                  "const": "egress_denied",
+                  "type": "string"
+                },
+                {
+                  "const": "worker_lost",
+                  "type": "string"
+                },
+                {
+                  "const": "worker_lease_expired",
+                  "type": "string"
+                },
+                {
+                  "const": "execution_deadline",
+                  "type": "string"
+                },
+                {
+                  "const": "attempt_timeout",
+                  "type": "string"
+                },
+                {
+                  "const": "insufficient_evidence",
+                  "type": "string"
+                },
+                {
+                  "const": "oracle_uncertain",
+                  "type": "string"
+                },
+                {
+                  "const": "retry_unsafe_external_effect",
+                  "type": "string"
+                },
+                {
+                  "const": "user_cancelled",
+                  "type": "string"
+                },
+                {
+                  "const": "deadline_cancelled",
+                  "type": "string"
+                },
+                {
+                  "const": "tunnel_lost",
+                  "type": "string"
+                },
+                {
+                  "const": "artifact_limit_exceeded",
+                  "type": "string"
+                },
+                {
+                  "const": "storage_unavailable",
+                  "type": "string"
+                },
+                {
+                  "const": "artifact_expired",
+                  "type": "string"
+                },
+                {
+                  "const": "redaction_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "budget_exhausted",
+                  "type": "string"
+                },
+                {
+                  "const": "quota_exceeded",
+                  "type": "string"
+                },
+                {
+                  "const": "schedule_misfire",
+                  "type": "string"
+                },
+                {
+                  "const": "schedule_overlap",
+                  "type": "string"
+                },
+                {
+                  "const": "owner_revoked",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_failed",
+                  "type": "string"
+                },
+                {
+                  "const": "cleanup_inconclusive",
+                  "type": "string"
+                },
+                {
+                  "const": "optional_step_skipped",
+                  "type": "string"
+                },
+                {
+                  "const": "stopped_after_failure",
+                  "type": "string"
+                },
+                {
+                  "const": "cancelled_before_step",
+                  "type": "string"
+                }
+              ]
+            },
+            "cleanupOutcome": {
+              "anyOf": [
+                {
+                  "const": "not_required",
+                  "type": "string"
+                },
+                {
+                  "const": "pending",
+                  "type": "string"
+                },
+                {
+                  "const": "passed",
+                  "type": "string"
+                },
+                {
+                  "const": "failed",
+                  "type": "string"
+                },
+                {
+                  "const": "inconclusive",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
+          "const": "secret.request",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "requestId",
+            "secretRef",
+            "secretVersion"
+          ],
+          "properties": {
+            "requestId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "secretRef": {
+              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "secretVersion": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:RunnerEvent",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

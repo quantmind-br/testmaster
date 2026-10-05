@@ -1,0 +1,148 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "comparability",
+    "reasons",
+    "differences"
+  ],
+  "properties": {
+    "comparability": {
+      "anyOf": [
+        {
+          "const": "comparable",
+          "type": "string"
+        },
+        {
+          "const": "partially_comparable",
+          "type": "string"
+        },
+        {
+          "const": "incomparable",
+          "type": "string"
+        }
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "differences": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "left",
+          "right"
+        ],
+        "properties": {
+          "field": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "left": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/$defs/T0"
+                  }
+                }
+              }
+            ]
+          },
+          "right": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:ComparisonResult",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

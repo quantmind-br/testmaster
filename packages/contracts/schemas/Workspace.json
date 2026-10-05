@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "mode",
+    "settingsVersion",
+    "quotaPolicyId"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "const": "single-user",
+          "type": "string"
+        },
+        {
+          "const": "server",
+          "type": "string"
+        },
+        {
+          "const": "distributed",
+          "type": "string"
+        }
+      ]
+    },
+    "settingsVersion": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "quotaPolicyId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Workspace",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

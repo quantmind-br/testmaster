@@ -1,0 +1,173 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "purpose",
+    "provider",
+    "model",
+    "promptHash",
+    "inputRefs",
+    "tokens",
+    "cost",
+    "latency",
+    "outcome"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "purpose": {
+      "anyOf": [
+        {
+          "const": "normalize",
+          "type": "string"
+        },
+        {
+          "const": "plan",
+          "type": "string"
+        },
+        {
+          "const": "resolve_action",
+          "type": "string"
+        },
+        {
+          "const": "generate_code",
+          "type": "string"
+        },
+        {
+          "const": "analyze",
+          "type": "string"
+        },
+        {
+          "const": "heal",
+          "type": "string"
+        }
+      ]
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "promptHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "inputRefs": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "minProperties": 1,
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "sourceRevisionId": {
+            "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "snapshotId": {
+            "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "relativePath": {
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+            "type": "string"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "length": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "jsonPointer": {
+            "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+            "type": "string"
+          },
+          "contentHash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cost": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "latency": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "const": "success",
+          "type": "string"
+        },
+        {
+          "const": "invalid",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ModelCall",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

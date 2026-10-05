@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "mediaType",
+    "sizeBytes",
+    "contentHash"
+  ],
+  "properties": {
+    "mediaType": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "sizeBytes": {
+      "minimum": 0,
+      "maximum": 26214400,
+      "type": "integer"
+    },
+    "contentHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:UploadRequest",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

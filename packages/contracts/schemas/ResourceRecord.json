@@ -1,0 +1,196 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "creatorAttemptId",
+    "resourceType",
+    "handleRef",
+    "cleanupPlan",
+    "state",
+    "ownerProof"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "creatorAttemptId": {
+      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "resourceType": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "handleRef": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cleanupPlan": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "planned",
+          "type": "string"
+        },
+        {
+          "const": "created",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_pending",
+          "type": "string"
+        },
+        {
+          "const": "cleaned",
+          "type": "string"
+        },
+        {
+          "const": "orphaned",
+          "type": "string"
+        },
+        {
+          "const": "uncertain",
+          "type": "string"
+        }
+      ]
+    },
+    "ownerProof": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "minProperties": 1,
+          "type": "object",
+          "properties": {
+            "artifactId": {
+              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "sourceRevisionId": {
+              "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "snapshotId": {
+              "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "relativePath": {
+              "minLength": 1,
+              "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+              "type": "string"
+            },
+            "offset": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "length": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "jsonPointer": {
+              "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+              "type": "string"
+            },
+            "contentHash": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:ResourceRecord",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "provider",
+    "destinationRef",
+    "enabled"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "destinationRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:IntegrationMetadata",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

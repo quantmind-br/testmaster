@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "jobId",
+    "state",
+    "progress"
+  ],
+  "properties": {
+    "jobId": {
+      "pattern": "^job_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "queued",
+          "type": "string"
+        },
+        {
+          "const": "running",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
+    },
+    "progress": {
+      "minimum": 0,
+      "maximum": 1,
+      "type": "number"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:OperationReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

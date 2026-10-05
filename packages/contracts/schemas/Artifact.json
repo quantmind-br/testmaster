@@ -1,0 +1,122 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "runId",
+    "attemptId",
+    "revisionId",
+    "snapshotId",
+    "kind",
+    "hash",
+    "bytes",
+    "mime",
+    "storageKey",
+    "state",
+    "redactionStatus"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "attemptId": {
+      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "revisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "snapshotId": {
+      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "kind": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "mime": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "storageKey": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "available",
+          "type": "string"
+        },
+        {
+          "const": "missing",
+          "type": "string"
+        },
+        {
+          "const": "expired",
+          "type": "string"
+        },
+        {
+          "const": "partial",
+          "type": "string"
+        }
+      ]
+    },
+    "redactionStatus": {
+      "anyOf": [
+        {
+          "const": "redacted",
+          "type": "string"
+        },
+        {
+          "const": "restrictedRaw",
+          "type": "string"
+        },
+        {
+          "const": "not_applicable",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Artifact",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

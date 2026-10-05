@@ -1,0 +1,100 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "purpose",
+    "provider",
+    "model",
+    "promptVersion",
+    "schemaVersion",
+    "inputRefs",
+    "responseSchema",
+    "policyHash"
+  ],
+  "properties": {
+    "purpose": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "promptVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "schemaVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "inputRefs": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "minProperties": 1,
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "sourceRevisionId": {
+            "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "snapshotId": {
+            "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "relativePath": {
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+            "type": "string"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "length": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "jsonPointer": {
+            "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+            "type": "string"
+          },
+          "contentHash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responseSchema": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "policyHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ModelRequest",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

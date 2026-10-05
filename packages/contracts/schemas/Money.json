@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "amount",
+    "currency",
+    "scale"
+  ],
+  "properties": {
+    "amount": {
+      "type": "integer"
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "type": "string"
+    },
+    "scale": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Money",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

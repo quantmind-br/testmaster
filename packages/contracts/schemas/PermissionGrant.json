@@ -1,0 +1,94 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "resourceType",
+    "actions",
+    "projectIds",
+    "environmentIds",
+    "expiresAt",
+    "grantedBy"
+  ],
+  "properties": {
+    "resourceType": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "read",
+            "type": "string"
+          },
+          {
+            "const": "write",
+            "type": "string"
+          },
+          {
+            "const": "execute",
+            "type": "string"
+          },
+          {
+            "const": "admin",
+            "type": "string"
+          },
+          {
+            "const": "approve",
+            "type": "string"
+          },
+          {
+            "const": "raw",
+            "type": "string"
+          },
+          {
+            "const": "export",
+            "type": "string"
+          },
+          {
+            "const": "delete",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "projectIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "environmentIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "expiresAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "grantedBy": {
+      "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "deny": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:PermissionGrant",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

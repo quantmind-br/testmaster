@@ -1,0 +1,113 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "batchId",
+    "producerRunId",
+    "producerStepId",
+    "name",
+    "type",
+    "encryptedValueRef",
+    "taint"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^var_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "batchId": {
+      "anyOf": [
+        {
+          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "producerRunId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "producerStepId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "const": "string",
+          "type": "string"
+        },
+        {
+          "const": "number",
+          "type": "string"
+        },
+        {
+          "const": "boolean",
+          "type": "string"
+        },
+        {
+          "const": "object",
+          "type": "string"
+        },
+        {
+          "const": "array",
+          "type": "string"
+        },
+        {
+          "const": "null",
+          "type": "string"
+        }
+      ]
+    },
+    "encryptedValueRef": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "taint": {
+      "anyOf": [
+        {
+          "const": "public",
+          "type": "string"
+        },
+        {
+          "const": "sensitive",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:VariableValue",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

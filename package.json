@@ -1,0 +1,27 @@
+{
+  "name": "testmaster-monorepo",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run --project unit",
+    "test:docker": "vitest run --project docker",
+    "test:live": "vitest run --project live",
+    "check": "bash tools/ci/check.sh"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "@biomejs/biome": "2.5.15",
+    "vitest": "5.0.3",
+    "fast-check": "4.10.2",
+    "@types/node": "24.10.1"
+  }
+}

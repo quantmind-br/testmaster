@@ -1,0 +1,503 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "batchId",
+    "requested",
+    "accepted",
+    "notDispatched",
+    "memberRuns",
+    "expanded",
+    "allMembers",
+    "counts",
+    "gate"
+  ],
+  "properties": {
+    "batchId": {
+      "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "requested": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "accepted": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "notDispatched": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "memberKey",
+          "reasonCode"
+        ],
+        "properties": {
+          "memberKey": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "reasonCode": {
+            "anyOf": [
+              {
+                "const": "assertions_satisfied",
+                "type": "string"
+              },
+              {
+                "const": "assertion_mismatch",
+                "type": "string"
+              },
+              {
+                "const": "assertion_timeout",
+                "type": "string"
+              },
+              {
+                "const": "missing_secret",
+                "type": "string"
+              },
+              {
+                "const": "credential_revoked",
+                "type": "string"
+              },
+              {
+                "const": "manual_auth_required",
+                "type": "string"
+              },
+              {
+                "const": "auth_checkpoint_expired",
+                "type": "string"
+              },
+              {
+                "const": "upstream_failed",
+                "type": "string"
+              },
+              {
+                "const": "dependency_cycle",
+                "type": "string"
+              },
+              {
+                "const": "ambiguous_producer",
+                "type": "string"
+              },
+              {
+                "const": "unsupported_capability",
+                "type": "string"
+              },
+              {
+                "const": "security_precondition_failed",
+                "type": "string"
+              },
+              {
+                "const": "approval_required",
+                "type": "string"
+              },
+              {
+                "const": "egress_denied",
+                "type": "string"
+              },
+              {
+                "const": "worker_lost",
+                "type": "string"
+              },
+              {
+                "const": "worker_lease_expired",
+                "type": "string"
+              },
+              {
+                "const": "execution_deadline",
+                "type": "string"
+              },
+              {
+                "const": "attempt_timeout",
+                "type": "string"
+              },
+              {
+                "const": "insufficient_evidence",
+                "type": "string"
+              },
+              {
+                "const": "oracle_uncertain",
+                "type": "string"
+              },
+              {
+                "const": "retry_unsafe_external_effect",
+                "type": "string"
+              },
+              {
+                "const": "user_cancelled",
+                "type": "string"
+              },
+              {
+                "const": "deadline_cancelled",
+                "type": "string"
+              },
+              {
+                "const": "tunnel_lost",
+                "type": "string"
+              },
+              {
+                "const": "artifact_limit_exceeded",
+                "type": "string"
+              },
+              {
+                "const": "storage_unavailable",
+                "type": "string"
+              },
+              {
+                "const": "artifact_expired",
+                "type": "string"
+              },
+              {
+                "const": "redaction_failed",
+                "type": "string"
+              },
+              {
+                "const": "budget_exhausted",
+                "type": "string"
+              },
+              {
+                "const": "quota_exceeded",
+                "type": "string"
+              },
+              {
+                "const": "schedule_misfire",
+                "type": "string"
+              },
+              {
+                "const": "schedule_overlap",
+                "type": "string"
+              },
+              {
+                "const": "owner_revoked",
+                "type": "string"
+              },
+              {
+                "const": "cleanup_failed",
+                "type": "string"
+              },
+              {
+                "const": "cleanup_inconclusive",
+                "type": "string"
+              },
+              {
+                "const": "optional_step_skipped",
+                "type": "string"
+              },
+              {
+                "const": "stopped_after_failure",
+                "type": "string"
+              },
+              {
+                "const": "cancelled_before_step",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "memberRuns": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runId",
+          "status",
+          "revisionId",
+          "environmentRevisionId",
+          "acceptedAt",
+          "links",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "queued",
+                    "type": "string"
+                  },
+                  {
+                    "const": "preparing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "running",
+                    "type": "string"
+                  },
+                  {
+                    "const": "collecting",
+                    "type": "string"
+                  },
+                  {
+                    "const": "analyzing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "completed",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          },
+          "revisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "environmentRevisionId": {
+            "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "acceptedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "self",
+              "events",
+              "bundle"
+            ],
+            "properties": {
+              "self": {
+                "type": "string"
+              },
+              "events": {
+                "type": "string"
+              },
+              "bundle": {
+                "type": "string"
+              }
+            }
+          },
+          "idempotencyKey": {
+            "minLength": 16,
+            "maxLength": 128,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "expanded": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runId",
+          "status",
+          "revisionId",
+          "environmentRevisionId",
+          "acceptedAt",
+          "links",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "queued",
+                    "type": "string"
+                  },
+                  {
+                    "const": "preparing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "running",
+                    "type": "string"
+                  },
+                  {
+                    "const": "collecting",
+                    "type": "string"
+                  },
+                  {
+                    "const": "analyzing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "completed",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          },
+          "revisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "environmentRevisionId": {
+            "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "acceptedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "self",
+              "events",
+              "bundle"
+            ],
+            "properties": {
+              "self": {
+                "type": "string"
+              },
+              "events": {
+                "type": "string"
+              },
+              "bundle": {
+                "type": "string"
+              }
+            }
+          },
+          "idempotencyKey": {
+            "minLength": 16,
+            "maxLength": 128,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "allMembers": {
+      "type": "array",
+      "items": {
+        "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "counts": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "passed",
+        "failed",
+        "blocked",
+        "cancelled",
+        "inconclusive",
+        "inFlight"
+      ],
+      "properties": {
+        "passed": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "failed": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "blocked": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cancelled": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "inconclusive": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "inFlight": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "gate": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "passed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "not_applicable",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:BatchReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "batchId",
+    "expectedVersion",
+    "acceptIds",
+    "rejectIds"
+  ],
+  "properties": {
+    "batchId": {
+      "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "acceptIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "rejectIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_review_plan",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

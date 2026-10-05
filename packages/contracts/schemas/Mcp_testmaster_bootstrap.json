@@ -1,0 +1,38 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "projectRoot",
+    "target",
+    "scope",
+    "mode"
+  ],
+  "properties": {
+    "projectRoot": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "target": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "mode": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_bootstrap",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

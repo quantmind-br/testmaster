@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "anyOf": [
+        {
+          "const": "alive",
+          "type": "string"
+        },
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "unavailable",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Health",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "corpusDigest",
+    "cohort",
+    "trialRefs",
+    "oracleVersion",
+    "denominator"
+  ],
+  "properties": {
+    "corpusDigest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "cohort": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "trialRefs": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "oracleVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "denominator": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:CohortManifest",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

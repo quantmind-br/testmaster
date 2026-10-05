@@ -1,0 +1,57 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "principalId",
+    "role",
+    "projectRestrictions"
+  ],
+  "properties": {
+    "principalId": {
+      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "role": {
+      "anyOf": [
+        {
+          "const": "org_owner",
+          "type": "string"
+        },
+        {
+          "const": "org_admin",
+          "type": "string"
+        },
+        {
+          "const": "maintainer",
+          "type": "string"
+        },
+        {
+          "const": "runner",
+          "type": "string"
+        },
+        {
+          "const": "reviewer",
+          "type": "string"
+        },
+        {
+          "const": "viewer",
+          "type": "string"
+        },
+        {
+          "const": "service_account",
+          "type": "string"
+        }
+      ]
+    },
+    "projectRestrictions": {
+      "type": "array",
+      "items": {
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:MembershipInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

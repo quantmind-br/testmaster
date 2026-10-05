@@ -1,0 +1,332 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "selection"
+  ],
+  "properties": {
+    "selection": {
+      "maxItems": 500,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "environmentId"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "revisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "environmentId": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "const": "replay",
+                "type": "string"
+              },
+              {
+                "const": "agent",
+                "type": "string"
+              }
+            ]
+          },
+          "healingPolicy": {
+            "anyOf": [
+              {
+                "const": "off",
+                "type": "string"
+              },
+              {
+                "const": "propose",
+                "type": "string"
+              },
+              {
+                "const": "apply",
+                "type": "string"
+              }
+            ]
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "const": "cli",
+                "type": "string"
+              },
+              {
+                "const": "api",
+                "type": "string"
+              },
+              {
+                "const": "mcp",
+                "type": "string"
+              },
+              {
+                "const": "schedule",
+                "type": "string"
+              },
+              {
+                "const": "webhook",
+                "type": "string"
+              },
+              {
+                "const": "verification",
+                "type": "string"
+              }
+            ]
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "limits": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "executionTimeoutMs": {
+                "minimum": 1,
+                "maximum": 7200000,
+                "default": 1800000,
+                "type": "integer"
+              },
+              "attemptTimeoutMs": {
+                "minimum": 1,
+                "maximum": 900000,
+                "default": 300000,
+                "type": "integer"
+              },
+              "stepTimeoutMs": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "networkRequestTimeoutMs": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "preparationTimeoutMs": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "collectionGraceMs": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "analysisGraceMs": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "maxAttempts": {
+                "minimum": 1,
+                "maximum": 2,
+                "default": 2,
+                "type": "integer"
+              },
+              "bodyBytes": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "artifactBytes": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "attemptArtifactBytes": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "logBytes": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            }
+          },
+          "provenance": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "commitSha": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "deploymentId": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "dirtyHash": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "extensions": {
+            "additionalProperties": false,
+            "type": "object",
+            "patternProperties": {
+              "^[a-z][a-z0-9.-]*:[a-zA-Z0-9._-]+$": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "patternProperties": {
+                      "^(.*)$": {
+                        "$ref": "#/$defs/T0"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "partialDispatch": {
+      "type": "boolean"
+    },
+    "allowEmpty": {
+      "type": "boolean"
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/T0"
+            }
+          },
+          {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {
+                "$ref": "#/$defs/T0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "matrix": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:BatchRequest",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

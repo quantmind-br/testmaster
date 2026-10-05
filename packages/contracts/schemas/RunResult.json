@@ -1,0 +1,397 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "runId",
+    "phase",
+    "outcome",
+    "status",
+    "gate",
+    "cleanupOutcome",
+    "analysisStatus",
+    "passedOnRetry",
+    "firstAttemptOutcome"
+  ],
+  "properties": {
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "phase": {
+      "anyOf": [
+        {
+          "const": "queued",
+          "type": "string"
+        },
+        {
+          "const": "preparing",
+          "type": "string"
+        },
+        {
+          "const": "running",
+          "type": "string"
+        },
+        {
+          "const": "collecting",
+          "type": "string"
+        },
+        {
+          "const": "analyzing",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "type": "string"
+        }
+      ]
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "passed",
+              "type": "string"
+            },
+            {
+              "const": "failed",
+              "type": "string"
+            },
+            {
+              "const": "blocked",
+              "type": "string"
+            },
+            {
+              "const": "cancelled",
+              "type": "string"
+            },
+            {
+              "const": "inconclusive",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "queued",
+              "type": "string"
+            },
+            {
+              "const": "preparing",
+              "type": "string"
+            },
+            {
+              "const": "running",
+              "type": "string"
+            },
+            {
+              "const": "collecting",
+              "type": "string"
+            },
+            {
+              "const": "analyzing",
+              "type": "string"
+            },
+            {
+              "const": "completed",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "const": "passed",
+              "type": "string"
+            },
+            {
+              "const": "failed",
+              "type": "string"
+            },
+            {
+              "const": "blocked",
+              "type": "string"
+            },
+            {
+              "const": "cancelled",
+              "type": "string"
+            },
+            {
+              "const": "inconclusive",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    "gate": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "passed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "not_applicable",
+          "type": "string"
+        }
+      ]
+    },
+    "cleanupOutcome": {
+      "anyOf": [
+        {
+          "const": "not_required",
+          "type": "string"
+        },
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "passed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "inconclusive",
+          "type": "string"
+        }
+      ]
+    },
+    "analysisStatus": {
+      "anyOf": [
+        {
+          "const": "not_requested",
+          "type": "string"
+        },
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "complete",
+          "type": "string"
+        },
+        {
+          "const": "partial",
+          "type": "string"
+        },
+        {
+          "const": "unavailable",
+          "type": "string"
+        }
+      ]
+    },
+    "reasonCode": {
+      "anyOf": [
+        {
+          "const": "assertions_satisfied",
+          "type": "string"
+        },
+        {
+          "const": "assertion_mismatch",
+          "type": "string"
+        },
+        {
+          "const": "assertion_timeout",
+          "type": "string"
+        },
+        {
+          "const": "missing_secret",
+          "type": "string"
+        },
+        {
+          "const": "credential_revoked",
+          "type": "string"
+        },
+        {
+          "const": "manual_auth_required",
+          "type": "string"
+        },
+        {
+          "const": "auth_checkpoint_expired",
+          "type": "string"
+        },
+        {
+          "const": "upstream_failed",
+          "type": "string"
+        },
+        {
+          "const": "dependency_cycle",
+          "type": "string"
+        },
+        {
+          "const": "ambiguous_producer",
+          "type": "string"
+        },
+        {
+          "const": "unsupported_capability",
+          "type": "string"
+        },
+        {
+          "const": "security_precondition_failed",
+          "type": "string"
+        },
+        {
+          "const": "approval_required",
+          "type": "string"
+        },
+        {
+          "const": "egress_denied",
+          "type": "string"
+        },
+        {
+          "const": "worker_lost",
+          "type": "string"
+        },
+        {
+          "const": "worker_lease_expired",
+          "type": "string"
+        },
+        {
+          "const": "execution_deadline",
+          "type": "string"
+        },
+        {
+          "const": "attempt_timeout",
+          "type": "string"
+        },
+        {
+          "const": "insufficient_evidence",
+          "type": "string"
+        },
+        {
+          "const": "oracle_uncertain",
+          "type": "string"
+        },
+        {
+          "const": "retry_unsafe_external_effect",
+          "type": "string"
+        },
+        {
+          "const": "user_cancelled",
+          "type": "string"
+        },
+        {
+          "const": "deadline_cancelled",
+          "type": "string"
+        },
+        {
+          "const": "tunnel_lost",
+          "type": "string"
+        },
+        {
+          "const": "artifact_limit_exceeded",
+          "type": "string"
+        },
+        {
+          "const": "storage_unavailable",
+          "type": "string"
+        },
+        {
+          "const": "artifact_expired",
+          "type": "string"
+        },
+        {
+          "const": "redaction_failed",
+          "type": "string"
+        },
+        {
+          "const": "budget_exhausted",
+          "type": "string"
+        },
+        {
+          "const": "quota_exceeded",
+          "type": "string"
+        },
+        {
+          "const": "schedule_misfire",
+          "type": "string"
+        },
+        {
+          "const": "schedule_overlap",
+          "type": "string"
+        },
+        {
+          "const": "owner_revoked",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_failed",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_inconclusive",
+          "type": "string"
+        },
+        {
+          "const": "optional_step_skipped",
+          "type": "string"
+        },
+        {
+          "const": "stopped_after_failure",
+          "type": "string"
+        },
+        {
+          "const": "cancelled_before_step",
+          "type": "string"
+        }
+      ]
+    },
+    "passedOnRetry": {
+      "type": "boolean"
+    },
+    "firstAttemptOutcome": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "passed",
+              "type": "string"
+            },
+            {
+              "const": "failed",
+              "type": "string"
+            },
+            {
+              "const": "blocked",
+              "type": "string"
+            },
+            {
+              "const": "cancelled",
+              "type": "string"
+            },
+            {
+              "const": "inconclusive",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RunResult",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

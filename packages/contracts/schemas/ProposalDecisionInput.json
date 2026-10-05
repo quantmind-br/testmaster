@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "proposalIds",
+    "expectedVersion"
+  ],
+  "properties": {
+    "proposalIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "reason": {
+      "maxLength": 8000,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ProposalDecisionInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

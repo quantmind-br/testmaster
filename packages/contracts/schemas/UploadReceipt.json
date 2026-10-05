@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "uploadId",
+    "contentHash",
+    "sizeBytes",
+    "state"
+  ],
+  "properties": {
+    "uploadId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "contentHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sizeBytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "complete",
+          "type": "string"
+        }
+      ]
+    },
+    "target": {
+      "type": "string"
+    },
+    "token": {
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:UploadReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,293 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "inputsFingerprint",
+    "phase",
+    "perFeatureResults",
+    "limits",
+    "usage"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "inputsFingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "phase": {
+      "anyOf": [
+        {
+          "const": "queued",
+          "type": "string"
+        },
+        {
+          "const": "extracting",
+          "type": "string"
+        },
+        {
+          "const": "normalizing",
+          "type": "string"
+        },
+        {
+          "const": "exploring",
+          "type": "string"
+        },
+        {
+          "const": "planning",
+          "type": "string"
+        },
+        {
+          "const": "validating",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
+    },
+    "perFeatureResults": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "featureId",
+          "status",
+          "evidenceRefs",
+          "errors"
+        ],
+        "properties": {
+          "featureId": {
+            "pattern": "^fea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "const": "ready",
+                "type": "string"
+              },
+              {
+                "const": "partial",
+                "type": "string"
+              },
+              {
+                "const": "unreachable",
+                "type": "string"
+              },
+              {
+                "const": "needs_input",
+                "type": "string"
+              }
+            ]
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "limits": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "executionTimeoutMs": {
+          "minimum": 1,
+          "maximum": 7200000,
+          "default": 1800000,
+          "type": "integer"
+        },
+        "attemptTimeoutMs": {
+          "minimum": 1,
+          "maximum": 900000,
+          "default": 300000,
+          "type": "integer"
+        },
+        "stepTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "networkRequestTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "preparationTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "collectionGraceMs": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "analysisGraceMs": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maxAttempts": {
+          "minimum": 1,
+          "maximum": 2,
+          "default": 2,
+          "type": "integer"
+        },
+        "bodyBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "artifactBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "attemptArtifactBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "logBytes": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    },
+    "usage": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:DiscoveryJob",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

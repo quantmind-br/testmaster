@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "candidates",
+    "validationErrors"
+  ],
+  "properties": {
+    "candidates": {
+      "type": "array",
+      "items": {
+        "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "validationErrors": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "message"
+        ],
+        "properties": {
+          "path": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:GeneratedTestsReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

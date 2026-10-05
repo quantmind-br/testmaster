@@ -1,0 +1,267 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "runId",
+    "revisionId",
+    "environmentRevisionId",
+    "mode",
+    "healingPolicy",
+    "seed",
+    "target",
+    "provenance",
+    "limits",
+    "secretRefs",
+    "requiredArtifacts"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "revisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "environmentRevisionId": {
+      "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "const": "replay",
+          "type": "string"
+        },
+        {
+          "const": "agent",
+          "type": "string"
+        }
+      ]
+    },
+    "healingPolicy": {
+      "anyOf": [
+        {
+          "const": "off",
+          "type": "string"
+        },
+        {
+          "const": "propose",
+          "type": "string"
+        },
+        {
+          "const": "apply",
+          "type": "string"
+        }
+      ]
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "target": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "baseUrl",
+        "networkProfile"
+      ],
+      "properties": {
+        "baseUrl": {
+          "format": "uri",
+          "type": "string"
+        },
+        "networkProfile": {
+          "anyOf": [
+            {
+              "const": "public",
+              "type": "string"
+            },
+            {
+              "const": "local-loopback",
+              "type": "string"
+            },
+            {
+              "const": "private",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "commitSha",
+        "dirtyHash",
+        "deploymentId"
+      ],
+      "properties": {
+        "commitSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dirtyHash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deploymentId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "limits": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "executionTimeoutMs": {
+          "minimum": 1,
+          "maximum": 7200000,
+          "default": 1800000,
+          "type": "integer"
+        },
+        "attemptTimeoutMs": {
+          "minimum": 1,
+          "maximum": 900000,
+          "default": 300000,
+          "type": "integer"
+        },
+        "stepTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "networkRequestTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "preparationTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "collectionGraceMs": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "analysisGraceMs": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maxAttempts": {
+          "minimum": 1,
+          "maximum": 2,
+          "default": 2,
+          "type": "integer"
+        },
+        "bodyBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "artifactBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "attemptArtifactBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "logBytes": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    },
+    "secretRefs": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "hash"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "requiredArtifacts": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "imageDigest": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "browserVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "dependenciesLockHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "capabilityManifestHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "policyHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sealedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ExecutionSnapshot",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

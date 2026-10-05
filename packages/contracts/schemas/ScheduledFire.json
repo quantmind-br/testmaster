@@ -1,0 +1,216 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "scheduleId",
+    "scheduledAt",
+    "eventId",
+    "state",
+    "batchId"
+  ],
+  "properties": {
+    "scheduleId": {
+      "pattern": "^sch_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "scheduledAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "eventId": {
+      "pattern": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "dispatched",
+          "type": "string"
+        },
+        {
+          "const": "skipped",
+          "type": "string"
+        },
+        {
+          "const": "misfire",
+          "type": "string"
+        },
+        {
+          "const": "overlap",
+          "type": "string"
+        }
+      ]
+    },
+    "batchId": {
+      "anyOf": [
+        {
+          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reasonCode": {
+      "anyOf": [
+        {
+          "const": "assertions_satisfied",
+          "type": "string"
+        },
+        {
+          "const": "assertion_mismatch",
+          "type": "string"
+        },
+        {
+          "const": "assertion_timeout",
+          "type": "string"
+        },
+        {
+          "const": "missing_secret",
+          "type": "string"
+        },
+        {
+          "const": "credential_revoked",
+          "type": "string"
+        },
+        {
+          "const": "manual_auth_required",
+          "type": "string"
+        },
+        {
+          "const": "auth_checkpoint_expired",
+          "type": "string"
+        },
+        {
+          "const": "upstream_failed",
+          "type": "string"
+        },
+        {
+          "const": "dependency_cycle",
+          "type": "string"
+        },
+        {
+          "const": "ambiguous_producer",
+          "type": "string"
+        },
+        {
+          "const": "unsupported_capability",
+          "type": "string"
+        },
+        {
+          "const": "security_precondition_failed",
+          "type": "string"
+        },
+        {
+          "const": "approval_required",
+          "type": "string"
+        },
+        {
+          "const": "egress_denied",
+          "type": "string"
+        },
+        {
+          "const": "worker_lost",
+          "type": "string"
+        },
+        {
+          "const": "worker_lease_expired",
+          "type": "string"
+        },
+        {
+          "const": "execution_deadline",
+          "type": "string"
+        },
+        {
+          "const": "attempt_timeout",
+          "type": "string"
+        },
+        {
+          "const": "insufficient_evidence",
+          "type": "string"
+        },
+        {
+          "const": "oracle_uncertain",
+          "type": "string"
+        },
+        {
+          "const": "retry_unsafe_external_effect",
+          "type": "string"
+        },
+        {
+          "const": "user_cancelled",
+          "type": "string"
+        },
+        {
+          "const": "deadline_cancelled",
+          "type": "string"
+        },
+        {
+          "const": "tunnel_lost",
+          "type": "string"
+        },
+        {
+          "const": "artifact_limit_exceeded",
+          "type": "string"
+        },
+        {
+          "const": "storage_unavailable",
+          "type": "string"
+        },
+        {
+          "const": "artifact_expired",
+          "type": "string"
+        },
+        {
+          "const": "redaction_failed",
+          "type": "string"
+        },
+        {
+          "const": "budget_exhausted",
+          "type": "string"
+        },
+        {
+          "const": "quota_exceeded",
+          "type": "string"
+        },
+        {
+          "const": "schedule_misfire",
+          "type": "string"
+        },
+        {
+          "const": "schedule_overlap",
+          "type": "string"
+        },
+        {
+          "const": "owner_revoked",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_failed",
+          "type": "string"
+        },
+        {
+          "const": "cleanup_inconclusive",
+          "type": "string"
+        },
+        {
+          "const": "optional_step_skipped",
+          "type": "string"
+        },
+        {
+          "const": "stopped_after_failure",
+          "type": "string"
+        },
+        {
+          "const": "cancelled_before_step",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ScheduledFire",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,152 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "seq",
+    "type",
+    "runId",
+    "attemptId",
+    "occurredAt",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "eventId": {
+      "pattern": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "seq": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "const": "run.accepted",
+          "type": "string"
+        },
+        {
+          "const": "attempt.started",
+          "type": "string"
+        },
+        {
+          "const": "step.started",
+          "type": "string"
+        },
+        {
+          "const": "step.finished",
+          "type": "string"
+        },
+        {
+          "const": "artifact.available",
+          "type": "string"
+        },
+        {
+          "const": "cleanup.finished",
+          "type": "string"
+        },
+        {
+          "const": "analysis.available",
+          "type": "string"
+        },
+        {
+          "const": "run.completed",
+          "type": "string"
+        },
+        {
+          "const": "run.cancel_requested",
+          "type": "string"
+        }
+      ]
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "attemptId": {
+      "anyOf": [
+        {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "payload": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:Event",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

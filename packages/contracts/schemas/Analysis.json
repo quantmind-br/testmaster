@@ -1,0 +1,338 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "runId",
+    "snapshotId",
+    "facts",
+    "hypotheses",
+    "failureKind",
+    "confidence",
+    "modelCallId",
+    "limitations"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^ana_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "snapshotId": {
+      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "supports",
+          "contradicts",
+          "confidence",
+          "calibrated"
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "supports": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "contradicts": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "confidence": {
+            "minimum": 0,
+            "maximum": 1,
+            "type": "number"
+          },
+          "calibrated": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "failureKind": {
+      "anyOf": [
+        {
+          "const": "product_bug",
+          "type": "string"
+        },
+        {
+          "const": "test_fragility",
+          "type": "string"
+        },
+        {
+          "const": "environment",
+          "type": "string"
+        },
+        {
+          "const": "contract_violation",
+          "type": "string"
+        },
+        {
+          "const": "security_policy",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "modelCallId": {
+      "anyOf": [
+        {
+          "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "recommendedAction": {
+      "maxLength": 8000,
+      "type": "string"
+    },
+    "fixTarget": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "sourceRevisionId": {
+          "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "snapshotId": {
+          "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "relativePath": {
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+          "type": "string"
+        },
+        "offset": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "length": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "jsonPointer": {
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "type": "string"
+        },
+        "contentHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Analysis",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

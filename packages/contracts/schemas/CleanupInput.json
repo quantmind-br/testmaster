@@ -1,0 +1,60 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "ownerProof"
+  ],
+  "properties": {
+    "approval": {
+      "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "ownerProof": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "sourceRevisionId": {
+          "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "snapshotId": {
+          "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "relativePath": {
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+          "type": "string"
+        },
+        "offset": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "length": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "jsonPointer": {
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "type": "string"
+        },
+        "contentHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:CleanupInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

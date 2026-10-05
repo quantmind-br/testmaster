@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "action",
+    "reason"
+  ],
+  "properties": {
+    "action": {
+      "anyOf": [
+        {
+          "const": "pause",
+          "type": "string"
+        },
+        {
+          "const": "resume",
+          "type": "string"
+        }
+      ]
+    },
+    "reason": {
+      "maxLength": 8000,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AdmissionInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

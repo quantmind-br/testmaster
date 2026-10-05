@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "featureIds"
+  ],
+  "properties": {
+    "featureIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^fea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "inputsFingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:DiscoveryRetryInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

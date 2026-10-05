@@ -1,0 +1,57 @@
+{
+  "schema": "ExecutablePlan",
+  "expectedPath": "/steps/1/input/locator",
+  "value": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "Reject an empty login password",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open-login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "Open the login page",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "submit-login",
+        "kind": "action",
+        "operation": "click",
+        "description": "Submit without a password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "button",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "check-error",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "Require an explicit password validation error",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password-error"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Password is required"
+          }
+        }
+      }
+    ]
+  }
+}

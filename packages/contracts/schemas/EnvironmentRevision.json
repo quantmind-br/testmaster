@@ -1,0 +1,251 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "targetOrigins",
+    "networkProfile",
+    "authProfileRefs",
+    "locale",
+    "timezone",
+    "variables",
+    "production"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "targetOrigins": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "networkProfile": {
+      "anyOf": [
+        {
+          "const": "public",
+          "type": "string"
+        },
+        {
+          "const": "private",
+          "type": "string"
+        },
+        {
+          "const": "local-loopback",
+          "type": "string"
+        }
+      ]
+    },
+    "authProfileRefs": {
+      "type": "array",
+      "items": {
+        "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "locale": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "timezone": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "variables": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "name",
+            "valueType",
+            "sensitive"
+          ],
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "valueType": {
+              "anyOf": [
+                {
+                  "const": "string",
+                  "type": "string"
+                },
+                {
+                  "const": "number",
+                  "type": "string"
+                },
+                {
+                  "const": "boolean",
+                  "type": "string"
+                },
+                {
+                  "const": "object",
+                  "type": "string"
+                },
+                {
+                  "const": "array",
+                  "type": "string"
+                },
+                {
+                  "const": "null",
+                  "type": "string"
+                }
+              ]
+            },
+            "sensitive": {
+              "type": "boolean"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "literal"
+                  ],
+                  "properties": {
+                    "literal": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/T0"
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "$ref": "#/$defs/T0"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "secretRef"
+                  ],
+                  "properties": {
+                    "secretRef": {
+                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "variableRef"
+                  ],
+                  "properties": {
+                    "variableRef": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "artifactRef"
+                  ],
+                  "properties": {
+                    "artifactRef": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "encryptedValueRef": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "production": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:EnvironmentRevision",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

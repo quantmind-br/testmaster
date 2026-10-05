@@ -1,0 +1,40 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "eventId",
+    "provider",
+    "payloadHash",
+    "occurredAt",
+    "receiptRef"
+  ],
+  "properties": {
+    "eventId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "payloadHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "receiptRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:IntegrationEvent",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

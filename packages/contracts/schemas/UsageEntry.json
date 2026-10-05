@@ -1,0 +1,82 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "provider",
+    "model",
+    "reserved",
+    "actual",
+    "tokens",
+    "cost",
+    "currency",
+    "occurredAt"
+  ],
+  "properties": {
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "reserved": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "actual": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cost": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "type": "string"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:UsageEntry",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

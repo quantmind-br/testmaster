@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "accepted",
+    "retained",
+    "rejected"
+  ],
+  "properties": {
+    "accepted": {
+      "type": "array",
+      "items": {
+        "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "retained": {
+      "type": "array",
+      "items": {
+        "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ProposalDecisionReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,61 @@
+{
+  "schema": "ExecutablePlan",
+  "value": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "Read service health",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "get-health",
+        "kind": "action",
+        "operation": "request",
+        "description": "Read the controlled health endpoint",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "health"
+            }
+          ],
+          "query": [],
+          "headers": {}
+        }
+      },
+      {
+        "id": "check-status",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "Require HTTP 200",
+        "required": true,
+        "input": {
+          "responseStepId": "get-health"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [200]
+        }
+      },
+      {
+        "id": "check-health",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "Require a healthy service state",
+        "required": true,
+        "input": {
+          "responseStepId": "get-health",
+          "jsonPointer": "/status"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "ok"
+          }
+        }
+      }
+    ]
+  }
+}

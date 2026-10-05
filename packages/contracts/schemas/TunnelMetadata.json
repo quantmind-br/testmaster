@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "binding",
+    "expiresAt"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "binding": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:TunnelMetadata",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,102 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "identityRef",
+    "capabilities",
+    "imageDigests",
+    "labels",
+    "state",
+    "lastHeartbeatAt"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^wrk_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "identityRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "imageDigests": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "labels": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "enrolling",
+          "type": "string"
+        },
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "draining",
+          "type": "string"
+        },
+        {
+          "const": "revoked",
+          "type": "string"
+        },
+        {
+          "const": "offline",
+          "type": "string"
+        }
+      ]
+    },
+    "lastHeartbeatAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Worker",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

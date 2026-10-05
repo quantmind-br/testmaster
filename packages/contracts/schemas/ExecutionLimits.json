@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "executionTimeoutMs": {
+      "minimum": 1,
+      "maximum": 7200000,
+      "default": 1800000,
+      "type": "integer"
+    },
+    "attemptTimeoutMs": {
+      "minimum": 1,
+      "maximum": 900000,
+      "default": 300000,
+      "type": "integer"
+    },
+    "stepTimeoutMs": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "networkRequestTimeoutMs": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "preparationTimeoutMs": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "collectionGraceMs": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "analysisGraceMs": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "maxAttempts": {
+      "minimum": 1,
+      "maximum": 2,
+      "default": 2,
+      "type": "integer"
+    },
+    "bodyBytes": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "artifactBytes": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "attemptArtifactBytes": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "logBytes": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ExecutionLimits",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

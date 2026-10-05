@@ -1,0 +1,66 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "allowedOrigins",
+    "networkProfile"
+  ],
+  "properties": {
+    "allowedOrigins": {
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "type": "string"
+      }
+    },
+    "privateTargets": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "host",
+          "port"
+        ],
+        "properties": {
+          "host": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "port": {
+            "minimum": 1,
+            "maximum": 65535,
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "networkProfile": {
+      "anyOf": [
+        {
+          "const": "public",
+          "type": "string"
+        },
+        {
+          "const": "local-loopback",
+          "type": "string"
+        },
+        {
+          "const": "private",
+          "type": "string"
+        }
+      ]
+    },
+    "allowInsecureTls": {
+      "type": "boolean"
+    },
+    "baseUrl": {
+      "format": "uri",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:NetworkPolicy",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

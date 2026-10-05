@@ -1,0 +1,104 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "milestone",
+    "ownerRole",
+    "status",
+    "scenario",
+    "oracle",
+    "evidence"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "milestone": {
+      "anyOf": [
+        {
+          "const": "M0",
+          "type": "string"
+        },
+        {
+          "const": "M1",
+          "type": "string"
+        },
+        {
+          "const": "M2",
+          "type": "string"
+        },
+        {
+          "const": "M3",
+          "type": "string"
+        },
+        {
+          "const": "M4",
+          "type": "string"
+        },
+        {
+          "const": "M5",
+          "type": "string"
+        },
+        {
+          "const": "M6",
+          "type": "string"
+        }
+      ]
+    },
+    "ownerRole": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "planned",
+          "type": "string"
+        },
+        {
+          "const": "implemented",
+          "type": "string"
+        },
+        {
+          "const": "verified",
+          "type": "string"
+        },
+        {
+          "const": "blocked",
+          "type": "string"
+        }
+      ]
+    },
+    "scenario": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "oracle": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:TraceabilityRecord",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
