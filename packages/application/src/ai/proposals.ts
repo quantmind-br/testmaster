@@ -304,6 +304,11 @@ export class ProposalsService {
       },
       () => {
         const { batch: current, proposals } = this.detail(id);
+        if (current.state === "stale")
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Source inputs changed; regenerate proposals",
+          );
         if (current.version !== input.expectedVersion)
           throw new ContractError("REVISION_CONFLICT", "Proposal batch changed", {
             diff: {

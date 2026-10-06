@@ -13,6 +13,7 @@ import {
   eventually,
   files,
   healthPlan,
+  items,
   journey,
   object,
   text,
@@ -258,15 +259,16 @@ it("J01 dead DOCKER_HOST refuses execution without a local process fallback or t
       ).result;
       expect(result.exitCode).toBe(9);
       expect(result.json).toBeDefined();
-      const envelope = object(result.json);
-      const serialized = JSON.stringify(envelope);
-      expect(serialized).toMatch(/sandbox|docker|policy/i);
       expect(target.hits()).toBe(0);
       for (const runId of session.runIds) {
         const run = await session.current(runId);
-        expect(run.outcome).not.toBe("passed");
-        expect(run.gate).not.toBe("passed");
+        expect(run.status).toBe("blocked");
+        expect(run.outcome).toBe("blocked");
+        expect(run.gate).toBe("failed");
         expect(JSON.stringify(run)).not.toContain('"executor":"process"');
+        const events = items((await session.command(["run", "events", runId])).items);
+        const terminal = events.find((event) => event.type === "run.completed");
+        expect(object(terminal?.payload).reasonCode).toBe("security_precondition_failed");
       }
       session.oracles.push({
         check: "deadDockerNoProcessFallback",

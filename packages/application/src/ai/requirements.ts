@@ -1,14 +1,11 @@
 import { ContractError, type Requirement } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
-import {
-  type NormalizedRequirements,
-  type SourceEvidenceRef,
-  validateNormalization,
-} from "@testmaster/planner";
+import type { SourceEvidenceRef } from "@testmaster/planner";
 import { authoringTransaction } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { ModelService } from "./model.js";
+import { normalizeSources } from "./normalization.js";
 import type { SourcesService } from "./sources.js";
 
 export interface Conflict {
@@ -72,17 +69,13 @@ export class RequirementsService {
         "PRECONDITION_FAILED",
         "Sources requiring input cannot be normalized",
       );
-    const evidence = sources.flatMap((source) => source.chunks.map((chunk) => chunk.evidenceRef));
     const before = this.snapshot(input.projectId);
-    const result = await this.model.complete<NormalizedRequirements>({
-      ...input,
-      purpose: "normalize",
-      responseSchema: "AIRequirementsOutput",
-      data: sources,
-      instructions:
-        "Extract explicit requirements and their acceptance criteria. Preserve contradictory statements as separate requirements with a conflict retaining both source refs. Use source evidence refs exactly as supplied. Do not approve anything. Inference needs confidence and reason. Use concise stable keys.",
-    });
-    const normalized = validateNormalization(result.output, evidence);
+    const codeRevisionIds = new Set(
+      input.sourceRevisionIds.filter((id) =>
+        ["code", "code-summary"].includes(this.sources.revisionRole(id)),
+      ),
+    );
+    const { normalized, modelCallIds } = await normalizeSources(this.model, input, sources);
     return authoringTransaction(this.ctx, () => {
       const current = this.snapshot(input.projectId);
       if (current.version !== before.version)
@@ -93,17 +86,22 @@ export class RequirementsService {
         );
       const byKey: Record<string, string> = {};
       const requirements = normalized.requirements.map((item) => {
+        const codeOnly =
+          item.sourceRefs.length > 0 &&
+          item.sourceRefs.every((ref) => codeRevisionIds.has(ref.sourceRevisionId));
         const value = entity(this.ctx, "req", {
           text: item.text,
           acceptanceCriteria: item.acceptanceCriteria,
           sourceRefs: item.sourceRefs,
-          originKind: item.originKind,
-          confidence: item.confidence,
+          originKind: codeOnly ? "inferred" : item.originKind,
+          confidence: codeOnly ? (item.confidence ?? 0.5) : item.confidence,
           approval: null,
           extensions: {
             "testmaster:projectId": input.projectId,
             "testmaster:key": item.key,
-            "testmaster:reason": item.reason,
+            "testmaster:reason": codeOnly
+              ? (item.reason ?? "Inferred from implementation, not an authoritative oracle")
+              : item.reason,
           },
         }) as StoredRequirement;
         this.ctx.entities.insert("Requirement", value, { projectId: input.projectId });
@@ -117,6 +115,27 @@ export class RequirementsService {
         sourceRefs: conflict.sourceRefs,
         resolution: null,
       }));
+      const inferred = requirements.filter((item) => item.originKind === "inferred");
+      const desired = requirements.filter(
+        (item) => item.originKind === "explicit" || item.originKind === "user_spec",
+      );
+      for (const item of inferred) {
+        if (
+          desired.length &&
+          !conflicts.some((conflict) => conflict.requirementIds.includes(item.id))
+        )
+          conflicts.push({
+            id: `conflict-${conflicts.length + 1}`,
+            requirementIds: [item.id, ...desired.map((value) => value.id)],
+            reason:
+              "Implementation inference requires reconciliation with the desired contract before use as an oracle",
+            sourceRefs: [
+              ...item.sourceRefs,
+              ...desired.flatMap((value) => value.sourceRefs),
+            ] as SourceEvidenceRef[],
+            resolution: null,
+          });
+      }
       const snapshot = {
         requirements,
         conflicts,
@@ -124,7 +143,7 @@ export class RequirementsService {
         version: current.version + 1,
         fingerprint: semanticHash({
           sources: sources.map((source) => source.revision),
-          modelCallId: result.modelCallId,
+          modelCallIds,
         }),
       };
       this.save(input.projectId, snapshot);

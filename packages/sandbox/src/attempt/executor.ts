@@ -3,6 +3,7 @@ import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import {
+  type ArtifactManifest,
   type NetworkPolicy,
   type PlanStep,
   type RunnerEvent,
@@ -10,9 +11,11 @@ import {
   type SupervisorEvent,
   validate,
 } from "@testmaster/contracts";
+import { scrubEvidenceText } from "@testmaster/domain";
 import type { ArtifactWriter, EvidenceStore } from "@testmaster/evidence";
 import {
   type CommandResult,
+  ContainerCleanupError,
   type DockerAttempt,
   DockerExecutor,
   type ExecutorKind,
@@ -39,6 +42,8 @@ export interface AttemptInput {
   attemptId: string;
   revisionId: string;
   snapshotId: string;
+  executionSnapshot?: ArtifactManifest["executionSnapshot"];
+  reproduction?: ArtifactManifest["reproduction"];
   nonce?: string;
   kind: ExecutorKind;
   imageId: string;
@@ -66,6 +71,11 @@ export interface AttemptResult {
   bundle?: { bundleDir: string; manifestSha256: string };
   logDropped: number;
   events: RunnerEvent[];
+  cleanupFailure?: {
+    type: "container" | "browser_profile";
+    containerName?: string;
+    details?: string;
+  };
 }
 export interface AttemptRuntimeExecutor {
   execute(
@@ -94,13 +104,11 @@ export class AttemptExecutor {
         attemptId: input.attemptId,
         revisionId: input.revisionId,
         snapshotId: input.snapshotId,
+        ...(input.executionSnapshot ? { executionSnapshot: input.executionSnapshot } : {}),
+        ...(input.reproduction ? { reproduction: input.reproduction } : {}),
       },
       {
-        scanText: (text) => ({
-          hit: [...values].some(
-            (value) => text.includes(value) || text.includes(encodeURIComponent(value)),
-          ),
-        }),
+        scanText: (text) => ({ hit: scrubEvidenceText(text, [...values]).redacted }),
       },
     );
     const policy = input.networkPolicy;
@@ -199,10 +207,11 @@ export class AttemptExecutor {
         if (event.payload.value) throw new Error("sensitive_capture_plaintext_retained");
       }
       if (event.type === "secret.request") {
+        const request = event.payload;
         const secret = input.secretRefs?.find(
           (candidate) =>
-            candidate.secretRef === event.payload.secretRef &&
-            candidate.secretVersion === event.payload.secretVersion,
+            candidate.secretRef === request.secretRef &&
+            candidate.secretVersion === request.secretVersion,
         );
         if (!secret) throw new Error("missing_secret");
         if (await secret.revoked?.()) throw new Error("credential_revoked");
@@ -265,7 +274,20 @@ export class AttemptExecutor {
         runnerOutcome = event.payload.outcome;
         runnerReason = event.payload.reasonCode;
       }
+      // Artifact bytes are private staging traffic, not public observation events.
+      if (event.type === "artifact.chunk") return;
       if (events.length >= 50000) throw new Error("event_limit");
+      const sanitize = (value: unknown): unknown => {
+        if (typeof value === "string") return scrubEvidenceText(value, [...values]).text;
+        if (Array.isArray(value)) return value.map(sanitize);
+        if (value && typeof value === "object")
+          return Object.fromEntries(
+            Object.entries(value).map(([key, entry]) => [key, sanitize(entry)]),
+          );
+        return value;
+      };
+      if (!["artifact.begin", "artifact.chunk", "artifact.end"].includes(event.type))
+        event = { ...event, payload: sanitize(event.payload) } as RunnerEvent;
       events.push(event);
       await input.onEvent?.(event);
     };
@@ -315,6 +337,8 @@ export class AttemptExecutor {
     let facts: InspectFacts | undefined;
     let logDropped = 0;
     let log = "";
+    let enforcementReady = false;
+    let cleanupFailure: AttemptResult["cleanupFailure"];
     try {
       await proxy.listen();
       await new Promise<void>((resolve, reject) => {
@@ -322,6 +346,7 @@ export class AttemptExecutor {
         server.listen(protocolPath, () => resolve());
       });
       await chmod(protocolPath, 0o666);
+      enforcementReady = true;
       const config = {
         ...input.runnerInput,
         attemptId: input.attemptId,
@@ -384,8 +409,43 @@ export class AttemptExecutor {
         runnerOutcome = "cancelled";
         runnerReason = "user_cancelled";
       }
+      const browserProfileFailed = events.some((event) => {
+        if (event.type !== "log") return false;
+        const payload = event.payload;
+        return (
+          Boolean(payload) &&
+          typeof payload === "object" &&
+          "message" in payload &&
+          typeof payload.message === "string" &&
+          payload.message.startsWith("browser_profile_cleanup_failed")
+        );
+      });
+      if (browserProfileFailed && !cleanupFailure) {
+        cleanupFailure = {
+          type: "browser_profile",
+          details: "Browser runner emitted browser_profile_cleanup_failed",
+        };
+      }
     } catch (error) {
-      if (malformed) {
+      if (error instanceof ContainerCleanupError) {
+        cleanupFailure = {
+          type: "container",
+          containerName: error.containerName,
+          details: error.message,
+        };
+        await queue;
+        const terminal = events.findLast((event) => event.type === "runner.finished");
+        if (terminal) {
+          runnerOutcome = terminal.payload.outcome;
+          runnerReason = terminal.payload.reasonCode;
+        } else if (malformed) {
+          runnerOutcome = "inconclusive";
+          runnerReason = "insufficient_evidence";
+        } else if (signal?.aborted) {
+          runnerOutcome = "cancelled";
+          runnerReason = "user_cancelled";
+        }
+      } else if (malformed) {
         runnerOutcome = "inconclusive";
         runnerReason = "insufficient_evidence";
       } else if (signal?.aborted) {
@@ -394,7 +454,9 @@ export class AttemptExecutor {
       } else {
         runnerOutcome = "blocked";
         runnerReason =
-          error instanceof PolicyDenied ? "security_precondition_failed" : "insufficient_evidence";
+          !enforcementReady || error instanceof PolicyDenied
+            ? "security_precondition_failed"
+            : "insufficient_evidence";
       }
     } finally {
       signal?.removeEventListener("abort", cancel);
@@ -409,13 +471,7 @@ export class AttemptExecutor {
     }
     for (const artifact of writers.values()) await artifact.writer.abort("partial").catch(() => {});
     const artifact = async (path: string, kind: string, mime: string, data: string) => {
-      for (const value of values) {
-        data = data
-          .split(value)
-          .join("[REDACTED]")
-          .split(encodeURIComponent(value))
-          .join("[REDACTED]");
-      }
+      data = scrubEvidenceText(data, [...values]).text;
       const writer = await staging.beginArtifact({
         relativePath: path,
         kind,
@@ -449,7 +505,7 @@ export class AttemptExecutor {
     const bundle = await staging.commit({
       redactionPolicyHash:
         input.redactionPolicyHash ??
-        createHash("sha256").update("runner-secret-scan-v1").digest("hex"),
+        createHash("sha256").update("runner-secret-and-default-pattern-scan-v2").digest("hex"),
     });
     await rm(sockets, { recursive: true, force: true });
     return {
@@ -459,6 +515,7 @@ export class AttemptExecutor {
       bundle,
       logDropped,
       events,
+      ...(cleanupFailure ? { cleanupFailure } : {}),
     };
   }
 }

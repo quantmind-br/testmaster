@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,6 +30,7 @@ async function fixture() {
   let completions = 0;
   const payloads: Record<string, unknown>[] = [];
   let output: unknown = { amount: 1, currency: "USD", scale: 2 };
+  let redirect: string | null = null;
   const server = createServer(async (request, response) => {
     requests++;
     if (request.url === "/v1/models") {
@@ -39,11 +40,23 @@ async function fixture() {
     completions++;
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
-    payloads.push(JSON.parse(Buffer.concat(chunks).toString()));
+    const payload = JSON.parse(Buffer.concat(chunks).toString());
+    payloads.push(payload);
+    const reconciliation = (payload.messages as { content: string }[]).some((message) =>
+      message.content.includes("Compare the normalized statements"),
+    );
+    const conflicts =
+      output && typeof output === "object" && "conflicts" in output ? output.conflicts : [];
+    const responseOutput = reconciliation ? { conflicts, openQuestions: [] } : output;
+    if (redirect) {
+      response.writeHead(307, { location: redirect });
+      response.end();
+      return;
+    }
     response.end(
       JSON.stringify({
         ...completion,
-        choices: [{ message: { content: JSON.stringify(output) }, finish_reason: "stop" }],
+        choices: [{ message: { content: JSON.stringify(responseOutput) }, finish_reason: "stop" }],
       }),
     );
   });
@@ -78,6 +91,9 @@ async function fixture() {
     setOutput(value: unknown) {
       output = value;
     },
+    setRedirect(value: string) {
+      redirect = value;
+    },
     counts() {
       return { requests, completions };
     },
@@ -95,13 +111,23 @@ it("records consent before data crosses a real boundary, and source injection ca
   await expect(f.app.model.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
   expect(f.counts().requests).toBe(0);
   f.app.model.grantConsent(f.projectId, "fake", ["documents"]);
+  await expect(f.app.model.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  expect(f.counts().requests).toBe(0);
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
   await f.app.model.complete(input);
   expect(f.counts().completions).toBe(1);
   expect(f.payloads[0]).not.toHaveProperty("tools");
   expect(f.app.usage.get(f.projectId).unknownCostCalls).toBe(1);
   expect(
     f.app.database.all("SELECT action FROM audit_events WHERE action='consent.granted'"),
-  ).toHaveLength(1);
+  ).toHaveLength(2);
+  expect(await f.app.model.consent(f.projectId, "fake")).toMatchObject({
+    allowUnknownCost: true,
+    revokedAt: null,
+  });
+  f.app.model.revokeConsent(f.projectId, "fake");
+  await expect(f.app.model.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  expect(f.counts().completions).toBe(1);
 });
 it("bounded model repairs never persist ready requirements or active tests", async () => {
   const f = await fixture();
@@ -112,7 +138,7 @@ it("bounded model repairs never persist ready requirements or active tests", asy
     path: join(f.root, "prd.md"),
     format: "markdown",
   });
-  f.app.model.grantConsent(f.projectId, "fake", ["documents"]);
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
   f.setOutput({ requirements: [], approval: "approved", tools: ["shell"] });
   await expect(
     f.app.requirements.normalize({
@@ -136,7 +162,7 @@ it("subset retries and concurrent duplicates create only selected generated revi
   });
   const ref = source.chunks[0]?.evidenceRef;
   if (!ref) throw new Error("No source chunk");
-  f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"]);
+  f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"], true);
   f.setOutput({
     requirements: ["A", "B", "C"].map((key) => ({
       key,
@@ -254,4 +280,290 @@ it("rejects trivial body visibility as a generated business oracle", () => {
     },
   ];
   expect(() => validateProposalPlan(plan)).toThrow();
+});
+it("every normative injection channel remains data with a compromised endpoint and no classifier", async () => {
+  const f = await fixture();
+  const channels = JSON.parse(
+    await readFile(
+      new URL("../../../../fixtures/adversarial/injection-channels.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { channel: string; text: string }[];
+  await writeFile(join(f.root, ".env"), "EXCLUDED_SECRET=private-env-canary");
+  const outsideRoot = await mkdtemp(join(tmpdir(), "tm-ai-outside-"));
+  roots.push(outsideRoot);
+  await writeFile(join(outsideRoot, "private-canary.txt"), "outside-context-canary");
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
+  const policy = structuredClone(f.app.config.profilePolicy);
+  const providers = structuredClone(f.app.config.modelProviders);
+  for (const channel of channels) {
+    f.setOutput({
+      index: 0,
+      command: "touch injection-owned",
+      provider: "attacker",
+      allowedOrigins: ["http://169.254.169.254"],
+      approve: true,
+    });
+    await expect(
+      f.app.model.complete({
+        projectId: f.projectId,
+        purpose: "resolve_action",
+        responseSchema: "AgentActionSelection",
+        data: { origin: channel.channel, trust: "untrusted", text: channel.text },
+        dataClasses: ["documents"],
+      }),
+    ).rejects.toBeDefined();
+    expect(f.app.config.profilePolicy).toEqual(policy);
+    expect(f.app.config.modelProviders).toEqual(providers);
+    expect(f.app.tests.list(f.projectId)).toHaveLength(0);
+    expect(allEntities(f.app.context, "Approval")).toHaveLength(0);
+    await expect(access(join(f.root, "injection-owned"))).rejects.toBeDefined();
+  }
+  expect(f.counts().completions).toBe(channels.length * 3);
+  const captured = JSON.stringify(f.payloads);
+  expect(captured).not.toContain("outside-context-canary");
+  expect(captured).not.toContain("private-env-canary");
+  expect(f.payloads.every((payload) => !Object.hasOwn(payload, "tools"))).toBe(true);
+  f.setOutput({ index: null });
+  expect(
+    (
+      await f.app.model.complete({
+        projectId: f.projectId,
+        purpose: "resolve_action",
+        responseSchema: "AgentActionSelection",
+        data: { origin: "positive_control", trust: "untrusted", text: "ordinary observation" },
+        dataClasses: ["documents"],
+      })
+    ).output,
+  ).toEqual({ index: null });
+});
+
+it("wrong code inference cannot be laundered into an approved PRD oracle", async () => {
+  const f = await fixture();
+  await writeFile(join(f.root, "desired.md"), "GET /health MUST return healthy=true.");
+  await writeFile(join(f.root, "code.md"), "app.get('/health',()=>({healthy:false}));");
+  const desired = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: "desired.md",
+  });
+  const code = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "code-summary",
+    path: "code.md",
+  });
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
+  f.setOutput({
+    requirements: [desired, code].map((source, index) => ({
+      key: `r${index}`,
+      text: index ? "Healthy is false" : "Healthy is true",
+      acceptanceCriteria: [index ? "healthy=false" : "healthy=true"],
+      sourceRefs: [source.chunks[0]?.evidenceRef],
+      originKind: "explicit",
+      confidence: null,
+      reason: "A compromised model claims both are explicit",
+    })),
+    conflicts: [],
+    openQuestions: [],
+  });
+  const normalized = await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [desired.revision.id, code.revision.id],
+  });
+  const wrong = normalized.requirements.find((value) => value.text === "Healthy is false");
+  if (!wrong) throw new Error("Missing code-derived requirement");
+  expect(wrong).toMatchObject({ originKind: "inferred", approval: null });
+  expect(normalized.conflicts).toHaveLength(1);
+  expect(normalized.conflicts[0]?.sourceRefs).toEqual(
+    expect.arrayContaining([desired.chunks[0]?.evidenceRef, code.chunks[0]?.evidenceRef]),
+  );
+  expect(() => f.app.requirements.approve(wrong.id, wrong.version ?? 1)).toThrow(
+    expect.objectContaining({ code: "PRECONDITION_FAILED" }),
+  );
+  await expect(
+    f.app.proposals.generate({ projectId: f.projectId, requirementIds: [wrong.id] }),
+  ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  expect(f.app.tests.list(f.projectId)).toHaveLength(0);
+});
+
+it("source and code updates supersede descendants without mutating immutable test revisions", async () => {
+  const f = await fixture();
+  await writeFile(join(f.root, "prd.md"), "GET /health MUST return ok.");
+  await writeFile(join(f.root, "server.ts"), "const app={};app.get('/health',()=>({ok:true}));");
+  const first = await f.app.sources.add({ projectId: f.projectId, role: "prd", path: "prd.md" });
+  await f.app.discovery.discover({ projectId: f.projectId });
+  f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"], true);
+  const normalize = async (source: typeof first) => {
+    f.setOutput({
+      requirements: [
+        {
+          key: "health",
+          text: "Health reports ok",
+          acceptanceCriteria: ["Health reports ok"],
+          sourceRefs: [source.chunks[0]?.evidenceRef],
+          originKind: "explicit",
+          confidence: null,
+          reason: "PRD",
+        },
+      ],
+      conflicts: [],
+      openQuestions: [],
+    });
+    const snapshot = await f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [source.revision.id],
+    });
+    const requirement = snapshot.requirements[0];
+    if (!requirement) throw new Error("Missing normalized requirement");
+    f.app.requirements.approve(requirement.id, requirement.version ?? 1);
+    const plan = scaffoldPlan("backend");
+    plan.requirementRefs = [requirement.id];
+    f.setOutput({
+      proposals: [
+        {
+          plan,
+          requirementRefs: [requirement.id],
+          evidenceRefs: [source.chunks[0]?.evidenceRef],
+          warnings: [],
+        },
+      ],
+    });
+    const batch = await f.app.proposals.generate({ projectId: f.projectId });
+    return { snapshot, requirement, batch, plan };
+  };
+  const before = await normalize(first);
+  const authored = f.app.tests.create({ projectId: f.projectId, plan: before.plan });
+  const pinned = f.app.revisions.get(String(authored.activeRevisionId));
+  await writeFile(join(f.root, "prd.md"), "GET /health MUST retain ok after reload.");
+  const second = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: "prd.md",
+    sourceId: first.source.id,
+    expectedVersion: first.source.version,
+  });
+  expect(f.app.requirements.get(before.requirement.id).approval).toBeNull();
+  expect(f.app.proposals.get(before.batch.id).state).toBe("stale");
+  const proposal = f.app.proposals.detail(before.batch.id).proposals[0];
+  if (!proposal) throw new Error("Missing proposal");
+  expect(() =>
+    f.app.proposals.accept(before.batch.id, {
+      proposalIds: [proposal.id],
+      expectedVersion: f.app.proposals.get(before.batch.id).version ?? 1,
+      idempotencyKey: "stale-source-subset-key",
+    }),
+  ).toThrow(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
+  const updated = await normalize(second);
+  expect(updated.snapshot.fingerprint).not.toBe(before.snapshot.fingerprint);
+  await writeFile(
+    join(f.root, "server.ts"),
+    "const app={};app.get('/changed-health',()=>({ok:false}));",
+  );
+  await f.app.discovery.discover({ projectId: f.projectId });
+  expect(f.app.requirements.get(updated.requirement.id).approval).toBeNull();
+  expect(f.app.proposals.get(updated.batch.id).state).toBe("stale");
+  const current = await normalize(second);
+  await f.app.discovery.discover({ projectId: f.projectId });
+  expect(f.app.requirements.get(current.requirement.id).approval).not.toBeNull();
+  expect(f.app.proposals.get(current.batch.id).state).toBe("proposed");
+  expect(f.app.revisions.get(pinned.id)).toEqual(pinned);
+  expect(f.app.sources.revision(first.revision.id).revision).toEqual(first.revision);
+});
+it("a compromised model endpoint cannot redirect the controller or forward its credential", async () => {
+  const f = await fixture();
+  let leaked = 0;
+  const recorder = createServer((_request, response) => {
+    leaked++;
+    response.end("positive boundary");
+  });
+  servers.push(recorder);
+  await new Promise<void>((resolve) => recorder.listen(0, "127.0.0.1", resolve));
+  const address = recorder.address();
+  if (!address || typeof address === "string") throw new Error("Missing recorder address");
+  const destination = `http://127.0.0.1:${address.port}/exfil`;
+  f.setRedirect(destination);
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
+  await expect(
+    f.app.model.complete({
+      projectId: f.projectId,
+      purpose: "normalize",
+      responseSchema: "Money",
+      data: "untrusted response redirect",
+      dataClasses: ["documents"],
+    }),
+  ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  expect(leaked).toBe(0);
+  expect(f.counts().completions).toBe(1);
+  await fetch(destination);
+  expect(leaked).toBe(1);
+});
+it("selected exploration retry refuses unknown full foreign drifted and unauthorized raw features before effects", async () => {
+  const f = await fixture();
+  const environment = f.app.environments.list(f.projectId)[0];
+  if (!environment) throw new Error("Missing initialized environment");
+  const environmentRevision = f.app.context.entities.get(
+    "EnvironmentRevision",
+    f.app.context.workspaceId,
+    String(environment.activeRevisionId),
+  );
+  if (!environmentRevision) throw new Error("Missing environment revision");
+  const url = String((environmentRevision.targetOrigins as string[])[0]);
+  const feature = entity(f.app.context, "fea", {
+    projectId: f.projectId,
+    stableKey: "/orders",
+    routeRefs: ["/orders"],
+    endpointRefs: [],
+    requirementRefs: [],
+  });
+  f.app.context.entities.insert("Feature", feature);
+  const job = entity(f.app.context, "dsc", {
+    inputsFingerprint: "0".repeat(64),
+    phase: "completed",
+    limits: {},
+    usage: {},
+    perFeatureResults: [{ featureId: feature.id, status: "ready", evidenceRefs: [], errors: [] }],
+    extensions: {
+      "testmaster:projectId": f.projectId,
+      "testmaster:environmentRevisionId": environment.activeRevisionId,
+    },
+  });
+  f.app.context.entities.insert("DiscoveryJob", job, { projectId: f.projectId });
+  const request = {
+    projectId: f.projectId,
+    environmentId: environment.id,
+    url,
+    jobId: job.id,
+    retryFeatureIds: [feature.id],
+  };
+  expect(() => f.app.explore.begin(request)).toThrow(
+    expect.objectContaining({ code: "PRECONDITION_FAILED" }),
+  );
+  expect(() =>
+    f.app.explore.begin({
+      ...request,
+      retryFeatureIds: ["fea_01900000-0000-7000-8000-000000000001"],
+    }),
+  ).toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+  const other = f.app.projects.create({ name: "Foreign project" });
+  expect(() => f.app.explore.begin({ ...request, projectId: other.id })).toThrow(
+    expect.objectContaining({ code: "PRECONDITION_FAILED" }),
+  );
+  f.app.environments.update(environment.id, { baseUrl: url }, environment.version ?? 1);
+  expect(() => f.app.explore.begin(request)).toThrow(
+    expect.objectContaining({ code: "PRECONDITION_FAILED" }),
+  );
+  f.app.context.authorizeRaw = () => {
+    throw new Error("Raw artifact access denied");
+  };
+  expect(() =>
+    f.app.explore.begin({
+      projectId: f.projectId,
+      environmentId: environment.id,
+      url,
+      featureIds: [feature.id],
+      video: true,
+    }),
+  ).toThrow("Raw artifact access denied");
+  expect(f.counts().requests).toBe(0);
+  expect(allEntities(f.app.context, "DiscoveryJob")).toHaveLength(1);
 });

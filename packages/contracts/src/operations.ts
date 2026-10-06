@@ -28,6 +28,40 @@ import {
 import { reasonCodes } from "./registries.js";
 
 export const defaults = Object.freeze({
+  controllerBind: "127.0.0.1",
+  httpRequestsPerAttempt: 4,
+  llmTransportRetries: 1,
+  browserCpu: 2,
+  browserMemoryBytes: 2147483648,
+  browserPids: 256,
+  httpCpu: 1,
+  httpMemoryBytes: 536870912,
+  httpPids: 128,
+  pythonCpu: 1,
+  pythonMemoryBytes: 1073741824,
+  pythonPids: 128,
+  rawArtifactBytes: 268435456,
+  storageWarningPercent: 80,
+  storageSuspendPercent: 90,
+  tenantActiveJobs: 1000,
+  actorAdmissionsPerMinute: 60,
+  actorAdmissionBurst: 20,
+  maxPageSize: 100,
+  signedLinkMs: 300000,
+  tunnelMs: 900000,
+  tunnelMaxMs: 3600000,
+  tunnelStreams: 32,
+  tunnelBytesPerSecond: 10485760,
+  tunnelTotalBytes: 536870912,
+  localBackup: "manual",
+  serverBackup: "daily",
+  backupDailyCopies: 7,
+  backupWeeklyCopies: 4,
+  backupMonthlyCopies: 3,
+  scheduleMisfire: "skip",
+  scheduleGraceMs: 300000,
+  scheduleOverlap: "forbid",
+  logRetentionDays: 14,
   executionTimeoutMs: 1800000,
   attemptTimeoutMs: 300000,
   stepTimeoutMs: 30000,
@@ -113,7 +147,12 @@ export const ProjectConfig = Obj({
   ),
   healing: Type.Optional(Obj({ mode: Enum(["off", "propose", "apply"]) })),
   artifacts: Type.Optional(
-    Obj({ trace: Enum(["off", "on"]), video: Enum(["off", "on"]), retentionDays: Positive }),
+    Obj({
+      trace: Enum(["off", "on"]),
+      video: Enum(["off", "on"]),
+      httpBodies: Type.Optional(Enum(["off", "on"])),
+      retentionDays: Positive,
+    }),
   ),
   telemetry: Type.Optional(Obj({ enabled: Type.Boolean() })),
   extensions: Type.Optional(Extensions),
@@ -197,6 +236,11 @@ export const CancelReceipt = Obj({
   result: Enum(["requested", "already_terminal", "rejected"]),
   status: Type.Union([Phase, Outcome]),
 });
+export const Reproduction = Obj({
+  degree: Enum(["evidence-replay", "strict-execution-replay", "fresh-llm-regeneration"]),
+  limitations: Type.Array(Name),
+  originalRunId: Type.Optional(id("run")),
+});
 export const ArtifactManifest = Obj({
   schemaVersion: Type.Literal("1.0.0"),
   workspaceId: Type.Optional(id("ws")),
@@ -204,6 +248,8 @@ export const ArtifactManifest = Obj({
   attemptId: id("att"),
   revisionId: id("rev"),
   snapshotId: id("snp"),
+  executionSnapshot: Type.Optional(Json),
+  reproduction: Type.Optional(Reproduction),
   entries: Type.Array(
     Obj({
       relativePath: RelativePath,
@@ -268,6 +314,8 @@ export const BackupManifest = Obj({
   ),
   databaseVersion: Version,
   secretIncluded: Type.Literal(false),
+  keyIds: Type.Optional(Type.Array(ContentDigest)),
+  configDigests: Type.Optional(Type.Array(ContentDigest)),
 });
 export const RestoreRequest = Obj({
   manifest: BackupManifest,

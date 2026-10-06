@@ -3,12 +3,35 @@ import { chmod, mkdir, realpath } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { PolicyDenied } from "../egress/policy.js";
 
+export class ContainerCleanupError extends Error {
+  readonly code = "container_cleanup_failed";
+  constructor(
+    readonly containerName: string,
+    override readonly cause?: unknown,
+  ) {
+    super(`Failed to cleanup container ${containerName}`);
+    this.name = "ContainerCleanupError";
+  }
+}
+
 export type ExecutorKind = "browser" | "http" | "python";
-const envelopes: Record<ExecutorKind, { cpus: string; memory: string; pids: string }> = {
-  browser: { cpus: "2", memory: "2g", pids: "256" },
-  http: { cpus: "1", memory: "512m", pids: "128" },
-  python: { cpus: "1", memory: "1g", pids: "128" },
+export const executorResources: Readonly<
+  Record<ExecutorKind, { cpu: number; memoryBytes: number; pids: number; diskBytes: number }>
+> = {
+  browser: { cpu: 2, memoryBytes: 2 * 1024 ** 3, pids: 256, diskBytes: 1024 ** 3 },
+  http: { cpu: 1, memoryBytes: 512 * 1024 ** 2, pids: 128, diskBytes: 1024 ** 3 },
+  python: { cpu: 1, memoryBytes: 1024 ** 3, pids: 128, diskBytes: 1024 ** 3 },
 };
+const envelopes = Object.fromEntries(
+  Object.entries(executorResources).map(([kind, resource]) => [
+    kind,
+    {
+      cpus: String(resource.cpu),
+      memory: String(resource.memoryBytes),
+      pids: String(resource.pids),
+    },
+  ]),
+) as Record<ExecutorKind, { cpus: string; memory: string; pids: string }>;
 export interface DockerAttempt {
   attemptId: string;
   runId: string;
@@ -220,6 +243,15 @@ export class DockerExecutor {
     if (!values[0]) throw new PolicyDenied("docker_inspect_missing");
     return inspectFacts(values[0]);
   }
+  async remove(name: string): Promise<void> {
+    await this.checked(["rm", "-f", name]);
+  }
+  async exists(name: string): Promise<boolean> {
+    const result = await this.command(["inspect", name]);
+    if (result.code === 0) return true;
+    if (/No such (?:object|container)/iu.test(result.stderr.toString())) return false;
+    throw new PolicyDenied("docker_inspect_unavailable");
+  }
   async execute(
     options: DockerAttempt,
     signal?: AbortSignal,
@@ -240,6 +272,8 @@ export class DockerExecutor {
       graceTimer.unref();
     };
     let deadline: NodeJS.Timeout | undefined;
+    let executionResult: (CommandResult & { facts: InspectFacts; cancelled: boolean }) | undefined;
+    let executionError: unknown;
     try {
       if (signal?.aborted) throw new PolicyDenied("attempt_cancelled");
       const normalized = {
@@ -274,13 +308,29 @@ export class DockerExecutor {
       const facts = await this.inspect(name);
       if (facts.runtimeError || facts.startedAt.startsWith("0001-"))
         throw new PolicyDenied("security_precondition_failed");
-      return { ...result, facts, cancelled };
+      executionResult = { ...result, facts, cancelled };
+    } catch (error) {
+      executionError = error;
     } finally {
       clearTimeout(deadline);
       clearTimeout(graceTimer);
       signal?.removeEventListener("abort", cancel);
-      if (created) await this.checked(["rm", "-f", name]);
     }
+    let cleanupError: Error | undefined;
+    if (created) {
+      try {
+        await this.checked(["rm", "-f", name]);
+      } catch (error) {
+        cleanupError = new ContainerCleanupError(name, error);
+      }
+    }
+    // Teardown uncertainty always quarantines the slot, including after an execution error.
+    if (cleanupError) throw cleanupError;
+    if (executionError) throw executionError;
+    if (!executionResult) {
+      throw new PolicyDenied("execution_failed");
+    }
+    return executionResult;
   }
   async listOrphans(): Promise<
     { name: string; attemptId: string; runId: string; ownerPid: number }[]

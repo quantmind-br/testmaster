@@ -204,6 +204,22 @@ export function parseAndValidate<T = unknown>(
 ): T {
   return validate<T>(name, parseStrictJson(bytes, maxBytes));
 }
+/** Offline validation exposed identically by CLI, REST and MCP. */
+export function validateDocument(
+  schema: string,
+  document: unknown,
+): { validated: true; schema: string } {
+  if (!["ExecutablePlan", "ProjectConfig", "RunRequest"].includes(schema))
+    throw new ContractError("INVALID_ARGUMENT", "Unsupported document schema");
+  const sizeBytes = Buffer.byteLength(JSON.stringify(document));
+  if (sizeBytes > 1048576)
+    throw new ContractError("PAYLOAD_TOO_LARGE", "Document exceeds byte limit", {
+      limit: 1048576,
+      sizeBytes,
+    });
+  validate(schema, document);
+  return { validated: true, schema };
+}
 export function validatePlanSemantics(plan: ExecutablePlan): void {
   const issues: ValidationIssue[] = [];
   const reject = (path: string, rule: string, message: string): void => {

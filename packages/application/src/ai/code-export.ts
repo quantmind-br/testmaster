@@ -7,6 +7,7 @@ import {
   exportCode,
   exportImportedCode,
 } from "@testmaster/planner";
+import { auditedOperation } from "../audit.js";
 import { RevisionsService, TestsService } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import type { ServiceContext } from "../context.js";
@@ -30,6 +31,14 @@ export class CodeExportService {
   ) {}
 
   async export(testId: string, options: CodeExportServiceOptions): Promise<TestCodeExport> {
+    return auditedOperation(this.ctx, "code.export", testId, () =>
+      this.exportRevision(testId, options),
+    );
+  }
+  private async exportRevision(
+    testId: string,
+    options: CodeExportServiceOptions,
+  ): Promise<TestCodeExport> {
     if (Object.keys(options).some((key) => !["format", "out", "revisionId", "async"].includes(key)))
       throw new ContractError("INVALID_ARGUMENT", "Unknown code export option");
     const test = new TestsService(this.ctx).get(testId);

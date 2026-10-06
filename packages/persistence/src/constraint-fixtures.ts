@@ -19,6 +19,34 @@ export const constraintSeed = [
 ];
 export const constraintFixtures: ConstraintFixture[] = [
   {
+    name: "negative independent token quota",
+    statements: [
+      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-a',-1)",
+    ],
+    expected: "check",
+  },
+  {
+    name: "cross-workspace token quota",
+    statements: [
+      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-b',100)",
+    ],
+    expected: "foreign_key",
+  },
+  {
+    name: "invalid unknown cost consent",
+    statements: [
+      "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,allow_unknown_cost) VALUES('ws-a','consent-invalid','2026-10-05','prj-a','provider','[]','2026-10-05',2)",
+    ],
+    expected: "check",
+  },
+  {
+    name: "valid independent token quota",
+    statements: [
+      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-a',0)",
+    ],
+    expected: "accept",
+  },
+  {
     name: "cross-workspace project reference",
     statements: [
       `INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('ws-a','bad','${time}','prj-b','Bad')`,
@@ -169,6 +197,7 @@ export function constraintErrorClass(error: unknown): ConstraintFixture["expecte
   if (
     code === "23514" ||
     message.includes("check constraint") ||
+    message.includes("contract constraint violation") ||
     message.includes("immutable") ||
     message.includes("phase_regression")
   )

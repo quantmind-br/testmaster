@@ -168,6 +168,11 @@ it("J14: all eight targets through the built CLI, with ownership and hostile-wor
           journey: "J14",
           observedAt: new Date().toISOString(),
           passed: error === undefined,
+          method: "automatic",
+          reviewer: "testmaster-automated-acceptance",
+          reviewLimitations: [
+            "Filesystem/CLI checks only; vendor clients not launched and no human sign-off.",
+          ],
           class: "deterministic-e2e",
           runner: "built-cli-node",
           externalDependency: "none",

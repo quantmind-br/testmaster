@@ -4,7 +4,11 @@ import { mkdir, open, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
 import { ContractError, type Source, validate } from "@testmaster/contracts";
 import { canonicalJson, sha256, uuidV7IdGenerator } from "@testmaster/domain";
-import { type EntityDocument, IdempotencyRepository } from "@testmaster/persistence";
+import {
+  type EntityDocument,
+  IdempotencyRepository,
+  OutboxRepository,
+} from "@testmaster/persistence";
 import {
   parseSource,
   readConfinedCodeFile,
@@ -14,6 +18,7 @@ import {
 import { authoringTransaction } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
+import { invalidateAiDescendants } from "./invalidation.js";
 
 const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 const MAX_STATE_BYTES = 32 * 1024 * 1024;
@@ -92,6 +97,25 @@ export class UploadsService {
     if (!this.config.profilePolicy.allowUpload)
       throw new ContractError("POLICY_DENIED", "Uploads require operator authorization");
   }
+  private alert(uploadId: string): void {
+    this.ctx.database.withTx(() => {
+      new OutboxRepository(this.ctx.database).append(
+        this.ctx.workspaceId,
+        this.ctx.workspaceId,
+        "storage.upload.failed",
+        {
+          uploadId,
+          reasonCode: "storage_unavailable",
+          pendingByteCeiling: 100 * 1024 * 1024,
+          pendingCountCeiling: 8,
+        },
+      );
+      this.ctx.database.run(
+        "INSERT INTO operational_state(key,value) VALUES('storage:upload-outage',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        JSON.stringify({ uploadId, observedAt: new Date().toISOString() }),
+      );
+    });
+  }
   private record(id: string): UploadRecord {
     const record = readAiState<UploadRecord>(this.ctx, `upload:${id}`);
     if (!record || record.actor !== this.ctx.principalId)
@@ -126,7 +150,27 @@ export class UploadsService {
       state: "pending",
       writing: false,
     };
-    saveAiState(this.ctx, `upload:${uploadId}`, record);
+    const reserve = () => {
+      const pending = this.ctx.database.get(
+        "SELECT COUNT(*) AS n,COALESCE(SUM(reserved_bytes),0) AS bytes FROM upload_leases WHERE workspace_id=?",
+        this.ctx.workspaceId,
+      );
+      if (
+        Number(pending?.n ?? 0) >= 8 ||
+        Number(pending?.bytes ?? 0) + input.sizeBytes > 100 * 1024 * 1024
+      )
+        throw new ContractError("QUOTA_EXCEEDED", "Pending upload backlog ceiling reached");
+      this.ctx.database.run(
+        "INSERT INTO upload_leases(workspace_id,upload_id,reserved_bytes,expires_at) VALUES(?,?,?,?)",
+        this.ctx.workspaceId,
+        uploadId,
+        input.sizeBytes,
+        new Date(Date.now() + 900000).toISOString(),
+      );
+      saveAiState(this.ctx, `upload:${uploadId}`, record);
+    };
+    if (this.ctx.database.db.isTransaction) reserve();
+    else this.ctx.database.withTx(reserve);
     return { ...this.receipt(record), target: `/uploads/${uploadId}/bytes`, token };
   }
   async write(
@@ -136,6 +180,13 @@ export class UploadsService {
   ): Promise<UploadReceipt> {
     this.allowed();
     const record = this.record(id);
+    const lease = this.ctx.database.get(
+      "SELECT expires_at FROM upload_leases WHERE workspace_id=? AND upload_id=?",
+      this.ctx.workspaceId,
+      id,
+    );
+    if (!lease || String(lease.expires_at) <= new Date().toISOString())
+      throw new ContractError("PRECONDITION_FAILED", "Upload lease expired");
     if (
       token !== undefined &&
       !timingSafeEqual(Buffer.from(sha256(token)), Buffer.from(record.tokenHash))
@@ -164,6 +215,13 @@ export class UploadsService {
       try {
         const stream = input instanceof Uint8Array ? [input] : input;
         for await (const chunk of stream) {
+          const currentLease = this.ctx.database.get(
+            "SELECT expires_at FROM upload_leases WHERE workspace_id=? AND upload_id=?",
+            this.ctx.workspaceId,
+            id,
+          );
+          if (!currentLease || String(currentLease.expires_at) <= new Date().toISOString())
+            throw new ContractError("PRECONDITION_FAILED", "Upload lease expired during streaming");
           if (!(chunk instanceof Uint8Array))
             throw new ContractError("INVALID_ARGUMENT", "Upload stream must contain bytes");
           received += chunk.byteLength;
@@ -181,6 +239,9 @@ export class UploadsService {
       record.received = received;
       record.receivedHash = hash.digest("hex");
       return this.receipt(record);
+    } catch (error) {
+      if (!(error instanceof ContractError)) this.alert(id);
+      throw error;
     } finally {
       if (temporary) await rm(temporary, { force: true });
       record.writing = false;
@@ -213,6 +274,11 @@ export class UploadsService {
       () => {
         record.state = "complete";
         saveAiState(this.ctx, `upload:${id}`, record);
+        this.ctx.database.run(
+          "DELETE FROM upload_leases WHERE workspace_id=? AND upload_id=?",
+          this.ctx.workspaceId,
+          id,
+        );
         return this.receipt(record);
       },
     ).receipt;
@@ -296,6 +362,11 @@ export class SourcesService {
   revisionProject(id: string): string {
     this.revision(id);
     return (readAiState<RevisionState>(this.ctx, `revision:${id}`) as RevisionState).projectId;
+  }
+  revisionRole(id: string): string {
+    this.revision(id);
+    const state = readAiState<RevisionState>(this.ctx, `revision:${id}`);
+    return String(requireEntity(this.ctx, "Source", (state as RevisionState).sourceId).role);
   }
   async add(input: SourceAddInput): Promise<SourceDetail> {
     this.ctx.authorize("W", input.projectId);
@@ -412,6 +483,7 @@ export class SourcesService {
             archivedAt: null,
             revisionId: id,
           } satisfies SourceState);
+          if (previous) invalidateAiDescendants(this.ctx, input.projectId, `source:${id}`);
           return this.get(source.id);
         },
       );

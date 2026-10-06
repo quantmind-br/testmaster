@@ -338,7 +338,7 @@ it.each(["fresh", "expired", "wrong-type"] as const)(
       });
       const execute = vi.spyOn(AttemptExecutor.prototype, "execute").mockResolvedValue({
         outcome: "blocked",
-        reasonCode: "insufficient_evidence",
+        reasonCode: "security_precondition_failed",
         logDropped: 0,
         events: [],
       });

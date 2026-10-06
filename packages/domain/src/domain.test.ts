@@ -7,7 +7,13 @@ import {
   sha256,
   uuidV7IdGenerator,
 } from "./foundations.js";
-import { aggregateBatch, batchExitCode, evaluateRisk, resolveDagClosure } from "./policies.js";
+import {
+  aggregateBatch,
+  batchExitCode,
+  evaluateRisk,
+  exitCodeForRun,
+  resolveDagClosure,
+} from "./policies.js";
 import { propagateTaint, requirePublic, scrubBytes, scrubText } from "./redaction.js";
 import {
   type AttemptObservation,
@@ -266,5 +272,15 @@ describe("hashes policy and redaction", () => {
     expect(batchExitCode([0, 1, 7, 10, 12, 6, 9])).toBe(9);
     expect(batchExitCode([1, 0])).toBe(1);
     expect(batchExitCode([12, 11])).toBe(12);
+  });
+  it("computes canonical run exit codes from gate, outcome and reason codes", () => {
+    expect(exitCodeForRun({ gate: "passed" })).toBe(0);
+    expect(exitCodeForRun({ gate: "failed" })).toBe(1);
+    expect(exitCodeForRun({ gate: "failed", reasonCode: "assertion_mismatch" })).toBe(1);
+    expect(exitCodeForRun({ gate: "failed", reasonCode: "security_precondition_failed" })).toBe(9);
+    expect(exitCodeForRun({ gate: "failed", outcome: "blocked" })).toBe(9);
+    expect(exitCodeForRun({ gate: "failed", reasonCode: "unsupported_capability" })).toBe(8);
+    expect(exitCodeForRun({ gate: "failed", reasonCode: "missing_secret" })).toBe(6);
+    expect(exitCodeForRun({ gate: "failed", reasonCode: "budget_exhausted" })).toBe(12);
   });
 });

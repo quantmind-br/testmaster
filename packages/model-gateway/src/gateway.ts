@@ -242,6 +242,7 @@ export class ModelGateway {
           provider: input.provider,
           model: input.model,
           estimate,
+          reservedTokens: promptBytes + input.maxOutputTokens,
           idempotencyKey: `${invocationId}:${repairAttempt}:${transportAttempt}`,
         });
         if (!reservation.ok)
@@ -357,7 +358,15 @@ export class ModelGateway {
           result.finishReason =
             typeof choice.finish_reason === "string" ? choice.finish_reason : null;
           if (result.finishReason === "length" || result.finishReason === "content_filter")
-            throw new ContractError("INVALID_ARGUMENT", "Completion is truncated or filtered");
+            throw new ContractError(
+              "PRECONDITION_FAILED",
+              "Completion did not finish; repairs cannot recover a truncated response",
+              {
+                reasonCode:
+                  result.finishReason === "length" ? "output_truncated" : "content_filtered",
+                maxOutputTokens: input.maxOutputTokens,
+              },
+            );
           result.reasoningContent =
             typeof message.reasoning_content === "string"
               ? scrubText(message.reasoning_content, secrets).text
@@ -409,10 +418,14 @@ export class ModelGateway {
             repairAttempt,
             transportAttempt,
             reservation.reservationId,
-            "invalid",
+            result.finishReason === "length" || result.finishReason === "content_filter"
+              ? "failed"
+              : "invalid",
             input.dataPolicy.recordRawPrompt ? promptText : undefined,
           );
           if (error instanceof ContractError && error.code === "CAPABILITY_UNAVAILABLE")
+            throw error;
+          if (result.finishReason === "length" || result.finishReason === "content_filter")
             throw error;
           invalid = true;
           if (error instanceof ContractError)
@@ -497,6 +510,14 @@ export class ModelGateway {
       )
     )
       throw new ContractError("POLICY_DENIED", "Model data-class consent is absent or revoked");
+    if (
+      !provider.prices?.[input.model] &&
+      (!input.dataPolicy.allowUnknownCost || consent.allowUnknownCost !== true)
+    )
+      throw new ContractError(
+        "POLICY_DENIED",
+        "Unknown model cost requires recorded explicit consent",
+      );
     if (signal.aborted)
       throw new ContractError(
         input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
@@ -523,6 +544,9 @@ export class ModelGateway {
       provider: input.provider,
       model: input.model,
       promptHash,
+      modelConfigHash: input.modelConfigHash,
+      sourceRevisionIds: [...input.sourceRevisionIds],
+      ...(input.runId ? { runId: input.runId } : {}),
       inputRefs: [...input.inputRefs],
       usage: result.usage,
       cost: result.cost,
@@ -534,6 +558,11 @@ export class ModelGateway {
       reservationId,
       responseHash: result.responseHash || null,
       finishReason: result.finishReason,
+      ...(result.finishReason === "length"
+        ? { failureReason: "output_truncated" as const }
+        : result.finishReason === "content_filter"
+          ? { failureReason: "content_filtered" as const }
+          : {}),
       ...(rawPrompt === undefined ? {} : { rawPrompt }),
     });
   }

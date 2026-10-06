@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, rm, statfs, writeFile } from "node:fs/promises";
+import { availableParallelism, totalmem } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   ContractError,
+  defaults,
   type EffectiveConfig,
   type ExecutablePlan,
   type PlanStep,
@@ -31,14 +34,34 @@ import {
   OutboxRepository,
   StaleFenceError,
 } from "@testmaster/persistence";
-import { AttemptExecutor, DockerExecutor, type ImageLock } from "@testmaster/sandbox";
+import {
+  AttemptExecutor,
+  type AttemptRuntimeExecutor,
+  ContainerCleanupError,
+  type DockerCommand,
+  DockerExecutor,
+  type ExecutorKind,
+  type ImageLock,
+  PolicyDenied,
+} from "@testmaster/sandbox";
 import { AgentModeService } from "./ai/agent-mode.js";
 import { CodeImportService } from "./ai/code-import.js";
+import { auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, requireEntity, type ServiceContext } from "./context.js";
+import { correlationId, OperationalLogger } from "./observability.js";
+import { reproduction, verifyAdmission } from "./provenance.js";
 import { captureDeclarations, type ResolvedDependency, type RunsService } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
+import { RuntimeTimer } from "./timing.js";
 import { UnsafeRuntime } from "./unsafe-runtime.js";
+import { fitsCapacity, validateCapacity, type WorkerCapacity } from "./worker-capacity.js";
+import {
+  localHandshake,
+  supportsQueuedRun,
+  validateHandshake,
+  type WorkerHandshake,
+} from "./worker-handshake.js";
 
 export interface WorkerHost {
   config: ResolvedConfig;
@@ -47,6 +70,8 @@ export interface WorkerHost {
   secrets: SecretsService;
   runs: RunsService;
   retention?: { maintenance(): Promise<unknown> };
+  dockerCommand?: DockerCommand;
+  docker?: AttemptRuntimeExecutor;
 }
 export function planSteps(plan: ExecutablePlan): PlanStep[] {
   const output: PlanStep[] = [];
@@ -64,10 +89,20 @@ export class WorkerService {
   private workerId: string | null = null;
   private drainRequested = false;
   private readonly active = new Map<string, AbortController>();
+  private readonly logs: OperationalLogger;
   constructor(
     readonly ctx: ServiceContext,
     readonly host: WorkerHost,
-  ) {}
+  ) {
+    this.logs = new OperationalLogger(
+      join(host.config.dataDir, "logs", "worker"),
+      host.config.logRetentionDays,
+    );
+  }
+  private dockerExecutor(): DockerExecutor {
+    if (this.host.docker instanceof DockerExecutor) return this.host.docker;
+    return new DockerExecutor(this.host.dockerCommand);
+  }
   status(): EntityDocument[] {
     this.ctx.authorize("R");
     return this.ctx.database
@@ -161,7 +196,17 @@ export class WorkerService {
         return {
           attemptId: String(row.id),
           number: Number(row.number),
-          started: malformed || events.some((event) => event.type === "step.started"),
+          started:
+            malformed ||
+            events.some((event) => event.type === "step.started") ||
+            Boolean(
+              this.ctx.database.get(
+                "SELECT 1 FROM outbox WHERE workspace_id=? AND aggregate_id=? AND type='attempt.runner_started' AND json_extract(data_json,'$.attemptId')=?",
+                this.ctx.workspaceId,
+                runId,
+                row.id,
+              ),
+            ),
           steps: observations,
           reasonCode:
             (malformed ? "insufficient_evidence" : finished?.payload.reasonCode) ??
@@ -313,7 +358,41 @@ export class WorkerService {
     const env = requireEntity(this.ctx, "EnvironmentRevision", run.environmentRevisionId);
     const plan = revision.plan ? validate<ExecutablePlan>("ExecutablePlan", revision.plan) : null;
     const cell = run.matrixCell as Record<string, unknown>;
+    const logs = this.logs;
+    const correlation = correlationId(cell.correlationId);
+    logs.record({
+      component: "worker",
+      event: "attempt.started",
+      correlationId: correlation,
+      runId: run.id,
+      attemptId: fence.attemptId,
+    });
+    const queued = this.host.runs
+      .events(run.id)
+      .findLast((event) => event.type === "run.timing_queued")?.payload as ConstructorParameters<
+      typeof RuntimeTimer
+    >[2];
+    const timer = new RuntimeTimer(undefined, undefined, fence.number === 1 ? queued : undefined);
+    const recordTiming = () => {
+      timer.mark("completed");
+      database.withTx(() => {
+        leases.assertCurrent(fence);
+        new OutboxRepository(database).append(this.ctx.workspaceId, run.id, "attempt.timing", {
+          attemptId: fence.attemptId,
+          timing: timer.snapshot(),
+        });
+      });
+    };
     const limits = cell.limits as Record<string, number>;
+    const firstStartedAt = this.ctx.database.get(
+      "SELECT started_at FROM attempts WHERE workspace_id=? AND run_id=? ORDER BY number LIMIT 1",
+      this.ctx.workspaceId,
+      run.id,
+    )?.started_at;
+    const elapsedMs =
+      typeof firstStartedAt === "string" ? Math.max(0, Date.now() - Date.parse(firstStartedAt)) : 0;
+    const executionRemainingMs = Math.max(0, (limits.executionTimeoutMs ?? 1800000) - elapsedMs);
+    const attemptDeadlineMs = Math.min(limits.attemptTimeoutMs ?? 300000, executionRemainingMs);
     const effective = validate<EffectiveConfig>("EffectiveConfig", cell.effectiveConfig);
     const config = effective.config;
     const controller = new AbortController();
@@ -321,6 +400,16 @@ export class WorkerService {
     const abort = () => controller.abort();
     signal?.addEventListener("abort", abort, { once: true });
     if (signal?.aborted || this.cancelled(run.id)) controller.abort();
+    database.withTx(() => {
+      leases.assertCurrent(fence);
+      new OutboxRepository(database).append(this.ctx.workspaceId, run.id, "attempt.deadline", {
+        attemptId: fence.attemptId,
+        origin: executionRemainingMs <= (limits.attemptTimeoutMs ?? 300000) ? "run" : "attempt",
+        timeoutMs: attemptDeadlineMs,
+        deadline: new Date(Date.now() + attemptDeadlineMs).toISOString(),
+        finalAction: "stop_new_steps_then_kill_after_grace",
+      });
+    });
     let heartbeatError: unknown;
     const poll = setInterval(() => {
       if (this.cancelled(run.id)) controller.abort();
@@ -335,6 +424,7 @@ export class WorkerService {
     }, 10000);
     const inputDir = join(this.host.config.dataDir, "cache", "attempt-input", fence.attemptId);
     let activeStepId: string | undefined;
+    let sealedSnapshot: Record<string, unknown> | undefined;
     const snapshotId = entity(this.ctx, "snp", {}).id;
     const required = plan ? planSteps(plan).filter((step) => step.required !== false) : [];
     const assertions = required
@@ -351,6 +441,7 @@ export class WorkerService {
         variables = await this.dependencyVariables(run);
       } catch (error) {
         if (!(error instanceof ContractError)) throw error;
+        recordTiming();
         execution.finalize(fence, {
           ...run,
           phase: "completed",
@@ -374,6 +465,31 @@ export class WorkerService {
         );
         return;
       }
+      if (executionRemainingMs === 0) {
+        const reduced = reduceOutcome(this.observations(run.id, plan), assertions, requiredSteps);
+        execution.finalize(fence, {
+          ...run,
+          phase: "completed",
+          status: reduced.outcome === "failed" ? "failed" : "inconclusive",
+          outcome: reduced.outcome === "failed" ? "failed" : "inconclusive",
+          gate: "failed",
+        });
+        database.withTx(() =>
+          new OutboxRepository(database).append(
+            this.ctx.workspaceId,
+            run.id,
+            "run.deadline_exceeded",
+            {
+              reasonCode: "execution_deadline",
+              origin: "run",
+              deadline: new Date(
+                Date.parse(String(firstStartedAt)) + (limits.executionTimeoutMs ?? 1800000),
+              ).toISOString(),
+            },
+          ),
+        );
+        return;
+      }
       await mkdir(inputDir, { recursive: true, mode: 0o755 });
       const imported = !plan
         ? await new CodeImportService(this.ctx, this.host.config).readBundle(revision.id)
@@ -388,7 +504,26 @@ export class WorkerService {
         }
       }
       execution.progress(fence, "running");
-      const lock = cell.executor === "process" ? null : await this.host.images();
+      const currentImages = cell.executor === "process" ? null : await this.host.images();
+      const admitted = verifyAdmission(run, revision, env, currentImages, this.ctx);
+      const lock = admitted.images;
+      sealedSnapshot = {
+        ...admitted,
+        runId: run.id,
+        revisionId: run.revisionId,
+        environmentRevisionId: run.environmentRevisionId,
+        effectiveConfig: cell.effectiveConfig,
+        baseUrl: cell.baseUrl,
+        seed: cell.seed,
+        sealedAt: new Date().toISOString(),
+        originalRunId: cell.originalRunId ?? null,
+        correlationId: cell.correlationId ?? null,
+        environment: env,
+        workerId: this.workerId,
+        controllerVersion: "1.0.0",
+        hostPlatform: process.platform,
+        hostArchitecture: process.arch,
+      };
       const secretIds = new Set<string>();
       const inspect = (value: unknown) => {
         if (!value || typeof value !== "object") return;
@@ -399,16 +534,28 @@ export class WorkerService {
       };
       inspect(plan);
       const releases = await Promise.all([...secretIds].map((id) => this.host.secrets.release(id)));
+      sealedSnapshot.secretRefs = [...secretIds].map((id) => {
+        const secret = this.host.secrets.get(id);
+        return { id, version: secret.secretVersion, allowedOrigins: secret.allowedOrigins };
+      });
+      database.withTx(() =>
+        new OutboxRepository(database).append(this.ctx.workspaceId, run.id, "run.snapshot_sealed", {
+          attemptId: fence.attemptId,
+          snapshotId,
+          executionSnapshot: sealedSnapshot,
+        }),
+      );
       const origins = Array.from(
         new Set([...(env.targetOrigins as string[]), new URL(String(cell.baseUrl)).origin]),
       );
       const agent =
         run.mode === "agent"
-          ? new AgentModeService(this.ctx, this.host.config).session(
-              revision.id,
-              origins,
-              controller.signal,
-            )
+          ? new AgentModeService(this.ctx, {
+              ...this.host.config,
+              effectiveConfig: effective,
+              modelProviders: admitted.modelProviders,
+              profilePolicy: admitted.profilePolicy,
+            }).session(revision.id, origins, controller.signal, run.id)
           : null;
       if (agent && cell.executor === "process")
         throw new ContractError("POLICY_DENIED", "Agent execution requires Docker isolation");
@@ -432,7 +579,8 @@ export class WorkerService {
         maxObjectBytes: limits.artifactBytes ?? 67108864,
         maxAttemptBytes: limits.attemptArtifactBytes ?? 268435456,
       });
-      const runtime = cell.executor === "process" ? new UnsafeRuntime(this.host.config) : undefined;
+      const docker = this.host.docker ?? this.dockerExecutor();
+      const runtime = cell.executor === "process" ? new UnsafeRuntime(this.host.config) : docker;
       const runtimeRoot = await this.runtimeRoot();
       const result = await new AttemptExecutor(evidence, runtime, runtimeRoot).execute(
         {
@@ -440,6 +588,12 @@ export class WorkerService {
           runId: run.id,
           attemptId: fence.attemptId,
           revisionId: run.revisionId,
+          executionSnapshot: JSON.parse(JSON.stringify(sealedSnapshot)),
+          reproduction: reproduction(
+            admitted,
+            typeof cell.originalRunId === "string" ? cell.originalRunId : undefined,
+            run.mode === "agent",
+          ),
           snapshotId,
           kind:
             imported?.bundle.format === "pytest"
@@ -477,14 +631,18 @@ export class WorkerService {
             timezone: env.timezone,
             browser: config.browser,
             stepTimeoutMs: limits.stepTimeoutMs ?? 30000,
-            timeoutMs: limits.attemptTimeoutMs ?? 300000,
+            timeoutMs: attemptDeadlineMs,
             policy: {
               trace: config.artifacts?.trace === "on",
               video: config.artifacts?.video === "on",
-              restrictedRaw: config.artifacts?.trace === "on" || config.artifacts?.video === "on",
+              httpBodies: config.artifacts?.httpBodies === "on",
+              restrictedRaw:
+                config.artifacts?.trace === "on" ||
+                config.artifacts?.video === "on" ||
+                config.artifacts?.httpBodies === "on",
             },
           },
-          attemptTimeoutMs: limits.attemptTimeoutMs ?? 300000,
+          attemptTimeoutMs: attemptDeadlineMs,
           seccompPath: this.host.seccompPath,
           protectCapture: async (capture) => {
             if (!capture.sensitive) return capture;
@@ -508,6 +666,18 @@ export class WorkerService {
             };
           },
           onEvent: async (event) => {
+            if (event.type === "runner.hello")
+              database.withTx(() => {
+                leases.assertCurrent(fence);
+                new OutboxRepository(database).append(
+                  this.ctx.workspaceId,
+                  run.id,
+                  "attempt.runner_started",
+                  { attemptId: fence.attemptId },
+                );
+              });
+            if (event.type === "step.started") timer.mark("running");
+            if (event.type === "runner.finished") timer.mark("collecting");
             if (event.type === "step.started") activeStepId = event.payload.stepId;
             if (event.type === "variable.captured") {
               const declaration = (plan ? captureDeclarations(plan) : []).find(
@@ -702,8 +872,22 @@ export class WorkerService {
         },
         controller.signal,
       );
+      const cleanupFailure = result.cleanupFailure;
+      if (cleanupFailure) {
+        this.quarantineWorker({
+          runId: run.id,
+          attemptId: fence.attemptId,
+          reason:
+            cleanupFailure.type === "container"
+              ? "container_cleanup_failed"
+              : "browser_profile_cleanup_failed",
+          containerName: cleanupFailure.containerName ?? `tm-att-${fence.attemptId}`,
+          details: cleanupFailure,
+        });
+      }
       if (heartbeatError) throw heartbeatError;
       execution.progress(fence, "collecting");
+      timer.mark("collecting");
       let evidenceComplete = false;
       if (result.bundle) {
         const bundle = await verifyBundle(result.bundle.bundleDir, {
@@ -714,32 +898,37 @@ export class WorkerService {
           snapshotId,
           manifestSha256: result.bundle.manifestSha256,
         });
-        execution.publish(fence, "Snapshot", {
-          id: snapshotId,
-          workspaceId: this.ctx.workspaceId,
-          runId: run.id,
-          attemptId: fence.attemptId,
-          revisionId: run.revisionId,
-          manifestHash: bundle.meta.manifestHash,
-          committedAt: bundle.meta.committedAt,
-          redactionPolicyHash: bundle.meta.redactionPolicyHash,
-        });
-        for (const entry of bundle.manifest.entries)
-          execution.publish(fence, "Artifact", {
-            id: entry.artifactId,
+        database.withTx(() => {
+          execution.publish(fence, "Snapshot", {
+            id: snapshotId,
             workspaceId: this.ctx.workspaceId,
             runId: run.id,
             attemptId: fence.attemptId,
             revisionId: run.revisionId,
-            snapshotId,
-            kind: entry.kind,
-            hash: entry.sha256,
-            bytes: entry.sizeBytes,
-            mime: entry.mimeType,
-            storageKey: `runs/${this.ctx.workspaceId}/${run.id}/${fence.attemptId}/${entry.relativePath}`,
-            state: entry.state,
-            redactionStatus: entry.redactionStatus,
+            manifestHash: bundle.meta.manifestHash,
+            committedAt: bundle.meta.committedAt,
+            redactionPolicyHash: bundle.meta.redactionPolicyHash,
+            executionSnapshot: sealedSnapshot,
           });
+          for (const entry of bundle.manifest.entries)
+            execution.publish(fence, "Artifact", {
+              id: entry.artifactId,
+              workspaceId: this.ctx.workspaceId,
+              runId: run.id,
+              attemptId: fence.attemptId,
+              revisionId: run.revisionId,
+              snapshotId,
+              extensions: { "testmaster:correlationId": correlation },
+              kind: entry.kind,
+              hash: entry.sha256,
+              bytes: entry.sizeBytes,
+              mime: entry.mimeType,
+              storageKey: `runs/${this.ctx.workspaceId}/${run.id}/${fence.attemptId}/${entry.relativePath}`,
+              state: entry.state,
+              redactionStatus: entry.redactionStatus,
+            });
+        });
+        await rm(join(result.bundle.bundleDir, ".partial"), { force: true });
         evidenceComplete = !bundle.manifest.entries.some((entry) => entry.state !== "available");
       }
       const attempts = this.observations(run.id, plan);
@@ -751,6 +940,7 @@ export class WorkerService {
           (result.outcome === "blocked" || result.outcome === "inconclusive") &&
           canRetry(current, limits.maxAttempts ?? 2)
         ) {
+          recordTiming();
           leases.release(fence, true);
           return;
         }
@@ -764,9 +954,11 @@ export class WorkerService {
         reduced.reasonCode = result.reasonCode;
       }
       const terminal = result.events.findLast((event) => event.type === "runner.finished");
-      const cleanupOutcome = terminal?.payload.cleanupOutcome ?? "not_required";
+      const cleanupOutcome = cleanupFailure
+        ? "failed"
+        : (terminal?.payload.cleanupOutcome ?? "not_required");
       const gate = evaluateGate(reduced.outcome, cleanupOutcome, {
-        cleanupRequired: Boolean(plan?.cleanup?.length),
+        cleanupRequired: Boolean(plan?.cleanup?.length) || Boolean(cleanupFailure),
         requiredEvidenceComplete: evidenceComplete,
         policySatisfied: true,
         requiredDependenciesPassed: true,
@@ -789,6 +981,7 @@ export class WorkerService {
             ),
           );
       }
+      recordTiming();
       execution.finalize(fence, {
         ...run,
         phase: "completed",
@@ -813,9 +1006,32 @@ export class WorkerService {
         );
         const attempts = this.observations(run.id, plan);
         const reduced = reduceOutcome(attempts, assertions, requiredSteps);
-        if (reduced.outcome === "passed") {
-          reduced.outcome = "inconclusive";
-          reduced.reasonCode = "insufficient_evidence";
+        if (
+          ((error instanceof ContractError &&
+            error.details.reasonCode === "security_precondition_failed") ||
+            error instanceof PolicyDenied) &&
+          reduced.outcome !== "failed"
+        ) {
+          reduced.outcome = "blocked";
+          reduced.reasonCode = "security_precondition_failed";
+        }
+        recordTiming();
+        const containerCleanupFailed =
+          error instanceof ContainerCleanupError ||
+          (error instanceof Error && error.message.includes("container_cleanup_failed"));
+        const cleanupOutcome = containerCleanupFailed ? "failed" : "inconclusive";
+        if (containerCleanupFailed) {
+          const containerName =
+            error instanceof ContainerCleanupError
+              ? error.containerName
+              : `tm-att-${fence.attemptId}`;
+          this.quarantineWorker({
+            runId: run.id,
+            attemptId: fence.attemptId,
+            reason: "container_cleanup_failed",
+            containerName,
+            details: { error: (error as Error).message },
+          });
         }
         execution.finalize(fence, {
           ...run,
@@ -823,7 +1039,7 @@ export class WorkerService {
           status: reduced.outcome,
           outcome: reduced.outcome,
           gate: "failed",
-          cleanupOutcome: "inconclusive",
+          cleanupOutcome,
           analysisStatus: "not_requested",
         });
         database.withTx(() =>
@@ -832,7 +1048,13 @@ export class WorkerService {
             run.id,
             "run.execution_error",
             {
-              reasonCode: "insufficient_evidence",
+              reasonCode:
+                error instanceof PolicyDenied
+                  ? "security_precondition_failed"
+                  : error instanceof ContractError
+                    ? (error.details.reasonCode ?? "insufficient_evidence")
+                    : "insufficient_evidence",
+              ...(error instanceof ContractError ? { details: error.details } : {}),
               error: error instanceof ContractError ? error.code : "INTERNAL",
               ...(error &&
               typeof error === "object" &&
@@ -854,11 +1076,240 @@ export class WorkerService {
       signal?.removeEventListener("abort", abort);
       this.active.delete(run.id);
       await rm(inputDir, { recursive: true, force: true });
+      logs.record({
+        component: "worker",
+        event: "attempt.completed",
+        correlationId: correlation,
+        runId: run.id,
+        attemptId: fence.attemptId,
+      });
+      await logs.flush();
     }
   }
-  async reconcile() {
+  async reconcile(options: { dryRun?: boolean } = {}) {
     this.ctx.authorize("A");
+    if (options.dryRun) {
+      return {
+        dryRun: true,
+        actor: this.ctx.principalId,
+        actions: this.ctx.database.all(
+          "SELECT id,resource_id,state,fence FROM job_leases WHERE workspace_id=? AND dispatchable=1 AND (state='reconciliation_required' OR (state='leased' AND lease_expires_at<=?))",
+          this.ctx.workspaceId,
+          new Date().toISOString(),
+        ),
+        orphanStaging: await findOrphanStaging(this.host.config.dataDir),
+      };
+    }
     return this.maintenance();
+  }
+  private quarantineWorker(info: {
+    runId: string;
+    attemptId: string;
+    reason: string;
+    containerName?: string;
+    profilePath?: string;
+    details?: unknown;
+  }): { incidentId: string; quarantinedAt: string } {
+    const incidentId = `inc_${randomUUID()}`;
+    const quarantinedAt = new Date().toISOString();
+    const quarantineRecord = {
+      incidentId,
+      workspaceId: this.ctx.workspaceId,
+      runId: info.runId,
+      attemptId: info.attemptId,
+      workerId: this.workerId,
+      reason: info.reason,
+      containerName: info.containerName,
+      profilePath: info.profilePath,
+      quarantinedAt,
+      details: info.details,
+    };
+    const incidentRecord = {
+      id: incidentId,
+      workspaceId: this.ctx.workspaceId,
+      type: "worker_cleanup_quarantine",
+      severity: "high",
+      createdAt: quarantinedAt,
+      runId: info.runId,
+      attemptId: info.attemptId,
+      reason: info.reason,
+      status: "active",
+      details: {
+        containerName: info.containerName,
+        profilePath: info.profilePath,
+        workerId: this.workerId,
+        ...(info.details && typeof info.details === "object" ? info.details : {}),
+      },
+    };
+    this.ctx.database.withTx(() => {
+      this.ctx.database.run(
+        "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        `worker:quarantine:${this.ctx.workspaceId}`,
+        canonicalJson(quarantineRecord),
+      );
+      this.ctx.database.run(
+        "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        `incident:${incidentId}`,
+        canonicalJson(incidentRecord),
+      );
+      const outbox = new OutboxRepository(this.ctx.database);
+      outbox.append(this.ctx.workspaceId, info.runId, "worker.quarantined", quarantineRecord);
+      outbox.append(this.ctx.workspaceId, info.runId, "incident.created", incidentRecord);
+    });
+    return { incidentId, quarantinedAt };
+  }
+  isQuarantined(): boolean {
+    const row = this.ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      `worker:quarantine:${this.ctx.workspaceId}`,
+    );
+    return Boolean(row);
+  }
+  quarantineStatus(): {
+    quarantined: boolean;
+    record: Record<string, unknown> | null;
+    incident: Record<string, unknown> | null;
+  } {
+    this.ctx.authorize("R");
+    const row = this.ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      `worker:quarantine:${this.ctx.workspaceId}`,
+    );
+    if (!row) return { quarantined: false, record: null, incident: null };
+    const parsed = JSON.parse(String(row.value));
+    const record = parsed && typeof parsed === "object" ? parsed : {};
+    const incidentId =
+      "incidentId" in record && typeof record.incidentId === "string" ? record.incidentId : null;
+    const incidentRow = incidentId
+      ? this.ctx.database.get(
+          "SELECT value FROM operational_state WHERE key=?",
+          `incident:${incidentId}`,
+        )
+      : null;
+    const incident = incidentRow ? JSON.parse(String(incidentRow.value)) : null;
+    return { quarantined: true, record, incident };
+  }
+  async clearQuarantine(): Promise<{
+    cleared: boolean;
+    incidentId?: string;
+    containerRemoved?: boolean;
+    profileRemoved?: boolean;
+  }> {
+    const key = `worker:quarantine:${this.ctx.workspaceId}`;
+    auditSecurity(this.ctx, "worker.quarantine.clear", key, "requested");
+    try {
+      this.ctx.authorize("A");
+    } catch (error) {
+      auditSecurity(this.ctx, "worker.quarantine.clear", key, "denied");
+      throw error;
+    }
+    const row = this.ctx.database.get("SELECT value FROM operational_state WHERE key=?", key);
+    if (!row) {
+      return { cleared: false };
+    }
+    const originalValue = String(row.value);
+    const parsed = JSON.parse(originalValue);
+    if (!parsed || typeof parsed !== "object") {
+      return { cleared: false };
+    }
+    const incidentId =
+      "incidentId" in parsed && typeof parsed.incidentId === "string"
+        ? parsed.incidentId
+        : "quarantine";
+    const runId = "runId" in parsed && typeof parsed.runId === "string" ? parsed.runId : undefined;
+    const containerName =
+      "containerName" in parsed && typeof parsed.containerName === "string"
+        ? parsed.containerName
+        : undefined;
+    const profilePath =
+      "profilePath" in parsed && typeof parsed.profilePath === "string"
+        ? parsed.profilePath
+        : undefined;
+    const incidentKey = `incident:${incidentId}`;
+    let containerRemoved = false;
+    let profileRemoved = false;
+    const docker = this.dockerExecutor();
+    if (containerName) {
+      let containerExists = false;
+      try {
+        containerExists = await docker.exists(containerName);
+      } catch {
+        containerExists = true;
+      }
+      if (containerExists) {
+        try {
+          await docker.remove(containerName);
+          containerRemoved = true;
+        } catch (error) {
+          auditSecurity(this.ctx, "worker.quarantine.clear", incidentId, "denied");
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            `Refusing unsafe quarantine clear: leftover container ${containerName} is still present and could not be cleaned`,
+            { containerName, error: errorMsg },
+          );
+        }
+      }
+    }
+    if (profilePath) {
+      try {
+        const stats = await lstat(profilePath).catch(() => null);
+        if (stats) {
+          await rm(profilePath, { recursive: true, force: true });
+          profileRemoved = true;
+        }
+      } catch (error) {
+        auditSecurity(this.ctx, "worker.quarantine.clear", incidentId, "denied");
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          `Refusing unsafe quarantine clear: leftover profile directory ${profilePath} is still present and could not be cleaned`,
+          { profilePath, error: errorMsg },
+        );
+      }
+    }
+    const clearedAt = new Date().toISOString();
+    this.ctx.database.withTx(() => {
+      const deleted = this.ctx.database.run(
+        "DELETE FROM operational_state WHERE key=? AND value=?",
+        key,
+        originalValue,
+      );
+      if (deleted.changes !== 1) {
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Quarantine state changed concurrently during clear",
+        );
+      }
+      const incRow = this.ctx.database.get(
+        "SELECT value FROM operational_state WHERE key=?",
+        incidentKey,
+      );
+      if (incRow) {
+        const incident = JSON.parse(String(incRow.value));
+        if (incident && typeof incident === "object") {
+          this.ctx.database.run(
+            "UPDATE operational_state SET value=? WHERE key=?",
+            canonicalJson({ ...incident, status: "cleared", clearedAt }),
+            incidentKey,
+          );
+        }
+      }
+      const outbox = new OutboxRepository(this.ctx.database);
+      outbox.append(this.ctx.workspaceId, runId ?? incidentId, "worker.quarantine_cleared", {
+        incidentId,
+        clearedAt,
+        containerRemoved,
+        profileRemoved,
+      });
+      auditSecurity(this.ctx, "worker.quarantine.clear", incidentId, "allowed");
+    });
+    return {
+      cleared: true,
+      incidentId,
+      containerRemoved,
+      profileRemoved,
+    };
   }
   private abandonResources(attemptId: string, assertOwnership: () => void): void {
     assertOwnership();
@@ -900,9 +1351,13 @@ export class WorkerService {
       const last = attempts.at(-1);
       const cell = run.matrixCell as Record<string, unknown>;
       const limits = cell.limits as Record<string, number>;
-      if (last && canRetry(last, limits.maxAttempts ?? 2) && !this.cancelled(run.id))
-        leases.resume(this.ctx.workspaceId, String(job.id), Number(job.fence));
-      else {
+      if (last && canRetry(last, limits.maxAttempts ?? 2) && !this.cancelled(run.id)) {
+        try {
+          leases.resume(this.ctx.workspaceId, String(job.id), Number(job.fence));
+        } catch (error) {
+          if (!(error instanceof StaleFenceError)) throw error;
+        }
+      } else {
         const required = plan
           ? planSteps(plan).filter((step) => step.required !== false)
           : [{ id: "imported-code", kind: "assertion" }];
@@ -918,6 +1373,13 @@ export class WorkerService {
           reduced.reasonCode = "worker_lost";
         }
         database.withTx(() => {
+          const currentJob = database.get(
+            "SELECT state,fence FROM job_leases WHERE workspace_id=? AND id=?",
+            this.ctx.workspaceId,
+            job.id,
+          );
+          if (currentJob?.state !== "reconciliation_required" || currentJob.fence !== job.fence)
+            return;
           for (const attempt of attempts)
             this.abandonResources(attempt.attemptId, () => {
               const current = database.get(
@@ -951,7 +1413,7 @@ export class WorkerService {
         });
       }
     }
-    const reaped = await new DockerExecutor()
+    const reaped = await this.dockerExecutor()
       .reapOrphans(async (attemptId) => {
         const row = database.get(
           "SELECT j.state FROM attempts a JOIN job_leases j ON j.workspace_id=a.workspace_id AND j.id=a.job_id WHERE a.workspace_id=? AND a.id=?",
@@ -1023,7 +1485,15 @@ export class WorkerService {
       availableBytes: Number(storage.bavail) * Number(storage.bsize),
     };
   }
-  async run(options: { signal?: AbortSignal; ephemeral?: boolean; runIds?: string[] } = {}) {
+  async run(
+    options: {
+      signal?: AbortSignal;
+      ephemeral?: boolean;
+      runIds?: string[];
+      capacity?: WorkerCapacity;
+      handshake?: WorkerHandshake;
+    } = {},
+  ) {
     this.ctx.authorize(options.ephemeral ? "X" : "A");
     this.drainRequested = false;
     const database = this.ctx.database;
@@ -1031,12 +1501,60 @@ export class WorkerService {
     const runIds = options.ephemeral
       ? this.host.runs.expandRunIds(options.runIds ?? [])
       : undefined;
-    if (!options.ephemeral) {
+    const storage = await statfs(this.host.config.dataDir);
+    const capacity = validateCapacity(
+      options.capacity ?? {
+        cpu: availableParallelism(),
+        memoryBytes: totalmem(),
+        pids: 1024,
+        diskBytes: Number(storage.bavail) * Number(storage.bsize),
+        pools: {
+          browser: defaults.browserConcurrency,
+          http: defaults.httpConcurrency,
+          python: defaults.pythonConcurrency,
+        },
+      },
+    );
+    const needsImages =
+      !options.ephemeral ||
+      (runIds ?? []).some((id) => {
+        const run = this.host.runs.get(id);
+        return (
+          run.phase !== "completed" &&
+          (run.matrixCell as Record<string, unknown>).executor !== "process" &&
+          !this.dependencies(run).some((binding) => {
+            const upstream = this.host.runs.get(binding.producerRunId);
+            return upstream.phase === "completed" && upstream.gate !== "passed";
+          })
+        );
+      });
+    const lock = needsImages ? await this.host.images() : null;
+    const availableHandshake = lock ? localHandshake(lock) : null;
+    const handshake = availableHandshake
+      ? validateHandshake(options.handshake ?? availableHandshake, availableHandshake)
+      : null;
+    const kindOf = (id: string): ExecutorKind => {
+      const run = this.host.runs.get(id);
+      const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
+      const runner = revision.runnerKind ?? (revision.plan as ExecutablePlan | null)?.runner;
+      return runner === "python" ? "python" : runner === "http" ? "http" : "browser";
+    };
+    if (!options.ephemeral && handshake) {
       const worker = entity(this.ctx, "wrk", {
         identityRef: this.owner,
-        capabilities: ["browser", "http", "python"],
-        imageDigests: [],
-        labels: { pid: String(process.pid) },
+        capabilities: handshake.runners.map((runner) =>
+          runner === "playwright" ? "browser" : runner,
+        ),
+        imageDigests: handshake.imageDigests,
+        labels: {
+          pid: String(process.pid),
+          architecture: process.arch,
+          os: process.platform,
+          capacity: JSON.stringify(capacity),
+          schemaVersions: JSON.stringify(handshake.schemaVersions),
+          runnerVersion: handshake.runnerVersion,
+          actions: JSON.stringify(handshake.actions),
+        },
         state: "ready",
         lastHeartbeatAt: new Date().toISOString(),
       });
@@ -1089,6 +1607,14 @@ export class WorkerService {
           this.host.config.effectiveConfig.config.execution?.concurrency ?? 2,
           Number(next?.matrixCell.maxConcurrency ?? 2),
         );
+        if (this.isQuarantined()) {
+          if (Date.now() - lastMaintenance >= 30000) {
+            await this.maintenance();
+            lastMaintenance = Date.now();
+          }
+          await delay(200);
+          continue;
+        }
         if (!this.drainRequested && !done && tasks.size < concurrency) {
           const candidates = database
             .all(
@@ -1099,17 +1625,35 @@ export class WorkerService {
             .filter(
               (id) =>
                 (!runIds || runIds.includes(id)) &&
+                (!handshake ||
+                  !lock ||
+                  supportsQueuedRun(
+                    handshake,
+                    this.host.runs.get(id),
+                    requireEntity(this.ctx, "TestRevision", this.host.runs.get(id).revisionId),
+                    lock,
+                  )) &&
                 (this.cancelled(id) ||
                   this.dependencies(this.host.runs.get(id)).every(
                     (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
                   )),
             );
-          const fence = leases.claim({
-            workspaceId: this.ctx.workspaceId,
-            owner: this.owner,
-            queue: "local",
-            runIds: candidates,
-            ...(this.workerId ? { workerId: this.workerId } : {}),
+          // The transaction makes resource reservation and lease claim indivisible across local owners.
+          const fence = database.withTx(() => {
+            if (this.isQuarantined()) return null;
+            const reserved = database
+              .all("SELECT resource_id FROM job_leases WHERE state='leased' AND dispatchable=1")
+              .map((row) => kindOf(String(row.resource_id)));
+            const eligible = candidates.filter((id) =>
+              fitsCapacity(capacity, reserved, kindOf(id)),
+            );
+            return leases.claim({
+              workspaceId: this.ctx.workspaceId,
+              owner: this.owner,
+              queue: "local",
+              runIds: eligible,
+              ...(this.workerId ? { workerId: this.workerId } : {}),
+            });
           });
           if (fence) {
             const task = this.execute(

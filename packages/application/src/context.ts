@@ -13,7 +13,9 @@ export interface ServiceContext {
   entities: EntityRepository;
   workspaceId: string;
   principalId: string;
+  correlationId?: string;
   authorize(scope: Scope, projectId?: string): void;
+  authorizeRaw?(projectId: string, environmentId: string): void;
 }
 export function entity(
   ctx: ServiceContext,

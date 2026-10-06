@@ -18,7 +18,28 @@ export function workerCommands(program: Command, runtime: Runtime): void {
   runtime.bind(group.command("stop"), async (rt) => ({
     data: await (await rt.app()).worker.stop(),
   }));
-  runtime.bind(group.command("reconcile"), async (rt) => ({
-    data: await (await rt.app()).worker.reconcile(),
-  }));
+  runtime.bind(
+    group.command("reconcile").option("--dry-run", "List repair actions without mutations"),
+    async (rt, _args, options) => ({
+      data: await (await rt.app()).worker.reconcile({ dryRun: options.dryRun === true }),
+    }),
+  );
+  runtime.bind(
+    group
+      .command("clear-quarantine")
+      .description(
+        "Clear worker cleanup quarantine after verifying leftover resources are removed",
+      ),
+    async (rt) => {
+      const app = await rt.app();
+      return { data: await app.worker.clearQuarantine() };
+    },
+  );
+  runtime.bind(
+    group.command("quarantine").description("Show worker cleanup quarantine status"),
+    async (rt) => {
+      const app = await rt.app();
+      return { data: await app.worker.quarantineStatus() };
+    },
+  );
 }

@@ -52,6 +52,26 @@ export async function startAdversarial({
         `<!doctype html><html lang="en"><title>External resources</title><h1>External connections</h1><iframe title="External widget" id="external"></iframe><script>const origin=${origin};document.querySelector('iframe').src=origin;new WebSocket(origin.replace(/^http/,'ws')+'/socket');</script></html>`,
       );
     }
+    if (url.pathname.startsWith("/injection/")) {
+      const fixtures = JSON.parse(await readFile(`${fixtureRoot}injection-channels.json`, "utf8"));
+      const fixture = fixtures.find(
+        (entry) => entry.channel === decodeURIComponent(url.pathname.slice("/injection/".length)),
+      );
+      if (!fixture) {
+        response.writeHead(404);
+        return response.end();
+      }
+      const escapeHtml = (value) =>
+        value.replace(
+          /[&<>"']/g,
+          (character) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character],
+        );
+      response.writeHead(200, { "content-type": "text/html" });
+      return response.end(
+        `<!doctype html><html lang="en"><title>Untrusted ${escapeHtml(fixture.channel)}</title><main><p>${escapeHtml(fixture.text)}</p><img alt="${escapeHtml(fixture.text)}" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></main></html>`,
+      );
+    }
     if (url.pathname === "/prompt-injection") {
       response.writeHead(200, { "content-type": "text/html" });
       return response.end(

@@ -14,6 +14,8 @@ if (
 } else {
   try {
     const result = await checkRepository(process.cwd(), gate as Milestone | undefined);
+    if (result.capabilitySummary)
+      console.log(JSON.stringify({ capabilitySummary: result.capabilitySummary }));
     if (result.ok)
       console.log(
         `Traceability: ${result.definitionCount} normative IDs covered; no inconsistencies.`,

@@ -1,6 +1,6 @@
 import type { Application } from "@testmaster/application";
 import { ContractError, defaults, type Run, type RunReceipt } from "@testmaster/contracts";
-import { exitCodeForGate } from "@testmaster/domain";
+import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { CliFailure, type Options, type Result, type Runtime, seconds, string } from "./runtime.js";
 
@@ -42,6 +42,8 @@ export async function waitForRun(
   options: Options,
   ownership: "worker" | "ephemeral" = "worker",
 ): Promise<Run> {
+  const current = app.runs.get(id);
+  if (current.phase === "completed") return current;
   const workerController = new AbortController();
   const waitController = new AbortController();
   const interrupt = (): void => {
@@ -151,5 +153,10 @@ export async function receiptResult(
   runtime.receipts.push(receipt);
   if (options.wait !== true) return { data: receipt };
   const run = await waitForRun(runtime, app, receipt.runId, options, receipt.ownership ?? "worker");
-  return { data: { receipt, run }, exit: exitCodeForGate(run.gate) };
+  const completed = app.runs.events(receipt.runId).find((event) => event.type === "run.completed");
+  const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)?.reasonCode;
+  return {
+    data: { receipt, run },
+    exit: exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode }),
+  };
 }

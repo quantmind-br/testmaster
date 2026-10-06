@@ -119,4 +119,28 @@ describe("Independent corpus ground truth", () => {
       ).status,
     ).toBe(413);
   });
+  it("detects ignored updates by comparing update response and persisted query", async () => {
+    for (const mutant of ["healthy", "products-update-ignored"]) {
+      const shop = await instance(mutant);
+      const login = await rawRequest(shop.url, "/api/auth/token", {
+        method: "POST",
+        value: { password: "correct-password" },
+      });
+      const token = login.body.token;
+      const created = await rawRequest(shop.url, "/api/products", {
+        method: "POST",
+        token,
+        value: { name: "Workflow original", priceCents: 123 },
+      });
+      const update = await rawRequest(shop.url, `/api/products/${created.body.id}`, {
+        method: "PUT",
+        token,
+        value: { name: "Workflow updated", priceCents: 456 },
+      });
+      expect(update.status).toBe(200);
+      expect(update.body.priceCents).toBe(mutant === "healthy" ? 456 : 123);
+      const query = await rawRequest(shop.url, `/api/products/${created.body.id}`, { token });
+      expect(query.body).toEqual(update.body);
+    }
+  });
 });

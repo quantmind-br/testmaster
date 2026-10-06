@@ -78,6 +78,19 @@ it("rejects insufficient session scopes even for the local workspace owner", asy
       expect.objectContaining({ code: "FORBIDDEN" }),
     );
     expect(() => reader.runs.cancel("run_missing")).toThrow();
+    await expect(reader.worker.reconcile({ dryRun: true })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    expect(() => reader.retention.repairReferences(true)).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+    expect(() => reader.backups.review({ apply: true, revocationsConfirmed: true })).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+    expect(() => reader.backups.resumeRun("run_missing", true)).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+    await expect(reader.secrets.rewrapKeys()).rejects.toMatchObject({ code: "FORBIDDEN" });
   } finally {
     reader.close();
   }

@@ -1,8 +1,18 @@
+import { exportEffectiveConfig, resolveConfig } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import type { Command } from "commander";
 import { type Runtime, string, unavailable } from "./runtime.js";
 
 export function setupCommands(program: Command, runtime: Runtime): void {
+  runtime.bind(program.command("config").command("show"), async (rt) => ({
+    data: exportEffectiveConfig(
+      await resolveConfig({
+        cwd: rt.path("."),
+        ...(string(rt.options, "config") ? { configPath: rt.path(String(rt.options.config)) } : {}),
+        ...(string(rt.options, "profile") ? { profile: String(rt.options.profile) } : {}),
+      }),
+    ),
+  }));
   runtime.bind(
     program
       .command("init")

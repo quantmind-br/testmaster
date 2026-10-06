@@ -15,6 +15,34 @@ export function scrubText(
   for (const value of values) output = output.replaceAll(value, replacement);
   return { text: output, redacted: output !== text };
 }
+
+/** Shared default-pattern policy; encoded/unknown PII is not an anonymity guarantee. */
+export function scrubEvidenceText(text: string, secrets: readonly string[] = []): RedactedText {
+  let output = scrubText(
+    text,
+    secrets.flatMap((value) => [value, encodeURIComponent(value)]),
+  ).text;
+  output = output
+    .replace(
+      /\b(authorization|proxy-authorization|set-cookie|cookie)\s*:\s*[^\r\n]+/giu,
+      "$1: [REDACTED]",
+    )
+    .replace(
+      /([?&](?:token|access_token|api_key|password|secret|session)=)[^&#\s"'<>]*/giu,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /("(?:password|passwd|token|access_token|api_key|secret|document|cpf|email)"\s*:\s*)"(?:[^"\\]|\\.)*"/giu,
+      '$1"[REDACTED]"',
+    )
+    .replace(
+      /\b(password|passwd|token|access_token|api_key|secret|document|cpf)\s*[=:]\s*[^\s,;&<>"']+/giu,
+      "$1=[REDACTED]",
+    )
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/giu, "[REDACTED]")
+    .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/gu, "[REDACTED]");
+  return { text: output, redacted: output !== text };
+}
 export function scrubBytes(
   bytes: Uint8Array,
   secrets: readonly Uint8Array[],

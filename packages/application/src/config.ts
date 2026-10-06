@@ -11,7 +11,7 @@ import {
   parseStrictJson,
   validate,
 } from "@testmaster/contracts";
-import { semanticHash } from "@testmaster/domain";
+import { scrubEvidenceText, semanticHash } from "@testmaster/domain";
 
 import type { ProviderConfig } from "@testmaster/model-gateway";
 export interface ProfilePolicy {
@@ -31,6 +31,36 @@ export interface ResolvedConfig {
   effectiveConfig: EffectiveConfig;
   profilePolicy: ProfilePolicy;
   modelProviders: ProviderConfig[];
+  logRetentionDays?: number;
+}
+export function exportEffectiveConfig(
+  resolved: ResolvedConfig,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const secrets = Object.entries(env)
+    .filter(([name]) => /(?:SECRET|TOKEN|PASSWORD|API_KEY|CREDENTIAL)/i.test(name))
+    .map(([, value]) => value)
+    .filter((value): value is string => Boolean(value));
+  return {
+    ...(JSON.parse(
+      scrubEvidenceText(JSON.stringify(resolved.effectiveConfig), secrets).text,
+    ) as EffectiveConfig),
+    operationalDefaults: defaults,
+    logging: {
+      retentionDays: resolved.logRetentionDays ?? defaults.logRetentionDays,
+      minimumRetentionDays: 1,
+      maxFileBytes: defaults.logBytes,
+      dailyFilesPerComponent: 2,
+    },
+    unavailable: {
+      signedArtifactLinks: "M4",
+      manualAuthCheckpoint: "M4",
+      tunnel: "M4",
+      automatedServerBackup: "M4",
+      schedule: "M4",
+      distributed: "M5",
+    },
+  };
 }
 export interface ResolveConfigOptions {
   cwd?: string;
@@ -185,6 +215,7 @@ function environmentConfig(env: NodeJS.ProcessEnv): ObjectValue {
     TESTMASTER_HEAL: "healing.mode",
     TESTMASTER_TRACE: "artifacts.trace",
     TESTMASTER_VIDEO: "artifacts.video",
+    TESTMASTER_HTTP_BODIES: "artifacts.httpBodies",
     TESTMASTER_RETENTION_DAYS: "artifacts.retentionDays",
     TESTMASTER_PROJECT_ID: "project.id",
   };
@@ -214,6 +245,19 @@ function environmentConfig(env: NodeJS.ProcessEnv): ObjectValue {
 
 /** Resolves configuration without effects, network access, or loading a model gateway. */
 export async function resolveConfig(options: ResolveConfigOptions = {}): Promise<ResolvedConfig> {
+  const retentionValue =
+    options.env?.TESTMASTER_LOG_RETENTION_DAYS ??
+    (options.env === undefined ? process.env.TESTMASTER_LOG_RETENTION_DAYS : undefined);
+  const logRetentionDays =
+    retentionValue === undefined ? defaults.logRetentionDays : Number(retentionValue);
+  if (
+    retentionValue !== undefined &&
+    (!/^[0-9]+$/.test(retentionValue) ||
+      !Number.isSafeInteger(logRetentionDays) ||
+      logRetentionDays < 1 ||
+      logRetentionDays > 365)
+  )
+    throw new ContractError("INVALID_ARGUMENT", "TESTMASTER_LOG_RETENTION_DAYS must be 1–365");
   const env = options.env ?? process.env;
   const cwd = resolve(options.cwd ?? process.cwd());
   const home = resolve(options.home ?? env.HOME ?? homedir());
@@ -393,7 +437,12 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
       testIdAttributes: ["data-testid"],
     },
     healing: { mode: "off" },
-    artifacts: { trace: "off", video: "off", retentionDays: defaults.artifactRetentionDays },
+    artifacts: {
+      trace: "off",
+      video: "off",
+      httpBodies: "off",
+      retentionDays: defaults.artifactRetentionDays,
+    },
     telemetry: { enabled: false },
   };
   const config: ObjectValue = {};
@@ -452,6 +501,7 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
   return {
     cwd,
     home,
+    logRetentionDays,
     dataDir: resolve(cwd, env.TESTMASTER_DATA_DIR ?? ".testmaster"),
     effectiveConfig: { config: effective, origins, policyHash: semanticHash(profilePolicy) },
     modelProviders: structuredClone(selected.modelProviders ?? []),

@@ -1,12 +1,13 @@
 import { spawn } from "node:child_process";
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
-import { type FileHandle, link, mkdir, open, readdir, unlink } from "node:fs/promises";
+import { type FileHandle, link, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { ContractError, type SecretReference } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { type EntityDocument, IdempotencyRepository } from "@testmaster/persistence";
 import type { SecretRelease } from "@testmaster/sandbox";
+import { auditedOperation } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, type ServiceContext } from "./context.js";
 
@@ -248,6 +249,105 @@ async function vaultKey(config: ResolvedConfig, allowCreate: boolean): Promise<B
 function aad(workspace: string, id: string, version: number): Buffer {
   return Buffer.from(JSON.stringify([workspace, id, version]));
 }
+interface VaultEnvelope {
+  formatVersion: number;
+  keyId: string;
+  workspace: string;
+  id: string;
+  version: number;
+  payload: string;
+}
+function parseVaultEnvelope(stored: Buffer): VaultEnvelope {
+  const value: unknown = JSON.parse(stored.toString("utf8"));
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("formatVersion" in value) ||
+    value.formatVersion !== 1 ||
+    !("keyId" in value) ||
+    typeof value.keyId !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.keyId) ||
+    !("workspace" in value) ||
+    typeof value.workspace !== "string" ||
+    !/^ws_[a-f0-9-]+$/.test(value.workspace) ||
+    !("id" in value) ||
+    typeof value.id !== "string" ||
+    !/^sec_[a-f0-9-]+$/.test(value.id) ||
+    !("version" in value) ||
+    typeof value.version !== "number" ||
+    !Number.isSafeInteger(value.version) ||
+    value.version < 1 ||
+    !("payload" in value) ||
+    typeof value.payload !== "string" ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(value.payload)
+  )
+    throw unavailable();
+  return {
+    formatVersion: 1,
+    keyId: value.keyId,
+    workspace: value.workspace,
+    id: value.id,
+    version: value.version,
+    payload: value.payload,
+  };
+}
+async function vaultLock(
+  config: ResolvedConfig,
+): Promise<{ directory: FileHandle; release(): Promise<void> }> {
+  const directory = await privateDirectory(join(config.home, ".config", "testmaster"));
+  const path = `/proc/self/fd/${directory.fd}/vault.lock`;
+  try {
+    try {
+      const lock = await open(
+        path,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        0o600,
+      );
+      await lock.writeFile(String(process.pid));
+      await lock.close();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const pid = Number((await readPrivate(directory, "vault.lock", 32)).toString());
+      if (!Number.isSafeInteger(pid) || pid < 1) throw unavailable();
+      try {
+        process.kill(pid, 0);
+        throw new ContractError("PRECONDITION_FAILED", "Vault key maintenance is busy");
+      } catch (owner) {
+        if ((owner as NodeJS.ErrnoException).code !== "ESRCH") throw owner;
+      }
+      await unlink(path);
+      const lock = await open(
+        path,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        0o600,
+      );
+      await lock.writeFile(String(process.pid));
+      await lock.close();
+    }
+    return {
+      directory,
+      release: async () => {
+        try {
+          await unlink(path);
+        } finally {
+          await directory.close();
+        }
+      },
+    };
+  } catch (error) {
+    await directory.close();
+    throw error;
+  }
+}
+async function replacePrivate(directory: FileHandle, name: string, bytes: Buffer): Promise<void> {
+  const temporary = `.replace-${randomBytes(16).toString("hex")}`;
+  await writePrivate(directory, temporary, bytes);
+  await rename(
+    `/proc/self/fd/${directory.fd}/${temporary}`,
+    `/proc/self/fd/${directory.fd}/${name}`,
+  );
+  await directory.sync();
+}
 async function vaultWrite(
   config: ResolvedConfig,
   workspace: string,
@@ -256,22 +356,35 @@ async function vaultWrite(
   value: string,
   allowCreate = true,
 ): Promise<void> {
-  const key = await vaultKey(config, allowCreate);
+  const lock = await vaultLock(config);
+  let key: Buffer | undefined;
   let directory: FileHandle | undefined;
   try {
+    key = await vaultKey(config, allowCreate);
     directory = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
     const nonce = randomBytes(12);
+    const keyId = createHash("sha256").update(key).digest("hex");
     const cipher = createCipheriv("aes-256-gcm", key, nonce);
     cipher.setAAD(aad(workspace, id, version));
     const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
     await writePrivate(
       directory,
       vaultName(id, version),
-      Buffer.concat([nonce, cipher.getAuthTag(), ciphertext]),
+      Buffer.from(
+        JSON.stringify({
+          formatVersion: 1,
+          keyId,
+          workspace,
+          id,
+          version,
+          payload: Buffer.concat([nonce, cipher.getAuthTag(), ciphertext]).toString("base64"),
+        }),
+      ),
     );
   } finally {
-    key.fill(0);
+    key?.fill(0);
     await directory?.close();
+    await lock.release();
   }
 }
 async function vaultRead(
@@ -288,13 +401,42 @@ async function vaultRead(
     key = await readPrivate(keys, "vault.key", 32);
     if (key.length !== 32) throw unavailable();
     directory = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
-    const bytes = await readPrivate(directory, vaultName(id, version), MAX_SECRET_BYTES + 28);
+    const stored = await readPrivate(directory, vaultName(id, version), MAX_SECRET_BYTES * 2);
+    let bytes = stored;
+    if (stored[0] === 123) {
+      const envelope = parseVaultEnvelope(stored);
+      if (
+        envelope.formatVersion !== 1 ||
+        !/^[a-f0-9]{64}$/.test(envelope.keyId) ||
+        envelope.workspace !== workspace ||
+        envelope.id !== id ||
+        envelope.version !== version
+      )
+        throw unavailable();
+      const activeId = createHash("sha256").update(key).digest("hex");
+      let retired: string[] = [];
+      try {
+        retired = JSON.parse(
+          (await readPrivate(keys, "vault-retired.json", MAX_SECRET_BYTES)).toString("utf8"),
+        ) as string[];
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      if (retired.includes(envelope.keyId) || retired.includes(activeId))
+        throw new ContractError("PRECONDITION_FAILED", "Vault encryption key is retired");
+      if (envelope.keyId !== activeId) {
+        key.fill(0);
+        key = await readPrivate(keys, `${envelope.keyId}.key`, 32);
+      }
+      bytes = Buffer.from(envelope.payload, "base64");
+    }
     if (bytes.length < 29) throw unavailable();
     const decipher = createDecipheriv("aes-256-gcm", key, bytes.subarray(0, 12));
     decipher.setAAD(aad(workspace, id, version));
     decipher.setAuthTag(bytes.subarray(12, 28));
     return Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString("utf8");
-  } catch {
+  } catch (error) {
+    if (error instanceof ContractError) throw error;
     throw unavailable();
   } finally {
     key?.fill(0);
@@ -409,6 +551,15 @@ export class SecretsService {
     value: string,
     options: { ephemeral?: boolean; allowedOrigins?: string[]; idempotencyKey?: string } = {},
   ): Promise<SecretMetadata> {
+    return auditedOperation(this.ctx, "secret.set", "secret-reference", () =>
+      this.setValue(name, value, options),
+    );
+  }
+  private async setValue(
+    name: string,
+    value: string,
+    options: { ephemeral?: boolean; allowedOrigins?: string[]; idempotencyKey?: string } = {},
+  ): Promise<SecretMetadata> {
     this.ctx.authorize("W");
     validateValue(value);
     const body = {
@@ -506,6 +657,11 @@ export class SecretsService {
     return reference;
   }
   async rotate(idOrName: string, value: string): Promise<SecretMetadata> {
+    return auditedOperation(this.ctx, "secret.rotate", idOrName, () =>
+      this.rotateValue(idOrName, value),
+    );
+  }
+  private async rotateValue(idOrName: string, value: string): Promise<SecretMetadata> {
     this.ctx.authorize("W");
     validateValue(value);
     const previous = this.lookup(idOrName);
@@ -534,6 +690,11 @@ export class SecretsService {
     return next;
   }
   async remove(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
+    return auditedOperation(this.ctx, "secret.revoke", idOrName, () =>
+      this.removeValue(idOrName, idempotencyKey),
+    );
+  }
+  private async removeValue(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
     this.ctx.authorize("W");
     const previous = this.lookup(idOrName);
     if (previous.revokedAt && !idempotencyKey) return previous;
@@ -570,6 +731,9 @@ export class SecretsService {
     return receipt;
   }
   async release(id: string): Promise<SecretRelease> {
+    return auditedOperation(this.ctx, "secret.release", id, () => this.releaseValue(id));
+  }
+  private async releaseValue(id: string): Promise<SecretRelease> {
     this.ctx.authorize("X");
     const reference = this.lookup(id);
     origins(reference.allowedOrigins);
@@ -591,33 +755,223 @@ export class SecretsService {
       secretRef: reference.id,
       secretVersion: reference.secretVersion,
       revoked,
-      resolve: async () => {
-        if (await revoked()) throw new ContractError("POLICY_DENIED", "Secret version is revoked");
-        let value: string;
-        if (reference.provider === "ephemeral") {
-          const memory = this.ephemeral.get(`${reference.id}:${reference.secretVersion}`);
-          if (memory === undefined) throw unavailable();
-          value = memory;
-        } else if (reference.provider === "secret-tool")
-          value = await keychain(
-            "lookup",
-            reference.workspaceId,
-            reference.id,
-            reference.secretVersion,
-          );
-        else if (reference.provider === "vault")
-          value = await vaultRead(
-            this.config,
-            reference.workspaceId,
-            reference.id,
-            reference.secretVersion,
-          );
-        else throw unavailable();
-        validateValue(value);
-        if (await revoked()) throw new ContractError("POLICY_DENIED", "Secret version is revoked");
-        return value;
-      },
+      resolve: () =>
+        auditedOperation(this.ctx, "secret.resolve", reference.id, async () => {
+          if (await revoked())
+            throw new ContractError("POLICY_DENIED", "Secret version is revoked");
+          let value: string;
+          if (reference.provider === "ephemeral") {
+            const memory = this.ephemeral.get(`${reference.id}:${reference.secretVersion}`);
+            if (memory === undefined) throw unavailable();
+            value = memory;
+          } else if (reference.provider === "secret-tool")
+            value = await keychain(
+              "lookup",
+              reference.workspaceId,
+              reference.id,
+              reference.secretVersion,
+            );
+          else if (reference.provider === "vault")
+            value = await vaultRead(
+              this.config,
+              reference.workspaceId,
+              reference.id,
+              reference.secretVersion,
+            );
+          else throw unavailable();
+          validateValue(value);
+          if (await revoked())
+            throw new ContractError("POLICY_DENIED", "Secret version is revoked");
+          return value;
+        }),
     };
+  }
+  async keyStatus(): Promise<{ activeKeyId: string; retiredKeyIds: string[] }> {
+    this.ctx.authorize("A");
+    const key = await vaultKey(this.config, false);
+    const directory = await privateDirectory(join(this.config.home, ".config", "testmaster"));
+    try {
+      let retiredKeyIds: string[] = [];
+      try {
+        retiredKeyIds = JSON.parse(
+          (await readPrivate(directory, "vault-retired.json", MAX_SECRET_BYTES)).toString("utf8"),
+        ) as string[];
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      return { activeKeyId: createHash("sha256").update(key).digest("hex"), retiredKeyIds };
+    } finally {
+      key.fill(0);
+      await directory.close();
+    }
+  }
+  async rewrapKeys(): Promise<{ activeKeyId: string; previousKeyId: string; rewrapped: number }> {
+    this.ctx.authorize("A");
+    return auditedOperation(this.ctx, "secret.key.rewrap", "vault", async () => {
+      const lock = await vaultLock(this.config);
+      let directory: FileHandle;
+      let old: Buffer;
+      try {
+        directory = await privateDirectory(join(this.config.home, ".local", "share", "testmaster"));
+        old = await vaultKey(this.config, false);
+      } catch (error) {
+        await lock.release();
+        throw error;
+      }
+      const next = randomBytes(32);
+      const previousKeyId = createHash("sha256").update(old).digest("hex");
+      const activeKeyId = createHash("sha256").update(next).digest("hex");
+      const retired = await this.keyStatus();
+      if (retired.retiredKeyIds.includes(previousKeyId)) {
+        old.fill(0);
+        next.fill(0);
+        await directory.close();
+        await lock.release();
+        throw new ContractError("PRECONDITION_FAILED", "Cannot rewrap with a retired active key");
+      }
+      let rewrapped = 0;
+      try {
+        try {
+          await writePrivate(lock.directory, `${previousKeyId}.key`, old);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        }
+        await replacePrivate(lock.directory, "vault.key", next);
+        for (const name of (await readdir(`/proc/self/fd/${directory.fd}`)).filter((name) =>
+          name.endsWith(".vault"),
+        )) {
+          const stored = await readPrivate(directory, name, MAX_SECRET_BYTES * 2);
+          let envelope: VaultEnvelope;
+          if (stored[0] === 123) envelope = parseVaultEnvelope(stored);
+          else {
+            const reference = this.list().find(
+              (entry) => vaultName(entry.id, entry.secretVersion) === name,
+            );
+            if (!reference)
+              throw new ContractError(
+                "PRECONDITION_FAILED",
+                "Legacy vault object requires its workspace metadata before rewrap",
+              );
+            envelope = {
+              formatVersion: 1,
+              keyId: previousKeyId,
+              workspace: reference.workspaceId,
+              id: reference.id,
+              version: reference.secretVersion,
+              payload: stored.toString("base64"),
+            };
+          }
+          const sourceKey =
+            envelope.keyId === previousKeyId
+              ? old
+              : await readPrivate(lock.directory, `${envelope.keyId}.key`, 32);
+          try {
+            const bytes = Buffer.from(envelope.payload, "base64");
+            const decipher = createDecipheriv("aes-256-gcm", sourceKey, bytes.subarray(0, 12));
+            decipher.setAAD(aad(envelope.workspace, envelope.id, envelope.version));
+            decipher.setAuthTag(bytes.subarray(12, 28));
+            const value = Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]);
+            try {
+              const nonce = randomBytes(12);
+              const cipher = createCipheriv("aes-256-gcm", next, nonce);
+              cipher.setAAD(aad(envelope.workspace, envelope.id, envelope.version));
+              const encrypted = Buffer.concat([cipher.update(value), cipher.final()]);
+              await replacePrivate(
+                directory,
+                name,
+                Buffer.from(
+                  JSON.stringify({
+                    ...envelope,
+                    keyId: activeKeyId,
+                    payload: Buffer.concat([nonce, cipher.getAuthTag(), encrypted]).toString(
+                      "base64",
+                    ),
+                  }),
+                ),
+              );
+              rewrapped++;
+            } finally {
+              value.fill(0);
+            }
+          } finally {
+            if (sourceKey !== old) sourceKey.fill(0);
+          }
+        }
+        return { activeKeyId, previousKeyId, rewrapped };
+      } finally {
+        old.fill(0);
+        next.fill(0);
+        await directory.close();
+        await lock.release();
+      }
+    });
+  }
+  async retireKey(
+    keyId: string,
+    dryRun = true,
+  ): Promise<{ keyId: string; dryRun: boolean; references: string[]; retired: boolean }> {
+    this.ctx.authorize("A");
+    if (!/^[a-f0-9]{64}$/.test(keyId))
+      throw new ContractError("INVALID_ARGUMENT", "Invalid vault key ID");
+    return auditedOperation(this.ctx, "secret.key.retire", keyId, async () => {
+      const lock = await vaultLock(this.config);
+      let directory: FileHandle;
+      let key: Buffer;
+      try {
+        directory = await privateDirectory(join(this.config.home, ".local", "share", "testmaster"));
+        key = await vaultKey(this.config, false);
+      } catch (error) {
+        await lock.release();
+        throw error;
+      }
+      try {
+        if (createHash("sha256").update(key).digest("hex") === keyId)
+          throw new ContractError("PRECONDITION_FAILED", "Cannot retire active vault key");
+        const references: string[] = [];
+        for (const name of (await readdir(`/proc/self/fd/${directory.fd}`)).filter((name) =>
+          name.endsWith(".vault"),
+        )) {
+          const bytes = await readPrivate(directory, name, MAX_SECRET_BYTES * 2);
+          if (bytes[0] !== 123) references.push(name);
+          else {
+            const envelope = parseVaultEnvelope(bytes);
+            if (envelope.keyId === keyId) references.push(name);
+          }
+        }
+        if (!dryRun && references.length)
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Vault ciphertexts still require this key",
+            { references },
+          );
+        if (!dryRun) {
+          let retired: string[] = [];
+          try {
+            retired = JSON.parse(
+              (await readPrivate(lock.directory, "vault-retired.json", MAX_SECRET_BYTES)).toString(
+                "utf8",
+              ),
+            ) as string[];
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+          }
+          await replacePrivate(
+            lock.directory,
+            "vault-retired.json",
+            Buffer.from(JSON.stringify([...new Set([...retired, keyId])])),
+          );
+          await unlink(`/proc/self/fd/${lock.directory.fd}/${keyId}.key`).catch((error) => {
+            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+          });
+          await lock.directory.sync();
+        }
+        return { keyId, dryRun, references, retired: !dryRun };
+      } finally {
+        key.fill(0);
+        await directory.close();
+        await lock.release();
+      }
+    });
   }
   async health(): Promise<SecretBackendHealth> {
     this.ctx.authorize("R");

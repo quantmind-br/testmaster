@@ -14,6 +14,7 @@ import {
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import {
+  type DockerCommand,
   DockerExecutor,
   dockerCommand,
   type ImageLock,
@@ -33,6 +34,7 @@ import { SourcesService, UploadsService } from "./ai/sources.js";
 import { UsageService } from "./ai/usage.js";
 import { ApprovalsService } from "./approvals.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
+import { AuditService, auditSecurity } from "./audit.js";
 import {
   EnvironmentsService,
   ProjectsService,
@@ -42,6 +44,7 @@ import {
 import { BackupsService } from "./backups.js";
 import { type ResolveConfigOptions, type ResolvedConfig, resolveConfig } from "./config.js";
 import { entity, type Scope, type ServiceContext } from "./context.js";
+import { correlationId } from "./observability.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
@@ -64,6 +67,9 @@ export interface AuthorizationIdentity {
 }
 export interface ApplicationOptions extends ResolveConfigOptions {
   identity?: AuthorizationIdentity;
+  correlationId?: string;
+  imageLockPath?: string;
+  dockerCommand?: DockerCommand;
 }
 export class Application {
   readonly context: ServiceContext;
@@ -92,16 +98,20 @@ export class Application {
   readonly codeExport: CodeExportService;
   readonly codeGeneration: CodeGenerationService;
   readonly resources: ResourcesService;
+  readonly audit: AuditService;
   readonly seccompPath = fileURLToPath(
     new URL("../../../containers/seccomp_profile.json", import.meta.url),
   );
-  private readonly lockPath = fileURLToPath(
-    new URL("../../../containers/images.lock.json", import.meta.url),
-  );
+  private verifiedImages: ImageLock | null = null;
   private constructor(
     readonly config: ResolvedConfig,
     readonly database: PersistenceDatabase,
     readonly identity?: AuthorizationIdentity,
+    readonly correlation = correlationId(),
+    private readonly lockPath = fileURLToPath(
+      new URL("../../../containers/images.lock.json", import.meta.url),
+    ),
+    readonly dockerCommand?: DockerCommand,
   ) {
     const workspace = database.get("SELECT id FROM workspaces ORDER BY created_at LIMIT 1");
     const principal = database.get(
@@ -113,8 +123,35 @@ export class Application {
       entities: new EntityRepository(database),
       workspaceId: String(workspace?.id ?? ""),
       principalId: identity?.principalId ?? String(principal?.id ?? ""),
+      correlationId: correlation,
       authorize: (scope, projectId) => this.authorize(scope, projectId),
+      authorizeRaw: (projectId, environmentId) => {
+        this.authorize("R", projectId);
+        const membership = database.get(
+          "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
+          this.context.workspaceId,
+          this.context.principalId,
+        );
+        const role = String(membership?.role);
+        const matching = (identity?.grants ?? []).filter(
+          (grant) =>
+            ["Artifact", "artifacts", "*"].includes(grant.resourceType) &&
+            grant.actions.includes("raw") &&
+            (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()) &&
+            (!grant.projectIds.length || grant.projectIds.includes(projectId)) &&
+            (!grant.environmentIds.length || grant.environmentIds.includes(environmentId)),
+        );
+        if (
+          role === "viewer" ||
+          matching.some((grant) => grant.deny) ||
+          (identity
+            ? !matching.some((grant) => !grant.deny)
+            : !["org_owner", "org_admin"].includes(role))
+        )
+          throw new ContractError("FORBIDDEN", "Raw evidence requires artifacts:raw permission");
+      },
     };
+    this.audit = new AuditService(this.context, config.cwd);
     this.projects = new ProjectsService(this.context);
     this.environments = new EnvironmentsService(this.context);
     this.tests = new TestsService(this.context);
@@ -123,6 +160,10 @@ export class Application {
     this.secrets = new SecretsService(this.context, config);
     this.runs = new RunsService(this.context, {
       config,
+      admittedImages: () => this.verifiedImages,
+      verifyEvidence: async (id) => {
+        await this.artifacts.get(id);
+      },
       preflight: (unsafe, executor) => this.preflight(unsafe, executor),
       liveWorker: () => this.worker.live(),
       verifyApproval: (run, test, env) =>
@@ -141,10 +182,11 @@ export class Application {
       secrets: this.secrets,
       runs: this.runs,
       retention: this.retention,
+      ...(this.dockerCommand ? { dockerCommand: this.dockerCommand } : {}),
     });
     this.artifacts = new ArtifactsService(this.context, config, this.runs);
     this.reports = new ReportsService(this.context, config, this.runs, this.artifacts);
-    this.backups = new BackupsService(this.context, config);
+    this.backups = new BackupsService(this.context, config, this.secrets);
     this.agentSkills = new AgentSkillsService(this.context, config.cwd);
     this.model = new ModelService(this.context, config);
     this.uploads = new UploadsService(this.context, config);
@@ -177,16 +219,40 @@ export class Application {
       config,
       await PersistenceDatabase.open(join(config.dataDir, "testmaster.db")),
       options.identity,
+      correlationId(options.correlationId),
+      options.imageLockPath,
+      options.dockerCommand,
     );
   }
   /** Request-scoped services borrowing this application's database; do not close the view. */
-  withIdentity(identity: AuthorizationIdentity): Application {
-    return new Application(this.config, this.database, identity);
+  withIdentity(identity: AuthorizationIdentity, correlation = this.correlation): Application {
+    return new Application(
+      this.config,
+      this.database,
+      identity,
+      correlationId(correlation),
+      this.lockPath,
+      this.dockerCommand,
+    );
   }
   close(): void {
     this.database.close();
   }
   private authorize(scope: Scope, projectId?: string): void {
+    try {
+      this.authorizePermission(scope, projectId);
+    } catch (error) {
+      if (this.context.workspaceId)
+        auditSecurity(
+          this.context,
+          "authorization",
+          projectId ?? this.context.workspaceId,
+          "denied",
+        );
+      throw error;
+    }
+  }
+  private authorizePermission(scope: Scope, projectId?: string): void {
     if (!this.context.workspaceId || !this.context.principalId)
       throw new ContractError("PRECONDITION_FAILED", "Initialize this repository first", {
         nextActions: ["init"],
@@ -235,8 +301,13 @@ export class Application {
     if (
       matching.some((grant) => grant.deny) ||
       (!(defaults[role] ?? []).includes(scope) && !matching.some((grant) => !grant.deny))
-    )
+    ) {
+      if (grants.length)
+        auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "denied");
       throw new ContractError("FORBIDDEN", "Action is not authorized", { scope });
+    }
+    if (matching.some((grant) => !grant.deny))
+      auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "allowed");
   }
   async init(options: { name?: string; baseUrl?: string; overwrite?: boolean } = {}): Promise<{
     workspaceId: string;
@@ -381,16 +452,21 @@ export class Application {
     const docker = await new DockerExecutor().doctor();
     if (!docker.available)
       throw new ContractError("POLICY_DENIED", "Hardened Docker sandbox is unavailable", {
+        reasonCode: "security_precondition_failed",
+        control: "docker",
         diagnostics: docker.diagnostics,
       });
     try {
       await this.images();
     } catch {
-      throw new ContractError("POLICY_DENIED", "Runner image lock or seccomp verification failed");
+      throw new ContractError("POLICY_DENIED", "Runner image lock or seccomp verification failed", {
+        reasonCode: "security_precondition_failed",
+        control: "runner_images",
+      });
     }
   }
   async images(): Promise<ImageLock> {
-    return verifyImageLock(this.lockPath, async (imageId) => {
+    const lock = await verifyImageLock(this.lockPath, async (imageId) => {
       const result = await dockerCommand(
         ["image", "inspect", imageId, "--format", "{{.Id}}"],
         10000,
@@ -399,6 +475,108 @@ export class Application {
         throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable");
       return result.stdout.toString().trim();
     });
+    this.verifiedImages = lock;
+    return lock;
+  }
+  async readiness() {
+    let persistence = false;
+    try {
+      const status = this.database.status();
+      this.database.withTx(() =>
+        this.database.run(
+          "INSERT INTO operational_state(key,value) VALUES('readiness:probe',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          new Date().toISOString(),
+        ),
+      );
+      persistence = status.pending.length === 0;
+    } catch {}
+    let policy = false;
+    try {
+      const admission = this.database.get(
+        "SELECT value FROM operational_state WHERE key='admission'",
+      );
+      policy = admission?.value === "enabled" && Boolean(this.context.workspaceId);
+    } catch {}
+    const runtime = await new DockerExecutor().doctor();
+    const runners: Record<string, { status: "ready" | "unavailable" }> = {};
+    for (const [runner, image] of [
+      ["http", "testmaster-runner"],
+      ["playwright", "testmaster-runner"],
+      ["python", "testmaster-runner-python"],
+    ] as const) {
+      let ready = runtime.available;
+      if (ready) {
+        try {
+          const lock = await verifyImageLock(
+            this.lockPath,
+            async (id) => {
+              const result = await dockerCommand(
+                ["image", "inspect", id, "--format", "{{.Id}}"],
+                10000,
+              );
+              if (result.code !== 0) throw new Error("Image unavailable");
+              return result.stdout.toString().trim();
+            },
+            [image],
+          );
+          if (runner === "playwright") {
+            const probe = await mkdtemp(join(tmpdir(), "tm-ready-"));
+            try {
+              await mkdir(join(probe, "input"));
+              await mkdir(join(probe, "sockets"));
+              const browser = await new DockerExecutor().doctor({
+                attemptId: uuidV7IdGenerator.next("att"),
+                runId: uuidV7IdGenerator.next("run"),
+                kind: "browser",
+                imageId: lock[image].imageId,
+                inputDir: join(probe, "input"),
+                socketsDir: join(probe, "sockets"),
+                seccompPath: this.seccompPath,
+              });
+              ready = browser.available;
+              if (ready) {
+                const launched = await new DockerExecutor().execute({
+                  attemptId: uuidV7IdGenerator.next("att"),
+                  runId: uuidV7IdGenerator.next("run"),
+                  kind: "browser",
+                  imageId: lock[image].imageId,
+                  inputDir: join(probe, "input"),
+                  socketsDir: join(probe, "sockets"),
+                  seccompPath: this.seccompPath,
+                  entrypoint: ["node"],
+                  command: [
+                    "--input-type=module",
+                    "-e",
+                    "import {chromium} from 'playwright-core'; const browser=await chromium.launch({headless:true,chromiumSandbox:true}); await browser.close();",
+                  ],
+                  attemptTimeoutMs: 10000,
+                  cancellationGraceMs: 0,
+                });
+                ready = launched.code === 0;
+              }
+            } finally {
+              await rm(probe, { recursive: true, force: true });
+            }
+          }
+        } catch {
+          ready = false;
+        }
+      }
+      runners[runner] = { status: ready ? "ready" : "unavailable" };
+    }
+    return {
+      status: persistence && policy ? "ready" : "unavailable",
+      components: {
+        persistence: persistence ? "ready" : "unavailable",
+        admission: policy ? "ready" : "unavailable",
+      },
+      worker: {
+        status: Object.values(runners).every((runner) => runner.status === "ready")
+          ? "ready"
+          : "degraded",
+        runners,
+      },
+    };
   }
   async doctor(options: { target?: string } = {}) {
     let lock: ImageLock | null = null;
@@ -466,7 +644,13 @@ export class Application {
         secrets: { status: secrets.writable ? "PASS" : "WARN", ...secrets },
         config: { status: "PASS", effectiveConfig: this.config.effectiveConfig },
         target,
-        model: { status: "DISABLED", reason: "No model calls in replay" },
+        model: this.config.modelProviders.some(
+          (provider) =>
+            this.config.profilePolicy.allowedModelProviders.includes(provider.id) &&
+            provider.models.length,
+        )
+          ? { status: "NOT_CHECKED", reason: "Model is configured; replay does not contact it" }
+          : { status: "ABSENT", diagnostics: ["model_not_configured"], requiredForReplay: false },
       },
     };
   }

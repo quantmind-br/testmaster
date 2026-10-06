@@ -31,6 +31,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/health/live", "public", "M1", "Empty", "Health"],
   ["GET", "/health/ready", "ops:R", "M1", "Empty", "Health"],
   ["GET", "/capabilities", "meta:R", "M1", "Empty", "CapabilityManifest"],
+  [
+    "POST",
+    "/contracts/validate",
+    "meta:R",
+    "M0",
+    "DocumentValidationInput",
+    "DocumentValidationResult",
+  ],
   ["GET", "/me", "identity:R", "M4", "Empty", "Principal"],
   ["GET,POST", "/workspaces", "workspace:R/A", "M4", "WorkspaceInput", "Workspace"],
   ["GET,PATCH", "/workspaces/{id}", "workspace:R/A", "M4", "WorkspaceInput", "Workspace"],
@@ -152,6 +160,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET,POST", "/workers", "workers:A", "M4", "Worker", "Worker"],
   ["POST", "/workers/{id}/heartbeat", "worker:X", "M4", "HeartbeatInput", "Worker"],
   ["GET", "/usage", "usage:R", "M2", "Empty", "UsageEntry"],
+  ["POST", "/projects/{id}/budget", "usage:A", "M2", "TokenBudgetInput", "UsageEntry"],
   ["GET", "/audit-events", "audit:R", "M4", "Empty", "AuditEvent"],
   ["POST", "/integrations/{provider}/webhooks", "signature", "M4", "IntegrationEvent", "Delivery"],
   ["GET,POST", "/integrations", "integrations:A", "M4", "IntegrationInput", "IntegrationMetadata"],
@@ -248,6 +257,11 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
 );
 export const mcpTools = {
   testmaster_capabilities: { milestone: "M1", input: Obj({}), output: "CapabilityManifest" },
+  testmaster_validate_document: {
+    milestone: "M0",
+    input: Obj({ schema: Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]), document: Json }),
+    output: "DocumentValidationResult",
+  },
   testmaster_bootstrap: {
     milestone: "M2",
     input: Obj({ projectRoot: Name, target: Name, scope: Type.Array(Name), mode: Name }),

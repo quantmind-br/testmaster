@@ -83,6 +83,30 @@ async function fixture(
   };
 }
 
+it("records output_truncated and charges one completion without blind repairs", async () => {
+  const f = await fixture((_req, res) =>
+    res.end(
+      JSON.stringify({
+        ...completion,
+        choices: [{ message: { content: '{"amount":' }, finish_reason: "length" }],
+        usage: { prompt_tokens: 20, completion_tokens: 128 },
+      }),
+    ),
+  );
+  await expect(f.gateway.complete(testRequest)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "output_truncated" },
+  });
+  expect(f.counts().completions).toBe(1);
+  expect(f.records).toHaveLength(1);
+  expect(f.records[0]).toMatchObject({
+    finishReason: "length",
+    failureReason: "output_truncated",
+    repairAttempt: 0,
+    usage: { outputTokens: 128 },
+  });
+  expect(f.ledger.settlements).toHaveLength(1);
+});
 describe("policy-controlled model requests", () => {
   it("denies absent consent and disallowed providers before any request, with a positive boundary control", async () => {
     const f = await fixture();
@@ -225,6 +249,21 @@ describe("policy-controlled model requests", () => {
     expect(f.records[1]?.reservationId).toBeNull();
     await f.gateway.complete({ ...input, projectId: "other-project" });
     expect(f.counts().completions).toBe(2);
+    const sourceUpdate = await f.gateway.complete({
+      ...input,
+      sourceRevisionIds: ["svr_01900000-0000-7000-8000-000000000001"],
+    });
+    expect(sourceUpdate.cacheHit).toBe(false);
+    const diffUpdate = await f.gateway.complete({
+      ...input,
+      inputRefs: ["diff:new-head-and-dirty-hash"],
+    });
+    expect(diffUpdate.cacheHit).toBe(false);
+    expect(f.counts().completions).toBe(4);
+    expect(
+      (await f.gateway.complete({ ...input, inputRefs: ["diff:new-head-and-dirty-hash"] }))
+        .cacheHit,
+    ).toBe(true);
     f.revoke();
     await expect(f.gateway.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
   });

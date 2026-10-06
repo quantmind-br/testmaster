@@ -10,7 +10,7 @@ import type { ResolvedConfig } from "../config.js";
 import { requireEntity, type ServiceContext } from "../context.js";
 
 export const promptVersions = {
-  normalize: "normalize-1",
+  normalize: "normalize-2-bounded",
   plan: "plan-1",
   resolve_action: "resolve-action-1",
   generate_code: "generate-code-1",
@@ -21,6 +21,7 @@ export const promptVersions = {
 } as const;
 export interface ModelInput {
   projectId: string;
+  runId?: string;
   purpose: ModelRequest["purpose"];
   responseSchema: string;
   data: unknown;
@@ -44,7 +45,12 @@ export class ModelService {
     this.ledger = new SqliteBudgetLedger(ctx.database);
     this.consents = new SqliteConsentStore(ctx.database);
   }
-  grantConsent(projectId: string, providerId: string, dataClasses: string[]): void {
+  grantConsent(
+    projectId: string,
+    providerId: string,
+    dataClasses: string[],
+    allowUnknownCost = false,
+  ): void {
     this.ctx.authorize("A", projectId);
     requireEntity(this.ctx, "Project", projectId);
     if (
@@ -63,6 +69,7 @@ export class ModelService {
       { workspaceId: this.ctx.workspaceId, projectId, providerId },
       [...new Set(dataClasses)],
       this.ctx.principalId,
+      allowUnknownCost,
     );
   }
   revokeConsent(projectId: string, providerId: string): void {
@@ -113,6 +120,7 @@ export class ModelService {
     return gateway.complete<T>({
       workspaceId: this.ctx.workspaceId,
       projectId: input.projectId,
+      ...(input.runId ? { runId: input.runId } : {}),
       purpose: input.purpose,
       provider: provider.id,
       model: model.id,
@@ -135,15 +143,21 @@ export class ModelService {
       inputRefs: input.inputRefs ?? [],
       locale: this.config.effectiveConfig.config.environment?.locale ?? "en-US",
       policyHash: this.config.effectiveConfig.policyHash,
-      maxOutputTokens:
-        input.maxOutputTokens ?? Math.min(model.capabilities.maxOutputTokens ?? 8192, 8192),
+      maxOutputTokens: input.maxOutputTokens ?? model.capabilities.maxOutputTokens ?? 8192,
       deadlineMs: input.deadlineMs ?? 180000,
       temperature: 0,
       dataPolicy: {
         dataClasses: input.dataClasses ?? ["documents"],
         maxInputBytes: 1048576,
         maxInputTokens: 100000,
-        allowUnknownCost: true,
+        allowUnknownCost:
+          (
+            await this.consents.find({
+              workspaceId: this.ctx.workspaceId,
+              projectId: input.projectId,
+              providerId: provider.id,
+            })
+          )?.allowUnknownCost === true,
       },
       ...(input.signal ? { signal: input.signal } : {}),
     });

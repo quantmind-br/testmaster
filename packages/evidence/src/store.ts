@@ -11,6 +11,8 @@ export interface AttemptIds {
   attemptId: string;
   revisionId: string;
   snapshotId: string;
+  executionSnapshot?: ArtifactManifest["executionSnapshot"];
+  reproduction?: ArtifactManifest["reproduction"];
 }
 export interface ArtifactInput {
   relativePath: string;
@@ -212,9 +214,12 @@ class Staging implements AttemptStaging {
             let hit: boolean;
             try {
               const bytes = await scanFile.readFile();
-              hit = this.options.scanText(
-                new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-              ).hit;
+              const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+              if (input.mimeType === "application/json" || input.mimeType.endsWith("+json"))
+                JSON.parse(text);
+              if (input.mimeType === "application/x-ndjson")
+                for (const line of text.split("\n")) if (line.trim()) JSON.parse(line);
+              hit = this.options.scanText(text).hit;
             } catch {
               hit = true;
             } finally {
@@ -228,7 +233,7 @@ class Staging implements AttemptStaging {
               this.writers.delete(path);
               return entry;
             }
-            entry.redactionStatus = "redacted";
+            if (input.sensitivity !== "restricted") entry.redactionStatus = "redacted";
           }
           await this.root.rename(temp, path);
           await this.root.sync();
@@ -285,7 +290,11 @@ class Staging implements AttemptStaging {
     const bundleMeta = validate<BundleMeta>("BundleMeta", {
       ...meta,
       schemaVersion: "1.0.0",
-      ...this.ids,
+      workspaceId: this.ids.workspaceId,
+      runId: this.ids.runId,
+      attemptId: this.ids.attemptId,
+      revisionId: this.ids.revisionId,
+      snapshotId: this.ids.snapshotId,
       manifestHash: manifestSha256,
       committedAt: new Date().toISOString(),
     });
@@ -312,8 +321,6 @@ class Staging implements AttemptStaging {
     await file.sync();
     await file.close();
     await finalRoot.rename(".tm-meta", "meta.json");
-    await finalRoot.sync();
-    await finalRoot.unlink(".partial");
     await finalRoot.sync();
     finalRoot.close();
     this.base.close();

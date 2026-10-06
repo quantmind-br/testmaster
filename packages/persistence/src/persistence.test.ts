@@ -432,6 +432,67 @@ describe("SQLite persistence", () => {
       ).ok,
     ).toBe(false);
   });
+  it("bounds concurrent model compute slots even without a price or monetary quota", async () => {
+    const { db, ws, project } = await createSeeded();
+    const ledger = new SqliteBudgetLedger(db);
+    const request = {
+      workspaceId: ws,
+      projectId: project,
+      purpose: "plan",
+      provider: "local",
+      model: "local",
+      estimate: "unknown" as const,
+      reservedTokens: 10,
+    };
+    const reservations = await Promise.all(
+      ["A", "B", "C"].map((idempotencyKey) => ledger.reserve({ ...request, idempotencyKey })),
+    );
+    expect(reservations.filter((result) => result.ok)).toHaveLength(2);
+    const first = reservations[0];
+    if (!first?.ok) throw new Error("Missing compute slot");
+    await ledger.settle(
+      first.reservationId,
+      { inputTokens: 1, outputTokens: 2, reasoningTokens: 0 },
+      "unknown",
+    );
+    expect((await ledger.reserve({ ...request, idempotencyKey: "D" })).ok).toBe(true);
+  });
+  it("reserves independent cumulative tokens atomically and retains unknown-response charges", async () => {
+    const { db, ws, project } = await createSeeded();
+    const ledger = new SqliteBudgetLedger(db);
+    ledger.setTokenLimit(ws, project, 100);
+    const request = {
+      workspaceId: ws,
+      projectId: project,
+      purpose: "plan",
+      provider: "p",
+      model: "m",
+      estimate: "unknown" as const,
+      reservedTokens: 60,
+    };
+    const results = await Promise.all([
+      ledger.reserve({ ...request, idempotencyKey: "A" }),
+      ledger.reserve({ ...request, idempotencyKey: "B" }),
+    ]);
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    const winner = results.find((result) => result.ok);
+    if (!winner?.ok) throw new Error("No winning reservation");
+    await ledger.settle(
+      winner.reservationId,
+      { inputTokens: 10, outputTokens: 20, reasoningTokens: 5 },
+      "unknown",
+    );
+    expect(ledger.tokenBudget(ws, project)).toEqual({ limit: 100, used: 30, remaining: 70 });
+    const lost = await ledger.reserve({ ...request, idempotencyKey: "C" });
+    if (!lost.ok) throw new Error("Expected conservative reserve");
+    await ledger.settle(
+      lost.reservationId,
+      { inputTokens: null, outputTokens: null, reasoningTokens: null },
+      "unknown",
+    );
+    expect(ledger.tokenBudget(ws, project)).toEqual({ limit: 100, used: 90, remaining: 10 });
+    expect((await ledger.reserve({ ...request, idempotencyKey: "D" })).ok).toBe(false);
+  });
   it("stores consent with audit and complete model usage without converting null to zero", async () => {
     const { db, ws, project } = await createSeeded();
     const store = new SqliteConsentStore(db);

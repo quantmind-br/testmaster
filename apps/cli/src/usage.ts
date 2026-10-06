@@ -11,17 +11,31 @@ export function usageCommands(program: Command, runtime: Runtime): void {
       ),
     }),
   );
+  runtime.bind(
+    program.command("budget").command("set").requiredOption("--tokens <count>"),
+    async (rt, _args, options) => ({
+      data: (await rt.app()).usage.setBudget(await rt.project(options), {
+        tokens: Number(required(options, "tokens")),
+      }),
+    }),
+  );
   const consent = program.command("consent");
   runtime.bind(
     consent
       .command("grant")
       .requiredOption("--provider <id>")
+      .option("--allow-unknown-cost")
       .requiredOption("--data-class <class...>"),
     async (rt, _args, options) => {
       const app = await rt.app();
       const projectId = await rt.project(options);
       const provider = required(options, "provider");
-      app.model.grantConsent(projectId, provider, strings(options, "dataClass"));
+      app.model.grantConsent(
+        projectId,
+        provider,
+        strings(options, "dataClass"),
+        options.allowUnknownCost === true,
+      );
       return {
         data: { projectId, provider, consent: await app.model.consent(projectId, provider) },
       };

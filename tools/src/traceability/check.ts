@@ -1,6 +1,16 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { type Definition, extractSpecifications } from "./extract.js";
+import {
+  type CapabilityLink,
+  type CapabilitySummary,
+  type Coverage,
+  checkReleaseDecision,
+  checkReleaseItem,
+  type ReleaseDecision,
+  releaseSummary,
+  type Waiver,
+} from "./release.js";
 
 export type Milestone = `M${0 | 1 | 2 | 3 | 4 | 5 | 6}`;
 export interface RegistryItem {
@@ -14,14 +24,21 @@ export interface RegistryItem {
   oracle: string[];
   evidence: string[];
   code: string[];
+  note?: string;
+  blockedReason?: string;
+  coverage?: Coverage;
+  waiver?: Waiver;
 }
 export interface Registry {
   items: RegistryItem[];
+  capabilities?: CapabilityLink[];
+  release?: ReleaseDecision;
 }
 export interface CheckResult {
   ok: boolean;
   definitionCount: number;
   errors: string[];
+  capabilitySummary?: CapabilitySummary[];
 }
 
 const statuses: Record<RegistryItem["status"], true> = {
@@ -37,6 +54,8 @@ export async function checkRegistry(
   definitions: readonly Definition[],
   registry: Registry,
   gate?: Milestone,
+  advertisedCapabilities: readonly string[] = [],
+  now = Date.now(),
 ): Promise<CheckResult> {
   const errors: string[] = [];
   const expected = new Map(definitions.map((item) => [item.id, item]));
@@ -70,7 +89,16 @@ export async function checkRegistry(
     ) {
       errors.push(`${item.id}: planned ${item.milestone} item blocks milestone gate ${gate}`);
     }
-    if (item.status !== "verified") continue;
+    if (
+      item.status === "waived" ||
+      (gate && /^M[0-6]$/u.test(item.milestone) && item.milestone <= gate)
+    )
+      await checkReleaseItem(canonicalRoot, item, errors, now);
+    if (
+      item.status !== "verified" &&
+      !(gate && item.milestone <= gate && item.coverage && !item.blockedReason)
+    )
+      continue;
     for (const field of ["scenario", "oracle", "code", "evidence"] as const) {
       if (!Array.isArray(item[field]) || item[field].length === 0)
         errors.push(`${item.id}: verified requires ${field}`);
@@ -95,6 +123,16 @@ export async function checkRegistry(
       errors.push(
         `Missing registry ID ${definition.id} (${definition.sourceFile}:${definition.sourceLine})`,
       );
+  if (gate) {
+    const capabilitySummary = releaseSummary(registry, advertisedCapabilities, errors);
+    checkReleaseDecision(registry.release, errors);
+    return {
+      ok: errors.length === 0,
+      definitionCount: definitions.length,
+      errors,
+      capabilitySummary,
+    };
+  }
   return { ok: errors.length === 0, definitionCount: definitions.length, errors };
 }
 
@@ -112,5 +150,20 @@ export async function checkRepository(root: string, gate?: Milestone): Promise<C
   }
   if (registry.items.some((item: unknown) => !item || typeof item !== "object"))
     throw new Error("Registry items must be objects");
-  return checkRegistry(root, await extractSpecifications(root), registry as Registry, gate);
+  const catalog = await readFile(
+    resolve(root, "packages/contracts/src/registries.ts"),
+    "utf8",
+  ).catch(() => "");
+  const featureBlock = /const features:[\s\S]*?=\s*\{([\s\S]*?)\n\};/u.exec(catalog)?.[1] ?? "";
+  const advertised = [...featureBlock.matchAll(/"([A-Za-z_][A-Za-z0-9_-]*)"/gu)].map(
+    (match) => match[1] ?? "",
+  );
+  if (gate && !advertised.length) throw new Error("Cannot discover public capability catalog");
+  return checkRegistry(
+    root,
+    await extractSpecifications(root),
+    registry as Registry,
+    gate,
+    advertised,
+  );
 }

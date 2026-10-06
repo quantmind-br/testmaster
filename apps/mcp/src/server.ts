@@ -13,7 +13,12 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { type Application, SignedCursorCodec } from "@testmaster/application";
+import {
+  type Application,
+  correlationId,
+  entity,
+  SignedCursorCodec,
+} from "@testmaster/application";
 import {
   type BatchReceipt,
   type BatchRequest,
@@ -22,7 +27,9 @@ import {
   mcpToolCatalog,
   type RunResult,
   validate,
+  validateDocument,
 } from "@testmaster/contracts";
+import { semanticHash } from "@testmaster/domain";
 
 export interface McpOptions {
   application: Application;
@@ -32,6 +39,7 @@ export interface McpOptions {
 type Arguments = Record<string, unknown>;
 const readTools: Record<string, true> = {
   testmaster_capabilities: true,
+  testmaster_validate_document: true,
   testmaster_get_run: true,
   testmaster_get_evidence: true,
   testmaster_open_report: true,
@@ -111,7 +119,14 @@ export class TestMasterMcp {
                 params: { progressToken, progress: value, message },
               });
           };
-          const data = object(await this.call(tool.name, args, extra.signal, progress));
+          const value = request.params._meta?.["testmaster:correlationId"];
+          const base = this.options.application;
+          if (!base.identity) throw new ContractError("UNAUTHENTICATED", "MCP identity required");
+          const scoped = base.withIdentity(
+            base.identity,
+            correlationId(value ?? `mcp_${extra.requestId}`),
+          );
+          const data = object(await this.call(tool.name, args, extra.signal, progress, scoped));
           validate(tool.outputSchema, data);
           const links =
             tool.name === "testmaster_get_evidence"
@@ -131,6 +146,19 @@ export class TestMasterMcp {
             error instanceof ContractError
               ? error
               : new ContractError("INTERNAL", "MCP operation failed");
+          const app = this.options.application;
+          app.context.entities.insert(
+            "AuditEvent",
+            entity(app.context, "aud", {
+              actor: app.context.principalId,
+              action: "mcp.tool.denied",
+              resourceId: request.params.name.slice(0, 200),
+              requestId: String(extra.requestId),
+              beforeHash: null,
+              afterHash: semanticHash({ tool: request.params.name, code: failure.code }),
+              timestamp: new Date().toISOString(),
+            }),
+          );
           const data = {
             error: { code: failure.code, message: failure.message, details: failure.details },
           };
@@ -329,9 +357,11 @@ export class TestMasterMcp {
     args: Arguments,
     signal: AbortSignal,
     progress: (value: number, message: string) => Promise<void>,
+    app: Application,
   ): Promise<unknown> {
-    const app = this.options.application;
     switch (name) {
+      case "testmaster_validate_document":
+        return validateDocument(String(args.schema), args.document);
       case "testmaster_capabilities": {
         const manifest = await app.capabilities();
         return {
@@ -515,7 +545,7 @@ export class TestMasterMcp {
         }
         let jobId: string;
         let task: Promise<void> | undefined;
-        if (args.jobId) {
+        if (args.jobId && !(args.featureIds as string[]).length) {
           const job = app.explore.get(String(args.jobId));
           if (
             (job.extensions as Record<string, unknown>)["testmaster:projectId"] !== args.projectId
@@ -527,6 +557,10 @@ export class TestMasterMcp {
             projectId: String(args.projectId),
             environmentId: String(args.envId),
             url: String((revision.targetOrigins as string[])[0]),
+            featureIds: args.featureIds as string[],
+            ...(args.jobId
+              ? { jobId: String(args.jobId), retryFeatureIds: args.featureIds as string[] }
+              : {}),
             budget: args.budget as { steps: number; timeMs: number; modelCalls: number },
           });
           jobId = begun.job.id;
@@ -558,6 +592,18 @@ export class TestMasterMcp {
       ...(args.attemptId ? { attemptId: String(args.attemptId) } : {}),
       failedOnly: Boolean(args.failedOnly),
     });
+    const app = this.options.application;
+    const run = app.runs.get(String(args.runId));
+    const environmentRevision = app.database.get(
+      "SELECT environment_id FROM environment_revisions WHERE workspace_id=? AND id=?",
+      app.context.workspaceId,
+      run.environmentRevisionId,
+    );
+    const environment = app.environments.get(String(environmentRevision?.environment_id));
+    const stale =
+      app.tests.get(run.testId).activeRevisionId !== run.revisionId ||
+      environment.activeRevisionId !== run.environmentRevisionId;
+    const partial = bundle.manifest.entries.some((entry) => entry.state !== "available");
     const binding = `${bundle.manifest.snapshotId}:${Boolean(args.failedOnly)}`;
     const offset = this.decodeCursor(args.cursor, binding);
     if (offset > bundle.manifest.entries.length)
@@ -590,9 +636,9 @@ export class TestMasterMcp {
           (entry) =>
             `testmaster://runs/${args.runId}/artifacts/${encodeURIComponent(entry.relativePath)}?attemptId=${bundle.manifest.attemptId}&offset=0`,
         ),
-      integrity: bundle.manifest.entries.some((entry) => entry.state !== "available")
-        ? "partial"
-        : "verified",
+      integrity: partial ? "partial" : "verified",
+      freshness: stale ? "stale" : "current",
+      verificationEligible: !partial && !stale && run.gate === "passed",
       nextCursor:
         nextOffset < bundle.manifest.entries.length ? this.cursor(nextOffset, binding) : null,
     };

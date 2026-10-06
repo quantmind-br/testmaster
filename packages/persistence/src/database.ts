@@ -10,11 +10,13 @@ import {
   readFile,
   rename,
   rm,
+  statfs,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { backup, DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { validate } from "@testmaster/contracts";
+import { ContractError, validate } from "@testmaster/contracts";
+import { ensureControlPlaneReserve, releaseControlPlaneReserve } from "./disk-reserve.js";
 
 export type SqlRow = Record<string, unknown>;
 export interface MigrationStatus {
@@ -79,6 +81,9 @@ export class PersistenceDatabase {
   ): Promise<PersistenceDatabase> {
     const actual = resolve(path);
     await mkdir(dirname(actual), { recursive: true, mode: 0o700 });
+    const filesystem = await statfs(dirname(actual));
+    if ([0x6969, 0xff534d42, 0xfe534d42, 0x65735546].includes(Number(filesystem.type) >>> 0))
+      throw new ContractError("PRECONDITION_FAILED", "SQLite requires compatible local storage");
     try {
       const info = await lstat(actual);
       if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)
@@ -86,14 +91,24 @@ export class PersistenceDatabase {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
+    if (Number(filesystem.bavail) * Number(filesystem.bsize) > 8 * 1024 * 1024)
+      ensureControlPlaneReserve(actual);
     const db = new DatabaseSync(actual);
     try {
       await chmod(actual, 0o600);
       db.exec(
         "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
       );
+      const journal = db.prepare("PRAGMA journal_mode").get()?.journal_mode;
+      const locking = db.prepare("PRAGMA locking_mode").get()?.locking_mode;
+      if (journal !== "wal" || locking !== "normal")
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "SQLite storage must support WAL with normal locking",
+        );
       const instance = new PersistenceDatabase(db, actual);
       if (options.migrate !== false) await instance.migrate(options.migrationsDir);
+      else instance.verifyCompatibility(await loadMigrations("sqlite", options.migrationsDir));
       return instance;
     } catch (error) {
       db.close();
@@ -116,6 +131,8 @@ export class PersistenceDatabase {
       this.db.exec("COMMIT");
       return value;
     } catch (error) {
+      if (error instanceof Error && /database or disk is full|SQLITE_FULL/.test(error.message))
+        releaseControlPlaneReserve(this.path);
       if (this.db.isTransaction) this.db.exec("ROLLBACK");
       throw error;
     }
@@ -132,54 +149,75 @@ export class PersistenceDatabase {
   ): { changes: number | bigint; lastInsertRowid: number | bigint } {
     return this.db.prepare(sql).run(...(params as SQLInputValue[]));
   }
+  private verifyCompatibility(available: Migration[]): void {
+    const exists = this.get(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
+    );
+    const applied = exists
+      ? this.all<{ version: number; name: string; checksum: string }>(
+          "SELECT version,name,checksum FROM schema_migrations ORDER BY version",
+        )
+      : [];
+    for (const [index, row] of applied.entries()) {
+      const migration = available[row.version - 1];
+      if (!migration || row.version !== index + 1)
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Controller is incompatible with database schema",
+          { databaseVersion: row.version, supportedVersion: available.length },
+        );
+      if (migration.name !== row.name || migration.checksum !== row.checksum)
+        throw new MigrationChecksumError(row.version, row.checksum, migration.checksum);
+    }
+    this.migrations = available;
+  }
   async migrate(directory?: string): Promise<void> {
     const available = await loadMigrations("sqlite", directory);
     if (this.db.isTransaction) throw new Error("Database migrations require their own transaction");
-    const hasMigrationTable = this.get(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
-    );
-    const currentVersion = hasMigrationTable
-      ? Number(
-          this.get("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations")?.version,
-        )
-      : 0;
-    // SQLite's documented table-rebuild procedure disables enforcement before BEGIN.
-    // Validate every foreign key before COMMIT and restore enforcement on every exit.
+    this.verifyCompatibility(available);
+    const currentVersion =
+      this.migrations.length &&
+      this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'")
+        ? Number(
+            this.get("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations")?.version,
+          )
+        : 0;
+    if (currentVersion === available.length) return;
     const rebuildsArtifacts = available.some(
       (migration) =>
         migration.version > currentVersion && migration.name === "authored_code_artifacts",
     );
     if (rebuildsArtifacts) this.db.exec("PRAGMA foreign_keys=OFF");
+    this.db.exec("PRAGMA busy_timeout=0");
     try {
-      this.withTx((db) => {
-        db.exec(
-          "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL)",
-        );
-        const applied = this.all<{ version: number; name: string; checksum: string }>(
-          "SELECT version,name,checksum FROM schema_migrations ORDER BY version",
-        );
-        for (const row of applied) {
-          const migration = available[row.version - 1];
-          if (!migration || migration.name !== row.name || migration.checksum !== row.checksum)
-            throw new MigrationChecksumError(
-              row.version,
-              row.checksum,
-              migration?.checksum ?? "missing",
-            );
-        }
-        for (const migration of available.slice(applied.length)) {
-          db.exec(migration.sql);
-          db.prepare(
+      try {
+        this.db.exec("BEGIN EXCLUSIVE");
+      } catch {
+        throw new ContractError("PRECONDITION_FAILED", "Another instance owns the migration lock");
+      }
+      this.verifyCompatibility(available);
+      this.db.exec(
+        "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL)",
+      );
+      const applied = Number(this.get("SELECT COUNT(*) AS n FROM schema_migrations")?.n);
+      for (const migration of available.slice(applied)) {
+        this.db.exec(migration.sql);
+        this.db
+          .prepare(
             "INSERT INTO schema_migrations(version,name,checksum,applied_at) VALUES(?,?,?,?)",
-          ).run(migration.version, migration.name, migration.checksum, new Date().toISOString());
-        }
-        if (rebuildsArtifacts && this.all("PRAGMA foreign_key_check").length)
-          throw new Error("Migration produced a foreign key violation");
-      });
+          )
+          .run(migration.version, migration.name, migration.checksum, new Date().toISOString());
+      }
+      if (rebuildsArtifacts && this.all("PRAGMA foreign_key_check").length)
+        throw new Error("Migration produced a foreign key violation");
+      this.db.exec("COMMIT");
+    } catch (error) {
+      if (this.db.isTransaction) this.db.exec("ROLLBACK");
+      throw error;
     } finally {
+      this.db.exec("PRAGMA busy_timeout=5000");
       if (rebuildsArtifacts) this.db.exec("PRAGMA foreign_keys=ON");
     }
-    this.migrations = available;
   }
   status(): DatabaseStatus {
     const rows = this.all<MigrationStatus>(
@@ -203,6 +241,7 @@ export class PersistenceDatabase {
     const snapshot = new DatabaseSync(dbPath, { readOnly: true });
     let index: EvidenceIndex;
     let databaseVersion: number;
+    const metadataFiles: BackupManifestFile[] = [];
     try {
       const refs = snapshot
         .prepare(
@@ -236,21 +275,49 @@ export class PersistenceDatabase {
             throw new Error("Unsafe evidence storage key");
           if (row.state !== "available") continue;
           const source = join(resolve(options.evidenceRoot), key);
-          const info = await lstat(source);
-          if (
-            !info.isFile() ||
-            info.isSymbolicLink() ||
-            info.nlink !== 1 ||
-            info.size !== Number(row.bytes) ||
-            (await fileSha256(source)) !== row.hash
-          ) {
+          try {
+            const info = await lstat(source);
+            if (
+              !info.isFile() ||
+              info.isSymbolicLink() ||
+              info.nlink !== 1 ||
+              info.size !== Number(row.bytes) ||
+              (await fileSha256(source)) !== row.hash
+            )
+              throw new Error("Evidence object unavailable or corrupt");
+            const target = join(destination, "evidence", key);
+            await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+            await copyFile(source, target);
+            if ((await fileSha256(target)) !== row.hash)
+              throw new Error("Copied evidence hash mismatch");
+            await chmod(target, 0o600);
+          } catch {
             index.missingObjects.push(String(row.id));
-            continue;
           }
-          const target = join(destination, "evidence", key);
-          await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-          await copyFile(source, target);
-          await chmod(target, 0o600);
+        }
+        const snapshots = snapshot
+          .prepare("SELECT workspace_id,run_id,attempt_id FROM snapshots ORDER BY workspace_id,id")
+          .all();
+        for (const row of snapshots) {
+          for (const name of ["manifest.json", "meta.json"]) {
+            const key = `runs/${String(row.workspace_id)}/${String(row.run_id)}/${String(row.attempt_id)}/${name}`;
+            try {
+              const source = join(resolve(options.evidenceRoot), key);
+              const info = await lstat(source);
+              if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)
+                throw new Error("Unsafe snapshot metadata");
+              const target = join(destination, "evidence", key);
+              await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+              await copyFile(source, target);
+              metadataFiles.push({
+                relativePath: `evidence/${key}`,
+                sizeBytes: info.size,
+                sha256: await fileSha256(target),
+              });
+            } catch {
+              index.missingObjects.push(key);
+            }
+          }
         }
         index.complete = index.missingObjects.length === 0;
       }
@@ -259,7 +326,7 @@ export class PersistenceDatabase {
     }
     const indexPath = join(destination, "evidence-index.json");
     await writeAtomic(indexPath, JSON.stringify(index));
-    const files: BackupManifestFile[] = [];
+    const files: BackupManifestFile[] = [...metadataFiles];
     for (const relativePath of ["testmaster.db", "evidence-index.json"]) {
       const path = join(destination, relativePath);
       files.push({
@@ -281,6 +348,8 @@ export class PersistenceDatabase {
       files,
       databaseVersion,
       secretIncluded: false,
+      keyIds: options.keyIds ?? [],
+      configDigests: options.configDigests ?? [],
     });
     for (const file of files) {
       const fd = await open(join(destination, file.relativePath), "r");
@@ -293,7 +362,11 @@ export class PersistenceDatabase {
     await writeAtomic(join(destination, "manifest.json"), JSON.stringify(manifest));
     return manifest;
   }
-  static async restore(backupDir: string, destinationDir: string): Promise<RestoreResult> {
+  static async restore(
+    backupDir: string,
+    destinationDir: string,
+    options: { revocations?: SqlRow[]; tombstones?: SqlRow[] } = {},
+  ): Promise<RestoreResult> {
     const source = resolve(backupDir);
     const destination = resolve(destinationDir);
     const manifest = validate<BackupManifest>(
@@ -343,11 +416,62 @@ export class PersistenceDatabase {
         throw new Error("Backup database schema version mismatch");
       await restored.migrate();
       restored.withTx(() => {
+        for (const current of options.revocations ?? []) {
+          const row = restored.get(
+            "SELECT data_json FROM secret_references WHERE workspace_id=? AND id=?",
+            current.workspace_id,
+            current.id,
+          );
+          if (!row) continue;
+          const reference = JSON.parse(String(row.data_json)) as Record<string, unknown>;
+          if (
+            !current.revoked_at &&
+            Number(current.secret_version) <= Number(reference.secretVersion)
+          )
+            continue;
+          const revokedAt = current.revoked_at ?? new Date().toISOString();
+          reference.revokedAt = revokedAt;
+          reference.version = Number(reference.version ?? 1) + 1;
+          restored.run(
+            "UPDATE secret_references SET revoked_at=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=?",
+            revokedAt,
+            JSON.stringify(reference),
+            current.workspace_id,
+            current.id,
+          );
+        }
+        for (const tombstone of options.tombstones ?? []) {
+          restored.run(
+            "INSERT OR REPLACE INTO operational_state(key,value) VALUES(?,?)",
+            tombstone.key,
+            tombstone.value,
+          );
+          const match = /^retention:artifact:(ws_[0-9a-f-]+):(art_[0-9a-f-]+)$/.exec(
+            String(tombstone.key),
+          );
+          if (match) {
+            const retention = JSON.parse(String(tombstone.value)) as { stage?: string };
+            if (["marked", "tombstoned", "deleted"].includes(retention.stage ?? ""))
+              restored.run(
+                "UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND state<>'expired'",
+                match[1],
+                match[2],
+              );
+          }
+        }
+        restored.run(
+          "UPDATE workers SET state='offline',last_heartbeat_at=?",
+          new Date(0).toISOString(),
+        );
         restored.run(
           "UPDATE operational_state SET value='suspended_restore' WHERE key='admission'",
         );
         restored.run(
           "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore_review','post_backup_revocations_and_tombstones_unverified')",
+        );
+        restored.run(
+          "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore:evidence-complete',?)",
+          String(index.complete),
         );
         restored.run(
           "UPDATE job_leases SET dispatchable=0,state=CASE WHEN state IN ('leased','queued') THEN 'reconciliation_required' ELSE state END,lease_owner=NULL,lease_expires_at=NULL,fence=fence+1",
@@ -380,6 +504,8 @@ export interface BackupManifest {
   files: BackupManifestFile[];
   databaseVersion: number;
   secretIncluded: false;
+  keyIds?: string[];
+  configDigests?: string[];
 }
 export interface BackupOptions {
   evidenceRoot?: string;

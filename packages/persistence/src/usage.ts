@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ContractError } from "@testmaster/contracts";
-import { canonicalJson } from "@testmaster/domain";
+import { canonicalJson, sha256 } from "@testmaster/domain";
 import type { PersistenceDatabase } from "./database.js";
 import { AuditRepository } from "./repositories.js";
 
@@ -17,10 +17,11 @@ export interface BudgetReserveRequest {
   model: string;
   estimate: Money | "unknown";
   idempotencyKey: string;
+  reservedTokens?: number;
 }
 export type BudgetReserveResult =
   | { ok: true; reservationId: string }
-  | { ok: false; reasonCode: "budget_exceeded"; remaining: Money | "unknown" };
+  | { ok: false; reasonCode: "budget_exhausted"; remaining: Money | "unknown" };
 export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -38,6 +39,7 @@ export interface ConsentQuery {
 }
 export interface ConsentRecord {
   dataClasses: string[];
+  allowUnknownCost: boolean;
   grantedAt: string;
   revokedAt: string | null;
 }
@@ -53,6 +55,9 @@ export interface ModelCallRecord {
   provider: string;
   model: string;
   promptHash: string;
+  modelConfigHash?: string;
+  sourceRevisionIds?: string[];
+  runId?: string;
   inputRefs: string[];
   usage: TokenUsage;
   cost: Money | "unknown";
@@ -64,6 +69,7 @@ export interface ModelCallRecord {
   reservationId: string | null;
   responseHash: string | null;
   finishReason: string | null;
+  failureReason?: "output_truncated" | "content_filtered";
   rawPrompt?: string;
 }
 export interface ModelCallRecorder {
@@ -113,8 +119,39 @@ export class SqliteBudgetLedger implements BudgetLedger {
       );
     });
   }
+  setTokenLimit(workspaceId: string, projectId: string, tokens: number): void {
+    if (!Number.isSafeInteger(tokens) || tokens < 0)
+      throw new ContractError("INVALID_ARGUMENT", "Token quota must be a nonnegative safe integer");
+    this.database.run(
+      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES(?,?,?) ON CONFLICT(workspace_id,project_id) DO UPDATE SET tokens=excluded.tokens",
+      workspaceId,
+      projectId,
+      tokens,
+    );
+  }
+  tokenBudget(workspaceId: string, projectId: string) {
+    const limit =
+      this.database.get<{ tokens: number }>(
+        "SELECT tokens FROM token_budget_limits WHERE workspace_id=? AND project_id=?",
+        workspaceId,
+        projectId,
+      )?.tokens ?? 100000;
+    const used =
+      this.database.get<{ tokens: number }>(
+        "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,CASE WHEN json_type(usage_json,'$.inputTokens')='integer' AND json_type(usage_json,'$.outputTokens')='integer' THEN json_extract(usage_json,'$.inputTokens')+json_extract(usage_json,'$.outputTokens') ELSE CASE WHEN reserved_tokens=0 THEN 100000 ELSE reserved_tokens END END) END),0) AS tokens FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
+        workspaceId,
+        projectId,
+      )?.tokens ?? 0;
+    return { limit, used, remaining: Math.max(0, limit - used) };
+  }
   async reserve(request: BudgetReserveRequest): Promise<BudgetReserveResult> {
     if (request.estimate !== "unknown") integerMoney(request.estimate);
+    const tokens = request.reservedTokens ?? 0;
+    if (!Number.isSafeInteger(tokens) || tokens < 0)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Reserved tokens must be a nonnegative safe integer",
+      );
     return this.database.withTx(() => {
       const existing = this.database.get(
         "SELECT id,state,data_json FROM budget_reservations WHERE workspace_id=? AND project_id=? AND idempotency_key=?",
@@ -130,6 +167,15 @@ export class SqliteBudgetLedger implements BudgetLedger {
           );
         return { ok: true, reservationId: String(existing.id) };
       }
+      const active =
+        this.database.get<{ count: number }>(
+          "SELECT COUNT(*) AS count FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state='reserved'",
+          request.workspaceId,
+          request.projectId,
+        )?.count ?? 0;
+      if (active >= 2) return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
+      if (tokens > this.tokenBudget(request.workspaceId, request.projectId).remaining)
+        return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
       const limit = this.database.get<{ amount: string; currency: string; scale: number }>(
         "SELECT amount,currency,scale FROM budget_limits WHERE workspace_id=? AND project_id=?",
         request.workspaceId,
@@ -137,7 +183,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
       );
       if (limit) {
         if (request.estimate === "unknown")
-          return { ok: false, reasonCode: "budget_exceeded", remaining: "unknown" };
+          return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
         if (request.estimate.currency !== limit.currency || request.estimate.scale !== limit.scale)
           throw new ContractError("INVALID_ARGUMENT", "Budget currencies and scales must match");
         const rows = this.database.all<{
@@ -155,7 +201,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
             row.state === "reserved" ? row.estimate_json : (row.cost_json ?? '"unknown"'),
           ) as Money | "unknown";
           if (cost === "unknown")
-            return { ok: false, reasonCode: "budget_exceeded", remaining: "unknown" };
+            return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
           if (cost.currency !== limit.currency || cost.scale !== limit.scale)
             throw new ContractError(
               "INVALID_ARGUMENT",
@@ -167,7 +213,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
         if (integerMoney(request.estimate) > remaining)
           return {
             ok: false,
-            reasonCode: "budget_exceeded",
+            reasonCode: "budget_exhausted",
             remaining: {
               amount: remaining.toString(),
               currency: limit.currency,
@@ -177,7 +223,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
       }
       const reservationId = randomUUID();
       this.database.run(
-        "INSERT INTO budget_reservations(workspace_id,id,created_at,project_id,purpose,provider,model,estimate_json,idempotency_key,state,data_json) VALUES(?,?,?,?,?,?,?,?,?,'reserved',?)",
+        "INSERT INTO budget_reservations(workspace_id,id,created_at,project_id,purpose,provider,model,estimate_json,idempotency_key,state,data_json,reserved_tokens) VALUES(?,?,?,?,?,?,?,?,?,'reserved',?,?)",
         request.workspaceId,
         reservationId,
         new Date().toISOString(),
@@ -188,6 +234,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
         canonicalJson(request.estimate),
         request.idempotencyKey,
         canonicalJson(request),
+        tokens,
       );
       return { ok: true, reservationId };
     });
@@ -219,9 +266,12 @@ export class SqliteBudgetLedger implements BudgetLedger {
       )
         throw new ContractError("INVALID_ARGUMENT", "Settlement denomination mismatch");
       this.database.run(
-        "UPDATE budget_reservations SET state='settled',cost_json=?,usage_json=? WHERE id=? AND state='reserved'",
+        "UPDATE budget_reservations SET state='settled',cost_json=?,usage_json=?,charged_tokens=? WHERE id=? AND state='reserved'",
         canonicalJson(cost),
         canonicalJson(usage),
+        usage.inputTokens === null || usage.outputTokens === null
+          ? Number(row.reserved_tokens)
+          : usage.inputTokens + usage.outputTokens,
         reservationId,
       );
       this.database.run(
@@ -260,8 +310,9 @@ export class SqliteConsentStore implements ConsentStore {
       data_classes_json: string;
       granted_at: string;
       revoked_at: string | null;
+      allow_unknown_cost: number;
     }>(
-      "SELECT data_classes_json,granted_at,revoked_at FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
+      "SELECT data_classes_json,granted_at,revoked_at,allow_unknown_cost FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
       request.workspaceId,
       request.projectId,
       request.providerId,
@@ -271,14 +322,15 @@ export class SqliteConsentStore implements ConsentStore {
           dataClasses: JSON.parse(row.data_classes_json) as string[],
           grantedAt: row.granted_at,
           revokedAt: row.revoked_at,
+          allowUnknownCost: row.allow_unknown_cost === 1,
         }
       : null;
   }
-  grant(query: ConsentQuery, dataClasses: string[], actor: string): void {
+  grant(query: ConsentQuery, dataClasses: string[], actor: string, allowUnknownCost = false): void {
     this.database.withTx(() => {
       const now = new Date().toISOString();
       this.database.run(
-        "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,revoked_at) VALUES(?,?,?,?,?,?,?,NULL) ON CONFLICT(workspace_id,project_id,provider_id) DO UPDATE SET data_classes_json=excluded.data_classes_json,granted_at=excluded.granted_at,revoked_at=NULL",
+        "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,revoked_at,allow_unknown_cost) VALUES(?,?,?,?,?,?,?,NULL,?) ON CONFLICT(workspace_id,project_id,provider_id) DO UPDATE SET data_classes_json=excluded.data_classes_json,granted_at=excluded.granted_at,revoked_at=NULL,allow_unknown_cost=excluded.allow_unknown_cost",
         query.workspaceId,
         randomUUID(),
         now,
@@ -286,6 +338,7 @@ export class SqliteConsentStore implements ConsentStore {
         query.providerId,
         canonicalJson(dataClasses),
         now,
+        Number(allowUnknownCost),
       );
       new AuditRepository(this.database).append({
         workspaceId: query.workspaceId,
@@ -294,7 +347,9 @@ export class SqliteConsentStore implements ConsentStore {
         resourceId: query.projectId,
         requestId: randomUUID(),
         beforeHash: null,
-        afterHash: null,
+        afterHash: sha256(
+          canonicalJson({ providerId: query.providerId, dataClasses, allowUnknownCost }),
+        ),
         timestamp: now,
       });
     });

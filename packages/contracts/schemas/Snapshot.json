@@ -53,6 +53,36 @@
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
+    "executionSnapshot": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
     "extensions": {
       "type": "object",
       "patternProperties": {

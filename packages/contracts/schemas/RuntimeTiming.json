@@ -1,0 +1,161 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "source",
+    "clockDomain",
+    "boundaries",
+    "queueDuration",
+    "preparationDuration",
+    "executionDuration",
+    "collectionDuration",
+    "analysisDuration",
+    "wallClockDuration",
+    "analysisStatus"
+  ],
+  "properties": {
+    "source": {
+      "const": "monotonic",
+      "type": "string"
+    },
+    "clockDomain": {
+      "type": "string"
+    },
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "phase",
+          "occurredAt",
+          "monotonicMs"
+        ],
+        "properties": {
+          "phase": {
+            "anyOf": [
+              {
+                "const": "queued",
+                "type": "string"
+              },
+              {
+                "const": "preparing",
+                "type": "string"
+              },
+              {
+                "const": "running",
+                "type": "string"
+              },
+              {
+                "const": "collecting",
+                "type": "string"
+              },
+              {
+                "const": "analyzing",
+                "type": "string"
+              },
+              {
+                "const": "completed",
+                "type": "string"
+              }
+            ]
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "monotonicMs": {
+            "minimum": 0,
+            "type": "number"
+          }
+        }
+      }
+    },
+    "queueDuration": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "preparationDuration": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "executionDuration": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "collectionDuration": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "analysisDuration": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "wallClockDuration": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "analysisStatus": {
+      "anyOf": [
+        {
+          "const": "not_requested",
+          "type": "string"
+        },
+        {
+          "const": "measured",
+          "type": "string"
+        },
+        {
+          "const": "insufficientData",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RuntimeTiming",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

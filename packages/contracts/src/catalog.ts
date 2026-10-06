@@ -1,5 +1,6 @@
 import { type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
+import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
 import * as P from "./primitives.js";
@@ -8,6 +9,11 @@ import { ErrorEnvelope, mcpTools, SuccessEnvelope } from "./surfaces.js";
 
 const names = Type.Array(P.Name);
 const supplemental = {
+  DocumentValidationInput: P.Obj({
+    schema: P.Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
+    document: P.Json,
+  }),
+  DocumentValidationResult: P.Obj({ validated: Type.Literal(true), schema: P.Name }),
   AIRequirementsOutput: P.Obj({
     requirements: Type.Array(
       P.Obj({
@@ -30,6 +36,16 @@ const supplemental = {
     ),
     openQuestions: Type.Array(P.Description),
   }),
+  AIRequirementConflictsOutput: P.Obj({
+    conflicts: Type.Array(
+      P.Obj({
+        keys: Type.Array(P.Name, { minItems: 2 }),
+        reason: P.Description,
+        sourceRefs: Type.Array(P.EvidenceRef, { minItems: 2 }),
+      }),
+    ),
+    openQuestions: Type.Array(P.Description),
+  }),
   AIProposalsOutput: P.Obj({
     proposals: Type.Array(
       P.Obj({
@@ -42,6 +58,7 @@ const supplemental = {
     ),
   }),
   Empty: P.Obj({}),
+  TokenBudgetInput: P.Obj({ tokens: P.Nonnegative }),
   Binary: Type.String({ contentEncoding: "base64" }),
   Health: P.Obj({ status: P.Enum(["alive", "ready", "unavailable"]) }),
   ProjectInput: P.Obj({
@@ -196,6 +213,8 @@ const supplemental = {
     manifest: Ops.ArtifactManifest,
     resources: Type.Array(Type.String({ minLength: 1, maxLength: 8192 })),
     integrity: P.Enum(["verified", "partial", "invalid"]),
+    freshness: P.Enum(["current", "stale"]),
+    verificationEligible: Type.Boolean(),
     nextCursor: Type.Union([Type.String(), Type.Null()]),
   }),
   ReportLocation: P.Obj({ location: Type.String() }),
@@ -215,6 +234,10 @@ const httpInputs = {
   }),
 };
 export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
+  RatioMetric: Metrics.RatioMetric,
+  CoverageMetrics: Metrics.CoverageMetrics,
+  ExecutionMetrics: Metrics.ExecutionMetrics,
+  RuntimeTiming: Metrics.RuntimeTiming,
   EntityId: P.EntityId,
   Timestamp: P.Timestamp,
   ContentDigest: P.ContentDigest,

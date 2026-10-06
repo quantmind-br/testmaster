@@ -175,10 +175,8 @@ export class EgressProxy {
       upstream.setTimeout(this.options.requestTimeoutMs ?? 30000, () =>
         upstream.destroy(new Error("request_timeout")),
       );
-      upstream.on("error", () => {
-        if (!response.headersSent) response.writeHead(502);
-        response.end();
-      });
+      // A gateway transport failure is not an HTTP response from the target.
+      upstream.on("error", () => response.destroy());
       request.on("aborted", () => upstream.destroy());
       response.on("close", () => upstream.destroy());
       const limiter = boundedStream(this.options.maxBodyBytes ?? 10 * 1024 * 1024);

@@ -10,7 +10,6 @@ import {
   type ExecutablePlan,
   type PlanStep,
   type RunnerEvent,
-  validate,
   validateRunnerWireEvent,
 } from "@testmaster/contracts";
 import { Agent } from "undici";
@@ -252,6 +251,33 @@ it("sends typed sensitive captures only over trusted IPC and keeps artifacts red
   ).not.toContain("captured-canary");
   for (const bytes of artifacts.values())
     expect(Buffer.from(bytes).toString()).not.toContain("captured-canary");
+  const captureTrace = JSON.parse(Buffer.from(artifacts.get("http/capture.json") ?? []).toString());
+  expect(captureTrace.captures).toContainEqual({
+    name: "token",
+    variableRef: "capture.token",
+    valueType: "string",
+    sensitive: true,
+    resolved: "[REDACTED]",
+  });
+  expect(captureTrace.captures).toContainEqual({
+    name: "count",
+    variableRef: "capture.count",
+    valueType: "number",
+    sensitive: false,
+    resolved: 7,
+  });
+  await engine.perform(
+    requestStep("consume", [], {
+      pathSegments: [{ variableRef: "capture.count" }],
+      headers: { "x-captured-token": { variableRef: "capture.token" } },
+    }),
+  );
+  const consumeTrace = JSON.parse(Buffer.from(artifacts.get("http/consume.json") ?? []).toString());
+  expect(consumeTrace.request.bindings).toEqual([
+    { variableRef: "capture.count", sensitive: false, resolved: 7 },
+    { variableRef: "capture.token", sensitive: true, resolved: "[REDACTED]" },
+  ]);
+  expect(JSON.stringify(consumeTrace)).not.toContain("captured-canary");
   expect(
     events.some(
       (event) =>
@@ -597,4 +623,62 @@ it("requires a proxy in runHttp and can use a real local CONNECT proxy", async (
   } finally {
     for (const socket of sockets) socket.destroy();
   }
+});
+
+it("retains only bounded error metadata by default while assertions consume full responses in memory", async () => {
+  const body = JSON.stringify({
+    error: "failed validation",
+    message: "Contact person@example.test",
+    records: "unnecessary-private-body".repeat(1000),
+  });
+  const base = await serve((_req, res) => {
+    res.writeHead(500, {
+      "content-type": "application/json",
+      "set-cookie": "sid=never-keep",
+      "x-private": "never-keep-header",
+    });
+    res.end(body);
+  });
+  const { engine, artifacts } = fixture(base, {
+    variables: { payload: { value: { private: "unnecessary-request-body" }, sensitive: false } },
+  });
+  await engine.perform(
+    requestStep("request", [], {
+      method: "POST",
+      body: { kind: "json", value: { variableRef: "payload" } },
+    }),
+  );
+  expect(engine.responses.get("request")?.body.byteLength).toBe(Buffer.byteLength(body));
+  const evidence = JSON.parse(Buffer.from(artifacts.get("http/request.json") ?? []).toString());
+  expect(evidence.response).not.toHaveProperty("body");
+  expect(evidence.request).not.toHaveProperty("body");
+  expect(evidence.response.bodyMetadata.sizeBytes).toBe(Buffer.byteLength(body));
+  expect(evidence.response.bodyMetadata.sha256).toMatch(/^[0-9a-f]{64}$/);
+  expect(evidence.response.failureExcerpt).toContain("failed validation");
+  expect(evidence.response.failureExcerpt.length).toBeLessThanOrEqual(512);
+  expect(JSON.stringify(evidence)).not.toMatch(/unnecessary-|person@example|never-keep/);
+  expect(artifacts.has("http/request-bodies.json")).toBe(false);
+});
+
+it("requires explicit restricted body optin before any request and emits full bodies only separately", async () => {
+  let hits = 0;
+  const base = await serve((_req, res) => {
+    hits++;
+    res.setHeader("content-type", "application/json");
+    res.end('{"business":"complete-response","token":"sensitive-pattern"}');
+  });
+  const denied = fixture(base, { policy: { httpBodies: true } });
+  await expect(denied.engine.perform(requestStep("denied", []))).rejects.toMatchObject({
+    reasonCode: "security_precondition_failed",
+  });
+  expect(hits).toBe(0);
+  const allowed = fixture(base, { policy: { httpBodies: true, restrictedRaw: true } });
+  await allowed.engine.perform(requestStep("allowed", []));
+  expect(hits).toBe(1);
+  const raw = Buffer.from(allowed.artifacts.get("http/allowed-bodies.json") ?? []).toString();
+  expect(raw).toContain("complete-response");
+  expect(raw).not.toContain("sensitive-pattern");
+  expect(Buffer.from(allowed.artifacts.get("http/allowed.json") ?? []).toString()).not.toContain(
+    "complete-response",
+  );
 });

@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import type { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { crc32 } from "node:zlib";
 import tar from "tar-stream";
 import yauzl from "yauzl";
 import { ConfinedRoot, validateRelativePath } from "./path.js";
@@ -11,6 +12,7 @@ export interface ArchiveLimits {
   maxMembers?: number;
   maxBytes?: number;
   maxRatio?: number;
+  signal?: AbortSignal;
 }
 export class ArchiveLimitError extends Error {
   readonly code = "ARCHIVE_REJECTED";
@@ -43,13 +45,20 @@ async function copyMember(
   stream: Readable,
   declared: number,
   limit: number,
+  signal?: AbortSignal,
+  expectedCrc?: number,
 ): Promise<number> {
   const file = await root.openFile(name, true);
+  const abort = () => stream.destroy(new Error("Archive extraction cancelled"));
+  signal?.addEventListener("abort", abort, { once: true });
   let size = 0;
+  let checksum = 0;
   let prefix = Buffer.alloc(0);
   try {
     for await (const raw of stream) {
+      signal?.throwIfAborted();
       const chunk = Buffer.from(raw as Uint8Array);
+      if (expectedCrc !== undefined) checksum = crc32(chunk, checksum);
       size += chunk.length;
       if (size > declared || size > limit)
         throw new ArchiveLimitError("Archive real byte limit exceeded");
@@ -61,9 +70,13 @@ async function copyMember(
       await file.writeFile(chunk);
     }
     if (size !== declared) throw new ArchiveLimitError("Archive member size mismatch");
+    if (expectedCrc !== undefined && checksum !== expectedCrc)
+      throw new ArchiveLimitError("ZIP member CRC mismatch");
+    signal?.throwIfAborted();
     await file.sync();
     return size;
   } finally {
+    signal?.removeEventListener("abort", abort);
     await file.close();
   }
 }
@@ -92,6 +105,7 @@ export async function extractZip(
   const stage = await staging(destination);
   let zip: yauzl.ZipFile | undefined;
   try {
+    limits.signal?.throwIfAborted();
     zip = await new Promise<yauzl.ZipFile>((resolveZip, reject) => {
       const callback = (error: Error | null, file?: yauzl.ZipFile): void => {
         if (error) reject(error);
@@ -117,6 +131,7 @@ export async function extractZip(
       archive.on("entry", (entry) => {
         void (async () => {
           const name = memberName(entry.fileName);
+          limits.signal?.throwIfAborted();
           if (++count > maxMembers || seen.has(name))
             throw new ArchiveLimitError("Archive duplicate/member count violation");
           seen.add(name);
@@ -142,6 +157,8 @@ export async function extractZip(
             stream,
             entry.uncompressedSize,
             maxBytes - total,
+            limits.signal,
+            entry.crc32,
           );
           archive.readEntry();
         })().catch(reject);
@@ -149,6 +166,7 @@ export async function extractZip(
       archive.readEntry();
     });
     await stage.root.sync();
+    limits.signal?.throwIfAborted();
     await stage.parent.rename(stage.temp, stage.name);
     await stage.parent.sync();
   } catch (error) {
@@ -173,13 +191,15 @@ export async function extractTar(
   const seen = new Set<string>();
   let count = 0,
     total = 0;
+  let member: Promise<void> = Promise.resolve();
   const done = new Promise<void>((resolveDone, reject) => {
     extractor.once("finish", resolveDone);
     extractor.once("error", reject);
   });
   extractor.on("entry", (header, stream, next) => {
-    void (async () => {
+    member = (async () => {
       const name = memberName(header.name);
+      limits.signal?.throwIfAborted();
       if (++count > maxMembers || seen.has(name))
         throw new ArchiveLimitError("Archive duplicate/member count violation");
       seen.add(name);
@@ -194,6 +214,7 @@ export async function extractTar(
         stream as unknown as Readable,
         size,
         maxBytes - total,
+        limits.signal,
       );
       next();
     })().catch((error) => {
@@ -202,17 +223,23 @@ export async function extractTar(
     });
   });
   try {
+    limits.signal?.throwIfAborted();
     if (typeof input === "string")
-      await Promise.all([pipeline(createReadStream(input), extractor), done]);
+      await Promise.all([
+        pipeline(createReadStream(input), extractor, { signal: limits.signal }),
+        done,
+      ]);
     else {
       extractor.end(Buffer.from(input));
       await done;
     }
     await stage.root.sync();
+    limits.signal?.throwIfAborted();
     await stage.parent.rename(stage.temp, stage.name);
     await stage.parent.sync();
   } catch (error) {
     extractor.destroy();
+    await member.catch(() => {});
     await stage.parent.remove(stage.temp);
     throw error;
   } finally {

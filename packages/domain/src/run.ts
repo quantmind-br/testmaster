@@ -258,6 +258,14 @@ export function cancelReceipt(
 export function canRetry(attempt: AttemptObservation, maxAttempts: number): boolean {
   return (
     attempt.number < maxAttempts &&
+    ![
+      "security_precondition_failed",
+      "approval_required",
+      "egress_denied",
+      "missing_secret",
+      "credential_revoked",
+      "retry_unsafe_external_effect",
+    ].includes(attempt.reasonCode ?? "") &&
     !attempt.externalEffectUncertain &&
     !attempt.steps.some((step) => step.assertion || step.status === "passed") &&
     !attempt.cancelAuthorized

@@ -355,7 +355,14 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         "security_precondition_failed",
         "Download output name is unsafe or duplicated",
       );
-    authorizeUrl(runtime, download.url());
+    const downloadUrl = download.url();
+    // Blob downloads inherit their creator origin; opaque/data blobs are never authorized.
+    if (downloadUrl.startsWith("blob:")) {
+      const origin = new URL(downloadUrl).origin;
+      if (origin === "null")
+        throw new RuntimeError("egress_denied", "Opaque blob download is not authorized");
+      authorizeUrl(runtime, `${origin}/`);
+    } else authorizeUrl(runtime, downloadUrl);
     const stream = await download.createReadStream();
     if (!stream)
       throw new RuntimeError(
@@ -704,7 +711,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     if (explorationStopped) return null;
     const observed = await page.evaluate(() => ({
       title: document.title,
-      text: Array.from(document.querySelectorAll("h1,h2,h3,p,label,a,button"))
+      text: Array.from(document.querySelectorAll("h1,h2,h3,p,label,a,button,main"))
         .filter((node) => !node.closest("[data-sensitive],form"))
         .map((node) => node.textContent ?? "")
         .join("\n")
@@ -928,7 +935,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     else
       result = {
         outcome: browser ? "inconclusive" : "blocked",
-        reasonCode: browser ? "insufficient_evidence" : "unsupported_capability",
+        reasonCode: browser ? "insufficient_evidence" : "security_precondition_failed",
       };
   } finally {
     runtime.signal.removeEventListener("abort", abort);
@@ -1013,14 +1020,25 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     } catch {
       result = { ...result, cleanupOutcome: "inconclusive" };
     }
-    const closed = await Promise.allSettled([http.close(), browser?.close()]);
-    if (closed.some((entry) => entry.status === "rejected"))
+    const [httpClosed, browserClosed] = await Promise.allSettled([http.close(), browser?.close()]);
+    if (browserClosed?.status === "rejected") {
       result = { ...result, cleanupOutcome: "failed" };
+      await runtime.emit("log", {
+        level: "error",
+        message: "browser_profile_cleanup_failed:browser_close",
+      });
+    } else if (httpClosed.status === "rejected") {
+      result = { ...result, cleanupOutcome: "failed" };
+    }
     if (tempDirectory) {
       try {
         await rm(tempDirectory, { recursive: true, force: true });
       } catch {
         result = { ...result, cleanupOutcome: "failed" };
+        await runtime.emit("log", {
+          level: "error",
+          message: "browser_profile_cleanup_failed:temp_dir",
+        });
       }
     }
   }

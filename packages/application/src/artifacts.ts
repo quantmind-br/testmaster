@@ -5,10 +5,14 @@ import {
   type Attempt,
   ContractError,
   type RunResult,
+  type RuntimeTiming,
   type StepResult,
+  validate,
 } from "@testmaster/contracts";
+import { semanticHash } from "@testmaster/domain";
 import { deriveFailedOnly, streamBundleArtifact, verifyBundle } from "@testmaster/evidence";
 import {
+  executionMetrics,
   exportAllure,
   exportHtml,
   exportJson,
@@ -17,9 +21,12 @@ import {
   type ReportRun,
   type ReportSnapshot,
 } from "@testmaster/reporting";
+import { auditedOperation, auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
+import { reportCoverage } from "./coverage.js";
 import type { RunsService } from "./runs.js";
+import { sumTimings } from "./timing.js";
 export interface ArtifactStream {
   entry: ArtifactManifest["entries"][number];
   stream: AsyncIterable<Uint8Array>;
@@ -30,6 +37,46 @@ export class ArtifactsService {
     readonly config: ResolvedConfig,
     readonly runs: RunsService,
   ) {}
+  private authorizeRaw(runId: string, explicit: boolean, approvalId?: string): void {
+    try {
+      if (!explicit)
+        throw new ContractError("FORBIDDEN", "Restricted raw evidence requires explicit --raw");
+      const run = this.runs.get(runId);
+      const test = requireEntity(this.ctx, "TestCase", run.testId);
+      const environment = requireEntity(this.ctx, "EnvironmentRevision", run.environmentRevisionId);
+      const row = this.ctx.database.get(
+        "SELECT environment_id FROM environment_revisions WHERE workspace_id=? AND id=?",
+        this.ctx.workspaceId,
+        environment.id,
+      );
+      if (!row || !this.ctx.authorizeRaw)
+        throw new ContractError("FORBIDDEN", "Raw authorization is unavailable");
+      this.ctx.authorizeRaw(String(test.projectId), String(row.environment_id));
+      if (environment.production) {
+        const approval = approvalId ? requireEntity(this.ctx, "Approval", approvalId) : undefined;
+        const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
+        if (
+          !approval ||
+          approval.actorId !== this.ctx.principalId ||
+          approval.revokedAt ||
+          Date.parse(String(approval.expiresAt)) <= Date.now() ||
+          approval.environmentRevisionId !== environment.id ||
+          !(approval.actionSet as string[]).includes("artifacts:raw") ||
+          approval.revisionHash !== revision.contentHash ||
+          approval.policyHash !== this.config.effectiveConfig.policyHash ||
+          semanticHash(approval.originSet) !== semanticHash(environment.targetOrigins)
+        )
+          throw new ContractError(
+            "POLICY_DENIED",
+            "Production raw evidence requires a matching current approval",
+          );
+      }
+      auditSecurity(this.ctx, "artifact.raw", runId, "allowed");
+    } catch (error) {
+      auditSecurity(this.ctx, "artifact.raw", runId, "denied");
+      throw error;
+    }
+  }
   async get(
     runId: string,
     options: {
@@ -37,6 +84,23 @@ export class ArtifactsService {
       out?: string;
       failedOnly?: boolean;
       allowRestrictedRaw?: boolean;
+      approvalId?: string;
+    } = {},
+  ) {
+    if (options.out)
+      return auditedOperation(this.ctx, "artifact.export", runId, () =>
+        this.getBundle(runId, options),
+      );
+    return this.getBundle(runId, options);
+  }
+  private async getBundle(
+    runId: string,
+    options: {
+      attemptId?: string;
+      out?: string;
+      failedOnly?: boolean;
+      allowRestrictedRaw?: boolean;
+      approvalId?: string;
     } = {},
   ) {
     const run = this.runs.get(runId);
@@ -82,12 +146,11 @@ export class ArtifactsService {
       if (out === bundleDir || out.startsWith(`${bundleDir}/`))
         throw new ContractError("INVALID_ARGUMENT", "Output must not overwrite committed evidence");
       if (
-        !options.allowRestrictedRaw &&
         manifest.entries.some(
           (entry) => entry.state === "available" && entry.redactionStatus === "restrictedRaw",
         )
       )
-        throw new ContractError("FORBIDDEN", "Restricted raw evidence requires explicit --raw");
+        this.authorizeRaw(runId, options.allowRestrictedRaw === true, options.approvalId);
       await mkdir(out, { recursive: true, mode: 0o700 });
       for (const entry of manifest.entries) {
         if (entry.state !== "available") continue;
@@ -134,8 +197,10 @@ export class ArtifactsService {
     const entry = bundle.manifest.entries.find((item) => item.relativePath === relativePath);
     if (entry?.state !== "available")
       throw new ContractError("NOT_FOUND", "Artifact is unavailable");
-    if (entry.redactionStatus === "restrictedRaw")
+    if (entry.redactionStatus === "restrictedRaw") {
+      auditSecurity(this.ctx, "artifact.raw", "run-evidence", "denied");
       throw new ContractError("FORBIDDEN", "Restricted raw evidence is not exposed to MCP");
+    }
     if (offset > entry.sizeBytes)
       throw new ContractError("INVALID_ARGUMENT", "Artifact offset exceeds its size");
     const bytes = Buffer.alloc(Math.min(maxBytes, entry.sizeBytes - offset));
@@ -162,7 +227,11 @@ export class ArtifactsService {
   }
   async stream(
     artifactId: string,
-    options: { range?: { start: number; end: number }; allowRestrictedRaw?: boolean } = {},
+    options: {
+      range?: { start: number; end: number };
+      allowRestrictedRaw?: boolean;
+      approvalId?: string;
+    } = {},
   ): Promise<ArtifactStream> {
     const artifact = requireEntity(this.ctx, "Artifact", artifactId);
     const attempt = requireEntity(this.ctx, "Attempt", String(artifact.attemptId));
@@ -170,9 +239,10 @@ export class ArtifactsService {
     const entry = bundle.manifest.entries.find((item) => item.artifactId === artifactId);
     if (entry?.state !== "available") throw new ContractError("NOT_FOUND", "Artifact unavailable");
     if (entry.redactionStatus === "restrictedRaw")
-      throw new ContractError(
-        "FORBIDDEN",
-        "Restricted raw evidence requires separate authorization",
+      this.authorizeRaw(
+        String(attempt.runId),
+        options.allowRestrictedRaw === true,
+        options.approvalId,
       );
     const start = options.range?.start ?? 0;
     const end = options.range?.end ?? entry.sizeBytes - 1;
@@ -191,6 +261,7 @@ export class ArtifactsService {
       for await (const chunk of streamBundleArtifact(
         { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
         relativePath,
+        { allowRestrictedRaw: options.allowRestrictedRaw === true },
       )) {
         const from = Math.max(0, start - position);
         const to = Math.min(chunk.length, end + 1 - position);
@@ -256,6 +327,14 @@ export class ReportsService {
           null) as RunResult["firstAttemptOutcome"],
         ...(reduced?.reasonCode ? { reasonCode: String(reduced.reasonCode) } : {}),
       };
+      const recordedTimings = this.runs
+        .events(runId)
+        .filter((event) => event.type === "attempt.timing")
+        .map((event) => {
+          const payload = event.payload as { timing: unknown };
+          return validate<RuntimeTiming>("RuntimeTiming", payload.timing);
+        });
+      const timings = sumTimings(recordedTimings);
       entries.push({
         run,
         result,
@@ -264,6 +343,18 @@ export class ReportsService {
         environment: String((run.matrixCell as Record<string, unknown>).environmentName),
         snapshot: evidence.meta,
         manifest: evidence.manifest,
+        ...(evidence.manifest.reproduction
+          ? {
+              reproduction: {
+                degree: "evidence-replay" as const,
+                executionDegree:
+                  evidence.manifest.reproduction.degree === "fresh-llm-regeneration"
+                    ? ("fresh-llm-regeneration" as const)
+                    : ("strict-execution-replay" as const),
+                limitations: evidence.manifest.reproduction.limitations,
+              },
+            }
+          : {}),
         steps: this.runs.steps(runId) as unknown as StepResult[],
         attempts,
         freshness: {
@@ -272,14 +363,8 @@ export class ReportsService {
           currentRevisionId: String(test.activeRevisionId),
           currentEnvironmentRevisionId: String(environment.activeRevisionId),
         },
-        durationMs: attempts.reduce(
-          (total, attempt) =>
-            total +
-            (attempt.endedAt && attempt.startedAt
-              ? Date.parse(attempt.endedAt) - Date.parse(attempt.startedAt)
-              : 0),
-          0,
-        ),
+        timings,
+        durationMs: recordedTimings.length === attempts.length ? timings.executionDuration : null,
       });
     }
     const missing = entries.flatMap((entry) =>
@@ -288,7 +373,8 @@ export class ReportsService {
         .map((a) => a.omissionReason ?? a.state),
     );
     const snapshotId = entries[0]?.snapshot.snapshotId ?? id;
-    return {
+    const selection = batch?.selectionSnapshot as Record<string, unknown> | undefined;
+    const snapshot: ReportSnapshot = {
       schemaVersion: "1.0.0",
       committedAt: entries[0]?.snapshot.committedAt ?? new Date().toISOString(),
       snapshotId,
@@ -296,6 +382,8 @@ export class ReportsService {
       runs: entries,
       selection: {
         requested: batch ? Number(batch.requestedCount) : 1,
+        requestedRunIds: (selection?.requestedRunIds as string[] | undefined) ?? runIds,
+        duplicates: Number(selection?.duplicates ?? 0),
         notDispatched: batch
           ? (batch.rejectedMembers as { memberKey: string; reasonCode: string }[])
           : [],
@@ -307,8 +395,29 @@ export class ReportsService {
       },
       completeness: { state: missing.length ? "partial" : "complete", reasons: missing },
     };
+    snapshot.executionMetrics = executionMetrics(snapshot);
+    snapshot.coverage = reportCoverage(this.ctx, snapshot);
+    snapshot.executionMetrics.rates.requirementMappingCoverage = snapshot.coverage.requirement;
+    snapshot.executionMetrics.rates.endpointContractCoverage = snapshot.coverage.operation;
+    snapshot.executionMetrics.rates.verifiedRequirementCoverage = {
+      ...snapshot.coverage.requirement,
+      numerator: 0,
+      value: snapshot.coverage.requirement.denominator ? 0 : null,
+      definition:
+        "N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces",
+    };
+    return snapshot;
   }
   async export(
+    id: string,
+    format: "json" | "markdown" | "html" | "junit" | "allure",
+    out?: string,
+  ) {
+    return auditedOperation(this.ctx, "report.export", id, () =>
+      this.exportSnapshot(id, format, out),
+    );
+  }
+  private async exportSnapshot(
     id: string,
     format: "json" | "markdown" | "html" | "junit" | "allure",
     out?: string,

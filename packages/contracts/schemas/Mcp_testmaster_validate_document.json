@@ -1,0 +1,90 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schema",
+    "document"
+  ],
+  "properties": {
+    "schema": {
+      "anyOf": [
+        {
+          "const": "ExecutablePlan",
+          "type": "string"
+        },
+        {
+          "const": "ProjectConfig",
+          "type": "string"
+        },
+        {
+          "const": "RunRequest",
+          "type": "string"
+        }
+      ]
+    },
+    "document": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:Mcp_testmaster_validate_document",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

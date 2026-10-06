@@ -12,10 +12,11 @@ export interface BudgetReservationInput {
   model: string;
   estimate: Cost;
   idempotencyKey: string;
+  reservedTokens?: number;
 }
 export type BudgetReservationResult =
   | { ok: true; reservationId: string }
-  | { ok: false; reasonCode: "budget_exceeded"; remaining: Cost };
+  | { ok: false; reasonCode: "budget_exhausted"; remaining: Cost };
 export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -27,11 +28,12 @@ export interface BudgetLedger {
   release(reservationId: string, reason: string): Promise<void>;
 }
 export interface ConsentStore {
-  find(q: {
-    workspaceId: string;
-    projectId: string;
-    providerId: string;
-  }): Promise<{ dataClasses: string[]; grantedAt: string; revokedAt: string | null } | null>;
+  find(q: { workspaceId: string; projectId: string; providerId: string }): Promise<{
+    dataClasses: string[];
+    grantedAt: string;
+    revokedAt: string | null;
+    allowUnknownCost?: boolean;
+  } | null>;
 }
 export interface ModelCallRecord {
   id: string;
@@ -42,6 +44,9 @@ export interface ModelCallRecord {
   provider: string;
   model: string;
   promptHash: string;
+  modelConfigHash?: string;
+  sourceRevisionIds?: string[];
+  runId?: string;
   inputRefs: string[];
   usage: TokenUsage;
   cost: Cost;
@@ -53,6 +58,7 @@ export interface ModelCallRecord {
   reservationId: string | null;
   responseHash: string | null;
   finishReason: string | null;
+  failureReason?: "output_truncated" | "content_filtered";
   rawPrompt?: string;
 }
 export interface ModelCallRecorder {
@@ -98,6 +104,7 @@ export interface ModelToolCall {
 export interface ModelRequest {
   workspaceId: string;
   projectId: string;
+  runId?: string;
   purpose:
     | "summarize"
     | "normalize"

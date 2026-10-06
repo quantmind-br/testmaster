@@ -1,4 +1,5 @@
 import type { ExecutablePlan, NetworkPolicy, PlanStep } from "@testmaster/contracts";
+import { scrubEvidenceText, scrubText } from "@testmaster/domain";
 import type { ProtocolClient } from "./protocol.js";
 
 export interface RunnerInput {
@@ -22,6 +23,7 @@ export interface RunnerInput {
     restrictedRaw?: boolean;
     trace?: boolean;
     video?: boolean;
+    httpBodies?: boolean;
   };
   timeoutMs?: number;
   stepTimeoutMs?: number;
@@ -80,12 +82,10 @@ export class Runtime {
     return this.protocol.artifact(path, kind, mimeType, safe);
   }
   scrub(text: string): string {
-    for (const secret of this.secrets)
-      if (secret) {
-        text = text.split(secret).join("[REDACTED]");
-        text = text.split(encodeURIComponent(secret)).join("[REDACTED]");
-      }
-    return text;
+    return scrubEvidenceText(text, [...this.secrets]).text;
+  }
+  scrubSecrets(text: string): string {
+    return scrubText(text, [...this.secrets]).text;
   }
   async resolve(value: unknown): Promise<unknown> {
     if (!value || typeof value !== "object")

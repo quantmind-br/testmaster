@@ -61,6 +61,20 @@
         "secretIncluded": {
           "const": false,
           "type": "boolean"
+        },
+        "keyIds": {
+          "type": "array",
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        },
+        "configDigests": {
+          "type": "array",
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
         }
       }
     },

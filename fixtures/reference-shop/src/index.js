@@ -15,6 +15,7 @@ export const mutants = Object.freeze([
   "pagination-skip",
   "idempotency-ignored",
   "selector-drift",
+  "products-update-ignored",
 ]);
 
 const json = (response, status, value) => {
@@ -81,6 +82,85 @@ export async function startShop({
       const path = url.pathname.replace(/^\/api(?=\/)/, "");
       const method = request.method;
       const parsed = async () => JSON.parse((await body(request)).toString("utf8") || "{}");
+      if (path === "/acceptance/body") {
+        const incoming = method === "POST" ? await parsed() : null;
+        response.writeHead(200, {
+          "content-type": "application/json",
+          "x-private": "response-header-private-sentinel",
+          "set-cookie": "private=header-cookie-sentinel; Path=/",
+        });
+        return response.end(
+          JSON.stringify({
+            business: "response-body-private-sentinel",
+            requestAccepted: incoming?.private === "request-body-private-sentinel",
+          }),
+        );
+      }
+      if (path === "/acceptance/browser-bodies") {
+        response.writeHead(200, { "content-type": "text/html" });
+        return response.end(
+          '<!doctype html><title>Body privacy</title><p data-testid="body-status">pending</p><script>fetch("/acceptance/body",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({private:"request-body-private-sentinel"})}).then(r=>r.json()).then(value=>{document.querySelector("p").textContent=value.requestAccepted?"ready":"failed";document.querySelector("p").dataset.testid="body-ready"})</script>',
+        );
+      }
+      if (path === "/acceptance/browser-session") {
+        const known =
+          request.headers.cookie?.includes("matrix-session=synthetic-ephemeral-cookie") ?? false;
+        response.writeHead(200, {
+          "content-type": "text/html",
+          "set-cookie":
+            "matrix-session=synthetic-ephemeral-cookie; HttpOnly; SameSite=Strict; Path=/",
+        });
+        return response.end(
+          `<!doctype html><title>Ephemeral session</title><p data-testid="session-state">${known ? "reused" : "fresh"}</p>`,
+        );
+      }
+      if (path.startsWith("/adversarial/")) {
+        const mode = path.slice("/adversarial/".length);
+        const target = url.searchParams.get("target") ?? "http://169.254.169.254/latest/meta-data/";
+        const quoted = JSON.stringify(target).replaceAll("<", "\\u003c");
+        if (mode === "worker.js") {
+          response.writeHead(200, { "content-type": "application/javascript" });
+          return response.end(
+            `self.addEventListener('install', e => e.waitUntil(fetch(${quoted}, {mode:'no-cors'})));`,
+          );
+        }
+        const scripts = {
+          js: `location.href=${quoted}`,
+          fetch: `fetch(${quoted}, {mode:'no-cors'}).catch(()=>{})`,
+          iframe: `const frame=document.createElement('iframe'); frame.src=${quoted}; document.body.append(frame)`,
+          websocket: `new WebSocket(${quoted}.replace(/^http/, 'ws'))`,
+          worker: `navigator.serviceWorker.register('/adversarial/worker.js?target='+encodeURIComponent(${quoted})).then(()=>document.body.dataset.worker='registered').catch(()=>document.body.dataset.worker='blocked')`,
+        };
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        const meta =
+          mode === "meta"
+            ? `<meta http-equiv="refresh" content="0;url=${target.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">`
+            : "";
+        return response.end(
+          `<!doctype html><html lang="en"><head>${meta}</head><body><h1 data-testid="fixture">Adversarial fixture</h1><script>${scripts[mode] ?? ""}</script></body></html>`,
+        );
+      }
+      if (path === "/acceptance/server-error")
+        return json(response, 500, { error: "deliberate_server_error", retained: "response-body" });
+      if (path === "/acceptance/transport") {
+        request.socket.destroy();
+        return;
+      }
+      if (path.startsWith("/acceptance/auth/")) {
+        const kind = path.split("/").at(-1);
+        const expected = {
+          basic: ["authorization", `Basic ${Buffer.from("synthetic:password").toString("base64")}`],
+          bearer: ["authorization", "Bearer synthetic-bearer"],
+          "api-key": ["x-api-key", "synthetic-api-key"],
+          header: ["x-shop-auth", "synthetic-header"],
+          cookie: ["cookie", "shop-session=synthetic-cookie"],
+        }[kind];
+        const accepted =
+          kind === "none"
+            ? !request.headers.authorization && !request.headers.cookie
+            : expected && request.headers[expected[0]] === expected[1];
+        return json(response, accepted ? 200 : 401, { authenticated: Boolean(accepted), kind });
+      }
       if (path === "/health")
         return json(response, 200, { status: mutant === "health-degraded" ? "degraded" : "ok" });
       if (path === "/config")
@@ -179,6 +259,12 @@ export async function startShop({
             input.priceCents < 0
           )
             return json(response, 400, { error: "invalid_product" });
+          if (mutant === "products-update-ignored") {
+            const product = db
+              .prepare("SELECT id,name,price_cents AS priceCents FROM products WHERE id=?")
+              .get(id);
+            return json(response, product ? 200 : 404, product ?? { error: "not_found" });
+          }
           const result = db
             .prepare("UPDATE products SET name=?,price_cents=? WHERE id=?")
             .run(input.name, input.priceCents, id);

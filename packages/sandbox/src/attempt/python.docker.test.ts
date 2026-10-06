@@ -171,3 +171,29 @@ it("Python raw sockets cannot bypass egress and missing dependencies never downl
     ),
   ).toBe(true);
 }, 120000);
+
+it("Python subprocess cannot install dependencies or restore download tools at runtime", async () => {
+  const result = await runPython(`import importlib.util
+import subprocess
+import sys
+
+def test_runtime_install_is_denied():
+    assert importlib.util.find_spec('pip') is None
+    commands = [
+        [sys.executable, '-m', 'pip', 'install', 'testmaster_unapproved_dependency'],
+        [sys.executable, '-m', 'ensurepip'],
+        ['pip', 'install', 'testmaster_unapproved_dependency'],
+        ['uv', 'pip', 'install', 'testmaster_unapproved_dependency'],
+        ['npm', 'install', 'testmaster_unapproved_dependency'],
+    ]
+    for command in commands:
+        try:
+            result = subprocess.run(command, capture_output=True, timeout=15)
+            assert result.returncode != 0, command
+        except FileNotFoundError:
+            pass
+    assert importlib.util.find_spec('testmaster_unapproved_dependency') is None
+`);
+  expect(result.terminal.outcome).toBe("passed");
+  expect(result.result.facts.imageId).toMatch(/^sha256:[a-f0-9]{64}$/u);
+}, 90000);

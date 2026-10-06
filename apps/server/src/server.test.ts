@@ -266,12 +266,112 @@ it("resumes durable SSE events without gaps or duplicate terminal events", async
   const resumedEvents = [...resumed.matchAll(/^data: (.+)$/gm)].map((match) =>
     JSON.parse(match[1] as string),
   );
-  expect(originalEvents.map((event) => event.seq)).toEqual([0, 1]);
-  expect(resumedEvents.map((event) => event.seq)).toEqual([1]);
-  expect(resumedEvents[0].eventId).toBe(originalEvents[1].eventId);
+  const durable = f.application.runs.events(receipt.runId);
+  expect(originalEvents.map((event) => event.seq)).toEqual(durable.map((event) => event.seq));
+  expect(originalEvents.filter((event) => event.type === "run.completed")).toHaveLength(1);
+  expect(resumedEvents.map((event) => event.seq)).toEqual(
+    durable.slice(1).map((event) => event.seq),
+  );
+  expect(resumedEvents.map((event) => event.eventId)).toEqual(
+    originalEvents.slice(1).map((event) => event.eventId),
+  );
   const lastCursor = [...text.matchAll(/^id: (.+)$/gm)].at(-1)?.[1] as string;
   const exhausted = await fetch(`${address}/v1/runs/${receipt.runId}/events`, {
     headers: { ...f.headers, "last-event-id": lastCursor },
   });
   expect(await exhausted.text()).not.toContain("data:");
+});
+
+it("validates and returns correlation IDs while readiness follows durable admission state", async () => {
+  const f = await fixture();
+  const result = await f.app.inject({
+    url: "/v1/projects",
+    headers: { ...f.headers, "x-correlation-id": "incident-http-123" },
+  });
+  expect(result.headers["x-correlation-id"]).toBe("incident-http-123");
+  expect(result.json().requestId).toBe("incident-http-123");
+  const generated = await f.app.inject({ url: "/v1/projects", headers: f.headers });
+  expect(generated.headers["x-correlation-id"]).toMatch(/^[a-f0-9-]{36}$/);
+  const invalid = await f.app.inject({
+    url: "/v1/projects",
+    headers: { ...f.headers, "x-correlation-id": "a".repeat(129) },
+  });
+  expect(invalid.statusCode).toBe(400);
+  f.application.database.run(
+    "UPDATE operational_state SET value='suspended_manual' WHERE key='admission'",
+  );
+  const readiness = await f.app.inject({ url: "/v1/health/ready", headers: f.headers });
+  expect(readiness.statusCode).toBe(503);
+  expect(readiness.json().data.components.admission).toBe("unavailable");
+  expect(JSON.stringify(readiness.json())).not.toContain(f.application.config.dataDir);
+});
+
+it("admits runs with raw capture when authenticated with authorized local capability token and rejects ungranted tokens", async () => {
+  const f = await fixture();
+  f.application.context.entities.insert("Worker", {
+    id: "wrk_00000000-0000-4000-8000-000000000001",
+    workspaceId: f.init.workspaceId,
+    createdAt: new Date().toISOString(),
+    version: 1,
+    identityRef: "local-tabletop",
+    capabilities: ["http"],
+    imageDigests: [],
+    labels: {},
+    state: "ready",
+    lastHeartbeatAt: new Date().toISOString(),
+  });
+  f.application.preflight = async () => {};
+  const test = f.application.tests.create({
+    projectId: f.init.projectId,
+    plan: scaffoldPlan("backend"),
+  });
+  f.application.config.effectiveConfig.config.artifacts = {
+    trace: "on",
+    video: "off",
+    httpBodies: "off",
+  };
+  const body = {
+    testId: test.id,
+    environmentId: f.init.environmentId,
+    mode: "replay",
+    healingPolicy: "off",
+    origin: "api",
+  };
+  const authorized = await f.mutate("POST", "/v1/runs", body);
+  expect(authorized.statusCode).toBe(202);
+  expect(authorized.json().data.runId).toBeDefined();
+
+  const restricted = await issueLocalToken(f.application, {
+    scopes: ["R", "X"],
+    tokenPath: join(f.application.config.home, "restricted.token"),
+  });
+  const denied = await f.app.inject({
+    method: "POST",
+    url: "/v1/runs",
+    headers: {
+      authorization: `Bearer ${restricted.token}`,
+      "content-type": "application/json",
+      "idempotency-key": randomUUID(),
+    },
+    payload: body,
+  });
+  expect(denied.statusCode).toBe(403);
+  expect(denied.json().error.code).toBe("FORBIDDEN");
+  expect(denied.json().error.message).toContain("artifacts:raw");
+});
+
+it("never widens an existing token's raw grant during reuse", async () => {
+  const f = await fixture();
+  const tokenPath = join(f.application.config.home, "narrow-admin.token");
+  const issued = await issueLocalToken(f.application, { tokenPath, grants: [] });
+  await expect(issueLocalToken(f.application, { tokenPath })).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  });
+  const reused = await issueLocalToken(f.application, { tokenPath, grants: [] });
+  expect(reused.token).toBe(issued.token);
+  expect(() =>
+    f.application
+      .withIdentity(reused.identity)
+      .context.authorizeRaw?.(f.init.projectId, f.init.environmentId),
+  ).toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
 });

@@ -1,4 +1,4 @@
-import { statfs } from "node:fs/promises";
+import { readdir, statfs } from "node:fs/promises";
 import { defaults } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import {
@@ -8,7 +8,11 @@ import {
   type GcSafety,
   validateRelativePath,
 } from "@testmaster/evidence";
-import { AuditRepository, OutboxRepository } from "@testmaster/persistence";
+import {
+  AuditRepository,
+  OutboxRepository,
+  releaseControlPlaneReserve,
+} from "@testmaster/persistence";
 import type { ResolvedConfig } from "./config.js";
 import type { ServiceContext } from "./context.js";
 
@@ -41,6 +45,7 @@ AND NOT EXISTS (SELECT 1 FROM operational_state h WHERE h.value<>'released' AND 
   'retention:legal-hold:' || artifacts.workspace_id,
   'retention:legal-hold:' || artifacts.workspace_id || ':' || artifacts.run_id,
   'retention:legal-hold:' || artifacts.workspace_id || ':' || artifacts.id))
+AND NOT EXISTS (SELECT 1 FROM backup_object_holds b WHERE b.workspace_id=artifacts.workspace_id AND b.artifact_id=artifacts.id AND b.expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 AND NOT EXISTS (SELECT 1 FROM artifacts ref WHERE ref.workspace_id=artifacts.workspace_id
   AND ref.storage_key=artifacts.storage_key AND ref.id<>artifacts.id)`;
 
@@ -49,6 +54,58 @@ export class RetentionService {
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
   ) {}
+  repairReferences(apply = false) {
+    this.ctx.authorize("A");
+    return this.ctx.database.withTx(() => {
+      const actual = this.ctx.database.all<{ storage_key: string; n: number }>(
+        "SELECT storage_key,COUNT(*) AS n FROM artifacts WHERE workspace_id=? AND state IN ('available','partial') GROUP BY storage_key",
+        this.ctx.workspaceId,
+      );
+      const keys = new Set(actual.map((row) => row.storage_key));
+      for (const row of this.ctx.database.all(
+        "SELECT storage_key FROM blob_reference_counts WHERE workspace_id=?",
+        this.ctx.workspaceId,
+      ))
+        keys.add(String(row.storage_key));
+      const changes = [...keys].flatMap((storageKey) => {
+        const count = actual.find((row) => row.storage_key === storageKey)?.n ?? 0;
+        const cached = this.ctx.database.get(
+          "SELECT references_count FROM blob_reference_counts WHERE workspace_id=? AND storage_key=?",
+          this.ctx.workspaceId,
+          storageKey,
+        )?.references_count;
+        return cached === count
+          ? []
+          : [{ storageKey, recorded: cached ?? null, recomputed: count }];
+      });
+      if (apply) {
+        for (const change of changes)
+          this.ctx.database.run(
+            "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,?,?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=excluded.references_count,checked_at=excluded.checked_at",
+            this.ctx.workspaceId,
+            change.storageKey,
+            change.recomputed,
+            new Date().toISOString(),
+          );
+        new AuditRepository(this.ctx.database).append({
+          workspaceId: this.ctx.workspaceId,
+          actor: this.ctx.principalId,
+          action: "storage.references.repaired",
+          resourceId: this.ctx.workspaceId,
+          requestId: "storage-repair",
+          timestamp: new Date().toISOString(),
+          beforeHash: semanticHash(changes),
+          afterHash: semanticHash(
+            changes.map((change) => ({
+              storageKey: change.storageKey,
+              references: change.recomputed,
+            })),
+          ),
+        });
+      }
+      return { dryRun: !apply, changes, deletedObjects: 0 };
+    });
+  }
 
   private key(id: string): string {
     return `retention:artifact:${this.ctx.workspaceId}:${id}`;
@@ -90,6 +147,7 @@ export class RetentionService {
     const usedFraction =
       total > 0 ? Math.min(1, Math.max(0, 1 - Number(storage.bavail) / total)) : 1;
     const database = this.ctx.database;
+    if (usedFraction >= 0.9) releaseControlPlaneReserve(database.path);
     database.withTx(() => {
       const pressureKey = "retention:storage-pressure";
       const admission = database.get(
@@ -130,6 +188,47 @@ export class RetentionService {
   }> {
     const database = this.ctx.database;
     await this.storagePressure();
+    const uploadsRoot = new ConfinedRoot(this.config.dataDir);
+    try {
+      for (const lease of database.all(
+        "SELECT upload_id FROM upload_leases WHERE workspace_id=? AND expires_at<=?",
+        this.ctx.workspaceId,
+        new Date().toISOString(),
+      )) {
+        const uploadId = String(lease.upload_id);
+        if (!/^[a-f0-9]{48}$/.test(uploadId)) throw new Error("Invalid persisted upload lease");
+        const directory = `uploads/${this.ctx.workspaceId}`;
+        try {
+          const uploads = uploadsRoot.openDirectory(directory);
+          try {
+            for (const name of await readdir(`/proc/self/fd/${uploads.fd}`))
+              if (
+                name === `${uploadId}.bin` ||
+                (name.startsWith(`${uploadId}.`) && name.endsWith(".pending"))
+              )
+                await uploads.unlink(name);
+          } finally {
+            uploads.close();
+          }
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+        database.withTx(() => {
+          database.run(
+            "DELETE FROM upload_leases WHERE workspace_id=? AND upload_id=? AND expires_at<=?",
+            this.ctx.workspaceId,
+            uploadId,
+            new Date().toISOString(),
+          );
+          database.run(
+            "DELETE FROM operational_state WHERE key=?",
+            `ai:${this.ctx.workspaceId}:upload:${uploadId}`,
+          );
+        });
+      }
+    } finally {
+      uploadsRoot.close();
+    }
     const cutoff = new Date(
       Date.now() -
         (this.config.effectiveConfig.config.artifacts?.retentionDays ??
@@ -237,13 +336,21 @@ export class RetentionService {
                 { state: row.state, retention: previous },
                 { state: "expired", retention: record },
               );
+              database.run(
+                "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,(SELECT COUNT(*) FROM artifacts WHERE workspace_id=? AND storage_key=? AND state IN ('available','partial')),?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=excluded.references_count,checked_at=excluded.checked_at",
+                this.ctx.workspaceId,
+                row.storage_key,
+                this.ctx.workspaceId,
+                row.storage_key,
+                new Date().toISOString(),
+              );
               if (row.state !== "expired") expiredArtifacts++;
               return { version: candidate.version + 1 };
             }),
           tombstone: async (candidate) =>
             database.withTx(() => {
               const row = current(candidate);
-              if (!row || row.state !== "expired") return null;
+              if (row?.state !== "expired") return null;
               const previous = this.record(row.id);
               if (!previous || previous.stage === "deleted") return null;
               const changed = database.run(

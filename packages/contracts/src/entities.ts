@@ -283,6 +283,7 @@ export const entities = {
     manifestHash: ContentDigest,
     committedAt: Timestamp,
     redactionPolicyHash: ContentDigest,
+    executionSnapshot: Type.Optional(Json),
   }),
   Analysis: entity("ana", {
     runId: id("run"),
@@ -497,6 +498,11 @@ export const ExecutionSnapshot = Obj({
   dependenciesLockHash: Type.Optional(ContentDigest),
   capabilityManifestHash: Type.Optional(ContentDigest),
   policyHash: Type.Optional(ContentDigest),
+  sourceRevisionIds: Type.Optional(Type.Array(id("svr"))),
+  modelConfigHash: Type.Optional(ContentDigest),
+  buildInputsHash: Type.Optional(ContentDigest),
+  seccompHash: Type.Optional(ContentDigest),
+  reproductionLimitations: Type.Optional(names),
   sealedAt: Type.Optional(Timestamp),
 });
 export const IntegrationEvent = Obj({

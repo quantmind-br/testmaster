@@ -55,6 +55,9 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
       .requiredOption("--url <url>")
       .option("--env <id>")
       .option("--job <id>")
+      .option("--feature <ids...>", "Expected feature IDs")
+      .option("--retry-feature <ids...>", "Retry only selected eligible features from --job")
+      .option("--video", "Collect restricted raw exploration video (admin only)")
       .option("--max-steps <count>", "Action budget", integer, 5)
       .option("--max-model-calls <count>", "Model budget", integer, 5)
       .option("--time-budget-ms <ms>", "Wall-clock budget", integer, 60000),
@@ -69,6 +72,9 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
             url: required(options, "url"),
             ...(string(options, "env") ? { environmentId: string(options, "env") as string } : {}),
             ...(string(options, "job") ? { jobId: string(options, "job") as string } : {}),
+            ...(options.feature ? { featureIds: options.feature as string[] } : {}),
+            ...(options.retryFeature ? { retryFeatureIds: options.retryFeature as string[] } : {}),
+            ...(options.video ? { video: true } : {}),
             budget: {
               steps: Number(options.maxSteps),
               modelCalls: Number(options.maxModelCalls),

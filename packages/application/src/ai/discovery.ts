@@ -31,6 +31,7 @@ import {
 import { DockerExecutor, dockerCommand, verifyImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
+import { invalidateAiDescendants } from "./invalidation.js";
 import { promptVersions } from "./model.js";
 import { readAiState, replayAiReceipt, type SourcesService, saveAiState } from "./sources.js";
 
@@ -606,6 +607,11 @@ export class DiscoveryService {
         body: input,
       },
       () => {
+        const cacheKey = `discovery-inputs:${input.projectId}:${root}:${scope}`;
+        const currentFingerprint = readAiState<string>(this.ctx, cacheKey);
+        if (currentFingerprint && currentFingerprint !== fingerprint)
+          invalidateAiDescendants(this.ctx, input.projectId, `code:${codeSnapshot.id}`);
+        saveAiState(this.ctx, cacheKey, fingerprint);
         this.ctx.entities.insert("CodeSnapshot", codeSnapshot, { projectId: input.projectId });
         for (const feature of features)
           if (!this.ctx.entities.get("Feature", this.ctx.workspaceId, feature.id))

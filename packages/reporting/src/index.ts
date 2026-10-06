@@ -3,10 +3,15 @@ import type {
   Attempt,
   BatchRun,
   BundleMeta,
+  CoverageMetrics,
+  ExecutionMetrics,
   Run,
   RunResult,
+  RuntimeTiming,
   StepResult,
 } from "@testmaster/contracts";
+
+export { coverageMetrics, executionMetrics, ratioMetric } from "./metrics.js";
 
 export interface ReportRun {
   run: Pick<
@@ -21,7 +26,13 @@ export interface ReportRun {
   manifest: ArtifactManifest;
   steps: readonly StepResult[];
   attempts: readonly Attempt[];
-  durationMs: number;
+  durationMs: number | null;
+  timings?: RuntimeTiming;
+  reproduction?: {
+    degree: "evidence-replay";
+    executionDegree: "strict-execution-replay" | "fresh-llm-regeneration";
+    limitations: string[];
+  };
   /** Read-time context comparison; never modifies the committed verdict or evidence seal. */
   freshness?: {
     state: "current" | "stale";
@@ -37,8 +48,12 @@ export interface ReportSnapshot {
   title: string;
   runs: readonly ReportRun[];
   batch?: BatchRun;
+  coverage?: CoverageMetrics;
+  executionMetrics?: ExecutionMetrics;
   selection: {
     requested: number;
+    requestedRunIds?: readonly string[];
+    duplicates?: number;
     notDispatched: readonly { memberKey: string; reasonCode: string }[];
     excluded: readonly { memberKey: string; reasonCode: string }[];
     allowEmpty: boolean;
@@ -111,10 +126,18 @@ function validateSnapshot(snapshot: ReportSnapshot): void {
       item.manifest.workspaceId !== item.run.workspaceId
     )
       throw new Error("Report workspace binding mismatch");
-    if (!Number.isFinite(item.durationMs) || item.durationMs < 0)
+    if (item.durationMs !== null && (!Number.isFinite(item.durationMs) || item.durationMs < 0))
       throw new Error("Invalid report duration");
   }
-  if (snapshot.selection.requested < snapshot.runs.length + snapshot.selection.notDispatched.length)
+  if (
+    snapshot.selection.requested <
+    snapshot.runs.filter(
+      (item) =>
+        !snapshot.selection.requestedRunIds ||
+        snapshot.selection.requestedRunIds.includes(item.run.id),
+    ).length +
+      snapshot.selection.notDispatched.length
+  )
     throw new Error("Invalid selection counts");
 }
 function missing(item: ReportRun): string[] {
@@ -139,6 +162,20 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
     `Completeness: ${snapshot.completeness.state}`,
     `Selection: ${snapshot.selection.requested}; not dispatched: ${snapshot.selection.notDispatched.length}; excluded: ${snapshot.selection.excluded.length}`,
     ...snapshot.completeness.reasons.map((reason) => `- Incomplete: ${markdown(reason)}`),
+    ...Object.entries(snapshot.coverage ?? {}).map(
+      ([name, metric]) =>
+        `Coverage ${name}: ${metric.denominatorState === "unknown" ? "unknown" : metric.value === null ? metric.state : `${metric.numerator}/${metric.denominator} (${(metric.value * 100).toFixed(2)}%)`}; ${metric.scope}`,
+    ),
+    ...Object.entries(snapshot.executionMetrics?.rates ?? {}).map(
+      ([name, metric]) =>
+        `${name}: ${metric.value === null ? metric.state : `${metric.numerator}/${metric.denominator} (${(metric.value * 100).toFixed(2)}%)`}`,
+    ),
+    ...(snapshot.executionMetrics
+      ? [
+          `Execution counts: ${JSON.stringify(snapshot.executionMetrics.counts)}`,
+          `Exclusions: ${JSON.stringify(snapshot.executionMetrics.exclusions)}`,
+        ]
+      : []),
   ];
   if (!snapshot.runs.length)
     lines.push(
@@ -151,6 +188,14 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
       `Run: ${markdown(item.run.id)}; revision: ${markdown(item.run.revisionId)}; environment: ${markdown(item.environment)}`,
       `Outcome: ${item.result.outcome ?? "nonterminal"}; gate: ${item.result.gate}; cleanup: ${item.result.cleanupOutcome}`,
       `First attempt: ${item.result.firstAttemptOutcome ?? "unknown"}; passed on retry: ${item.result.passedOnRetry}`,
+      ...(item.reproduction
+        ? [
+            `Reproduction: ${item.reproduction.degree}; execution: ${item.reproduction.executionDegree}`,
+            ...item.reproduction.limitations.map(
+              (reason) => `- Reproduction limitation: ${markdown(reason)}`,
+            ),
+          ]
+        : []),
       ...(item.freshness
         ? [
             `Context: ${item.freshness.state}${item.freshness.reasons.length ? ` (${item.freshness.reasons.join(", ")})` : ""}`,
@@ -175,10 +220,20 @@ export function exportHtml(snapshot: ReportSnapshot): string {
           .map((reason) => `<li>Evidence: ${xml(reason)}</li>`)
           .join(
             "",
-          )}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul></section>`,
+          )}${item.reproduction ? `<li>Reproduction: ${xml(item.reproduction.degree)}; execution: ${xml(item.reproduction.executionDegree)} (${xml(item.reproduction.limitations.join(", "))})</li>` : ""}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul></section>`,
     )
     .join("");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"><title>${xml(snapshot.title)}</title></head><body><h1>${xml(snapshot.title)}</h1><p>Gate: ${reportGate(snapshot)}</p><p>Snapshot: ${xml(snapshot.snapshotId)}; completeness: ${snapshot.completeness.state}</p><p>Selection: ${snapshot.selection.requested}; not dispatched: ${snapshot.selection.notDispatched.length}; excluded: ${snapshot.selection.excluded.length}</p>${snapshot.runs.length ? runs : `<p>No tests executed: ${xml(snapshot.selection.emptyReason ?? "selection empty without authorization")}</p>`}<ul>${[...snapshot.completeness.reasons, ...snapshot.selection.notDispatched.map((cell) => `Not dispatched: ${cell.memberKey}: ${cell.reasonCode}`), ...snapshot.selection.excluded.map((cell) => `Excluded: ${cell.memberKey}: ${cell.reasonCode}`)].map((reason) => `<li>${xml(reason)}</li>`).join("")}</ul></body></html>`;
+  const metricsHtml = `<section><h2>Separate coverage metrics</h2><ul>${Object.entries(
+    snapshot.coverage ?? {},
+  )
+    .map(
+      ([name, metric]) =>
+        `<li>${xml(name)}: ${metric.denominatorState === "unknown" ? "unknown" : metric.value === null ? metric.state : `${metric.numerator}/${metric.denominator} (${(metric.value * 100).toFixed(2)}%)`}</li>`,
+    )
+    .join(
+      "",
+    )}</ul><h2>Execution metrics</h2><pre>${xml(JSON.stringify(snapshot.executionMetrics ?? {}, null, 2))}</pre></section>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"><title>${xml(snapshot.title)}</title></head><body><h1>${xml(snapshot.title)}</h1><p>Gate: ${reportGate(snapshot)}</p><p>Snapshot: ${xml(snapshot.snapshotId)}; completeness: ${snapshot.completeness.state}</p><p>Selection: ${snapshot.selection.requested}; not dispatched: ${snapshot.selection.notDispatched.length}; excluded: ${snapshot.selection.excluded.length}</p>${metricsHtml}${snapshot.runs.length ? runs : `<p>No tests executed: ${xml(snapshot.selection.emptyReason ?? "selection empty without authorization")}</p>`}<ul>${[...snapshot.completeness.reasons, ...snapshot.selection.notDispatched.map((cell) => `Not dispatched: ${cell.memberKey}: ${cell.reasonCode}`), ...snapshot.selection.excluded.map((cell) => `Excluded: ${cell.memberKey}: ${cell.reasonCode}`)].map((reason) => `<li>${xml(reason)}</li>`).join("")}</ul></body></html>`;
 }
 function junitKind(item: ReportRun): "failure" | "error" | "skipped" | null {
   if (item.result.outcome === "failed") return "failure";
@@ -205,6 +260,7 @@ export function exportJunit(snapshot: ReportSnapshot): string {
   };
   const cases = snapshot.runs.map((item) => {
     const kind = junitKind(item);
+    const detail = JSON.stringify({ steps: item.steps, evidence: missing(item) });
     const properties: Record<string, unknown> = {
       runId: item.run.id,
       revisionId: item.run.revisionId,
@@ -218,6 +274,12 @@ export function exportJunit(snapshot: ReportSnapshot): string {
       passedOnRetry: item.result.passedOnRetry,
       cleanupOutcome: item.result.cleanupOutcome,
       gate: item.result.gate,
+      reproduction: item.reproduction?.degree ?? "unavailable",
+      executionReproduction: item.reproduction?.executionDegree ?? "unavailable",
+      reproductionLimitations: item.reproduction?.limitations.join(", ") ?? "unavailable",
+      systemOutTruncated: detail.length > 1024 * 1024,
+      durationSource: item.timings?.source ?? "unavailable",
+      timings: item.timings ? JSON.stringify(item.timings) : "unavailable",
     };
     const reason =
       item.result.outcome === "passed" && item.result.cleanupOutcome === "failed"
@@ -228,19 +290,25 @@ export function exportJunit(snapshot: ReportSnapshot): string {
             : item.result.gate !== "passed"
               ? "gate_failed"
               : item.result.outcome));
-    return `<testcase name="${xml(item.title)}" classname="${xml(`${item.projectId}.${item.run.testId}`)}" time="${item.durationMs / 1000}"><properties>${Object.entries(
+    return `<testcase name="${xml(item.title)}" classname="${xml(`${item.projectId}.${item.run.testId}`)}"${item.durationMs === null ? "" : ` time="${item.durationMs / 1000}"`}><properties>${Object.entries(
       properties,
     )
       .map(([name, value]) => `<property name="${xml(name)}" value="${xml(value)}"/>`)
       .join(
         "",
-      )}</properties>${kind ? `<${kind} type="${xml(reason)}" message="${xml(reason)}">${xml(missing(item).join("\n"))}</${kind}>` : ""}<system-out>${xml(JSON.stringify({ steps: item.steps, evidence: missing(item) }).slice(0, 1024 * 1024))}</system-out></testcase>`;
+      )}</properties>${kind ? `<${kind} type="${xml(reason)}" message="${xml(reason)}">${xml(missing(item).join("\n"))}</${kind}>` : ""}<system-out>${xml(detail.slice(0, 1024 * 1024))}</system-out></testcase>`;
   });
   if (syntheticError)
     cases.push(
       `<testcase name="Selection/completeness" classname="testmaster.selection"><error type="incomplete_selection" message="${xml(snapshot.selection.emptyReason ?? "No complete nonempty selection")}">${xml(JSON.stringify({ notDispatched: snapshot.selection.notDispatched, reasons: snapshot.completeness.reasons }))}</error></testcase>`,
     );
-  return `<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="${xml(snapshot.title)}" tests="${cases.length}" failures="${counts.failure}" errors="${counts.error}" skipped="${counts.skipped}" time="${snapshot.runs.reduce((sum, item) => sum + item.durationMs, 0) / 1000}"><properties><property name="gate" value="${reportGate(snapshot)}"/><property name="snapshot" value="${xml(snapshot.snapshotId)}"/><property name="excluded" value="${snapshot.selection.excluded.length}"/></properties>${cases.join("")}</testsuite></testsuites>`;
+  const suiteTime = snapshot.runs.some((item) => item.durationMs === null)
+    ? ""
+    : ` time="${snapshot.runs.reduce((sum, item) => sum + (item.durationMs ?? 0), 0) / 1000}"`;
+  const output = `<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="${xml(snapshot.title)}" tests="${cases.length}" failures="${counts.failure}" errors="${counts.error}" skipped="${counts.skipped}"${suiteTime}><properties><property name="gate" value="${reportGate(snapshot)}"/><property name="snapshot" value="${xml(snapshot.snapshotId)}"/><property name="excluded" value="${snapshot.selection.excluded.length}"/><property name="excludedMembers" value="${xml(JSON.stringify(snapshot.selection.excluded))}"/></properties>${cases.join("")}</testsuite></testsuites>`;
+  if (Buffer.byteLength(output) > 16 * 1024 * 1024)
+    throw new Error("JUnit output exceeds 16 MiB; export JSON or split the selection");
+  return output;
 }
 export function exportAllure(snapshot: ReportSnapshot): Record<string, string> {
   validateSnapshot(snapshot);

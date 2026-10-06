@@ -4,7 +4,9 @@ import { agentCommands } from "./agents.js";
 import { explorationCommands } from "./ai-execution.js";
 import { approvalCommands } from "./approvals.js";
 import { artifactCommands } from "./artifacts.js";
+import { auditCommands } from "./audit.js";
 import { backupCommands } from "./backups.js";
+import { contractCommands } from "./contracts.js";
 import { databaseCommands } from "./database.js";
 import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
@@ -54,6 +56,8 @@ export function createCli(runtime: Runtime): Command {
   reportCommands(program, runtime);
   workerCommands(program, runtime);
   backupCommands(program, runtime);
+  auditCommands(program, runtime);
+  contractCommands(program, runtime);
   databaseCommands(program, runtime);
   approvalCommands(program, runtime);
   agentCommands(program, runtime);

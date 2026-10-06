@@ -138,6 +138,8 @@ export interface JourneyMetadata {
   runner: string;
   externalDependency: string;
   limitations: string[];
+  method?: "automatic" | "human";
+  reviewer?: string;
   provider?: string;
   model?: string;
 }
@@ -148,6 +150,7 @@ export class Journey {
   readonly oracles: Json[] = [];
   readonly children = new Set<RunningCommand>();
   readonly env: NodeJS.ProcessEnv;
+  commandPrefix: string[] = [];
   private readonly diagnosticSecrets = new Set<string>();
   private constructor(
     readonly name: string,
@@ -201,11 +204,16 @@ export class Journey {
     }
     const stream = args.includes("events") && args.includes("ndjson");
     const argv = [cli, ...args, "--output", stream ? "text" : "json", "--no-color"];
-    const child = spawn(process.execPath, argv, {
-      cwd,
-      env: { ...this.env, ...env },
-      stdio: "pipe",
-    });
+    const [executable = process.execPath, ...prefixArgs] = this.commandPrefix;
+    const child = spawn(
+      executable,
+      [...prefixArgs, ...(this.commandPrefix.length ? [process.execPath] : []), ...argv],
+      {
+        cwd,
+        env: { ...this.env, ...env },
+        stdio: "pipe",
+      },
+    );
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => {
@@ -415,6 +423,12 @@ export class Journey {
             ...(this.metadata.model ? { model: this.metadata.model } : {}),
             observedAt: new Date().toISOString(),
             passed: error === undefined,
+            method: this.metadata.method ?? "automatic",
+            reviewer: this.metadata.reviewer ?? "testmaster-automated-acceptance",
+            reviewLimitations:
+              this.metadata.method === "human"
+                ? []
+                : ["Automated oracle only; no independent human sign-off implied."],
             ...(error === undefined ? {} : { error: String(error) }),
             commands: this.commands.map((command) => ({
               argv: command.argv,

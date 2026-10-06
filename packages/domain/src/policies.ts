@@ -1,4 +1,9 @@
-import { ContractError, type ErrorCode, errorRegistry } from "@testmaster/contracts";
+import {
+  ContractError,
+  type ErrorCode,
+  errorRegistry,
+  reasonRegistry,
+} from "@testmaster/contracts";
 import type { Gate, RunOutcome } from "./run.js";
 export interface BatchMember {
   key: string;
@@ -189,6 +194,21 @@ export function exitCodeForError(code: ErrorCode): number {
 }
 export function exitCodeForGate(gate: Gate, wait = true): number {
   return !wait ? 0 : gate === "passed" ? 0 : 1;
+}
+export function exitCodeForRun(
+  run: {
+    gate: Gate;
+    outcome?: RunOutcome | null | undefined;
+    reasonCode?: string | null | undefined;
+  },
+  wait = true,
+): number {
+  if (!wait) return 0;
+  if (run.gate === "passed") return 0;
+  const mapping = run.reasonCode ? reasonRegistry[run.reasonCode] : undefined;
+  if (mapping) return mapping.exit;
+  if (run.outcome === "blocked") return 9;
+  return 1;
 }
 const exitRanks: Record<number, number> = {
   3: 0,

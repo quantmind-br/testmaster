@@ -24,7 +24,7 @@ export class AgentModeService {
         "Agent mode requires an accepted generated proposal revision",
       );
   }
-  session(revisionId: string, origins: string[], signal?: AbortSignal) {
+  session(revisionId: string, origins: string[], signal?: AbortSignal, runId?: string) {
     this.authorizeRevision(revisionId);
     const revision = requireEntity(this.ctx, "TestRevision", revisionId);
     const test = requireEntity(this.ctx, "TestCase", String(revision.testId));
@@ -63,6 +63,7 @@ export class AgentModeService {
           index: number | null;
         }>({
           projectId: String(test.projectId),
+          ...(runId ? { runId } : {}),
           purpose: "resolve_action",
           responseSchema: "AgentActionSelection",
           data: { goal: plan.steps.find((step) => step.id === stepId)?.description, observation },

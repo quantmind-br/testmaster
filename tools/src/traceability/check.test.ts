@@ -83,8 +83,10 @@ describe("traceability release denials", () => {
     expect((await checkRegistry(root, [definition], { items: [item()] })).ok).toBe(true);
     expect((await checkRegistry(root, [definition], { items: [item()] }, "M0")).ok).toBe(false);
     expect(
-      (await checkRegistry(root, [definition], { items: [item({ milestone: "M2" })] }, "M1")).ok,
-    ).toBe(true);
+      (
+        await checkRegistry(root, [definition], { items: [item({ milestone: "M2" })] }, "M1")
+      ).errors.some((error) => error.includes("SEC-001")),
+    ).toBe(false);
   });
   it("rejects missing, unknown and duplicate IDs", async () => {
     const root = await temp();
@@ -110,7 +112,7 @@ describe("traceability release denials", () => {
     });
     expect((await checkRegistry(root, [definition], { items: [verified] })).ok).toBe(false);
     await writeFile(join(root, "result.json"), "{}\n");
-    expect((await checkRegistry(root, [definition], { items: [verified] }, "M0")).ok).toBe(true);
+    expect((await checkRegistry(root, [definition], { items: [verified] })).ok).toBe(true);
     expect(
       (await checkRegistry(root, [definition], { items: [item({ status: "verified" })] })).ok,
     ).toBe(false);

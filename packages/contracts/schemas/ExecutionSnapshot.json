@@ -255,6 +255,33 @@
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
+    "sourceRevisionIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "modelConfigHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "buildInputsHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "seccompHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "reproductionLimitations": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
     "sealedAt": {
       "format": "date-time",
       "pattern": "Z$",

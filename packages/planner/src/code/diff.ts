@@ -20,9 +20,16 @@ export interface DiffOptions {
   workingTree?: boolean;
   summary?: CodeSummary;
 }
-async function git(repoRoot: string, args: string[]): Promise<string> {
+async function git(
+  repoRoot: string,
+  args: string[],
+  filterOverrides: string[] = [],
+): Promise<string> {
+  // Repository reads need neither provider credentials nor operator Git configuration.
   const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+    Object.entries(process.env).filter(([key]) =>
+      ["PATH", "LANG", "LC_ALL", "TZ", "TMPDIR", "SYSTEMROOT"].includes(key),
+    ),
   );
   const result = await execFileAsync(
     "git",
@@ -30,20 +37,37 @@ async function git(repoRoot: string, args: string[]): Promise<string> {
       "-c",
       "core.hooksPath=/dev/null",
       "-c",
-      "protocol.file.allow=never",
+      "protocol.allow=never",
+      "-c",
+      "core.fsmonitor=false",
+      "-c",
+      "core.untrackedCache=false",
+      "-c",
+      "core.sshCommand=/usr/bin/false",
+      "-c",
+      "credential.helper=",
+      "-c",
+      "submodule.recurse=false",
+      "-c",
+      "diff.ignoreSubmodules=all",
       "-c",
       "diff.external=",
+      ...filterOverrides,
       ...args,
     ],
     {
       cwd: repoRoot,
       maxBuffer: 16 * 1024 * 1024,
+      timeout: 30_000,
       env: {
         ...env,
         GIT_CONFIG_NOSYSTEM: "1",
         GIT_CONFIG_GLOBAL: "/dev/null",
         GIT_OPTIONAL_LOCKS: "0",
         GIT_TERMINAL_PROMPT: "0",
+        GIT_NO_REPLACE_OBJECTS: "1",
+        GIT_ATTR_NOSYSTEM: "1",
+        GIT_PAGER: "cat",
       },
     },
   );
@@ -81,6 +105,29 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
       "Explicit --base/--head or --working-tree is required",
     );
   const root = await realpath(options.repoRoot);
+  // Working-tree diff can execute clean/process filters even with --no-textconv.
+  // Enumerate names without reading files, then disable every repository conversion driver.
+  let filterKeys: string[] = [];
+  try {
+    filterKeys = (
+      await git(root, [
+        "config",
+        "--includes",
+        "--null",
+        "--name-only",
+        "--get-regexp",
+        "^filter\\..*\\.(clean|smudge|process|required)$",
+      ])
+    )
+      .split("\0")
+      .filter(Boolean);
+  } catch (error) {
+    if (!error || typeof error !== "object" || !("code" in error) || error.code !== 1) throw error;
+  }
+  const filterOverrides = filterKeys.flatMap((key) => [
+    "-c",
+    `${key}=${key.endsWith(".required") ? "false" : ""}`,
+  ]);
   const resolveCommit = async (value: string) => {
     if (
       value.startsWith("-") ||
@@ -111,15 +158,11 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
   let dirtyHash: string | null = null;
   if (options.workingTree) {
     const dirty = parseNameStatus(
-      await git(root, [
-        "diff",
-        "--no-ext-diff",
-        "--no-textconv",
-        "--name-status",
-        "-z",
-        "HEAD",
-        "--",
-      ]),
+      await git(
+        root,
+        ["diff", "--no-ext-diff", "--no-textconv", "--name-status", "-z", "HEAD", "--"],
+        filterOverrides,
+      ),
     );
     const untracked = (await git(root, ["ls-files", "--others", "--exclude-standard", "-z"]))
       .split("\0")

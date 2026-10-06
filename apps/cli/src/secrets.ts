@@ -45,6 +45,20 @@ export function secretCommands(program: Command, runtime: Runtime): void {
   runtime.bind(group.command("list"), async (rt) => ({
     data: await (await rt.app()).secrets.list(),
   }));
+  runtime.bind(group.command("key-status"), async (rt) => ({
+    data: await (await rt.app()).secrets.keyStatus(),
+  }));
+  runtime.bind(group.command("rewrap"), async (rt) => ({
+    data: await (await rt.app()).secrets.rewrapKeys(),
+  }));
+  runtime.bind(
+    group
+      .command("retire-key <key-id>")
+      .option("--apply", "Confirm retiring a fully rewrapped key"),
+    async (rt, args, options) => ({
+      data: await (await rt.app()).secrets.retireKey(String(args[0]), options.apply !== true),
+    }),
+  );
   runtime.bind(group.command("remove <id-or-name>"), async (rt, args) => ({
     data: await (await rt.app()).secrets.remove(String(args[0])),
   }));

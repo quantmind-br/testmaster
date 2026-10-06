@@ -1,5 +1,5 @@
 import { ContractError } from "@testmaster/contracts";
-import { exitCodeForGate } from "@testmaster/domain";
+import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
 import { integer, type Runtime, seconds, string, unavailable } from "./runtime.js";
@@ -20,7 +20,12 @@ export function runCommands(program: Command, runtime: Runtime): void {
       const id = String(args[0]);
       rt.receipts.push({ runId: id, ownership: "worker" });
       const run = await waitForRun(rt, app, id, options);
-      return { data: run, exit: exitCodeForGate(run.gate) };
+      const completed = app.runs.events(id).find((event) => event.type === "run.completed");
+      const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)?.reasonCode;
+      return {
+        data: run,
+        exit: exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode }),
+      };
     },
   );
   runtime.bind(

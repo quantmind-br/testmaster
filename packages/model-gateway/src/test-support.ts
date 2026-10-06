@@ -19,7 +19,7 @@ export class TestBudgetLedger implements BudgetLedger {
   async reserve(r: BudgetReservationInput): Promise<BudgetReservationResult> {
     const amount = r.estimate === "unknown" ? 1n : BigInt(r.estimate.amount);
     if (this.spent + this.reserved + amount > this.limit)
-      return { ok: false, reasonCode: "budget_exceeded", remaining: "unknown" };
+      return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
     const id = `reservation-${this.reservations.size}-${crypto.randomUUID()}`;
     this.reservations.set(id, r.estimate);
     this.reserved += amount;
@@ -77,6 +77,7 @@ export const testRequest: ModelRequest = {
 };
 export const grantedConsent = {
   dataClasses: ["source"],
+  allowUnknownCost: true,
   grantedAt: "2026-10-05T00:00:00Z",
   revokedAt: null,
 };

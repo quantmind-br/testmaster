@@ -162,3 +162,40 @@ describe("snapshot reporters", () => {
     expect(() => exportJson(input)).toThrow("binding mismatch");
   });
 });
+
+it("bounds large JUnit output and exposes truncation without losing the gate", () => {
+  const input = snapshot();
+  const run = input.runs[0];
+  if (!run) throw new Error("Missing fixture");
+  run.steps = [{ observed: { text: "<hostile>&".repeat(200000) } }] as unknown as typeof run.steps;
+  const output = exportJunit(input);
+  expect(XMLValidator.validate(output)).toBe(true);
+  expect(output).toContain('name="systemOutTruncated" value="true"');
+  expect(output).toContain('name="gate" value="failed"');
+  expect(Buffer.byteLength(output)).toBeLessThan(16 * 1024 * 1024);
+  input.runs = Array.from({ length: 12 }, () => {
+    const member = structuredClone(run);
+    const id = uuidV7IdGenerator.next("run");
+    member.run.id = id;
+    member.result.runId = id;
+    member.snapshot.runId = id;
+    member.manifest.runId = id;
+    return member;
+  });
+  input.selection.requested = input.runs.length;
+  expect(() => exportJunit(input)).toThrow("JUnit output exceeds 16 MiB");
+});
+
+it("summarizes nonempty excludes and reasons without adding excluded members to test totals", () => {
+  const input = snapshot();
+  input.selection.excluded = [
+    { memberKey: "disabled-catalog", reasonCode: "explicit_selection_exclusion" },
+  ];
+  const output = exportJunit(input);
+  expect(output).toContain('tests="1"');
+  expect(output).toContain('name="excluded" value="1"');
+  expect(output).toContain("disabled-catalog");
+  expect(output).toContain("explicit_selection_exclusion");
+  expect(JSON.parse(exportJson(input)).selection.excluded).toEqual(input.selection.excluded);
+  expect(exportMarkdown(input)).toContain("excluded: 1");
+});

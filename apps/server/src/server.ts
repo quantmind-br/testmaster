@@ -1,11 +1,15 @@
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Readable } from "node:stream";
 import {
   type Application,
   type ArtifactStream,
   type AuthorizationIdentity,
+  auditSecurity,
   authenticateLocalToken,
+  correlationId,
   executeIdempotent,
+  OperationalLogger,
   SignedCursorCodec,
 } from "@testmaster/application";
 import {
@@ -18,6 +22,7 @@ import {
   routeCatalog,
   type TestRevisionInput,
   validate,
+  validateDocument,
 } from "@testmaster/contracts";
 import { createMcpHttpHandler } from "@testmaster/mcp";
 import fastify, {
@@ -61,7 +66,7 @@ export function registerMcpHttp(app: FastifyInstance, handler: McpHttpHandler): 
         request,
         reply,
         identity,
-        application: ctx.options.application.withIdentity(identity),
+        application: ctx.options.application.withIdentity(identity, request.id),
       });
     },
   });
@@ -90,6 +95,9 @@ export function createServer(options: ServerOptions): FastifyInstance {
     options.now ?? Date.now,
   );
   const buckets = new Map<string, { tokens: number; at: number }>();
+  // One loopback installation has one failure budget. Neither token guesses nor
+  // attacker-controlled forwarding headers can create fresh buckets.
+  const authFailures = { tokens: 20, at: (options.now ?? Date.now)() };
   app.removeContentTypeParser("application/json");
   app.addContentTypeParser("application/json", { parseAs: "buffer" }, (_request, body, done) => {
     try {
@@ -101,14 +109,52 @@ export function createServer(options: ServerOptions): FastifyInstance {
   app.addContentTypeParser("application/octet-stream", (_request, payload, done) => {
     done(null, payload);
   });
-  app.addHook("onRequest", async (request) => {
+  const logs = new OperationalLogger(
+    join(options.application.config.dataDir, "logs", "api"),
+    options.application.config.logRetentionDays,
+    options.now ?? Date.now,
+  );
+  app.addHook("onClose", async () => logs.flush());
+  app.addHook("onResponse", async (request, reply) => {
+    logs.record({
+      component: "api",
+      event: "request.completed",
+      correlationId: request.id,
+      statusCode: reply.statusCode,
+    });
+  });
+  app.addHook("onRequest", async (request, reply) => {
+    request.id = correlationId();
+    request.id = correlationId(request.headers["x-correlation-id"] ?? request.id);
+    reply.header("X-Correlation-ID", request.id);
     const origin = request.headers.origin;
     if (origin && !(options.origins ?? []).includes(origin))
       throw new ContractError("FORBIDDEN", "Origin is not allowed");
     if (request.url.split("?")[0] === "/v1/health/live") return;
     const authorization = request.headers.authorization;
     const match = typeof authorization === "string" ? /^Bearer (\S+)$/.exec(authorization) : null;
-    const identity = authenticateLocalToken(options.application, match?.[1] ?? "");
+    const authenticationNow = (options.now ?? Date.now)();
+    authFailures.tokens = Math.min(
+      20,
+      authFailures.tokens + Math.max(0, authenticationNow - authFailures.at) / 1000,
+    );
+    authFailures.at = authenticationNow;
+    if (authFailures.tokens < 1)
+      throw new ContractError("RATE_LIMITED", "Local authentication rate exceeded");
+    let identity: AuthorizationIdentity;
+    try {
+      identity = authenticateLocalToken(options.application, match?.[1] ?? "");
+    } catch (error) {
+      authFailures.tokens--;
+      throw error;
+    }
+    auditSecurity(
+      options.application.withIdentity(identity).context,
+      "auth",
+      "local-api",
+      "allowed",
+      request.id,
+    );
     identities.set(request, identity);
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       const now = Date.now();
@@ -135,6 +181,19 @@ export function createServer(options: ServerOptions): FastifyInstance {
             statusCode === 400 ? "Malformed request" : "Request failed",
           );
     const metadata = errorRegistry[failure.code];
+    if (["UNAUTHENTICATED", "FORBIDDEN", "POLICY_DENIED", "RATE_LIMITED"].includes(failure.code)) {
+      const identity = identities.get(request);
+      const context = identity
+        ? options.application.withIdentity(identity).context
+        : { ...options.application.context, principalId: "unauthenticated:local" };
+      auditSecurity(
+        context,
+        identity ? "api.authorization" : "auth",
+        "local-api",
+        "denied",
+        request.id,
+      );
+    }
     if (failure.code === "RATE_LIMITED") reply.header("Retry-After", "1");
     reply.code(metadata.httpStatus).send({
       schemaVersion: "1.0.0",
@@ -172,7 +231,9 @@ export function createServer(options: ServerOptions): FastifyInstance {
       url: `/v1${route.path.replace(/\{(\w+)\}/g, ":$1")}`,
       handler: async (request, reply) => {
         const identity = identities.get(request);
-        const service = identity ? options.application.withIdentity(identity) : options.application;
+        const service = identity
+          ? options.application.withIdentity(identity, request.id)
+          : options.application;
         if (Number(route.milestone.slice(1)) > 2)
           throw new ContractError(
             "CAPABILITY_UNAVAILABLE",
@@ -259,6 +320,19 @@ export function createServer(options: ServerOptions): FastifyInstance {
                 : null,
           };
         };
+        if (route.path === "/health/ready") {
+          const result = await service.readiness();
+          return reply
+            .code(result.status === "ready" ? 200 : 503)
+            .send({ schemaVersion: "1.0.0", requestId: request.id, data: result, warnings: [] });
+        }
+        if (route.path === "/contracts/validate")
+          return reply.send({
+            schemaVersion: "1.0.0",
+            requestId: request.id,
+            data: validateDocument(String(body.schema), body.document),
+            warnings: [],
+          });
         if (route.path === "/runs/{id}/events" || route.path === "/discovery/{id}/events") {
           const job = route.path === "/discovery/{id}/events";
           if (job) service.discovery.get(id);
@@ -473,9 +547,7 @@ function dispatch(
     case "GET /health/live":
       return { status: "alive" };
     case "GET /health/ready":
-      return app
-        .doctor()
-        .then((result) => ({ status: result.status === "PASS" ? "ready" : "unavailable" }));
+      return app.readiness();
     case "GET /capabilities":
       return app.capabilities();
     case "GET /projects":
@@ -793,6 +865,8 @@ function dispatch(
       });
     case "GET /usage":
       return app.usage.get(query.projectId, query.since);
+    case "POST /projects/{id}/budget":
+      return app.usage.setBudget(id, body as { tokens: number });
     case "GET /revisions/{id}/code": {
       const revision = app.revisions.get(id);
       return app.codeExport.export(revision.testId, {

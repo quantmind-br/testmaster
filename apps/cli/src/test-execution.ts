@@ -1,5 +1,10 @@
 import { ContractError, type Run, type RunRequest } from "@testmaster/contracts";
-import { batchExitCode, exitCodeForError, exitCodeForGate } from "@testmaster/domain";
+import {
+  batchExitCode,
+  exitCodeForError,
+  exitCodeForGate,
+  exitCodeForRun,
+} from "@testmaster/domain";
 import type { Command } from "commander";
 import { environmentId, executionOptions, receiptResult, waitForRun } from "./execution.js";
 import {
@@ -227,15 +232,25 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
           ? { runId: receipt.memberRuns[index]?.runId, run: member.value }
           : { runId: receipt.memberRuns[index]?.runId, error: errorData(member.reason) },
       );
-      const codes = settled.map((member) =>
-        member.status === "fulfilled"
-          ? exitCodeForGate(member.value.gate)
-          : member.reason instanceof CliFailure
-            ? member.reason.exit
-            : member.reason instanceof ContractError && member.reason.details.waitTimeout
-              ? 7
-              : exitCodeForError(errorData(member.reason).code),
-      );
+      const codes = settled.map((member) => {
+        if (member.status === "fulfilled") {
+          const completed = app.runs
+            .events(member.value.id)
+            .find((e) => e.type === "run.completed");
+          const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)
+            ?.reasonCode;
+          return exitCodeForRun({
+            gate: member.value.gate,
+            outcome: member.value.outcome,
+            reasonCode,
+          });
+        }
+        return member.reason instanceof CliFailure
+          ? member.reason.exit
+          : member.reason instanceof ContractError && member.reason.details.waitTimeout
+            ? 7
+            : exitCodeForError(errorData(member.reason).code);
+      });
       const batch = await app.batches.get(receipt.batchId);
       const aggregate = batch.aggregate as {
         gate: "passed" | "failed" | "pending" | "not_applicable";

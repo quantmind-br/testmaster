@@ -9,7 +9,7 @@ import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectsService } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
-import type { ServiceContext } from "../context.js";
+import { entity, type ServiceContext } from "../context.js";
 import { DiscoveryService, DockerPythonSummaryRunner } from "./discovery.js";
 import { readAiState, SourcesService, saveAiState, UploadsService } from "./sources.js";
 
@@ -323,7 +323,7 @@ describe("durable discovery", () => {
     ).rejects.toMatchObject({ code: "POLICY_DENIED" });
   });
   it("analyzes the pinned head instead of a later dirty checkout", async () => {
-    const { cwd, projectId, discovery } = await fixture();
+    const { cwd, projectId, discovery, ctx } = await fixture();
     const git = promisify(execFile);
     const run = (args: string[]) =>
       git("git", ["-C", cwd, "-c", "core.hooksPath=/dev/null", ...args]);
@@ -360,10 +360,17 @@ describe("durable discovery", () => {
     expect(pinned.summary.endpoints.map((value) => value.path)).toEqual(["/pinned-head"]);
     expect(pinned.codeSnapshot.headSha).toBe(head);
     expect(pinned.codeSnapshot.dirtyHash).toBeNull();
+    const batch = entity(ctx, "pbt", {
+      projectId,
+      sourceSnapshotId: pinned.job.inputsFingerprint,
+      state: "proposed",
+    });
+    ctx.entities.insert("ProposalBatch", batch);
     const working = await discovery.discover({ projectId, scope: "diff", base, workingTree: true });
     expect(working.summary.endpoints.map((value) => value.path)).toEqual(["/dirty-checkout"]);
     expect(working.codeSnapshot.dirtyHash).not.toBeNull();
     expect(working.job.inputsFingerprint).not.toBe(pinned.job.inputsFingerprint);
+    expect(ctx.entities.get("ProposalBatch", ctx.workspaceId, batch.id)?.state).toBe("stale");
   });
   it("reports unavailable Python honestly and never imports submitted code", async () => {
     const { cwd, projectId, discovery } = await fixture();

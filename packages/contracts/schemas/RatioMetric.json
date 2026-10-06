@@ -1,0 +1,79 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "numerator",
+    "denominator",
+    "denominatorState",
+    "state",
+    "value",
+    "definition",
+    "scope"
+  ],
+  "properties": {
+    "numerator": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "denominator": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "denominatorState": {
+      "anyOf": [
+        {
+          "const": "known",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "available",
+          "type": "string"
+        },
+        {
+          "const": "notApplicable",
+          "type": "string"
+        },
+        {
+          "const": "insufficientData",
+          "type": "string"
+        }
+      ]
+    },
+    "value": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "definition": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RatioMetric",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

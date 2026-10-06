@@ -76,6 +76,7 @@ export async function hashBuildInputs(root: string, paths: readonly string[]): P
 export async function verifyImageLock(
   path: string,
   inspectImage: (imageId: string) => Promise<string>,
+  names: readonly (keyof ImageLock)[] = ["testmaster-runner", "testmaster-runner-python"],
 ): Promise<ImageLock> {
   const lock = await readImageLock(path);
   const profileHash = createHash("sha256")
@@ -84,8 +85,8 @@ export async function verifyImageLock(
   for (const entry of Object.values(lock))
     if (entry.seccomp.profileSha256 !== profileHash)
       throw new PolicyDenied("seccomp_hash_mismatch");
-  for (const entry of Object.values(lock))
-    if ((await inspectImage(entry.imageId)) !== entry.imageId)
+  for (const name of names)
+    if ((await inspectImage(lock[name].imageId)) !== lock[name].imageId)
       throw new PolicyDenied("image_lock_mismatch");
   return lock;
 }

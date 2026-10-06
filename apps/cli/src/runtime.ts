@@ -144,6 +144,7 @@ export class Runtime {
       const configPath = string(this.options, "config");
       const profile = string(this.options, "profile");
       this.opening = Application.open({
+        correlationId: this.requestId,
         ...(cwd ? { cwd } : {}),
         ...(configPath ? { configPath: this.path(configPath) } : {}),
         ...(profile ? { profile } : {}),

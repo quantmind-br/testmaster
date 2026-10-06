@@ -48,6 +48,7 @@ async function render() {
   } else if (path === '/profile') {
     view.innerHTML = '<h2>Profile</h2><label>Profile file<input type="file" data-testid="profile-upload"></label><button data-testid="profile-download">Download profile file</button><p data-testid="upload-size"></p>';
     view.querySelector('input').onchange = async event => { const file = event.target.files[0]; if (!file) return; const result = await api('/profile/file',{method:'POST',body:file}); view.querySelector('[data-testid=upload-size]').textContent = String(result.size); };
+    console.info('profile-ready');
     view.querySelector('button').onclick = async () => { const response = await fetch('/api/profile/file',{headers:{authorization:`Bearer ${token}`}}); if (!response.ok) return toast('No profile file'); const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a');link.href=url;link.download='profile.bin';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000); };
   }
 }

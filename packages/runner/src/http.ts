@@ -35,6 +35,7 @@ export interface HttpResponse {
   headers: Record<string, string>;
   body: Uint8Array;
   url: string;
+  authenticated?: boolean;
 }
 export interface HttpEngineOptions {
   dispatcher?: Dispatcher;
@@ -66,6 +67,31 @@ const CREDENTIAL_HEADER: Record<string, true> = {
   "api-key": true,
   "set-cookie": true,
 };
+const EVIDENCE_HEADERS: Record<string, true> = {
+  "content-type": true,
+  "content-length": true,
+  "cache-control": true,
+  etag: true,
+  "last-modified": true,
+  "retry-after": true,
+};
+function failureExcerpt(runtime: Runtime, response: HttpResponse): string | null {
+  if (response.status < 400 || !response.headers["content-type"]?.includes("json")) return null;
+  try {
+    const value = parseStrictJson(response.body, response.body.byteLength);
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const fields = Object.fromEntries(
+      Object.entries(value)
+        .filter(
+          ([key, item]) => ["error", "message", "code"].includes(key) && typeof item === "string",
+        )
+        .map(([key, item]) => [key, runtime.scrub(String(item)).slice(0, 128)]),
+    );
+    return Object.keys(fields).length ? runtime.scrub(JSON.stringify(fields)).slice(0, 512) : null;
+  } catch {
+    return null;
+  }
+}
 
 function deny(message: string): never {
   throw new RuntimeError("security_precondition_failed", message);
@@ -193,6 +219,11 @@ export async function assertResponse(
         `HTTP predicate ${expectation.predicate} is unsupported`,
       );
   }
+  if (!matches && response.status === 401 && response.authenticated)
+    throw new RuntimeError(
+      "manual_auth_required",
+      "Static credentials were rejected by the target",
+    );
   if (!matches)
     throw new RuntimeError(
       "assertion_mismatch",
@@ -451,6 +482,9 @@ export class HttpEngine {
     if (remaining <= 0)
       throw new RuntimeError("execution_deadline", "Attempt deadline expired", "inconclusive");
     timeoutMs = Math.max(1, Math.floor(Math.min(timeoutMs, remaining)));
+    if (this.runtime.input.policy?.httpBodies && !this.runtime.input.policy.restrictedRaw)
+      deny("Full HTTP bodies require restricted raw authorization");
+    const started = performance.now();
     const dispatcher = this.getDispatcher();
     const prepared = await this.prepare(input);
     let resource: OwnedResource | undefined;
@@ -461,7 +495,7 @@ export class HttpEngine {
       if (
         !correlationKey ||
         correlationKey.length > 200 ||
-        runtime.scrub(correlationKey) !== correlationKey
+        runtime.scrubSecrets(correlationKey) !== correlationKey
       )
         deny("Invalid resource correlation key");
       resource = {
@@ -538,6 +572,9 @@ export class HttpEngine {
           headers: responseHeaders,
           body: Buffer.concat(chunks, bytes),
           url: url.href,
+          authenticated: Object.keys(headers).some(
+            (name) => CREDENTIAL_HEADER[name] || sensitiveInput(runtime, input.headers?.[name]),
+          ),
         };
         if (resource) {
           if (
@@ -587,12 +624,64 @@ export class HttpEngine {
           }
         }
         await this.capture(stepId, input, response);
+        const bindings: { variableRef: string; sensitive: boolean; resolved: unknown }[] = [];
+        const collectBindings = (value: unknown): void => {
+          if (!value || typeof value !== "object") return;
+          if ("variableRef" in value) {
+            const variableRef = String(value.variableRef);
+            const variable = runtime.variables.get(variableRef);
+            bindings.push({
+              variableRef,
+              sensitive: variable?.sensitive ?? false,
+              resolved: variable?.sensitive ? "[REDACTED]" : variable?.value,
+            });
+          } else for (const child of Object.values(value)) collectBindings(child);
+        };
+        collectBindings({
+          pathSegments: input.pathSegments,
+          query: input.query,
+          headers: input.headers,
+        });
+        const requestBytes =
+          typeof prepared.body === "string"
+            ? Buffer.from(prepared.body)
+            : (prepared.body ?? new Uint8Array());
         const evidence = {
-          request: { method: input.method, url: prepared.url.href, headers: prepared.headers },
+          request: {
+            method: input.method,
+            url: prepared.url.href,
+            headers: Object.fromEntries(
+              Object.entries(prepared.headers).filter(([name]) => EVIDENCE_HEADERS[name]),
+            ),
+            bodyMetadata: {
+              sha256: createHash("sha256").update(requestBytes).digest("hex"),
+              sizeBytes: requestBytes.byteLength,
+              contentType: prepared.headers["content-type"] ?? null,
+            },
+            bindings,
+          },
+          captures: (input.capture ?? []).map((capture) => {
+            const variable = runtime.variables.get(`${stepId}.${capture.name}`);
+            return {
+              name: capture.name,
+              variableRef: `${stepId}.${capture.name}`,
+              valueType: capture.valueType,
+              sensitive: variable?.sensitive ?? capture.sensitive,
+              resolved: variable?.sensitive ? "[REDACTED]" : variable?.value,
+            };
+          }),
           response: {
             status: response.status,
-            headers: response.headers,
-            body: new TextDecoder().decode(response.body),
+            headers: Object.fromEntries(
+              Object.entries(response.headers).filter(([name]) => EVIDENCE_HEADERS[name]),
+            ),
+            bodyMetadata: {
+              sha256: createHash("sha256").update(response.body).digest("hex"),
+              sizeBytes: response.body.byteLength,
+              contentType: response.headers["content-type"] ?? null,
+            },
+            failureExcerpt: failureExcerpt(runtime, response),
+            durationMs: Math.max(0, performance.now() - started),
           },
         };
         await runtime.artifact(
@@ -601,6 +690,26 @@ export class HttpEngine {
           "application/json",
           Buffer.from(runtime.scrub(JSON.stringify(evidence))),
         );
+        if (runtime.input.policy?.httpBodies === true)
+          await runtime.artifact(
+            `http/${stepId}-bodies.json`,
+            "restrictedRaw.http",
+            "application/json",
+            Buffer.from(
+              runtime.scrub(
+                JSON.stringify({
+                  request: {
+                    body: runtime.scrub(new TextDecoder().decode(requestBytes)),
+                    encoding: "utf8",
+                  },
+                  response: {
+                    body: runtime.scrub(new TextDecoder().decode(response.body)),
+                    encoding: "utf8",
+                  },
+                }),
+              ),
+            ),
+          );
         return response;
       }
     } catch (error) {

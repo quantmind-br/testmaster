@@ -165,3 +165,71 @@ it("authorizes public methods and reauthorizes every deferred release", async ()
   await expect(service.health()).rejects.toBe(denied);
   await expect(release.resolve()).rejects.toBe(denied);
 });
+
+it("SEC-036 restores real backup metadata but missing vault key denies release without replacement", async () => {
+  const { service, ctx, home, config } = await fixture();
+  const secret = await service.set("restored", "backup-canary", {
+    allowedOrigins: ["https://shop.example"],
+  });
+  const backup = join(home, "backup");
+  await ctx.database.backup(backup);
+  const isolated = join(home, "restore");
+  const restored = await PersistenceDatabase.restore(backup, isolated);
+  databases.push(restored.database);
+  await rm(join(home, ".config", "testmaster", "vault.key"));
+  const restoredService = new SecretsService(
+    { ...ctx, database: restored.database, entities: new EntityRepository(restored.database) },
+    config,
+  );
+  await expect((await restoredService.release(secret.id)).resolve()).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  });
+  await expect(stat(join(home, ".config", "testmaster", "vault.key"))).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+  expect(
+    restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+  ).toBe("suspended_restore");
+});
+
+it("SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes", async () => {
+  const { service, home } = await fixture();
+  const first = await service.set("first", "first-value", {
+    allowedOrigins: ["https://shop.example"],
+  });
+  const second = await service.set("second", "second-value", {
+    allowedOrigins: ["https://shop.example"],
+  });
+  const firstPath = join(home, ".local", "share", "testmaster", `${first.id}.1.vault`);
+  const oldBytes = await readFile(firstPath);
+  const oldKey = await readFile(join(home, ".config", "testmaster", "vault.key"));
+  const oldId = (await service.keyStatus()).activeKeyId;
+  await expect(service.retireKey(oldId, false)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  });
+  const changed = await service.rewrapKeys();
+  expect(changed.rewrapped).toBe(2);
+  expect(changed.previousKeyId).toBe(oldId);
+  expect(changed.activeKeyId).not.toBe(oldId);
+  expect(await (await service.release(first.id)).resolve()).toBe("first-value");
+  expect(await (await service.release(second.id)).resolve()).toBe("second-value");
+  expect(JSON.parse(await readFile(firstPath, "utf8")).keyId).toBe(changed.activeKeyId);
+  await writeFile(firstPath, oldBytes);
+  expect((await service.retireKey(oldId)).references).toContain(`${first.id}.1.vault`);
+  await expect(service.retireKey(oldId, false)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  });
+  await service.rewrapKeys();
+  await service.retireKey(oldId, false);
+  await expect(stat(join(home, ".config", "testmaster", `${oldId}.key`))).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+  await writeFile(firstPath, oldBytes);
+  await expect((await service.release(first.id)).resolve()).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  });
+  await writeFile(join(home, ".config", "testmaster", "vault.key"), oldKey);
+  await expect((await service.release(first.id)).resolve()).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+  });
+});

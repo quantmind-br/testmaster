@@ -5,6 +5,8 @@
     "manifest",
     "resources",
     "integrity",
+    "freshness",
+    "verificationEligible",
     "nextCursor"
   ],
   "properties": {
@@ -43,6 +45,74 @@
         "snapshotId": {
           "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
           "type": "string"
+        },
+        "executionSnapshot": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/T0"
+              }
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "$ref": "#/$defs/T0"
+                }
+              }
+            }
+          ]
+        },
+        "reproduction": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "degree",
+            "limitations"
+          ],
+          "properties": {
+            "degree": {
+              "anyOf": [
+                {
+                  "const": "evidence-replay",
+                  "type": "string"
+                },
+                {
+                  "const": "strict-execution-replay",
+                  "type": "string"
+                },
+                {
+                  "const": "fresh-llm-regeneration",
+                  "type": "string"
+                }
+              ]
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              }
+            },
+            "originalRunId": {
+              "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
         },
         "entries": {
           "type": "array",
@@ -171,6 +241,21 @@
         }
       ]
     },
+    "freshness": {
+      "anyOf": [
+        {
+          "const": "current",
+          "type": "string"
+        },
+        {
+          "const": "stale",
+          "type": "string"
+        }
+      ]
+    },
+    "verificationEligible": {
+      "type": "boolean"
+    },
     "nextCursor": {
       "anyOf": [
         {
@@ -182,7 +267,38 @@
       ]
     }
   },
-  "$defs": {},
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
   "$id": "urn:testmaster:EvidenceSummary",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

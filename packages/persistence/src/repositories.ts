@@ -1,5 +1,5 @@
 import type { SQLInputValue } from "node:sqlite";
-import { ContractError, type EntityPrefix, validate } from "@testmaster/contracts";
+import { ContractError, type EntityPrefix, type Run, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import type { PersistenceDatabase } from "./database.js";
 import { columnName, type EntityKind, immutableKinds, tableCatalog } from "./schema.js";
@@ -64,6 +64,14 @@ export class EntityRepository {
         .join(",")})`,
       ...Object.values(values),
     );
+    if (kind === "Artifact" && ["available", "partial"].includes(String(value.state))) {
+      this.database.run(
+        "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,1,?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=references_count+1,checked_at=excluded.checked_at",
+        value.workspaceId,
+        value.storageKey,
+        new Date().toISOString(),
+      );
+    }
   }
   /** Reads the constrained projection over the stored wire document after execution updates. */
   private decode<T extends EntityDocument>(kind: EntityKind, row: Record<string, unknown>): T {
@@ -168,6 +176,28 @@ export class OutboxRepository {
   ): { id: string; seq: number } {
     if (!this.database.db.isTransaction)
       throw new Error("Outbox append requires a state transaction");
+    const correlatedRun = this.database.get(
+      "SELECT data_json FROM runs WHERE workspace_id=? AND id=? UNION SELECT r.data_json FROM runs r JOIN job_leases j ON j.workspace_id=r.workspace_id AND j.resource_id=r.id WHERE j.workspace_id=? AND j.id=? LIMIT 1",
+      workspaceId,
+      aggregateId,
+      workspaceId,
+      aggregateId,
+    );
+    const correlated = correlatedRun
+      ? validate<Run>("Run", JSON.parse(String(correlatedRun.data_json)))
+      : undefined;
+    const cell = correlated?.matrixCell;
+    const correlation =
+      cell &&
+      typeof cell === "object" &&
+      !Array.isArray(cell) &&
+      typeof cell.correlationId === "string"
+        ? cell.correlationId
+        : undefined;
+    const correlatedPayload =
+      correlation && payload && typeof payload === "object" && !Array.isArray(payload)
+        ? { ...payload, correlationId: correlation }
+        : payload;
     const seq = Number(
       this.database.get(
         "SELECT COALESCE(MAX(seq),-1)+1 AS seq FROM outbox WHERE workspace_id=? AND aggregate_id=?",
@@ -185,7 +215,7 @@ export class OutboxRepository {
       seq,
       type,
       id,
-      canonicalJson(payload),
+      canonicalJson(correlatedPayload),
     );
     return { id, seq };
   }
@@ -301,7 +331,7 @@ export class LeaseRepository {
     now?: string;
     runIds?: readonly string[];
   }): (Fence & { runId: string; expiresAt: string; number: number }) | null {
-    return this.database.withTx(() => {
+    const claim = () => {
       if (
         this.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value !==
         "enabled"
@@ -363,7 +393,8 @@ export class LeaseRepository {
         expiresAt,
         number,
       };
-    });
+    };
+    return this.database.db.isTransaction ? claim() : this.database.withTx(claim);
   }
   assertCurrent(fence: Fence, now = new Date().toISOString()): void {
     const current = this.database.get(
@@ -473,11 +504,12 @@ export class ExecutionRepository {
         fence.attemptId,
       );
       this.database.run(
-        "UPDATE runs SET phase=?,status=? WHERE workspace_id=? AND id=? AND phase<>'completed'",
+        "UPDATE runs SET phase=?,status=? WHERE workspace_id=? AND id=? AND phase<>'completed' AND instr('queued preparing running collecting analyzing completed',phase)<=instr('queued preparing running collecting analyzing completed',?)",
         phase,
         phase,
         fence.workspaceId,
         attempt.run_id,
+        phase,
       );
       this.outbox.append(fence.workspaceId, String(attempt.run_id), "run.phase_changed", {
         phase,
@@ -517,7 +549,7 @@ export class ExecutionRepository {
     kind: "StepResult" | "ResourceRecord" | "VariableValue" | "Artifact" | "Snapshot",
     value: EntityDocument,
   ): void {
-    this.database.withTx(() => {
+    const publish = () => {
       this.leases.assertCurrent(fence);
       if (value.workspaceId !== fence.workspaceId) throw new StaleFenceError();
       const attempt = this.database.get(
@@ -533,7 +565,9 @@ export class ExecutionRepository {
       )
         throw new StaleFenceError();
       new EntityRepository(this.database).insert(kind, value);
-    });
+    };
+    if (this.database.db.isTransaction) publish();
+    else this.database.withTx(publish);
   }
   finalize(fence: Fence, next: EntityDocument): boolean {
     return this.database.withTx(() => {
