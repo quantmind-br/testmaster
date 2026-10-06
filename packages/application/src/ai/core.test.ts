@@ -332,7 +332,7 @@ it("subset retries and concurrent duplicates create only selected generated revi
   expect(rejection.retained).toEqual([]);
   expect(f.app.proposals.get(batch.id).state).toBe("accepted");
 });
-it("backend generation rejects frontend plans and sends evidence locators with handles", async () => {
+it("plan generation enforces requested or auto-chosen type/runner pairs with evidence locators", async () => {
   const f = await fixture();
   await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must report ok.");
   const source = await f.app.sources.add({
@@ -388,6 +388,24 @@ it("backend generation rejects frontend plans and sends evidence locators with h
   expect(f.app.proposals.detail(batch.id).proposals[0]?.evidenceRefs).toEqual(
     requirement.sourceRefs,
   );
+  f.setOutput(proposal("frontend"));
+  const auto = await f.app.proposals.generate({ projectId: f.projectId, type: "auto" });
+  expect(f.app.proposals.detail(auto.id).proposals[0]?.plan).toMatchObject({
+    type: "frontend",
+    runner: "playwright",
+  });
+  const integration = proposal("frontend");
+  const [candidate] = integration.proposals;
+  if (!candidate) throw new Error("Missing proposal fixture");
+  candidate.plan.type = "integration";
+  f.setOutput(integration);
+  await expect(
+    f.app.proposals.generate({ projectId: f.projectId, type: "auto" }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: "Generated proposals must be backend/http or frontend/playwright plans",
+  });
+  expect(f.app.proposals.list(f.projectId)).toHaveLength(2);
 });
 it("rejects trivial body visibility as a generated business oracle", () => {
   const plan = scaffoldPlan("frontend");
@@ -503,6 +521,7 @@ it("wrong code inference cannot be laundered into an approved PRD oracle", async
   if (!wrong) throw new Error("Missing code-derived requirement");
   expect(wrong).toMatchObject({ originKind: "inferred", approval: null });
   expect(normalized.conflicts).toHaveLength(1);
+  expect(normalized.conflicts[0]?.requirementIds).toEqual([wrong.id]);
   expect(normalized.conflicts[0]?.sourceRefs).toEqual(
     expect.arrayContaining([desired.chunks[0]?.evidenceRef, code.chunks[0]?.evidenceRef]),
   );
@@ -513,6 +532,9 @@ it("wrong code inference cannot be laundered into an approved PRD oracle", async
     f.app.proposals.generate({ projectId: f.projectId, requirementIds: [wrong.id] }),
   ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
   expect(f.app.tests.list(f.projectId)).toHaveLength(0);
+  const right = normalized.requirements.find((value) => value.text === "Healthy is true");
+  if (!right) throw new Error("Missing desired requirement");
+  expect(f.app.requirements.approve(right.id, right.version ?? 1).approval).not.toBeNull();
 });
 
 it("source and code updates supersede descendants without mutating immutable test revisions", async () => {

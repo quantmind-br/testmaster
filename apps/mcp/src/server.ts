@@ -17,6 +17,7 @@ import {
   type Application,
   correlationId,
   entity,
+  type PlanGenerationType,
   SignedCursorCodec,
 } from "@testmaster/application";
 import {
@@ -485,7 +486,7 @@ export class TestMasterMcp {
         return app.proposals.generate({
           projectId: String(args.projectId),
           sourceSnapshotId: String(args.sourceSnapshotId),
-          type: args.type as "frontend" | "backend",
+          type: args.type as PlanGenerationType,
           budget: args.budget as { deadlineMs?: number },
           signal,
         });

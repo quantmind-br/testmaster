@@ -574,7 +574,7 @@ export async function runEvaluation(
         let batch: Json;
         try {
           batch = await command(
-            ["plan", "generate", "--type", "backend", "--requirement", String(requirement.id)],
+            ["plan", "generate", "--type", "auto", "--requirement", String(requirement.id)],
             true,
           );
         } catch (error) {

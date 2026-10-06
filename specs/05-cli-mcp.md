@@ -118,7 +118,7 @@ Usar SDK oficial e versão do protocolo **negociada**, pinada no release testado
 | `testmaster_analyze_code` | projectId, root, base/head/dirty flag | CodeSnapshot e feature refs, ignores e warnings |
 | `testmaster_normalize_requirements` | projectId, sourceRevisionIds | requirement snapshot/conflicts |
 | `testmaster_explore` | projectId, envId, featureIds, budget | jobId, partial progress refs |
-| `testmaster_generate_plan` | projectId, sourceSnapshotId, type, budget | proposalBatchId, warnings, readiness |
+| `testmaster_generate_plan` | projectId, sourceSnapshotId, type (`frontend`/`backend`/`auto`; `integration` em M3), budget | proposalBatchId, warnings, readiness |
 | `testmaster_review_plan` | batchId, expectedVersion, acceptIds/rejectIds | accepted test IDs e retained IDs |
 | `testmaster_generate_tests` | proposalIds/revisionIds, budget | candidatas, validation errors; não passed |
 | `testmaster_run_tests` | testIds/suiteId, environmentId, mode, limits | run/batch receipt, requires explicit authority for mutations |

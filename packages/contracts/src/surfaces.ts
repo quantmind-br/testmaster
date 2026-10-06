@@ -300,7 +300,7 @@ export const mcpTools = {
     input: Obj({
       projectId: id("prj"),
       sourceSnapshotId: Name,
-      type: Enum(["frontend", "backend", "integration"]),
+      type: Enum(["frontend", "backend", "auto", "integration"]),
       budget: Json,
     }),
     output: "ProposalBatch",

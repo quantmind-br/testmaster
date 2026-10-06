@@ -790,11 +790,16 @@ function dispatch(
       return app.discovery.cancel(id);
     case "POST /projects/{id}/proposal-batches": {
       const scope = body.scope as string[];
-      if (scope.length > 1 || scope.some((type) => type !== "frontend" && type !== "backend"))
+      if (
+        new Set(scope).size !== scope.length ||
+        scope.some((type) => type !== "frontend" && type !== "backend")
+      )
         throw new ContractError(
           "INVALID_ARGUMENT",
-          "Proposal scope must select frontend or backend",
+          "Proposal scope must select distinct frontend and/or backend types",
         );
+      // Both types let the model choose per requirement; none keeps the backend default.
+      const type = scope.length === 2 ? "auto" : (scope[0] as "frontend" | "backend" | undefined);
       const refs = body.inputRefs as { sourceRevisionId?: string }[];
       const requirementIds = refs.length
         ? app.requirements
@@ -810,7 +815,7 @@ function dispatch(
         projectId: id,
         idempotencyKey: execution.key,
         budget: body.budget as { deadlineMs?: number },
-        ...(scope[0] ? { type: scope[0] as "frontend" | "backend" } : {}),
+        ...(type ? { type } : {}),
         ...(requirementIds ? { requirementIds } : {}),
       });
     }

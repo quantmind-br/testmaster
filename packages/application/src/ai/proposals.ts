@@ -27,6 +27,8 @@ import type { RequirementsService } from "./requirements.js";
 
 type StoredProposal = Proposal & EntityDocument;
 type StoredBatch = ProposalBatch & EntityDocument;
+export type PlanGenerationType = "frontend" | "backend" | "auto";
+const planRunners = { backend: "http", frontend: "playwright" } as const;
 export interface ProposalReceipt {
   accepted: string[];
   retained: string[];
@@ -41,7 +43,8 @@ export class ProposalsService {
   async generate(input: {
     projectId: string;
     sourceSnapshotId?: string;
-    type?: "frontend" | "backend";
+    /** `auto` lets the model choose frontend or backend per requirement; absent means backend. */
+    type?: PlanGenerationType;
     requirementIds?: string[];
     provider?: string;
     model?: string;
@@ -94,7 +97,11 @@ export class ProposalsService {
       requirements.flatMap((item) => item.sourceRefs) as SourceEvidenceRef[],
     );
     const type = input.type ?? "backend";
-    const runner = type === "backend" ? "http" : "playwright";
+    const allowed = type === "auto" ? (["backend", "frontend"] as const) : [type];
+    const typeInstruction =
+      type === "auto"
+        ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI.'
+        : `Every plan must have type "${type}" and runner "${planRunners[type]}".`;
     const output = await this.model.complete<unknown>({
       projectId: input.projectId,
       purpose: "plan",
@@ -111,7 +118,7 @@ export class ProposalsService {
         type,
         sourceSnapshotId: snapshot.fingerprint,
       },
-      instructions: `Return exactly one independent executable proposal per supplied requirement, not an intent. Every plan must have type "${type}" and runner "${runner}". Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
+      instructions: `Return exactly one independent executable proposal per supplied requirement, not an intent. ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
       sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
       dataClasses: ["requirements"],
       ...input.budget,
@@ -124,10 +131,18 @@ export class ProposalsService {
       requirements.map((item) => item.id),
       catalog,
     );
-    if (generated.proposals.some(({ plan }) => plan.type !== type || plan.runner !== runner))
+    if (
+      generated.proposals.some(
+        ({ plan }) =>
+          !(allowed as readonly string[]).includes(plan.type) ||
+          plan.runner !== planRunners[plan.type as keyof typeof planRunners],
+      )
+    )
       throw new ContractError(
         "INVALID_ARGUMENT",
-        `Generated proposals must be ${type} plans using the ${runner} runner`,
+        type === "auto"
+          ? "Generated proposals must be backend/http or frontend/playwright plans"
+          : `Generated proposals must be ${type} plans using the ${planRunners[type]} runner`,
       );
     if (
       generated.proposals.length !== requirements.length ||

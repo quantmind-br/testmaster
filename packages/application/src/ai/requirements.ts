@@ -124,9 +124,12 @@ export class RequirementsService {
           desired.length &&
           !conflicts.some((conflict) => conflict.requirementIds.includes(item.id))
         )
+          // Only the inference is blocked until a reviewer adjudicates it; desired contract
+          // statements stay approvable and are attached as reconciliation evidence. Listing them
+          // as members let one inference block (or, once adjudicated, supersede) the whole PRD.
           conflicts.push({
             id: `conflict-${conflicts.length + 1}`,
-            requirementIds: [item.id, ...desired.map((value) => value.id)],
+            requirementIds: [item.id],
             reason:
               "Implementation inference requires reconciliation with the desired contract before use as an oracle",
             sourceRefs: [

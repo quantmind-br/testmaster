@@ -1,3 +1,4 @@
+import type { PlanGenerationType } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import {
@@ -27,7 +28,12 @@ export function planCommands(program: Command, runtime: Runtime): void {
     group
       .command("generate")
       .option("--source-snapshot <id>")
-      .addOption(new Option("--type <type>").choices(["frontend", "backend"]))
+      .addOption(
+        new Option(
+          "--type <type>",
+          "Plan type; auto lets the model choose per requirement",
+        ).choices(["frontend", "backend", "auto"]),
+      )
       .option("--requirement <id>", "Requirement (repeatable)", collect)
       .option("--provider <id>")
       .option("--model <id>"),
@@ -38,7 +44,7 @@ export function planCommands(program: Command, runtime: Runtime): void {
           ? { sourceSnapshotId: required(options, "sourceSnapshot") }
           : {}),
         ...(string(options, "type")
-          ? { type: required(options, "type") as "frontend" | "backend" }
+          ? { type: required(options, "type") as PlanGenerationType }
           : {}),
         ...(options.requirement !== undefined
           ? { requirementIds: strings(options, "requirement") }

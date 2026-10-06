@@ -272,8 +272,12 @@ real normalization, proposal generation and code export. Observations are retain
 
 Requirements preserve conflicting source refs; reviewers adjudicate conflicts and explicitly approve
 selected requirements. Generated executable proposals need typed nontrivial assertions and grounded
-refs, and must match the requested `--type` (`backend` → `http`, `frontend` → `playwright`);
-any other plan rejects the batch. Generation sees each requirement's evidence locators (path,
+refs, and must match the requested `--type` (`backend` → `http`, `frontend` → `playwright`;
+absent means `backend`). `--type auto` (MCP `type: "auto"`, REST `scope: ["frontend","backend"]`)
+lets the model choose per requirement but still requires one of those two pairs; integration
+planning stays unavailable until M3. Any other plan rejects the batch. The evaluator generates
+with `auto` so UI-only requirements are not forced into invented HTTP endpoints, as observed in
+Round 6. Generation sees each requirement's evidence locators (path,
 JSON pointer) next to its handle but cites only handles.
 `plan accept --only ... --expected-version N --idempotency-key KEY` atomically creates only
 selected generated revisions and preserves retained proposals. Edits are CAS and return a diff on
@@ -358,7 +362,10 @@ compensation preserves the owning Run's original verdict and records a separate 
   no video. Updating a source or discovery fingerprint clears descendant requirement approvals and
   makes retained proposal batches stale, without rewriting immutable revisions or pinned Runs.
   Code-role source inference cannot acquire explicit authority from model output; conflicting
-  implementation versus desired PRD remains subject to reviewer adjudication.
+  implementation versus desired PRD remains subject to reviewer adjudication. An inferred
+  requirement the model did not link to a conflict gets a single-member reconciliation conflict
+  carrying the desired-contract evidence: only the inference is blocked until adjudicated, so one
+  inference cannot block or supersede the desired requirements (Round 6 trial-08 approved 0/36).
 - `test run --mode agent --revision REV` requires an accepted generated proposal. Resolution
   flags name existing action steps; the model chooses only typed actions grounded in sanitized
   browser observations. Assertions remain deterministic and immutable. A passing agent Attempt
