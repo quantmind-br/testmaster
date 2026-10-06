@@ -63,7 +63,7 @@ let error;
 try {
   await run("git", ["clone", "--no-local", source, checkout], source);
   const commit = (await run("git", ["rev-parse", "HEAD"])).trim();
-  // Reuse the operator's populated pnpm store, not its config, credentials or HOME.
+  // Reuse dependency bytes and registry metadata, never operator config or credentials.
   const storeEnv = { ...env, HOME: process.env.HOME };
   const { promise, resolve: done, reject } = Promise.withResolvers();
   const storeCommand = spawn("pnpm", ["store", "path"], {
@@ -81,7 +81,18 @@ try {
     code === 0 ? done() : reject(new Error("Cannot locate offline store")),
   );
   await promise;
-  await run("pnpm", ["install", "--frozen-lockfile", "--offline", "--store-dir", store.trim()]);
+  const cache = process.env.XDG_CACHE_HOME
+    ? join(process.env.XDG_CACHE_HOME, "pnpm")
+    : join(process.env.HOME, ".cache", "pnpm");
+  await run("pnpm", [
+    "install",
+    "--frozen-lockfile",
+    "--offline",
+    "--store-dir",
+    store.trim(),
+    "--cache-dir",
+    cache,
+  ]);
   await run("pnpm", ["build"]);
   await run("pnpm", ["test"]);
   const cli = join(checkout, "apps/cli/dist/main.js");
