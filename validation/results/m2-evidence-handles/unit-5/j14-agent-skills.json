@@ -1,0 +1,1898 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "J14",
+  "observedAt": "2026-10-06T20:00:58.095Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Filesystem/CLI checks only; vendor clients not launched and no human sign-off."
+  ],
+  "class": "deterministic-e2e",
+  "runner": "built-cli-node",
+  "externalDependency": "none",
+  "targets": [
+    {
+      "target": "claude",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "codex",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "cursor",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "cline",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "windsurf",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "copilot",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "kiro",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    },
+    {
+      "target": "antigravity",
+      "passed": true,
+      "checks": [
+        "preview",
+        "backup_modes",
+        "old_upgrade",
+        "foreign_bytes",
+        "instruction_drift",
+        "skill_drift",
+        "owned_uninstall",
+        "duplicate_markers",
+        "file_symlink",
+        "parent_symlink",
+        "concurrent_cli_processes"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "claude",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "claude",
+          "reasonCode": "managed_drift",
+          "path": "CLAUDE.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "claude",
+          "reasonCode": "managed_drift",
+          "path": ".claude/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "claude",
+          "reasonCode": "duplicate_markers",
+          "path": "CLAUDE.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "claude",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "claude",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "codex",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "codex",
+          "reasonCode": "managed_drift",
+          "path": "AGENTS.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "codex",
+          "reasonCode": "managed_drift",
+          "path": ".agents/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "codex",
+          "reasonCode": "duplicate_markers",
+          "path": "AGENTS.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "codex",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "codex",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "codex",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "File changed since preview",
+        "details": {
+          "target": "codex",
+          "reasonCode": "stale_preview",
+          "path": "AGENTS.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "cursor",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "cursor",
+          "reasonCode": "managed_drift",
+          "path": ".cursor/rules/testmaster.mdc"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "cursor",
+          "reasonCode": "managed_drift",
+          "path": ".cursor/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "cursor",
+          "reasonCode": "duplicate_markers",
+          "path": ".cursor/rules/testmaster.mdc"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "cursor",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "cursor",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "File changed since preview",
+        "details": {
+          "target": "cursor",
+          "reasonCode": "stale_preview",
+          "path": ".cursor/rules/testmaster.mdc"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cursor",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "cline",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "cline",
+          "reasonCode": "managed_drift",
+          "path": ".cline/rules/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "cline",
+          "reasonCode": "managed_drift",
+          "path": ".cline/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "cline",
+          "reasonCode": "duplicate_markers",
+          "path": ".cline/rules/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "cline",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "cline",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "cline",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "windsurf",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "windsurf",
+          "reasonCode": "managed_drift",
+          "path": ".windsurf/rules/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "windsurf",
+          "reasonCode": "managed_drift",
+          "path": ".windsurf/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "windsurf",
+          "reasonCode": "duplicate_markers",
+          "path": ".windsurf/rules/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "windsurf",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "windsurf",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "windsurf",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "File changed since preview",
+        "details": {
+          "target": "windsurf",
+          "reasonCode": "stale_preview",
+          "path": ".windsurf/rules/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "copilot",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "copilot",
+          "reasonCode": "managed_drift",
+          "path": ".github/copilot-instructions.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "copilot",
+          "reasonCode": "managed_drift",
+          "path": ".github/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "copilot",
+          "reasonCode": "duplicate_markers",
+          "path": ".github/copilot-instructions.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "copilot",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "copilot",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "copilot",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "kiro",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "kiro",
+          "reasonCode": "managed_drift",
+          "path": ".kiro/steering/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "kiro",
+          "reasonCode": "managed_drift",
+          "path": ".kiro/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "kiro",
+          "reasonCode": "duplicate_markers",
+          "path": ".kiro/steering/testmaster.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "kiro",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "kiro",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "kiro",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "status",
+        "--target",
+        "antigravity",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "antigravity",
+          "reasonCode": "managed_drift",
+          "path": "GEMINI.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "antigravity",
+          "reasonCode": "managed_drift",
+          "path": ".agent/skills/testmaster/SKILL.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "remove",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Managed content is not safe to modify",
+        "details": {
+          "target": "antigravity",
+          "reasonCode": "duplicate_markers",
+          "path": "GEMINI.md"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "antigravity",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unsafe workspace path or file type",
+        "details": {
+          "target": "antigravity",
+          "reasonCode": "unsafe_path"
+        },
+        "retryable": false,
+        "nextActions": []
+      }
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "antigravity",
+        "--yes",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "agent",
+        "install",
+        "--target",
+        "claude",
+        "--yes",
+        "--dry-run",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "requirements": [
+    "REQ-031",
+    "INT-034",
+    "INT-035",
+    "INT-036",
+    "INT-037",
+    "INT-038",
+    "INT-039",
+    "SEC-017"
+  ],
+  "mcpAuthorization": {
+    "owner": "W4CMcp",
+    "evidence": "apps/mcp/src/mcp.test.ts",
+    "status": "separately_covered_not_exercised_by_this_journey"
+  },
+  "limitations": [
+    "Linux filesystem/CLI behavior only; vendor clients not launched.",
+    "Atomic update is per file; proprietary client invocation is not execution proof.",
+    "MCP scope denial belongs to the MCP acceptance suite, not this CLI run."
+  ]
+}

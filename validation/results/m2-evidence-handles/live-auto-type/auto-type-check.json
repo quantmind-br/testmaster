@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "targeted-live-check-not-benchmark",
+  "observedAt": "2026-10-06",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "reasoningEffort": "medium",
+  "command": "testmaster plan generate --type auto --requirement ID (one requirement per call)",
+  "sources": [
+    "fixtures/reference-shop/artifacts/PRD.md",
+    "fixtures/reference-shop/artifacts/openapi.yaml"
+  ],
+  "normalization": {
+    "requirements": 35,
+    "conflictMemberCounts": [
+      2
+    ],
+    "inferred": 0
+  },
+  "proposals": [
+    {
+      "requirementId": "req_01a112c7-760b-73ca-822e-c1162bec8337",
+      "requirement": "Submitting an empty password shows exactly \"Password is required\" and creates no authenticated session.",
+      "type": "frontend",
+      "runner": "playwright",
+      "validation": "valid",
+      "steps": [
+        "navigate",
+        "fill",
+        "click",
+        "waitFor",
+        "assert",
+        "assert"
+      ]
+    },
+    {
+      "requirementId": "req_01a112c7-7611-70ba-9031-12ccfb3ff645",
+      "requirement": "Order endpoints require a bearer token; requests without it return HTTP 401.",
+      "type": "backend",
+      "runner": "http",
+      "validation": "valid",
+      "steps": [
+        "request",
+        "assert"
+      ]
+    },
+    {
+      "requirementId": "req_01a112c7-7611-70ba-9031-22b994203e75",
+      "requirement": "A successful checkout persists an order that remains visible after a page reload.",
+      "type": "frontend",
+      "runner": "playwright",
+      "validation": "valid",
+      "steps": [
+        "navigate",
+        "click",
+        "waitFor",
+        "navigate",
+        "assert"
+      ]
+    },
+    {
+      "requirementId": "req_01a112c7-7611-70ba-9031-32f3d19bce85",
+      "requirement": "GET /health returns HTTP 200 with JSON body status \"ok\".",
+      "type": "backend",
+      "runner": "http",
+      "validation": "valid",
+      "steps": [
+        "request",
+        "assert",
+        "assert"
+      ]
+    },
+    {
+      "requirementId": "req_01a112c7-7612-7745-82e3-ff243a8e6ad6",
+      "requirement": "A same-origin delivery iframe supports both Standard and Express shipping methods.",
+      "type": "frontend",
+      "runner": "playwright",
+      "validation": "valid",
+      "steps": [
+        "navigate",
+        "waitFor",
+        "assert",
+        "frame",
+        "assert"
+      ]
+    }
+  ],
+  "passed": true,
+  "limitations": [
+    "Generation only: plans were not replayed against the reference shop",
+    "No inferred requirement occurred in this normalization; scoped reconciliation conflicts are covered by the unit regression",
+    "Not a preregistered round; no detection or quality claim"
+  ]
+}
