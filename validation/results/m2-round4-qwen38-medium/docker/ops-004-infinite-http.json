@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "ops-004-infinite-http",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:18:40.560Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "ops-004-infinite-http",
+        "--base-url",
+        "http://127.0.0.1:33331",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b7c8f8e5-4af3-4090-a2a3-a4c076592e99",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-3g7Hfy/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0b152806-0eb7-4b8e-8441-6e1704a3c85e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115d-beca-76eb-9f77-1ef9f3f50ac0",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_e69cc72d-0dea-47d5-8be9-b7c5305ca874",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115d-c208-7482-8188-f0cd09faa3b7"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "infiniteStreamDisconnected",
+      "healthy": true,
+      "bytesProduced": 15269888,
+      "closed": true,
+      "exitCode": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

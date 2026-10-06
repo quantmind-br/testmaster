@@ -1,0 +1,1519 @@
+{
+  "schemaVersion": "1.0.0",
+  "configuration": {
+    "provider": {
+      "id": "quantforge",
+      "kind": "openai-compatible",
+      "baseUrl": "https://api.quantforge.com.br/v1",
+      "apiKeyEnv": "QUANTFORGE_API_KEY",
+      "model": "qwen3.8-flash",
+      "prices": null,
+      "snapshot": "Unavailable: provider can change remote weights without a versioned snapshot",
+      "executionDependencyStatus": "Operator authorized this exact endpoint/model with QUANTFORGE_API_KEY; no new inventory probe or immutable remote snapshot is claimed."
+    },
+    "reasoningEffort": "medium",
+    "outputReservationTokens": 8192,
+    "generationControlsOmitted": [
+      "max_tokens",
+      "max_completion_tokens",
+      "temperature",
+      "top_p",
+      "seed",
+      "presence_penalty",
+      "frequency_penalty",
+      "enable_thinking",
+      "tools"
+    ]
+  },
+  "implementationCommit": "116f682e197727e867f2b4937caacbbb0be37fc8",
+  "registration": {
+    "path": "evals/rounds/m2-round4-qwen38-medium/preregistration.json",
+    "sha256": "eeaf857c00cf9244cc86b684152bb113785711f5d47fd4f36b8683f422fd6267",
+    "frozenFiles": {
+      "fixtures/reference-shop/artifacts/PRD.md": "77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b",
+      "fixtures/reference-shop/artifacts/openapi.yaml": "a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881",
+      "fixtures/reference-shop/oracle/index.js": "c2923499f9f20653ab0be8ac296039fd2b3f8f21a7cfc05acf0a1d888499d531",
+      "packages/application/src/ai/model.ts": "4e013a7fe209ae99f575e291a5b9d7f44c770512587979dda3b5b82fdc2bd64b",
+      "packages/model-gateway/src/gateway.ts": "5874bde8147ef6ea96bdcc8375fb3ce1b7740f8ec7df4a6a942ed83f15f1817f",
+      "packages/application/src/ai/requirements.ts": "b767ac35931dc9b0e4f75e2a3ff631951bae9c5907f5d721274af0810056a077",
+      "packages/application/src/ai/proposals.ts": "40329ad90f73d379d056fa740f65ef0e677e2283d997d863635571de511fedd8",
+      "packages/application/src/ai/normalization.ts": "f740d1656075d03e2a1433857ec9226953a1afbccac6529ae76ea3cb62d3896b",
+      "tools/src/evals/run.ts": "26f18360b4dd7e9ad91cd922ebad3453b3bcb95d31caa1f86764d375fb565984",
+      "tools/src/evals/freeze.ts": "4a24dba716902074a1d7ee8b890be743479f865c095c395e0db9dbd55c3589c3",
+      "tools/src/evals/scoring.ts": "f0394127feabf72305a84318ca69b8a53ff30db4733e8ba385fa2ae76cfa5e42",
+      "evals/fixture.mjs": "c0963c1987f358bc5e73a4f2cf5735fad2e8810ece11a60c67d023104881a3cc",
+      "packages/application/src/runs.ts": "2f6239ec65cdaf608774e02f15b5e14ff86dd1e4595e324d11eb9550a34e0050",
+      "packages/application/src/worker.ts": "69a1fd7ec30c410b4e51de3db365b87445075c3b0aef29c7b258e870bf6c9de9",
+      "packages/application/src/provenance.ts": "102e4b9b67fc61e57de1a487d50e55c734c8216a52d5cc174462cf99ede8c1ec",
+      "packages/application/src/ai/sources.ts": "69ac61dcb3c1aa0763d8ed3cd1f7d3fa27a30bca94e62662809847fb47488a27",
+      "packages/application/src/ai/discovery.ts": "c51fca3873ff4477baa60ab0b842bf3547c197fde8e0c0e7d673c936312df49b",
+      "packages/application/src/ai/usage.ts": "eb264ccaf1670e3df872640e09c30ce7a609e7d679bd64a318f2cbd387e2d8de",
+      "packages/application/src/config.ts": "a375b7c58c620d76615998b4559f1937e6ceafe6c09171366cb8d55b0b563b13",
+      "packages/model-gateway/src/provider.ts": "e233e8883a172aebf10c71927aaefffc86f8a17fd85530fb1a305d6484e442a8",
+      "packages/persistence/src/usage.ts": "b5018636e06598f599da6d64875073a5d4a25625b599e0baedd40134eaf60531",
+      "packages/persistence/src/repositories.ts": "b5c5d0e9cbafd63165d05906c7efc392764f3ce04b90c41a76f7e0bb019a5fc7",
+      "packages/persistence/src/database.ts": "04f296faa792b22d57fbc0891551cc2ad60ca0affbde390e68e19d97fa9a74c8",
+      "packages/contracts/src/catalog.ts": "d70473c466c1e6c449f08efbeb0ecf16edac24174453bb7ec917275eaebfc2f1",
+      "packages/contracts/src/validation.ts": "d11a8fa116767eb914ed55ccde60c66d9c6154839758552e3ffa03adc8d1db61",
+      "packages/contracts/src/protocol.ts": "c755e067f4970bdc0ecf1b8267b03ac5da08730178a76dfc956a4f1d5197c2a5",
+      "packages/contracts/src/operations.ts": "e5bae73cf01776a8031d269eb4ea2c823a5fc0757cd508d0488e2b928796f288",
+      "packages/contracts/src/registries.ts": "9efbb42ade6e6d9b7d614cc1300a95453a1c842bfc79df4ec1ab5931b1577631",
+      "packages/runner/src/http.ts": "85158657b7554bdc8dcfb790a981b87b2fcb4d58c1a0d7611f3edd6e5864a355",
+      "packages/runner/src/runtime.ts": "6b29df57bd0368f5dcdf63749fe28f4647645a650dd1c15715a0a28be74664f6",
+      "packages/runner/src/browser.ts": "c8b41a082ad44e6e31335021541689dfb7e6cb1096e1f4c15267ab3e1f25d4cf",
+      "packages/sandbox/src/attempt/executor.ts": "2cb018789129d162a20ade56105ab0e151f060dac3b93ffccb96f95acf7c79b6",
+      "packages/sandbox/src/docker/executor.ts": "db197931a324bc927b9ea075cf242aba1e192c9090dbde0c801d28bd377ec799",
+      "packages/planner/src/requirements/index.ts": "cbdb24333669f37f94540634d373fa5638cdd35682185fa5e933c1ae4167bde8",
+      "packages/planner/src/proposals/index.ts": "770c383d226843c7d04f1b4b12a53e22d948580b47311156f6044db85963076a",
+      "apps/cli/src/usage.ts": "b949a68df7c5b9960043ade018a64c1ecf7f7aed12e52f6924c21f4d9273923d",
+      "apps/cli/src/requirements.ts": "b4599c76ac3bb9150d65d7ef7ec95569fb8fd93b8744e5eca939721e7c12e629",
+      "apps/cli/src/plans.ts": "2b3e355f4ecf16aac280afe5ff68413a118a47b665473efa98a787aea4e0bb55",
+      "apps/cli/src/execution.ts": "006274764430d67c179109385ed9d5f681fcf6ab0434fea0e121a74e28836208",
+      "fixtures/reference-shop/src/index.js": "0ed76b9da22fa78b27f62731d748ed058a3ca72f93cda2d38716dbf536cbed58",
+      "containers/images.lock.json": "1d5d98884f1f082b0398f3c487e62fb50bff851b1682ad9059e7d3fecdf58919",
+      "containers/seccomp_profile.json": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+      "pnpm-lock.yaml": "e5c0238e7acbbb16327d342465c704adb7e5b44c18c29804f91b7209b8f6e637",
+      "packages/application/src/application.ts": "0596b08e98c039ca3174b7d6afd687cd2c2d35d42af0b5de45c9346319ae9b6f",
+      "packages/contracts/src/entities.ts": "465701dd3f0e628ebe3c412a320fd0d93e89e21fb884b96ac746b77145cc5089",
+      "validation/journeys/m2-support.ts": "e26570079db072045778710302befce9e09b122798fe085324a912cc14e973fe",
+      "validation/journeys/m2-discovery.live.test.ts": "a40a3fadb29da749d6e6b413d83f8b9491c036e04de6fef5b486f41707d9ddb3",
+      "validation/journeys/m2-proposals.live.test.ts": "02c3eceb4bb1bfa4f5503e1a5b8b25c830959794ff9d8e09b76d6126a2b65246",
+      "validation/journeys/m2-agent.live.test.ts": "69d0fd497c6bcdd8be9050b5a9901cd9310ae8530c381532343f915dd6c22514",
+      "validation/journeys/harness.ts": "5025613dee26dc1a2cd9db6ca2d9147589253ab63462cefed4d95c935ea96287"
+    }
+  },
+  "commands": [
+    {
+      "label": "unit",
+      "args": [
+        "pnpm",
+        "test"
+      ],
+      "start": "2026-10-06T13:10:31.005Z",
+      "finishedAt": "2026-10-06T13:10:56.152Z",
+      "exitCode": 0,
+      "signal": null,
+      "captured": [
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/unit/critical-mutations.json",
+          "sha256": "0259f32e5599ea5cc1b7abd1be091698b53ace29f2b1e93712706e8f41180269"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/unit/hostile-repository-boundary-hostile-network.json",
+          "sha256": "767800f5c8429188b2d14406bc1c9ef2814b380e96e8feeffe4eab0617bb74a2"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/unit/hostile-repository-boundary.json",
+          "sha256": "90454911aff0986c02503fc5f7f0f98768e5eb9e5528148d81373b534f12db80"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/unit/j14-agent-skills.json",
+          "sha256": "4edf188ce065ba1e7ac9e4a8587b30e63de8d1acc4e12d7f384ee856259450ed"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/unit/journey-manifest-metadata.json",
+          "sha256": "d100d7f230f8cb6cc46bb3fe880e518822fc0319cdf281cb4337c7ee51529b4e"
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "label": "docker",
+      "args": [
+        "pnpm",
+        "test:docker"
+      ],
+      "start": "2026-10-06T13:11:06.695Z",
+      "finishedAt": "2026-10-06T13:19:12.017Z",
+      "exitCode": 0,
+      "signal": null,
+      "captured": [
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/W4-A-resource-cleanup.json",
+          "sha256": "5409568cb84a465500912b7dd29cd1ddfc16ae26c3d42faefe97e664ba4dcaec"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/W4-A-server-api.json",
+          "sha256": "e5a3181afe171138471dafec5c3ca1d0d8ff9b89fff1b792f3c78c1dfcaae044"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/browser-channel-matrix.json",
+          "sha256": "1866942776232be0de6b4c41ca4b95210347f77002c47e24b66852f5a26fd1cc"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/browser-lease-expiry.json",
+          "sha256": "fae3252eaa05b0c723af45555bc7e2a9ab855fbfe28c1fb570cfa150a78438c1"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/cleanup-quarantine-isolation.json",
+          "sha256": "4720b3864e84c5de5f55856d4e0b76cd9f2c4a3d4c6c55269b3b41ea3ea3a40d"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/cli-001-interruption.json",
+          "sha256": "9642d5cb1fe460ac039f02e8d36be0790633f1598df7de72f2dbae21fe6c63a6"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/cli-002-dry-run-boundary.json",
+          "sha256": "0ebda2d7bef08e0c9d6da3d5f35a97618cea04cb901729946b69de51a7b5e69f"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/cli-003-readonly-home.json",
+          "sha256": "43b123123e7af502ab0f27f8d6666295ea0e15cfab231e56f838cbc86deed997"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/cli-004-canary-redaction.json",
+          "sha256": "96a6aabb741000827156ddcda1f1764a72f0c946ed46a2bc9dc4a3af25753f10"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/coverage-metrics.json",
+          "sha256": "ed7e7238c60a3d8852cbd7b89e5d4a7373c95e8edf850ed9b576af4bd1c95575"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/discovery-descendant-invalidation.json",
+          "sha256": "34adcde53c9203e82283c1345c7bcc68a0584efe487601fcf056a980b2382d6b"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j01-docker-unavailable.json",
+          "sha256": "489ac722a84587b05d64b27bf4817fe0e64ee17222e20ca20b80161ad925eab3"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j01-j06-health-degraded.json",
+          "sha256": "d1ed6455188cddcb5621734cf6aaaade465cde542c632bf1b45dd31247608949"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j01-j06-healthy.json",
+          "sha256": "968513ec141e0ee124b6af548b42b01db634e1071ef5668767159646e7ee79a6"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j01-j06-toast-without-persist.json",
+          "sha256": "cc3ce45033854993bcb31444be684556aaddc1f7287dc4e7c9f0d6f008cf5dbd"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j04-revision-pinning.json",
+          "sha256": "50a55c22def71394a60a9c783a0eca05bdc79b70cb9c12fe6e99223af077f9ce"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j17-active-backup-revocation.json",
+          "sha256": "4d3862007ebfefba0a3e25fd48b8fb5eb433bc4f6fadb1007aec439adeb8c5c0"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j17-backup-restore.json",
+          "sha256": "7711496fb6a244a3db0ad38880853a723fa955925ac391a0e228531d86100fbb"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j17-evidence-history.json",
+          "sha256": "fc94b139b7e0a780f3cd4f7afbc87a8efb568bdef881be7a810c16e89add7227"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j17-publication-crash-matrix.json",
+          "sha256": "2d0da9995efa2f4f52425744f30ca471e8c38e6d803da997cb558fa1caee48b9"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/j17-worker-recovery.json",
+          "sha256": "a32c454c63ef81398506cb37bc4cbb88108791469befdf80068679cc833a79b6"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/m1-sensitive-dependencies.json",
+          "sha256": "d2eabb669b7d1998641f4897cc9f75341311711f9891c5d7864bccd2802d4137"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/m2-export-standalone.json",
+          "sha256": "e901dd274a638faf551459c6ec6a003bf1aa1e59ca6e5df7f48895931242d9ce"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/m2-integration-workflow-healthy.json",
+          "sha256": "93477954706052d7bfb83bf5d2326b5365605b380181a97f4df5ea97d4b9b106"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/m2-integration-workflow-products-update-ignored.json",
+          "sha256": "b75f9f610325631a695b784326ea34b350c1388638878b3b0c2785f824b63980"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/mcp-001-004.json",
+          "sha256": "591926fa8a16988c0d02c711b9751622dc9fd6ddb37286f3d340cc697d9d668a"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/network-replay-boundary-replay-network.json",
+          "sha256": "16e79291a4b1d8399be53bce6843e4c8aba42cd87a2462e1ce02172f89114a18"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/network-replay-boundary.json",
+          "sha256": "1688c8c74edce0c3e674a325003b36472c22bf49bbc872a402b37e3bbd0fda88"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/nfr-007-server-restart.json",
+          "sha256": "cb2d057a564ca9575ace9b74cadfc90fc8ec2e60413bc662281b3c8abfd251bb"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops-004-501-cells.json",
+          "sha256": "c42f2947cff5ca1b0218d57c48f1b2f505877036eb206ad396b26a6bb3ae38b2"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops-004-infinite-http.json",
+          "sha256": "f4cc3cd4ec4c8200e5d1cf07f62599094ec8d2490a8823905769cb0988cec246"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops-005-authoring-admission-crash.json",
+          "sha256": "75b26e40eca7173b19601e8160c33fe4f93c4de69f3b74e1fcae942e086edbfc"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops-012-eligible-retry-race.json",
+          "sha256": "9da4b223707c6ad6afa5470d5e66b268bb9cd829ae702438ff8b51e1010271e1"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops-021-publication-gc-backup-holds.json",
+          "sha256": "9c014394c6a0782066b29a36fa5a33ce8bdc91c126332f5864ea2841f10dc96c"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops-025-authorized-restore-reopen.json",
+          "sha256": "b92b8946723618f3f5df4d34216e460b70f86f413cc412a994395e90f072f546"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/ops002-daemon-readiness.json",
+          "sha256": "3edd88f556aa0003b2185546c6d4abd988e09169604e3a982b257b2849917974"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/provenance-strict-replay.json",
+          "sha256": "c479d074800440f483fbadfa9a0850b0a65d52d26fa11b50c003f1e7add25b97"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-batch-selection.json",
+          "sha256": "65442bca70d41fd5acb94102b55cbff612e7c405eb86d1ec318d28ecd1861e9f"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-browser-crash-1.json",
+          "sha256": "e317deacaf5fba1d023e04f8d6d485036828b3b9ab0d121c82bf028d577b81bc"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-browser-crash-2.json",
+          "sha256": "637989204e3ce9cae3cfcbce5523530f1b7b36b88cd2d7d5c1e17fed02a80618"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-concurrent-revisions.json",
+          "sha256": "e446e86465585ed2bd68b3f2e6f5185d26cfec076079fd8e7188a1306e274ec8"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-doctor-preconditions.json",
+          "sha256": "d72455e7862bd04f737fb68d8db45df96d7ae076d919b948fd8d3aa22aaffd81"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-drain-after-claim.json",
+          "sha256": "56d0c8621cb4cd22fa8b629655c81f9c7a87de8785e6c80c7621894ffe93827c"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-global-deadline.json",
+          "sha256": "c1a95f8c68b6bad65f3c9ead2fad147dfe5af1d86832768fb6904ecd188a09fd"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-invalid-policy.json",
+          "sha256": "b353416b9c3eda2a5bafc35fe93640ce686ffb3700ccab6208e697fb182130fd"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-pools-cancel.json",
+          "sha256": "c090333d55da74b46bc045a4f9fad9d756bbde04ba305cf68ef35b2b1a236747"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-post-timeout-no-repeat.json",
+          "sha256": "3b3f8a801a87cc66a1b6b27eb943045fc7666b67ce63e7b058b15776aa811052"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/runtime-proxy-unavailable.json",
+          "sha256": "20502aa1fe1911e7d30148ac4f3704591d46eaecc2a08c4d7e5c42cda9b54307"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/sec-021-active-queued-revocation.json",
+          "sha256": "81548b265febcf306b3c05812aac32ababded2081169fbd165fb899ef39c666f"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/surface-execution.json",
+          "sha256": "acbfc57e433c25f22cfd8fd6a4ec35fea614a8f8aa7d5ac6832b8609dd7ab78d"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/surface-invalid-corpus.json",
+          "sha256": "21a954aedb47387801e9ba9e7cde018130abbf5d901c1b7fc3b364521742a0de"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/surface-mcp-denials.json",
+          "sha256": "208c9b711c65424909d898669fa4ed5ebd3be1b7993d5bae12d04219b5d1cdf0"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/surface-missing-image.json",
+          "sha256": "9efa0dd4ae111269be0cdc029b2573bb22cba0eb4691148a9a992158221c0018"
+        },
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/docker/val009-model-budget-isolation.json",
+          "sha256": "1020402b755eb4abfbd8abe1f8911d641bb1f69a06f4b5a1ba06f25db8af5329"
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "label": "benchmark",
+      "args": [
+        "node",
+        "tools/dist/evals/run.js",
+        "--execute-preregistered",
+        "116f682e197727e867f2b4937caacbbb0be37fc8",
+        "--registration",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.json"
+      ],
+      "start": "2026-10-06T13:20:17.535Z",
+      "finishedAt": "2026-10-06T13:38:53.961Z",
+      "exitCode": 0,
+      "signal": null,
+      "captured": [],
+      "conflicts": []
+    },
+    {
+      "label": "live-j02",
+      "args": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "--project",
+        "live",
+        "validation/journeys/m2-discovery.live.test.ts"
+      ],
+      "start": "2026-10-06T13:39:22.568Z",
+      "finishedAt": "2026-10-06T13:40:51.130Z",
+      "exitCode": 1,
+      "signal": null,
+      "captured": [
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
+          "sha256": "68ae61a455eadead57aaf0f29b22b9a09e680f867b208720099c919c860eec4a"
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "label": "live-j03",
+      "args": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "--project",
+        "live",
+        "validation/journeys/m2-proposals.live.test.ts"
+      ],
+      "start": "2026-10-06T13:41:06.407Z",
+      "finishedAt": "2026-10-06T13:43:21.879Z",
+      "exitCode": 1,
+      "signal": null,
+      "captured": [
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+          "sha256": "9cd0cb4d9a9e0da8a9e30feceea909b019e94bddc94d10cb0eff7fbd7a23eb0b"
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "label": "live-agent",
+      "args": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "--project",
+        "live",
+        "validation/journeys/m2-agent.live.test.ts"
+      ],
+      "start": "2026-10-06T13:43:30.312Z",
+      "finishedAt": "2026-10-06T13:44:09.583Z",
+      "exitCode": 0,
+      "signal": null,
+      "captured": [
+        {
+          "path": "validation/results/m2-round4-qwen38-medium/live-agent/M2-agent-execution.json",
+          "sha256": "f80a644a8ca2db99bbe1a2390ca34d81bc3f4daf36a76e70e68f0186d6858001"
+        }
+      ],
+      "conflicts": []
+    }
+  ],
+  "report": "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.json",
+  "markdownReport": "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.md",
+  "stageCompletion": {
+    "planned": 8,
+    "sourceImports": 16,
+    "discovery": 8,
+    "normalization": 0,
+    "approvedRequirements": 0,
+    "generatedProposals": 0,
+    "validProposals": 0,
+    "acceptedRevisions": 0,
+    "replayPairs": 0,
+    "validatedArtifactCommands": 0
+  },
+  "trialStages": [
+    {
+      "trialId": "trial-01",
+      "caseId": "shop-defect-004",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-01",
+        "caseId": "shop-defect-004",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-02",
+      "caseId": "shop-defect-001",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-02",
+        "caseId": "shop-defect-001",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-03",
+      "caseId": "shop-defect-002",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-03",
+        "caseId": "shop-defect-002",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-04",
+      "caseId": "shop-defect-006",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-04",
+        "caseId": "shop-defect-006",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-05",
+      "caseId": "shop-defect-007",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-05",
+        "caseId": "shop-defect-007",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-06",
+      "caseId": "shop-defect-008",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-06",
+        "caseId": "shop-defect-008",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-07",
+      "caseId": "shop-defect-003",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-07",
+        "caseId": "shop-defect-003",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    },
+    {
+      "trialId": "trial-08",
+      "caseId": "shop-defect-005",
+      "normalization": false,
+      "approvedRequirements": 0,
+      "generatedProposals": 0,
+      "validProposals": 0,
+      "acceptedRevisions": 0,
+      "replayPairs": 0,
+      "artifactCommands": 0,
+      "artifactCommandsPassed": 0,
+      "errors": [
+        {
+          "phase": "normalize",
+          "code": "INVALID_ARGUMENT",
+          "exclusion": null
+        },
+        {
+          "phase": "evidence",
+          "code": "no_attempts",
+          "exclusion": null
+        }
+      ],
+      "score": {
+        "trialId": "trial-08",
+        "caseId": "shop-defect-005",
+        "detected": false,
+        "conditionalEligible": true,
+        "exclusions": [],
+        "sensitiveRevisionIds": [],
+        "healthyValid": 0,
+        "healthyFailed": 0,
+        "healthyUnavailable": 0
+      }
+    }
+  ],
+  "scores": [
+    {
+      "trialId": "trial-01",
+      "caseId": "shop-defect-004",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-02",
+      "caseId": "shop-defect-001",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-03",
+      "caseId": "shop-defect-002",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-04",
+      "caseId": "shop-defect-006",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-05",
+      "caseId": "shop-defect-007",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-06",
+      "caseId": "shop-defect-008",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-07",
+      "caseId": "shop-defect-003",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    },
+    {
+      "trialId": "trial-08",
+      "caseId": "shop-defect-005",
+      "detected": false,
+      "conditionalEligible": true,
+      "exclusions": [],
+      "sensitiveRevisionIds": [],
+      "healthyValid": 0,
+      "healthyFailed": 0,
+      "healthyUnavailable": 0
+    }
+  ],
+  "metrics": {
+    "primary": {
+      "status": "measured",
+      "successes": 0,
+      "n": 8,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.3244156195108769
+    },
+    "conditional": {
+      "status": "measured",
+      "successes": 0,
+      "n": 8,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.3244156195108769
+    },
+    "healthyFalseFailure": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "proposalValidity": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "strata": {
+      "development": {
+        "status": "measured",
+        "successes": 0,
+        "n": 6,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.3903430336530645
+      },
+      "business-calculation": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "authentication": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "persistence": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "contract": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "pagination": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "idempotency": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "holdout": {
+        "status": "measured",
+        "successes": 0,
+        "n": 2,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.6576280471103807
+      },
+      "health": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "authorization": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      }
+    }
+  },
+  "benchmarkUsage": {
+    "tokens": {
+      "inputTokens": 115986,
+      "outputTokens": 67020,
+      "reasoningTokens": 32537
+    },
+    "calls": 25,
+    "chargedTokens": 183006,
+    "cost": "unknown",
+    "errors": 16,
+    "unknownUsageCalls": 0
+  },
+  "supplementalCalls": 10,
+  "totalMeasuredTokens": {
+    "inputTokens": 131898,
+    "outputTokens": 74960,
+    "reasoningTokens": 37391
+  },
+  "cost": "unknown",
+  "journeys": [
+    {
+      "path": "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
+      "passed": false,
+      "error": "AssertionError: requirement normalize --source-revision svr_01a11170-c0fd-776f-b584-fb9da52274fb svr_01a11170-c21b-7359-8190-e6e6427cb8c4 stderr= stdout={\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_e0dfb4fd-2d75-4050-8773-4d5f6f11d9e3\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Conflict evidence is not grounded\",\"details\":{},\"retryable\":false,\"nextActions\":[]}}\n: expected 5 to be +0 // Object.is equality",
+      "configuration": {
+        "check": "modelConfiguration",
+        "provider": "quantforge",
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "contextTokens": 128000,
+        "outputReservationTokens": 8192,
+        "tokenBudget": 100000
+      },
+      "usage": {
+        "check": "supplementalModelUsage",
+        "calls": [
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:40:04.123Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11171-5b96-7787-8a04-7e1d5591f94d",
+            "inputRefs": [
+              "chunk_22879c01b9feb5e032a8535e41c1a936e481bcf6dd9ac2b7fc24d9a573e86fb3",
+              "chunk_2fa46793cf275f2577ce5cc66e569a437d6ed09769017082dddf8f119fd16d0d",
+              "chunk_5d0e6596c50d841a2cb13abf5ff0fa56df6f5fce1df627f9b8db0e969987aaa3",
+              "chunk_d2c015a1b6764778a5b1aaa17dd171ad0d16e01525caa2e0897342b03a449e12",
+              "chunk_0712bbc89e8b8accd51a87429467732cfb6db038a4106dba4b33472314dded25"
+            ],
+            "latency": 37284,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "invalid",
+            "projectId": "prj_01a11170-bc4d-74ea-8d56-0365e7068fda",
+            "promptHash": "ae52ba230238ab9fc6c64cd323b355954c4e8ae2acc8e8f9bb77d6f5cfa61406",
+            "provider": "quantforge",
+            "purpose": "normalize",
+            "repairAttempt": 0,
+            "reservationId": "24d03f59-ef21-40ed-8b33-40ed53f38aef",
+            "responseHash": "0e6be3af0701e113d7f39c284b2f0b19ce71c7dca3a792d48d65a47ba9689944",
+            "sourceRevisionIds": [
+              "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+              "svr_01a11170-c21b-7359-8190-e6e6427cb8c4"
+            ],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 2376,
+              "outputTokens": 1813,
+              "reasoningTokens": 1135
+            },
+            "workspaceId": "ws_01a11170-bc42-7113-bd36-0484ca4238d5"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:40:30.261Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11171-c1b5-7209-84f9-ba8cff2cdf94",
+            "inputRefs": [
+              "chunk_22879c01b9feb5e032a8535e41c1a936e481bcf6dd9ac2b7fc24d9a573e86fb3",
+              "chunk_2fa46793cf275f2577ce5cc66e569a437d6ed09769017082dddf8f119fd16d0d",
+              "chunk_5d0e6596c50d841a2cb13abf5ff0fa56df6f5fce1df627f9b8db0e969987aaa3",
+              "chunk_d2c015a1b6764778a5b1aaa17dd171ad0d16e01525caa2e0897342b03a449e12",
+              "chunk_0712bbc89e8b8accd51a87429467732cfb6db038a4106dba4b33472314dded25"
+            ],
+            "latency": 26137,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11170-bc4d-74ea-8d56-0365e7068fda",
+            "promptHash": "8d55b6780e67117235b3090e4665bc89e069f6ee72305f4ca054043a401d854b",
+            "provider": "quantforge",
+            "purpose": "normalize",
+            "repairAttempt": 1,
+            "reservationId": "d67022a8-1eb9-4b5d-9610-a0de77a404ec",
+            "responseHash": "80bf415f467121de7bebad68a3627a09e2013aea622cd92045b7c82fe08e487c",
+            "sourceRevisionIds": [
+              "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+              "svr_01a11170-c21b-7359-8190-e6e6427cb8c4"
+            ],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 2448,
+              "outputTokens": 1475,
+              "reasoningTokens": 768
+            },
+            "workspaceId": "ws_01a11170-bc42-7113-bd36-0484ca4238d5"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:40:50.802Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11172-11ef-70f7-90d5-280d65983466",
+            "inputRefs": [
+              "batch-1-health-200-response",
+              "batch-1-health-503-only"
+            ],
+            "latency": 20445,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11170-bc4d-74ea-8d56-0365e7068fda",
+            "promptHash": "f358b731a0c3315f3169b0b2580187244e29e01246d3ec98f0d16537296b0768",
+            "provider": "quantforge",
+            "purpose": "normalize",
+            "repairAttempt": 0,
+            "reservationId": "03e41a4f-3bec-422f-8a10-1e2e055d0fa0",
+            "responseHash": "de5b3a2fc547afeb6d980df79578cd8ea9fe1be0b064bed50e54cb3ed6e66cf4",
+            "sourceRevisionIds": [
+              "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+              "svr_01a11170-c21b-7359-8190-e6e6427cb8c4"
+            ],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 1806,
+              "outputTokens": 1078,
+              "reasoningTokens": 575
+            },
+            "workspaceId": "ws_01a11170-bc42-7113-bd36-0484ca4238d5"
+          }
+        ],
+        "tokens": {
+          "inputTokens": 6630,
+          "outputTokens": 4366,
+          "reasoningTokens": 2478
+        },
+        "cost": "unknown",
+        "measuredCosts": [],
+        "unknownCostCalls": 3,
+        "budgetRemaining": null,
+        "reservations": {
+          "reserved": 0,
+          "settled": 3,
+          "released": 0
+        },
+        "tokenBudget": null,
+        "runtimeMs": 83866,
+        "storageBytes": 0,
+        "runs": []
+      },
+      "runIds": []
+    },
+    {
+      "path": "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+      "passed": false,
+      "error": "AssertionError: expected [ { …(11) }, { …(11) }, …(2) ] to have a length of 3 but got 4",
+      "configuration": {
+        "check": "modelConfiguration",
+        "provider": "quantforge",
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "contextTokens": 128000,
+        "outputReservationTokens": 8192,
+        "tokenBudget": 100000
+      },
+      "usage": {
+        "check": "supplementalModelUsage",
+        "calls": [
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:42:31.577Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11173-9b93-75b4-aa9e-f64ca562326b",
+            "inputRefs": [
+              "chunk_4d46ac907ffbc84f53311f4b6d91336f577946da09517f2cfe96f2e4e19a1ac9",
+              "chunk_9cf9c4e970f795b3fa03fdb17016d884cd32b777518810e02f8ec5b50773b89b",
+              "chunk_b7c0f952d5cb9743e4446586b07251b6753b76fa2797d5f869527484674e03f9",
+              "chunk_c6010082e92cd69a2151d27b4fbfe8c3405c4a62c5ba4fb1587ab0e1477fa515",
+              "chunk_f7353d9b80426e89c1a68342f19128f161232a22a596ed5a00a89583cb2110e7",
+              "chunk_1f134271ecf40b3f8f53f571cd9acf87ae69399d92cf76e8580ea08eccb6b054"
+            ],
+            "latency": 82263,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "invalid",
+            "projectId": "prj_01a11172-53f8-7654-914a-10acd1d90eed",
+            "promptHash": "82efc51b0a19e96e828ac071a80879c7b0a42dfc6399f62e51ec8cf7fc7d765d",
+            "provider": "quantforge",
+            "purpose": "normalize",
+            "repairAttempt": 0,
+            "reservationId": "ea98a77e-9d80-4c1a-a5c2-158f018c3761",
+            "responseHash": "48d95086b5b97ce7a0e83a500f3d5910e322139ed8da2cf79dc52d1c603b5d87",
+            "sourceRevisionIds": [
+              "svr_01a11172-587e-7142-aca9-585bdd098235"
+            ],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 2654,
+              "outputTokens": 940,
+              "reasoningTokens": 595
+            },
+            "workspaceId": "ws_01a11172-53ed-7056-aaf4-0697ac37d00a"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:43:00.683Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11174-0d4b-749b-8a7b-d504353d0232",
+            "inputRefs": [
+              "chunk_4d46ac907ffbc84f53311f4b6d91336f577946da09517f2cfe96f2e4e19a1ac9",
+              "chunk_9cf9c4e970f795b3fa03fdb17016d884cd32b777518810e02f8ec5b50773b89b",
+              "chunk_b7c0f952d5cb9743e4446586b07251b6753b76fa2797d5f869527484674e03f9",
+              "chunk_c6010082e92cd69a2151d27b4fbfe8c3405c4a62c5ba4fb1587ab0e1477fa515",
+              "chunk_f7353d9b80426e89c1a68342f19128f161232a22a596ed5a00a89583cb2110e7",
+              "chunk_1f134271ecf40b3f8f53f571cd9acf87ae69399d92cf76e8580ea08eccb6b054"
+            ],
+            "latency": 29106,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11172-53f8-7654-914a-10acd1d90eed",
+            "promptHash": "370f95239e6f667155747879ae049d51e7b2db0b4b3456ef9d887701dfb786ba",
+            "provider": "quantforge",
+            "purpose": "normalize",
+            "repairAttempt": 1,
+            "reservationId": "2da2e46f-994f-4369-bfc1-c9bcbeb32993",
+            "responseHash": "90192148e0b877d9f00afac2ba43a10cd61160f64f512e72b7bec8ef68f35234",
+            "sourceRevisionIds": [
+              "svr_01a11172-587e-7142-aca9-585bdd098235"
+            ],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 3007,
+              "outputTokens": 1163,
+              "reasoningTokens": 555
+            },
+            "workspaceId": "ws_01a11172-53ed-7056-aaf4-0697ac37d00a"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:43:21.535Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11174-5ebf-72cc-a5d5-8dfd88105de0",
+            "inputRefs": [
+              "chunk_06a5c6bb4a6b9dfbc80affda1466a148448e3b31aa70cd7d31a209802ee4bde6"
+            ],
+            "latency": 20749,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11172-53f8-7654-914a-10acd1d90eed",
+            "promptHash": "30e9c0592e41828b4ee6eab290385b8a41644a7046729174ad9821cd99abb309",
+            "provider": "quantforge",
+            "purpose": "normalize",
+            "repairAttempt": 0,
+            "reservationId": "0bdb5c66-57c0-4e63-bae8-9fa1d3281a31",
+            "responseHash": "ae1d398c9a34d2bf4da7b583795498c2cb2f274d97828817ac72ced696619440",
+            "sourceRevisionIds": [
+              "svr_01a11172-587e-7142-aca9-585bdd098235"
+            ],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 1848,
+              "outputTokens": 541,
+              "reasoningTokens": 334
+            },
+            "workspaceId": "ws_01a11172-53ed-7056-aaf4-0697ac37d00a"
+          }
+        ],
+        "tokens": {
+          "inputTokens": 7509,
+          "outputTokens": 2644,
+          "reasoningTokens": 1484
+        },
+        "cost": "unknown",
+        "measuredCosts": [],
+        "unknownCostCalls": 3,
+        "budgetRemaining": null,
+        "reservations": {
+          "reserved": 0,
+          "settled": 3,
+          "released": 0
+        },
+        "tokenBudget": null,
+        "runtimeMs": 132118,
+        "storageBytes": 0,
+        "runs": []
+      },
+      "runIds": []
+    },
+    {
+      "path": "validation/results/m2-round4-qwen38-medium/live-agent/M2-agent-execution.json",
+      "passed": true,
+      "error": null,
+      "configuration": {
+        "check": "modelConfiguration",
+        "provider": "quantforge",
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "contextTokens": 128000,
+        "outputReservationTokens": 8192,
+        "tokenBudget": 100000
+      },
+      "usage": {
+        "check": "supplementalModelUsage",
+        "calls": [
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:43:43.310Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11174-b3cd-7297-9336-c7db2e01b2e3",
+            "inputRefs": [],
+            "latency": 9591,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "promptHash": "1646fc48aa706fb3010b611f4d694f6e384a627e9a980ee135f1efa4d2a5a8f1",
+            "provider": "quantforge",
+            "purpose": "resolve_action",
+            "repairAttempt": 0,
+            "reservationId": "51667c4f-a1cd-4fc4-aed6-851d4f61eccf",
+            "responseHash": "f67055f9ce54f6d18490b2ad746513b3c6e39b96730444b71c8344a39658d48f",
+            "sourceRevisionIds": [],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 532,
+              "outputTokens": 339,
+              "reasoningTokens": 326
+            },
+            "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:43:50.344Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11174-cf48-7222-a1be-aee3ef34e9c4",
+            "inputRefs": [],
+            "latency": 6288,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "promptHash": "ad7d9209d6116de27a8610968f04103e0fa373868bf6ce310ee2ce6f45a0bd1c",
+            "provider": "quantforge",
+            "purpose": "resolve_action",
+            "repairAttempt": 0,
+            "reservationId": "f8406e9a-fa1a-4db0-8848-783c170fbd23",
+            "responseHash": "53aaa402b21de3bf5b75cbf10f994ff3a2779fb6a5f4aa9ecd990c4a2d31ba9d",
+            "sourceRevisionIds": [],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 487,
+              "outputTokens": 146,
+              "reasoningTokens": 137
+            },
+            "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:43:58.628Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11174-efa4-737e-afd4-bd5e388722f4",
+            "inputRefs": [],
+            "latency": 7360,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "promptHash": "102f52c5372b7dd13c32be163db9f931abb5655d0e01e27d4aee8d809e772905",
+            "provider": "quantforge",
+            "purpose": "resolve_action",
+            "repairAttempt": 0,
+            "reservationId": "00830a73-ce07-430d-84d3-0e6c751daf75",
+            "responseHash": "2145c484a21243a7f9ffb92e7e2de1513d8f9e6a3e384398d43ea3c746fc0253",
+            "sourceRevisionIds": [],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 292,
+              "outputTokens": 224,
+              "reasoningTokens": 216
+            },
+            "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+          },
+          {
+            "cacheHit": false,
+            "cost": "unknown",
+            "createdAt": "2026-10-06T13:44:06.760Z",
+            "finishReason": "stop",
+            "id": "mdl_01a11175-0f68-7671-a79c-605da7cd078a",
+            "inputRefs": [],
+            "latency": 6232,
+            "model": "qwen3.8-flash",
+            "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+            "outcome": "success",
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "promptHash": "c46a344d257676cb1032cb96cdcc7a032e44986a086acc9e71fc7ec4781fc7bd",
+            "provider": "quantforge",
+            "purpose": "resolve_action",
+            "repairAttempt": 0,
+            "reservationId": "5e9e6d1b-025f-4ae3-86e6-6a020b823624",
+            "responseHash": "4778ee5901fd044b8c1dee734a902ec2a442e65ffb84b5e902c850cd193d099c",
+            "runId": "run_01a11174-f341-77ff-a802-7cec8079d0ab",
+            "sourceRevisionIds": [],
+            "transportAttempt": 0,
+            "usage": {
+              "inputTokens": 462,
+              "outputTokens": 221,
+              "reasoningTokens": 213
+            },
+            "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+          }
+        ],
+        "tokens": {
+          "inputTokens": 1773,
+          "outputTokens": 930,
+          "reasoningTokens": 892
+        },
+        "cost": "unknown",
+        "measuredCosts": [],
+        "unknownCostCalls": 4,
+        "budgetRemaining": null,
+        "reservations": {
+          "reserved": 0,
+          "settled": 4,
+          "released": 0
+        },
+        "tokenBudget": null,
+        "runtimeMs": 29471,
+        "storageBytes": 539474,
+        "runs": [
+          {
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "runId": "run_01a11174-f341-77ff-a802-7cec8079d0ab",
+            "storageBytes": 191333,
+            "runtimeMs": 6232
+          },
+          {
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "runId": "run_01a11175-118b-72db-b116-736acb13a32e",
+            "storageBytes": 174412,
+            "runtimeMs": 0
+          },
+          {
+            "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+            "runId": "run_01a11175-157a-74a5-ba4e-01d7f6eeef7c",
+            "storageBytes": 173729,
+            "runtimeMs": 0
+          }
+        ]
+      },
+      "runIds": [
+        "run_01a11174-f341-77ff-a802-7cec8079d0ab",
+        "run_01a11175-118b-72db-b116-736acb13a32e",
+        "run_01a11175-157a-74a5-ba4e-01d7f6eeef7c"
+      ]
+    }
+  ],
+  "verification": {
+    "scoringRecomputed": true,
+    "modelProvenance": [
+      {
+        "trialId": "trial-01",
+        "profileAvailable": true,
+        "calls": 5,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-02",
+        "profileAvailable": true,
+        "calls": 3,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-03",
+        "profileAvailable": true,
+        "calls": 3,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-04",
+        "profileAvailable": true,
+        "calls": 3,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-05",
+        "profileAvailable": true,
+        "calls": 1,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-06",
+        "profileAvailable": true,
+        "calls": 3,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-07",
+        "profileAvailable": true,
+        "calls": 3,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      },
+      {
+        "trialId": "trial-08",
+        "profileAvailable": true,
+        "calls": 4,
+        "status": "passed",
+        "expectedModelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+      }
+    ],
+    "historicalPreservation": {
+      "results": 87,
+      "historical": 26,
+      "changed": []
+    },
+    "credentialScan": "validation/results/m2-round4-qwen38-medium/credential-scan.json",
+    "bundleValidation": "unavailable: no benchmark Runs/bundles produced"
+  },
+  "localAcceptance": {
+    "status": "failed",
+    "failedReasons": [
+      "trial-01: full-source normalization rejected ungrounded output",
+      "trial-02: full-source normalization rejected ungrounded output",
+      "trial-03: full-source normalization rejected ungrounded output",
+      "trial-04: full-source normalization rejected ungrounded output",
+      "trial-05: full-source normalization rejected ungrounded output",
+      "trial-06: full-source normalization rejected ungrounded output",
+      "trial-07: full-source normalization rejected ungrounded output",
+      "trial-08: full-source normalization rejected ungrounded output",
+      "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json: AssertionError: requirement normalize --source-revision svr_01a11170-c0fd-776f-b584-fb9da52274fb svr_01a11170-c21b-7359-8190-e6e6427cb8c4 stderr= stdout={\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_e0dfb4fd-2d75-4050-8773-4d5f6f11d9e3\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Conflict evidence is not grounded\",\"details\":{},\"retryable\":false,\"nextActions\":[]}}\n: expected 5 to be +0 // Object.is equality",
+      "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json: AssertionError: expected [ { …(11) }, { …(11) }, …(2) ] to have a length of 3 but got 4"
+    ],
+    "blockedReasons": [
+      "trial-01: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-02: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-03: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-04: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-05: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-06: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-07: generation, acceptance and paired replay not reached; bundle verification unavailable",
+      "trial-08: generation, acceptance and paired replay not reached; bundle verification unavailable"
+    ]
+  },
+  "remainingNormativeBlockers": [
+    "Single family and previously observed mutant holdout; no independent-family holdout.",
+    "Graduation requires >=30 independent families, >=100 independent cases and >=3 trials per case.",
+    "Primary/holdout Wilson lower >=0.8 and healthy false-failure Wilson upper <=0.05 remain unmet/unmeasured.",
+    "Independent human labels and two-reviewer safety/conflict adjudication pending; rule-based review is not human sign-off.",
+    "Independent security sign-off, publication license and normative supported-runtime/rootless reference remain unavailable.",
+    "Remote provider snapshot/tariff unavailable; monetary cost remains unknown.",
+    "Generation quality remains experimental; M3-M6 remain disabled and public release is not approved."
+  ],
+  "inventoryConsistent": true,
+  "milestoneGatePassed": false,
+  "publicReleaseApproved": false
+}

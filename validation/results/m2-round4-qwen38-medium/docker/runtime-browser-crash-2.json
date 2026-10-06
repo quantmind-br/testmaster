@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-browser-crash-2",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:18:03.333Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-browser-crash-2",
+        "--base-url",
+        "http://127.0.0.1:36519",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b9c4c04b-befb-4d9c-90d0-53167b8fdaec",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115d-2e97-7306-8fe4-081998530329"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "preActionCrashRetryEvidence",
+      "healthy": true,
+      "crashes": 2,
+      "attempts": [
+        "att_01a1115d-2ebf-763a-8002-fb51108ed00c",
+        "att_01a1115d-3181-720e-82e3-6ad298d60c5d"
+      ],
+      "outcome": "inconclusive",
+      "targetHits": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "network-replay-boundary",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:16:47.009Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--base-url",
+        "http://127.0.0.1:45631",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1fa86650-bcd8-4f33-b3b1-bfc2344a2483",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "doctor",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_406fabb1-807c-4f8d-b514-379b240c28cb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "lint",
+        "--plan",
+        "/tmp/tm-m1-xhddJg/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a57ff77c-0092-48b6-bc82-0026c6a5e920",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-xhddJg/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8b7b2a67-1750-4d45-a839-07b669c1885c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115b-e225-72f3-9247-22be6c2ddf7a",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8c5b4a78-64b3-4a79-b7e5-297d6c9a22ae",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a1115b-e5bc-7313-8656-a8d4a2684ee3",
+        "--out",
+        "/tmp/tm-m1-xhddJg/repo/http-evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_063441a5-5a52-43ca-919d-8b276ca1697b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115b-e5bc-7313-8656-a8d4a2684ee3",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-xhddJg/repo/http-report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_74208891-c8c8-48fd-9ded-64bd4e7a9651",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a1115b-e5bc-7313-8656-a8d4a2684ee3",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e6d6a6ac-6e8e-409b-9c20-e81a92dd98bf",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "lint",
+        "--plan",
+        "/tmp/tm-m1-xhddJg/repo/browser.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bdc65ba7-a823-4667-a8e6-142f9c12fcbd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-xhddJg/repo/browser.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f9932a3d-a7f8-4bd8-8f3a-4221e196e898",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115b-f7b6-739e-bf44-8efce02f9a5e",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_72e38e88-d96b-45dc-8aea-f7ccf719289c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a1115b-fb7b-70a6-843a-322ab459a26f",
+        "--out",
+        "/tmp/tm-m1-xhddJg/repo/browser-evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_87f86c8d-e949-4a32-ac87-712476fcd712",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115b-fb7b-70a6-843a-322ab459a26f",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-xhddJg/repo/browser-report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82e7849a-bfc6-492f-9c72-b72ca390f0da",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a1115b-fb7b-70a6-843a-322ab459a26f",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e5d9b537-c115-44cf-9ed5-4af645269cd9",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115b-e5bc-7313-8656-a8d4a2684ee3",
+    "run_01a1115b-ef35-72b3-b048-932837887d56",
+    "run_01a1115b-fb7b-70a6-843a-322ab459a26f",
+    "run_01a1115c-05bf-7750-a82b-6fd142847236"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "containerEgressOnlyAuthorizedTarget",
+      "healthy": true,
+      "runId": "run_01a1115b-e5bc-7313-8656-a8d4a2684ee3",
+      "decisions": [
+        {
+          "origin": "http://127.0.0.1:45631",
+          "decision": "allow",
+          "reason": "allowed",
+          "pinnedIp": "127.0.0.1"
+        }
+      ]
+    },
+    {
+      "check": "containerEgressOnlyAuthorizedTarget",
+      "healthy": true,
+      "runId": "run_01a1115b-fb7b-70a6-843a-322ab459a26f",
+      "decisions": [
+        {
+          "origin": "http://127.0.0.1:45631",
+          "decision": "allow",
+          "reason": "allowed",
+          "pinnedIp": "127.0.0.1"
+        },
+        {
+          "origin": "http://127.0.0.1:45631",
+          "decision": "allow",
+          "reason": "allowed",
+          "pinnedIp": "127.0.0.1"
+        }
+      ]
+    },
+    {
+      "check": "replayControllerProcessTreeBoundary",
+      "healthy": true,
+      "targetConnections": 6,
+      "unauthorizedConnections": 0,
+      "analyticsUpdateModelTestSpriteRequests": 0,
+      "evidence": "validation/results/network-replay-boundary-replay-network.json",
+      "commands": 14
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

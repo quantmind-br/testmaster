@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j01-docker-unavailable",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:16:57.471Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j01-docker-unavailable",
+        "--base-url",
+        "http://127.0.0.1:35015",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_531237f9-f733-42c9-9fbb-9032bb86d1e6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-3AkL67/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_51233276-76c5-4336-a52c-09bcebb8618b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115c-2da1-71ef-a11b-def1021ca3f5",
+        "--wait",
+        "--timeout",
+        "30",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_c5eac45d-09d8-474e-84b9-bf90cd90a60a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a1115c-30aa-7720-9b32-63ebc5da2efb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_874585c6-6afe-420f-b22b-f80878a169f5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a1115c-30aa-7720-9b32-63ebc5da2efb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c1cd5b8c-0c66-4b29-9907-71c181d88399",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115c-30aa-7720-9b32-63ebc5da2efb"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "deadDockerNoProcessFallback",
+      "healthy": true,
+      "exitCode": 9,
+      "targetRequests": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

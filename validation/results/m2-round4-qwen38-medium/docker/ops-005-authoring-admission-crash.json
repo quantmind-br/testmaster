@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "ops-005-authoring-admission-crash",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:17:02.091Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "ops-005-authoring-admission-crash",
+        "--base-url",
+        "http://127.0.0.1:36013",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2363566c-214a-4f41-ae74-f4128ee93702",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0f56c2c4-dcfd-4c93-bbfc-863f55a4e0d0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4346d75f-5d9a-4466-8194-3183d71c84a5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-616pwc/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": null,
+      "signal": "SIGKILL",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-616pwc/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": null,
+      "signal": "SIGKILL",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115c-3b50-7396-b2b4-ab03880a6b82",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": null,
+      "signal": "SIGKILL",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115c-3b50-7396-b2b4-ab03880a6b82",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": null,
+      "signal": "SIGKILL",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "start",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 143,
+      "signal": null,
+      "requestId": "cli_42de63b6-4da6-4676-9396-b67729654cf9",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Command interrupted",
+        "details": {
+          "signal": "SIGTERM",
+          "receipts": []
+        },
+        "retryable": true,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "revisionAdmissionAllOrNoneCommitKill",
+      "healthy": true,
+      "revisions": 1,
+      "runs": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

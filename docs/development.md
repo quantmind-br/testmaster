@@ -442,3 +442,13 @@ Failed journeys capture supplemental model usage before removing their isolated 
 Round-specific captures preserve prior `validation/results` bytes and do not alter historical
 benchmark ledgers. Measurement integrity is separate from generation graduation/public release.
 
+Round 4 (`116f682e197727e867f2b4937caacbbb0be37fc8`) observed all eight planned trials:
+all full-source normalizations failed semantic grounding validation; no generated proposals,
+accepted revisions or paired benchmark replays were reached. Primary and conditional yield
+were 0/8 (Wilson 95% [0, 0.3244156195108769]); secondary replay/proposal denominators were zero.
+J02 failed ungrounded conflict evidence, J03 returned four requirements instead of three,
+and the fixture-authored agent/candidate journey passed. Local acceptance is failed, not M2
+completion. `validation/results/m2-round4-qwen38-medium/closure.json` records stages, usage,
+single-execution captures and residual blockers. VAL-038/039 verify measurement integrity only;
+human review, family holdout, graduation, security/license and public-release obligations remain.
+

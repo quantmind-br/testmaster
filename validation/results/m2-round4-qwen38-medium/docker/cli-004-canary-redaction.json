@@ -1,0 +1,327 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cli-004-canary-redaction",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:16:55.284Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "cli-004-canary-redaction",
+        "--base-url",
+        "http://127.0.0.1:46561",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_acefd572-bceb-4659-b8c3-0530bbf50143",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "JOURNEY_CANARY",
+        "--from-env",
+        "JOURNEY_CANARY_VALUE",
+        "--allowed-origin",
+        "http://127.0.0.1:46561",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_715dd674-45b2-46ca-be30-5fd818dd223e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-sd6XNA/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9d7825c9-ad6a-4cba-a000-5aa52e343c3b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b63fce91-1908-419a-92be-8218818d1079",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_549ef0d5-3637-4d2c-b7c7-79c49cb94192",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115c-143e-7279-8b8c-91ade3d68a74",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fb641abe-e445-4fd0-b1d5-d629c2dc5d6f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "wait",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_43ff5511-edc9-45c3-9c3b-96f28dea0a8a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "start",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 143,
+      "signal": null,
+      "requestId": "cli_681abcba-1b01-4ad2-8982-b09383f3a935",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Command interrupted",
+        "details": {
+          "signal": "SIGTERM",
+          "receipts": []
+        },
+        "retryable": true,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "secret",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_34e3ced3-a153-4859-8f46-7ae50e38a0d4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--out",
+        "/tmp/tm-m1-sd6XNA/repo/public-evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fe02554a-da86-414e-915d-f2fd1e4f27ff",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-sd6XNA/repo/report-json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a4190788-aa10-413a-b843-7a61fa2c938c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--format",
+        "markdown",
+        "--out",
+        "/tmp/tm-m1-sd6XNA/repo/report-markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_43099756-49c4-408e-9150-221c8721f1a8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--format",
+        "html",
+        "--out",
+        "/tmp/tm-m1-sd6XNA/repo/report-html",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d872417f-21a2-4926-a82a-2e9862b9c45b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--format",
+        "junit",
+        "--out",
+        "/tmp/tm-m1-sd6XNA/repo/report-junit",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d149948d-4f94-4275-9a1e-c9c776c62114",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--format",
+        "allure",
+        "--out",
+        "/tmp/tm-m1-sd6XNA/repo/report-allure",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_47ec7bd2-73ea-4629-8ac0-85204811a427",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+        "--format",
+        "ndjson",
+        "--output",
+        "text",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "secretCanaryBoundaryAndRedaction",
+      "healthy": true,
+      "runId": "run_01a1115c-1a0a-72f5-9fae-f0fe7684c5e9",
+      "secretId": "sec_01a1115c-1239-70dc-8efe-1bd37f10564a",
+      "deliveredAuthorizedRequests": 1,
+      "publicFilesChecked": 12,
+      "scannerPositiveControl": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

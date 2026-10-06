@@ -1,0 +1,653 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "surface-invalid-corpus",
+  "class": "surface-conformance",
+  "runner": "built-cli-and-real-http-mcp",
+  "externalDependency": "local-docker-doctor",
+  "observedAt": "2026-10-06T13:11:59.547Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "surface-invalid-corpus",
+        "--base-url",
+        "http://127.0.0.1:37013",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cbb9a2cc-843a-49ff-bfad-38b893ceb2bd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/valid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_be68551a-7531-48ad-9b81-f7d21dfe47ef",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/valid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d6de5045-7b28-43c7-b1d1-4c284d7a7dd5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/valid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_531b898f-ad48-4094-88f5-4bb7755c5ee2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_58d9e851-fcfa-4791-874c-e33124a3fd53",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/fabricated",
+              "rule": "additionalProperties",
+              "message": "must NOT have additional properties"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_118cfc72-5a30-4551-93c1-7bf23e6b2adf",
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "Document exceeds byte limit",
+        "details": {
+          "limit": 1048576,
+          "sizeBytes": 1049298
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_2360a8ce-9cc7-4830-884e-fd949e1f80a2",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/schemaVersion",
+              "rule": "const",
+              "message": "must be equal to constant"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_2a9adc7e-048a-4743-8145-fd6b193055f7",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/fabricated",
+              "rule": "additionalProperties",
+              "message": "must NOT have additional properties"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_21994baf-8b1c-4f34-acaf-80c8632ccf89",
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "Document exceeds byte limit",
+        "details": {
+          "limit": 1048576,
+          "sizeBytes": 1048648
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_9f4e6e4e-064f-40bd-8e4f-ca0c6b9adb8d",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/schemaVersion",
+              "rule": "const",
+              "message": "must be equal to constant"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_8e223fb9-7649-46de-8395-a6d43435af88",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid RunRequest",
+        "details": {
+          "issues": [
+            {
+              "path": "/fabricated",
+              "rule": "additionalProperties",
+              "message": "must NOT have additional properties"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_b8be7487-5efb-4742-a394-a83472846a32",
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "Document exceeds byte limit",
+        "details": {
+          "limit": 1048576,
+          "sizeBytes": 1048721
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_5e153853-5b62-4f78-a838-82fae25024cc",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/runner",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/runner",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/runner",
+              "rule": "anyOf",
+              "message": "must match a schema in anyOf"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_4f2f3f21-5916-46a5-8fcf-505593dfd8d3",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/execution/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/execution/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/execution/mode",
+              "rule": "anyOf",
+              "message": "must match a schema in anyOf"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_52f3ea23-71be-4a4e-ad7f-61b47e960385",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid RunRequest",
+        "details": {
+          "issues": [
+            {
+              "path": "/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/mode",
+              "rule": "anyOf",
+              "message": "must match a schema in anyOf"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_bd31ba82-f22f-4126-b5f9-04f6c1767b5c",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid RunRequest",
+        "details": {
+          "issues": [
+            {
+              "path": "/testId",
+              "rule": "pattern",
+              "message": "must match pattern \"^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\""
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_10f12742-b3ff-4f43-a391-c51d4d832da0",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/project/id",
+              "rule": "pattern",
+              "message": "must match pattern \"^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\""
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_c9c14ba7-710c-4f1c-a3b1-662741f4780c",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Plan semantic validation failed",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps/3/id",
+              "rule": "unique",
+              "message": "Duplicate step ID"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-wmQfNu/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_2d3fb89a-db4d-4fe3-8ef5-882f3ec7fbd3",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Plan semantic validation failed",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps",
+              "rule": "requiredAssertion",
+              "message": "At least one required assertion is required"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "server",
+        "start",
+        "--port",
+        "43939",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_49914e58-109d-4fff-956b-8fff5fdd68a0",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "sameErrorCodeRulePath",
+      "surfaces": [
+        "built-cli",
+        "server-start",
+        "stdio-mcp",
+        "http-mcp"
+      ],
+      "cases": [
+        "ExecutablePlan-unknown-field",
+        "ExecutablePlan-oversize",
+        "ExecutablePlan-future-major",
+        "ProjectConfig-unknown-field",
+        "ProjectConfig-oversize",
+        "ProjectConfig-future-major",
+        "RunRequest-unknown-field",
+        "RunRequest-oversize",
+        "plan-enum",
+        "config-enum",
+        "request-enum",
+        "request-bad-id",
+        "config-bad-id",
+        "plan-duplicate-step",
+        "plan-missing-assertion"
+      ],
+      "authoringWrites": 0
+    }
+  ],
+  "limitations": [
+    "Read-only validation has no audit-free promise: denials are audited; no tests, sources or runs are created."
+  ]
+}

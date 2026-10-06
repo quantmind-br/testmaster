@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "hostile-repository-boundary",
+  "class": "adversarial-cli",
+  "runner": "real-cli-git",
+  "externalDependency": "none",
+  "observedAt": "2026-10-06T13:10:36.842Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "hostile-repository-boundary",
+        "--base-url",
+        "http://127.0.0.1:43210",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82a007b0-af5b-4be5-92de-3253a1a31d8c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "d2f73df3f78c9d220786a54dfd525dcb34e09bbb",
+        "--head",
+        "bbbb5df517e9c9447e6aa1f84c795181924d054e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3960a5f9-8678-4d4f-b98b-1d3bcec34ef3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "bbbb5df517e9c9447e6aa1f84c795181924d054e",
+        "--working-tree",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_98766294-8382-48cc-9a82-e805ca63cfa1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_60ee423a-abae-40ee-8aec-3343526eb73d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "/tmp/tm-m1-xnw8d3/repo/external.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_19f4c1d6-1a53-4fdd-ba79-bcd3628b9aad",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "/tmp/tm-m1-xnw8d3/repo/cycle.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d2204490-e4d6-473f-97b9-3b33626e3148",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "hostileForkReadOnlyBoundary",
+      "healthy": true,
+      "baseSha": "d2f73df3f78c9d220786a54dfd525dcb34e09bbb",
+      "headSha": "bbbb5df517e9c9447e6aa1f84c795181924d054e",
+      "markerFiles": [],
+      "remotesAndConfigUnchanged": true,
+      "tokenDisclosed": false,
+      "internetConnections": 0,
+      "evidence": "validation/results/hostile-repository-boundary-hostile-network.json"
+    }
+  ],
+  "limitations": [
+    "Local fork analysis only; GitHub App installation tokens/check-SHA publishing are unavailable until M4."
+  ]
+}

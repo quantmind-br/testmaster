@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cleanup-quarantine-isolation",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:18:53.018Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "cleanup-quarantine-isolation",
+        "--base-url",
+        "http://127.0.0.1:37759",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_41d81ac2-f7c7-4ab2-b21a-3bdf52d593d3",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115d-eca3-762d-bc6e-009013bf4fa9",
+    "run_01a1115d-f109-7389-a34d-3c509f52c4fe"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "injected host cleanup failure quarantines durable slot; clear produces fresh session with same-attempt cookie positive control; admitted extension cannot activate hook",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

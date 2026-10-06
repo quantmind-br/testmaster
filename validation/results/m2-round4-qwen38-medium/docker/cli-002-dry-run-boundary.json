@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cli-002-dry-run-boundary",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:16:48.181Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-24Kcjp/repo/invalid.json",
+        "--dry-run",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_de49e567-77c7-462b-99e7-45d1337ce492",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps",
+              "rule": "minItems",
+              "message": "must NOT have fewer than 1 items"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-24Kcjp/repo/valid.json",
+        "--dry-run",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6413bbcc-64c8-4fc4-9e14-92e339551f30",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "offlineDryRunBoundary",
+      "healthy": true,
+      "positiveControl": {
+        "fetchCalls": 1,
+        "targetRequests": 1
+      },
+      "invalidExit": 5,
+      "validExit": 0,
+      "dryRunRequests": 0,
+      "repositoryAndHomeUnchanged": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

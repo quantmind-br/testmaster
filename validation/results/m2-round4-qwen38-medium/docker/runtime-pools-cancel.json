@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-pools-cancel",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:15:33.799Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-pools-cancel",
+        "--base-url",
+        "http://127.0.0.1:40465",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c70759f0-999b-4c33-a89d-35d7b2e381e9",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115a-e5a6-7355-8448-f1c787227858",
+    "run_01a1115a-e5e9-7421-a8d7-a3a476c4b57d",
+    "run_01a1115a-e62f-7203-aa06-82b9df69260b"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "resourceAdmissionAndCancelChildren",
+      "healthy": true,
+      "queuedRun": "run_01a1115a-e5e9-7421-a8d7-a3a476c4b57d",
+      "browserRun": "run_01a1115a-e5a6-7355-8448-f1c787227858",
+      "httpRun": "run_01a1115a-e62f-7203-aa06-82b9df69260b",
+      "remainingContainers": "",
+      "imageDigests": [
+        "sha256:e0010105190a41a8a4c735990004d2e4f96ddc764e3bc5e677bf8c06e06f373e",
+        "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

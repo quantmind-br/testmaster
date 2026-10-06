@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "surface-missing-image",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:19:11.132Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "surface-missing-image",
+        "--base-url",
+        "http://127.0.0.1:37813",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_50248c15-d402-44c5-87f2-3fde116f55b2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "missingImageUnavailable",
+      "runners": [],
+      "disabled": [
+        "local-execution",
+        "playwright",
+        "http",
+        "python",
+        "docker",
+        "unsafe-local",
+        "resolve_action",
+        "agent-mode",
+        "resources-cleanup",
+        "analysis",
+        "healing",
+        "run-comparison",
+        "batch-comparison",
+        "flake-study",
+        "ci",
+        "server",
+        "postgres",
+        "multi-user",
+        "suites",
+        "schedules",
+        "auth-dynamic",
+        "identity",
+        "workers-registration",
+        "integrations",
+        "deliveries",
+        "secrets-rotation",
+        "audit-api",
+        "distributed",
+        "tunnels",
+        "matrix-advanced",
+        "visualMatches",
+        "accessibilityViolations",
+        "memory",
+        "visual-baselines",
+        "sso",
+        "scim",
+        "portability",
+        "break-glass"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

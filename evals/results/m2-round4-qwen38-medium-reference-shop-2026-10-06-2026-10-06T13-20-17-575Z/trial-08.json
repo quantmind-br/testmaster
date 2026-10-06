@@ -1,0 +1,2699 @@
+{
+  "trialId": "trial-08",
+  "caseId": "shop-defect-005",
+  "split": "holdout",
+  "category": "authorization",
+  "mutant": "orders-auth-bypass",
+  "oracle": {
+    "healthyConfirmed": true,
+    "defectConfirmed": true
+  },
+  "pairs": [],
+  "errors": [
+    {
+      "phase": "normalize",
+      "code": "INVALID_ARGUMENT",
+      "message": "Requirement references evidence outside supplied sources",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+          "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+        ],
+        "startedAt": "2026-10-06T13:36:17.872Z",
+        "durationMs": 155510.05509699997,
+        "exitCode": 5,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_f2b95a28-0088-4644-9aa0-a7ce048159c8",
+          "error": {
+            "code": "INVALID_ARGUMENT",
+            "message": "Requirement references evidence outside supplied sources",
+            "details": {},
+            "retryable": false,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_f2b95a28-0088-4644-9aa0-a7ce048159c8\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Requirement references evidence outside supplied sources\",\"details\":{},\"retryable\":false,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": null
+    },
+    {
+      "phase": "evidence",
+      "code": "no_attempts",
+      "message": "No test runs executed; runs evidence directory was not created",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-WXHrSg/repo/.testmaster"
+      },
+      "exclusion": null
+    }
+  ],
+  "generatedProposals": 0,
+  "validProposals": 0,
+  "commands": [
+    {
+      "args": [
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "trial-08",
+        "--base-url",
+        "http://127.0.0.1:8080"
+      ],
+      "startedAt": "2026-10-06T13:36:16.092Z",
+      "durationMs": 300.0468960000435,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_359372ef-587e-4745-9f83-659581ff4f93",
+        "data": {
+          "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130",
+          "principalId": "usr_01a1116d-e1eb-7768-944b-d3906db68ca0",
+          "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+          "environmentId": "env_01a1116d-e1f9-7443-8358-fad5b0ef3d76",
+          "sessionOnly": false
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_359372ef-587e-4745-9f83-659581ff4f93\",\"data\":{\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\",\"principalId\":\"usr_01a1116d-e1eb-7768-944b-d3906db68ca0\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"environmentId\":\"env_01a1116d-e1f9-7443-8358-fad5b0ef3d76\",\"sessionOnly\":false},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans"
+      ],
+      "startedAt": "2026-10-06T13:36:16.393Z",
+      "durationMs": 277.46924399991985,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_8a0aad86-e56a-4156-b8b0-3f31cd78b1c0",
+        "data": {
+          "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+          "provider": "quantforge",
+          "consent": {
+            "dataClasses": [
+              "documents",
+              "code_summary",
+              "requirements",
+              "plans"
+            ],
+            "grantedAt": "2026-10-06T13:36:16.658Z",
+            "revokedAt": null,
+            "allowUnknownCost": true
+          }
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_8a0aad86-e56a-4156-b8b0-3f31cd78b1c0\",\"data\":{\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"provider\":\"quantforge\",\"consent\":{\"dataClasses\":[\"documents\",\"code_summary\",\"requirements\",\"plans\"],\"grantedAt\":\"2026-10-06T13:36:16.658Z\",\"revokedAt\":null,\"allowUnknownCost\":true}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "budget",
+        "set",
+        "--tokens",
+        "12000000"
+      ],
+      "startedAt": "2026-10-06T13:36:16.670Z",
+      "durationMs": 275.2819269999163,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_b9a2a2c3-0cf4-4931-bd3f-75f5a1277ddb",
+        "data": {
+          "calls": [],
+          "tokens": {
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "reasoningTokens": 0
+          },
+          "cost": [],
+          "measuredCosts": [],
+          "unknownCostCalls": 0,
+          "budgetRemaining": null,
+          "reservations": {
+            "reserved": 0,
+            "settled": 0,
+            "released": 0
+          },
+          "tokenBudget": {
+            "limit": 12000000,
+            "used": 0,
+            "remaining": 12000000
+          },
+          "runtimeMs": 0,
+          "storageBytes": 0,
+          "runs": []
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_b9a2a2c3-0cf4-4931-bd3f-75f5a1277ddb\",\"data\":{\"calls\":[],\"tokens\":{\"inputTokens\":0,\"outputTokens\":0,\"reasoningTokens\":0},\"cost\":[],\"measuredCosts\":[],\"unknownCostCalls\":0,\"budgetRemaining\":null,\"reservations\":{\"reserved\":0,\"settled\":0,\"released\":0},\"tokenBudget\":{\"limit\":12000000,\"used\":0,\"remaining\":12000000},\"runtimeMs\":0,\"storageBytes\":0,\"runs\":[]},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "source",
+        "add",
+        "PRD.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown"
+      ],
+      "startedAt": "2026-10-06T13:36:16.946Z",
+      "durationMs": 289.61696900008246,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_36dbbf38-e61c-4dfe-beaf-ab6e5b861a6a",
+        "data": {
+          "source": {
+            "activeRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+            "createdAt": "2026-10-06T13:36:17.223Z",
+            "displayName": "PRD.md",
+            "id": "src_01a1116d-e546-70b7-9413-7fd65623b140",
+            "origin": "local-file",
+            "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+            "role": "prd",
+            "version": 2,
+            "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+          },
+          "chunks": [
+            {
+              "contentHash": "43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8",
+              "evidenceRef": {
+                "contentHash": "43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8",
+                "length": 37,
+                "offset": 0,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+              "kind": "heading",
+              "lineEnd": 1,
+              "lineStart": 1,
+              "requirementLike": false,
+              "text": "# Reference Shop product requirements"
+            },
+            {
+              "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+              "evidenceRef": {
+                "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+                "length": 106,
+                "offset": 39,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+              "kind": "paragraph",
+              "lineEnd": 3,
+              "lineStart": 3,
+              "requirementLike": false,
+              "text": "Synthetic local-only application; no real customer data. License: UNLICENSED, pending maintainer decision."
+            },
+            {
+              "contentHash": "df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238",
+              "evidenceRef": {
+                "contentHash": "df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238",
+                "length": 17,
+                "offset": 147,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+              "kind": "heading",
+              "lineEnd": 5,
+              "lineStart": 5,
+              "requirementLike": false,
+              "text": "## Authentication"
+            },
+            {
+              "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+              "evidenceRef": {
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+              "kind": "paragraph",
+              "lineEnd": 7,
+              "lineStart": 6,
+              "requirementLike": true,
+              "text": "SHOP-AUTH-001: Submitting an empty password shows exactly \"Password is required\" and creates no authenticated session.\nSHOP-AUTH-002: Orders require a bearer token and return HTTP 401 without it."
+            },
+            {
+              "contentHash": "cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1",
+              "evidenceRef": {
+                "contentHash": "cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1",
+                "length": 23,
+                "offset": 362,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+              "kind": "heading",
+              "lineEnd": 9,
+              "lineStart": 9,
+              "requirementLike": false,
+              "text": "## Catalog and checkout"
+            },
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "evidenceRef": {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c",
+              "kind": "paragraph",
+              "lineEnd": 15,
+              "lineStart": 10,
+              "requirementLike": true,
+              "text": "SHOP-PRICE-001: All prices are integer cents; three Precision Widgets at 1005 cents each total 3015 cents.\nSHOP-SCHEMA-001: Products expose id, name and priceCents.\nSHOP-PAGING-001: Offset pagination enumerates every product exactly once.\nSHOP-ORDER-001: A successful checkout persists an order that remains visible after a page reload.\nSHOP-IDEMPOTENCY-001: Repeating an order Idempotency-Key returns the original order and never duplicates it.\nSHOP-EMPTY-001: **Deliberate conflict for adjudication:** empty-cart checkout returns HTTP 400. The OpenAPI declares HTTP 422. Both sources must be retained; neither is silently authoritative until reviewer approval."
+            },
+            {
+              "contentHash": "e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa",
+              "evidenceRef": {
+                "contentHash": "e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa",
+                "length": 14,
+                "offset": 1050,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+              "kind": "heading",
+              "lineEnd": 17,
+              "lineStart": 17,
+              "requirementLike": false,
+              "text": "## Other flows"
+            },
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "evidenceRef": {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+              "kind": "paragraph",
+              "lineEnd": 21,
+              "lineStart": 18,
+              "requirementLike": false,
+              "text": "SHOP-HEALTH-001: GET /health returns HTTP 200 with status \"ok\".\nSHOP-HOOK-001: Checkout exposes data-testid=\"checkout-button\". Renaming the hook is nonfunctional drift, not a business regression.\nProfile files are uploaded as raw bytes and downloaded without changes. Terms open in a popup. A same-origin delivery iframe supports Standard and Express.\nCatalog readiness is explicit via data-testid=\"catalog-ready\" after asynchronous loading; navigation is SPA with browser history."
+            },
+            {
+              "contentHash": "fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5",
+              "evidenceRef": {
+                "contentHash": "fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5",
+                "length": 9,
+                "offset": 1548,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+              "kind": "heading",
+              "lineEnd": 23,
+              "lineStart": 23,
+              "requirementLike": false,
+              "text": "## Review"
+            },
+            {
+              "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+              "evidenceRef": {
+                "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+                "length": 253,
+                "offset": 1558,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+              "kind": "paragraph",
+              "lineEnd": 24,
+              "lineStart": 24,
+              "requirementLike": false,
+              "text": "The intentional status conflict requires two independent reviewers, source locations and a recorded adjudication before benchmark classification. Labels in the evaluation manifest are not model input. No production execution or personal data is allowed."
+            },
+            {
+              "contentHash": "858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf",
+              "evidenceRef": {
+                "contentHash": "858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf",
+                "length": 28,
+                "offset": 1813,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+              "kind": "heading",
+              "lineEnd": 26,
+              "lineStart": 26,
+              "requirementLike": false,
+              "text": "## Reproduction and evidence"
+            },
+            {
+              "contentHash": "f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1",
+              "evidenceRef": {
+                "contentHash": "f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1",
+                "length": 356,
+                "offset": 1842,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b",
+              "kind": "paragraph",
+              "lineEnd": 27,
+              "lineStart": 27,
+              "requirementLike": false,
+              "text": "Run `node fixtures/reference-shop/src/server.js --port 3000` (set `REFERENCE_SHOP_MUTANT` for a negative control), or call `startShop({port: 0, mutant})`. Each instance owns its SQLite file and cleanup. Oracle checks use raw HTTP plus a separate read-only SQLite connection; browser checks additionally reload orders rather than trusting the success toast."
+            },
+            {
+              "contentHash": "ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e",
+              "evidenceRef": {
+                "contentHash": "ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e",
+                "length": 353,
+                "offset": 2200,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479",
+              "kind": "paragraph",
+              "lineEnd": 29,
+              "lineStart": 29,
+              "requirementLike": false,
+              "text": "Regenerate deterministic documents/digest with `node fixtures/reference-shop/artifacts/generate.js`, archives with `node fixtures/adversarial/generate.js`, then format the corpus with Biome. Unit controls run with `pnpm exec vitest run --project unit fixtures`; real Chromium controls use `pnpm exec vitest run --project docker fixtures/reference-shop`."
+            },
+            {
+              "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+              "evidenceRef": {
+                "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+                "length": 559,
+                "offset": 2555,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d",
+              "kind": "paragraph",
+              "lineEnd": 31,
+              "lineStart": 31,
+              "requirementLike": false,
+              "text": "The browser harness publishes only Playwright's server on host loopback, runs non-root in the pinned image, and binds the shop to the Docker gateway. Because this workstation's firewall rejects bridge-to-host ingress, the harness exposes only the gateway address via Playwright's WebSocket network tunnel; it does not modify firewall rules. This test-only connectivity does not validate the product sandbox's egress policy. Independent human labeling is explicitly pending in the corpus manifest; no release or model-quality claim follows from these controls."
+            },
+            {
+              "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+              "evidenceRef": {
+                "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+                "length": 407,
+                "offset": 3116,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              "id": "chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c",
+              "kind": "paragraph",
+              "lineEnd": 33,
+              "lineStart": 33,
+              "requirementLike": false,
+              "text": "Chromium is explicitly launched with `chromiumSandbox: true`; the remote server's default (sandbox disabled) is not used. The test reads `containers/seccomp_profile.json`, keeps `--cap-drop ALL` and `no-new-privileges`, and never falls back on sandbox failure. `run-server --unsafe` only permits the trusted loopback test client to request sandbox enablement; it does not alter application execution policy."
+            }
+          ],
+          "diagnostics": [],
+          "inventory": {},
+          "revision": {
+            "chunks": [
+              {
+                "contentHash": "43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8",
+                "length": 37,
+                "offset": 0,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+                "length": 106,
+                "offset": 39,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238",
+                "length": 17,
+                "offset": 147,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1",
+                "length": 23,
+                "offset": 362,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa",
+                "length": 14,
+                "offset": 1050,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5",
+                "length": 9,
+                "offset": 1548,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+                "length": 253,
+                "offset": 1558,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf",
+                "length": 28,
+                "offset": 1813,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1",
+                "length": 356,
+                "offset": 1842,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e",
+                "length": 353,
+                "offset": 2200,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+                "length": 559,
+                "offset": 2555,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              },
+              {
+                "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+                "length": 407,
+                "offset": 3116,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+              }
+            ],
+            "contentHash": "77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b",
+            "id": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+            "mediaType": "text/markdown",
+            "parentId": null,
+            "parserVersion": "1.0.0",
+            "sizeBytes": 3524,
+            "status": "ready",
+            "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+          },
+          "archivedAt": null
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_36dbbf38-e61c-4dfe-beaf-ab6e5b861a6a\",\"data\":{\"source\":{\"activeRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"createdAt\":\"2026-10-06T13:36:17.223Z\",\"displayName\":\"PRD.md\",\"id\":\"src_01a1116d-e546-70b7-9413-7fd65623b140\",\"origin\":\"local-file\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"role\":\"prd\",\"version\":2,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},\"chunks\":[{\"contentHash\":\"43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8\",\"evidenceRef\":{\"contentHash\":\"43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8\",\"length\":37,\"offset\":0,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a\",\"kind\":\"heading\",\"lineEnd\":1,\"lineStart\":1,\"requirementLike\":false,\"text\":\"# Reference Shop product requirements\"},{\"contentHash\":\"ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465\",\"evidenceRef\":{\"contentHash\":\"ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465\",\"length\":106,\"offset\":39,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583\",\"kind\":\"paragraph\",\"lineEnd\":3,\"lineStart\":3,\"requirementLike\":false,\"text\":\"Synthetic local-only application; no real customer data. License: UNLICENSED, pending maintainer decision.\"},{\"contentHash\":\"df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238\",\"evidenceRef\":{\"contentHash\":\"df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238\",\"length\":17,\"offset\":147,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844\",\"kind\":\"heading\",\"lineEnd\":5,\"lineStart\":5,\"requirementLike\":false,\"text\":\"## Authentication\"},{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"evidenceRef\":{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"length\":195,\"offset\":165,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0\",\"kind\":\"paragraph\",\"lineEnd\":7,\"lineStart\":6,\"requirementLike\":true,\"text\":\"SHOP-AUTH-001: Submitting an empty password shows exactly \\\"Password is required\\\" and creates no authenticated session.\\nSHOP-AUTH-002: Orders require a bearer token and return HTTP 401 without it.\"},{\"contentHash\":\"cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1\",\"evidenceRef\":{\"contentHash\":\"cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1\",\"length\":23,\"offset\":362,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb\",\"kind\":\"heading\",\"lineEnd\":9,\"lineStart\":9,\"requirementLike\":false,\"text\":\"## Catalog and checkout\"},{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"evidenceRef\":{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"length\":662,\"offset\":386,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c\",\"kind\":\"paragraph\",\"lineEnd\":15,\"lineStart\":10,\"requirementLike\":true,\"text\":\"SHOP-PRICE-001: All prices are integer cents; three Precision Widgets at 1005 cents each total 3015 cents.\\nSHOP-SCHEMA-001: Products expose id, name and priceCents.\\nSHOP-PAGING-001: Offset pagination enumerates every product exactly once.\\nSHOP-ORDER-001: A successful checkout persists an order that remains visible after a page reload.\\nSHOP-IDEMPOTENCY-001: Repeating an order Idempotency-Key returns the original order and never duplicates it.\\nSHOP-EMPTY-001: **Deliberate conflict for adjudication:** empty-cart checkout returns HTTP 400. The OpenAPI declares HTTP 422. Both sources must be retained; neither is silently authoritative until reviewer approval.\"},{\"contentHash\":\"e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa\",\"evidenceRef\":{\"contentHash\":\"e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa\",\"length\":14,\"offset\":1050,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867\",\"kind\":\"heading\",\"lineEnd\":17,\"lineStart\":17,\"requirementLike\":false,\"text\":\"## Other flows\"},{\"contentHash\":\"1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac\",\"evidenceRef\":{\"contentHash\":\"1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac\",\"length\":481,\"offset\":1065,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb\",\"kind\":\"paragraph\",\"lineEnd\":21,\"lineStart\":18,\"requirementLike\":false,\"text\":\"SHOP-HEALTH-001: GET /health returns HTTP 200 with status \\\"ok\\\".\\nSHOP-HOOK-001: Checkout exposes data-testid=\\\"checkout-button\\\". Renaming the hook is nonfunctional drift, not a business regression.\\nProfile files are uploaded as raw bytes and downloaded without changes. Terms open in a popup. A same-origin delivery iframe supports Standard and Express.\\nCatalog readiness is explicit via data-testid=\\\"catalog-ready\\\" after asynchronous loading; navigation is SPA with browser history.\"},{\"contentHash\":\"fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5\",\"evidenceRef\":{\"contentHash\":\"fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5\",\"length\":9,\"offset\":1548,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92\",\"kind\":\"heading\",\"lineEnd\":23,\"lineStart\":23,\"requirementLike\":false,\"text\":\"## Review\"},{\"contentHash\":\"e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896\",\"evidenceRef\":{\"contentHash\":\"e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896\",\"length\":253,\"offset\":1558,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437\",\"kind\":\"paragraph\",\"lineEnd\":24,\"lineStart\":24,\"requirementLike\":false,\"text\":\"The intentional status conflict requires two independent reviewers, source locations and a recorded adjudication before benchmark classification. Labels in the evaluation manifest are not model input. No production execution or personal data is allowed.\"},{\"contentHash\":\"858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf\",\"evidenceRef\":{\"contentHash\":\"858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf\",\"length\":28,\"offset\":1813,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c\",\"kind\":\"heading\",\"lineEnd\":26,\"lineStart\":26,\"requirementLike\":false,\"text\":\"## Reproduction and evidence\"},{\"contentHash\":\"f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1\",\"evidenceRef\":{\"contentHash\":\"f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1\",\"length\":356,\"offset\":1842,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b\",\"kind\":\"paragraph\",\"lineEnd\":27,\"lineStart\":27,\"requirementLike\":false,\"text\":\"Run `node fixtures/reference-shop/src/server.js --port 3000` (set `REFERENCE_SHOP_MUTANT` for a negative control), or call `startShop({port: 0, mutant})`. Each instance owns its SQLite file and cleanup. Oracle checks use raw HTTP plus a separate read-only SQLite connection; browser checks additionally reload orders rather than trusting the success toast.\"},{\"contentHash\":\"ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e\",\"evidenceRef\":{\"contentHash\":\"ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e\",\"length\":353,\"offset\":2200,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479\",\"kind\":\"paragraph\",\"lineEnd\":29,\"lineStart\":29,\"requirementLike\":false,\"text\":\"Regenerate deterministic documents/digest with `node fixtures/reference-shop/artifacts/generate.js`, archives with `node fixtures/adversarial/generate.js`, then format the corpus with Biome. Unit controls run with `pnpm exec vitest run --project unit fixtures`; real Chromium controls use `pnpm exec vitest run --project docker fixtures/reference-shop`.\"},{\"contentHash\":\"ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f\",\"evidenceRef\":{\"contentHash\":\"ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f\",\"length\":559,\"offset\":2555,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d\",\"kind\":\"paragraph\",\"lineEnd\":31,\"lineStart\":31,\"requirementLike\":false,\"text\":\"The browser harness publishes only Playwright's server on host loopback, runs non-root in the pinned image, and binds the shop to the Docker gateway. Because this workstation's firewall rejects bridge-to-host ingress, the harness exposes only the gateway address via Playwright's WebSocket network tunnel; it does not modify firewall rules. This test-only connectivity does not validate the product sandbox's egress policy. Independent human labeling is explicitly pending in the corpus manifest; no release or model-quality claim follows from these controls.\"},{\"contentHash\":\"acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c\",\"evidenceRef\":{\"contentHash\":\"acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c\",\"length\":407,\"offset\":3116,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},\"id\":\"chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c\",\"kind\":\"paragraph\",\"lineEnd\":33,\"lineStart\":33,\"requirementLike\":false,\"text\":\"Chromium is explicitly launched with `chromiumSandbox: true`; the remote server's default (sandbox disabled) is not used. The test reads `containers/seccomp_profile.json`, keeps `--cap-drop ALL` and `no-new-privileges`, and never falls back on sandbox failure. `run-server --unsafe` only permits the trusted loopback test client to request sandbox enablement; it does not alter application execution policy.\"}],\"diagnostics\":[],\"inventory\":{},\"revision\":{\"chunks\":[{\"contentHash\":\"43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8\",\"length\":37,\"offset\":0,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465\",\"length\":106,\"offset\":39,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238\",\"length\":17,\"offset\":147,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"length\":195,\"offset\":165,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1\",\"length\":23,\"offset\":362,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"length\":662,\"offset\":386,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa\",\"length\":14,\"offset\":1050,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac\",\"length\":481,\"offset\":1065,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5\",\"length\":9,\"offset\":1548,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896\",\"length\":253,\"offset\":1558,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf\",\"length\":28,\"offset\":1813,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1\",\"length\":356,\"offset\":1842,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e\",\"length\":353,\"offset\":2200,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f\",\"length\":559,\"offset\":2555,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"},{\"contentHash\":\"acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c\",\"length\":407,\"offset\":3116,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"}],\"contentHash\":\"77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b\",\"id\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"mediaType\":\"text/markdown\",\"parentId\":null,\"parserVersion\":\"1.0.0\",\"sizeBytes\":3524,\"status\":\"ready\",\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},\"archivedAt\":null},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "source",
+        "add",
+        "openapi.yaml",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi"
+      ],
+      "startedAt": "2026-10-06T13:36:17.236Z",
+      "durationMs": 328.2204160001129,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_f4dd06e1-f64b-497f-981a-a0abcba5916e",
+        "data": {
+          "source": {
+            "activeRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3",
+            "createdAt": "2026-10-06T13:36:17.552Z",
+            "displayName": "openapi.yaml",
+            "id": "src_01a1116d-e690-71c6-bb72-209deda37979",
+            "origin": "local-file",
+            "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+            "role": "api-spec",
+            "version": 2,
+            "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+          },
+          "chunks": [
+            {
+              "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+              "evidenceRef": {
+                "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "jsonPointer": "/paths/~1health/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"getHealth\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"status\":{\"const\":\"ok\"}},\"required\":[\"status\"],\"type\":\"object\"}}},\"description\":\"Healthy service\"}}}"
+            },
+            {
+              "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+              "evidenceRef": {
+                "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                "jsonPointer": "/paths/~1api~1auth~1token/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Bearer token\"}}}"
+            },
+            {
+              "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+              "evidenceRef": {
+                "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"refreshToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Fresh token with credentials\"}}}"
+            },
+            {
+              "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+              "evidenceRef": {
+                "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "jsonPointer": "/paths/~1api~1products/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_1d8eb065a47a3b6c4899d38eaaa6f8e1ae05d4c8cff69068c5c162b9eacff8b0",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"listProducts\",\"parameters\":[{\"in\":\"query\",\"name\":\"limit\",\"schema\":{\"default\":2,\"maximum\":100,\"minimum\":1,\"type\":\"integer\"}},{\"in\":\"query\",\"name\":\"offset\",\"schema\":{\"default\":0,\"minimum\":0,\"type\":\"integer\"}}],\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"items\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"},\"type\":\"array\"},\"nextOffset\":{\"type\":\"integer\"},\"total\":{\"type\":\"integer\"}},\"required\":[\"items\",\"total\",\"nextOffset\"],\"type\":\"object\"}}},\"description\":\"Paginated products\"}}}"
+            },
+            {
+              "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+              "evidenceRef": {
+                "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                "jsonPointer": "/paths/~1api~1products/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_252375ce39d565d6fb9dc7b0958a6318d65dd7ace64c06afab34147107e79399",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+              "evidenceRef": {
+                "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                "jsonPointer": "/paths/~1api~1products~1{id}/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_79f489bf0503f4e6a3cc7dc4171726d5c074d7691a2dce4d5ed82a53f014a529",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"getProduct\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+              "evidenceRef": {
+                "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                "jsonPointer": "/paths/~1api~1products~1{id}/put",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_206a98f3554919c8adcbd9a4651279b048545144c40780c5e58a987e674801f8",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"updateProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Updated product\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+              "evidenceRef": {
+                "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+                "jsonPointer": "/paths/~1api~1products~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_0199efcc555f69cfca79197888d2d435c2344ac0f72370932b85c46d4938f101",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"deleteProduct\",\"responses\":{\"200\":{\"description\":\"Deletion result\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+              "evidenceRef": {
+                "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+                "jsonPointer": "/paths/~1api~1cart/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_14c4c86d8b2d608b81c14241c435f557488ec807dc82a69e15b92285802a4606",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"getCart\",\"responses\":{\"200\":{\"description\":\"Persistent cart\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+              "evidenceRef": {
+                "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                "jsonPointer": "/paths/~1api~1cart/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_738b0759d2075fe9b50a3e3cdcbb3cc9d39363afb634c8a70d25dba89d9cdd3f",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"setCartItem\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"productId\":{\"type\":\"string\"},\"quantity\":{\"minimum\":1,\"type\":\"integer\"}},\"required\":[\"productId\",\"quantity\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Cart updated\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+              "evidenceRef": {
+                "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+                "jsonPointer": "/paths/~1api~1cart/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_18338c1c22abc29ac54ad72c6c8f5ce0d2b140ff966316c0410ce49d4365e260",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"clearCart\",\"responses\":{\"200\":{\"description\":\"Cart cleared\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+              "evidenceRef": {
+                "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "jsonPointer": "/paths/~1api~1orders/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_8351cbfde5b57736a3b1761c642e5b3a790231f72e02043a0b38fcc188e44459",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"listOrders\",\"responses\":{\"200\":{\"description\":\"Orders\"},\"401\":{\"description\":\"Authentication required\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+              "evidenceRef": {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_71d32f63cb8ce1d155900cb427ae72d55e840677a75b0a1228cb0546e49edc98",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createOrder\",\"parameters\":[{\"in\":\"header\",\"name\":\"Idempotency-Key\",\"required\":true,\"schema\":{\"minLength\":1,\"type\":\"string\"}}],\"responses\":{\"200\":{\"description\":\"Idempotent replay\"},\"201\":{\"description\":\"Persisted order\"},\"401\":{\"description\":\"Authentication required\"},\"422\":{\"description\":\"Empty cart\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+              "evidenceRef": {
+                "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                "jsonPointer": "/paths/~1api~1users/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_f101e58bead592b6001e67b1f4ca5dbf276baeb455a5bf841a13e99f63734e2b",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createUser\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"email\":{\"format\":\"email\",\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"Cleanup-owned user\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+              "evidenceRef": {
+                "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+                "jsonPointer": "/paths/~1api~1users~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_fc1b423c25767ccafa9c87944e2310dc0be2a096735b965950b13e825474648a",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"deleteUser\",\"responses\":{\"200\":{\"description\":\"Delete owned user\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+              "evidenceRef": {
+                "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "jsonPointer": "/paths/~1api~1profile~1file/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_c762774fe5f4bb2e74a65fa35d457c2b5d0af3edd71177faf076e1c3142968a1",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"uploadProfile\",\"requestBody\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"File uploaded\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+              "evidenceRef": {
+                "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+                "jsonPointer": "/paths/~1api~1profile~1file/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_fa5bbff32723f458734591cc9662b09b15430be7ccf8061c7d45ff59884367cf",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"downloadProfile\",\"responses\":{\"200\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"description\":\"Profile bytes\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+              "evidenceRef": {
+                "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "jsonPointer": "/components",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_b63477abb64c8b7663c450ae3443d225c33af02798f4c97bc0da573a3315d8b1",
+              "kind": "components",
+              "requirementLike": true,
+              "text": "{\"schemas\":{\"Product\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}},\"securitySchemes\":{\"bearerAuth\":{\"scheme\":\"bearer\",\"type\":\"http\"}}}"
+            },
+            {
+              "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+              "evidenceRef": {
+                "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+                "jsonPointer": "/servers",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              "id": "chunk_e0375bd9de2ac1591c40c4ea5731c3af7c5666cdd3640b66e0bc11e580fbfee9",
+              "kind": "servers",
+              "requirementLike": false,
+              "text": "[{\"url\":\"http://127.0.0.1:3000\"}]"
+            }
+          ],
+          "diagnostics": [],
+          "inventory": {
+            "operations": [
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "getHealth",
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "properties": {
+                              "status": {
+                                "const": "ok"
+                              }
+                            },
+                            "required": [
+                              "status"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Healthy service"
+                    }
+                  }
+                },
+                "path": "/health"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createToken",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "properties": {
+                            "email": {
+                              "type": "string"
+                            },
+                            "password": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "password"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Bearer token"
+                    }
+                  }
+                },
+                "path": "/api/auth/token"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "refreshToken",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "properties": {
+                            "email": {
+                              "type": "string"
+                            },
+                            "password": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "password"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Fresh token with credentials"
+                    }
+                  }
+                },
+                "path": "/api/auth/refresh"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "listProducts",
+                  "parameters": [
+                    {
+                      "in": "query",
+                      "name": "limit",
+                      "schema": {
+                        "default": 2,
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    },
+                    {
+                      "in": "query",
+                      "name": "offset",
+                      "schema": {
+                        "default": 0,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "properties": {
+                              "items": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "priceCents": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "priceCents"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "nextOffset": {
+                                "type": "integer"
+                              },
+                              "total": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "items",
+                              "total",
+                              "nextOffset"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Paginated products"
+                    }
+                  }
+                },
+                "path": "/api/products"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createProduct",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "priceCents": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "priceCents"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "201": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "priceCents": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "priceCents"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Product"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "getProduct",
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "priceCents": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "priceCents"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Product"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products/{id}"
+              },
+              {
+                "method": "PUT",
+                "operation": {
+                  "operationId": "updateProduct",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "priceCents": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "priceCents"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "priceCents": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "priceCents"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Updated product"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products/{id}"
+              },
+              {
+                "method": "DELETE",
+                "operation": {
+                  "operationId": "deleteProduct",
+                  "responses": {
+                    "200": {
+                      "description": "Deletion result"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products/{id}"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "getCart",
+                  "responses": {
+                    "200": {
+                      "description": "Persistent cart"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/cart"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "setCartItem",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "productId": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "quantity"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Cart updated"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/cart"
+              },
+              {
+                "method": "DELETE",
+                "operation": {
+                  "operationId": "clearCart",
+                  "responses": {
+                    "200": {
+                      "description": "Cart cleared"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/cart"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "listOrders",
+                  "responses": {
+                    "200": {
+                      "description": "Orders"
+                    },
+                    "401": {
+                      "description": "Authentication required"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/orders"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createOrder",
+                  "parameters": [
+                    {
+                      "in": "header",
+                      "name": "Idempotency-Key",
+                      "required": true,
+                      "schema": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Idempotent replay"
+                    },
+                    "201": {
+                      "description": "Persisted order"
+                    },
+                    "401": {
+                      "description": "Authentication required"
+                    },
+                    "422": {
+                      "description": "Empty cart"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/orders"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createUser",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "format": "email",
+                              "type": "string"
+                            },
+                            "password": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "password"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "201": {
+                      "description": "Cleanup-owned user"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/users"
+              },
+              {
+                "method": "DELETE",
+                "operation": {
+                  "operationId": "deleteUser",
+                  "responses": {
+                    "200": {
+                      "description": "Delete owned user"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/users/{id}"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "uploadProfile",
+                  "requestBody": {
+                    "content": {
+                      "application/octet-stream": {
+                        "schema": {
+                          "format": "binary",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "201": {
+                      "description": "File uploaded"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/profile/file"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "downloadProfile",
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/octet-stream": {
+                          "schema": {
+                            "format": "binary",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "description": "Profile bytes"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/profile/file"
+              }
+            ],
+            "specification": "OpenAPI"
+          },
+          "revision": {
+            "chunks": [
+              {
+                "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "jsonPointer": "/paths/~1health/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                "jsonPointer": "/paths/~1api~1auth~1token/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "jsonPointer": "/paths/~1api~1products/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                "jsonPointer": "/paths/~1api~1products/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                "jsonPointer": "/paths/~1api~1products~1{id}/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                "jsonPointer": "/paths/~1api~1products~1{id}/put",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+                "jsonPointer": "/paths/~1api~1products~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+                "jsonPointer": "/paths/~1api~1cart/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                "jsonPointer": "/paths/~1api~1cart/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+                "jsonPointer": "/paths/~1api~1cart/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "jsonPointer": "/paths/~1api~1orders/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                "jsonPointer": "/paths/~1api~1users/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+                "jsonPointer": "/paths/~1api~1users~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "jsonPointer": "/paths/~1api~1profile~1file/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+                "jsonPointer": "/paths/~1api~1profile~1file/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "jsonPointer": "/components",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              },
+              {
+                "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+                "jsonPointer": "/servers",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              }
+            ],
+            "contentHash": "a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881",
+            "id": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3",
+            "mediaType": "application/vnd.oai.openapi",
+            "parentId": null,
+            "parserVersion": "1.0.0",
+            "sizeBytes": 14932,
+            "status": "ready",
+            "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+          },
+          "archivedAt": null
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_f4dd06e1-f64b-497f-981a-a0abcba5916e\",\"data\":{\"source\":{\"activeRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\",\"createdAt\":\"2026-10-06T13:36:17.552Z\",\"displayName\":\"openapi.yaml\",\"id\":\"src_01a1116d-e690-71c6-bb72-209deda37979\",\"origin\":\"local-file\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"role\":\"api-spec\",\"version\":2,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},\"chunks\":[{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"evidenceRef\":{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"jsonPointer\":\"/paths/~1health/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"getHealth\\\",\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"status\\\":{\\\"const\\\":\\\"ok\\\"}},\\\"required\\\":[\\\"status\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Healthy service\\\"}}}\"},{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"evidenceRef\":{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"jsonPointer\":\"/paths/~1api~1auth~1token/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createToken\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"email\\\":{\\\"type\\\":\\\"string\\\"},\\\"password\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"email\\\",\\\"password\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Bearer token\\\"}}}\"},{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"evidenceRef\":{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"jsonPointer\":\"/paths/~1api~1auth~1refresh/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"refreshToken\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"email\\\":{\\\"type\\\":\\\"string\\\"},\\\"password\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"email\\\",\\\"password\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Fresh token with credentials\\\"}}}\"},{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"evidenceRef\":{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"jsonPointer\":\"/paths/~1api~1products/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_1d8eb065a47a3b6c4899d38eaaa6f8e1ae05d4c8cff69068c5c162b9eacff8b0\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"listProducts\\\",\\\"parameters\\\":[{\\\"in\\\":\\\"query\\\",\\\"name\\\":\\\"limit\\\",\\\"schema\\\":{\\\"default\\\":2,\\\"maximum\\\":100,\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"}},{\\\"in\\\":\\\"query\\\",\\\"name\\\":\\\"offset\\\",\\\"schema\\\":{\\\"default\\\":0,\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}}],\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"items\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"},\\\"type\\\":\\\"array\\\"},\\\"nextOffset\\\":{\\\"type\\\":\\\"integer\\\"},\\\"total\\\":{\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"items\\\",\\\"total\\\",\\\"nextOffset\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Paginated products\\\"}}}\"},{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"evidenceRef\":{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"jsonPointer\":\"/paths/~1api~1products/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_252375ce39d565d6fb9dc7b0958a6318d65dd7ace64c06afab34147107e79399\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createProduct\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"name\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"201\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Product\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"evidenceRef\":{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_79f489bf0503f4e6a3cc7dc4171726d5c074d7691a2dce4d5ed82a53f014a529\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"getProduct\\\",\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Product\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"evidenceRef\":{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/put\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_206a98f3554919c8adcbd9a4651279b048545144c40780c5e58a987e674801f8\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"updateProduct\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"name\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Updated product\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d\",\"evidenceRef\":{\"contentHash\":\"8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_0199efcc555f69cfca79197888d2d435c2344ac0f72370932b85c46d4938f101\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"deleteProduct\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Deletion result\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d\",\"evidenceRef\":{\"contentHash\":\"5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d\",\"jsonPointer\":\"/paths/~1api~1cart/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_14c4c86d8b2d608b81c14241c435f557488ec807dc82a69e15b92285802a4606\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"getCart\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Persistent cart\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"evidenceRef\":{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"jsonPointer\":\"/paths/~1api~1cart/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_738b0759d2075fe9b50a3e3cdcbb3cc9d39363afb634c8a70d25dba89d9cdd3f\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"setCartItem\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"productId\\\":{\\\"type\\\":\\\"string\\\"},\\\"quantity\\\":{\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"productId\\\",\\\"quantity\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Cart updated\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b\",\"evidenceRef\":{\"contentHash\":\"7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b\",\"jsonPointer\":\"/paths/~1api~1cart/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_18338c1c22abc29ac54ad72c6c8f5ce0d2b140ff966316c0410ce49d4365e260\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"clearCart\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Cart cleared\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"evidenceRef\":{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"jsonPointer\":\"/paths/~1api~1orders/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_8351cbfde5b57736a3b1761c642e5b3a790231f72e02043a0b38fcc188e44459\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"listOrders\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Orders\\\"},\\\"401\\\":{\\\"description\\\":\\\"Authentication required\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"evidenceRef\":{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"jsonPointer\":\"/paths/~1api~1orders/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_71d32f63cb8ce1d155900cb427ae72d55e840677a75b0a1228cb0546e49edc98\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createOrder\\\",\\\"parameters\\\":[{\\\"in\\\":\\\"header\\\",\\\"name\\\":\\\"Idempotency-Key\\\",\\\"required\\\":true,\\\"schema\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}}],\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Idempotent replay\\\"},\\\"201\\\":{\\\"description\\\":\\\"Persisted order\\\"},\\\"401\\\":{\\\"description\\\":\\\"Authentication required\\\"},\\\"422\\\":{\\\"description\\\":\\\"Empty cart\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"evidenceRef\":{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"jsonPointer\":\"/paths/~1api~1users/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_f101e58bead592b6001e67b1f4ca5dbf276baeb455a5bf841a13e99f63734e2b\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createUser\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"email\\\":{\\\"format\\\":\\\"email\\\",\\\"type\\\":\\\"string\\\"},\\\"password\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"email\\\",\\\"password\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"201\\\":{\\\"description\\\":\\\"Cleanup-owned user\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657\",\"evidenceRef\":{\"contentHash\":\"14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657\",\"jsonPointer\":\"/paths/~1api~1users~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_fc1b423c25767ccafa9c87944e2310dc0be2a096735b965950b13e825474648a\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"deleteUser\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Delete owned user\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"evidenceRef\":{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"jsonPointer\":\"/paths/~1api~1profile~1file/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_c762774fe5f4bb2e74a65fa35d457c2b5d0af3edd71177faf076e1c3142968a1\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"uploadProfile\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/octet-stream\\\":{\\\"schema\\\":{\\\"format\\\":\\\"binary\\\",\\\"type\\\":\\\"string\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"201\\\":{\\\"description\\\":\\\"File uploaded\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38\",\"evidenceRef\":{\"contentHash\":\"8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38\",\"jsonPointer\":\"/paths/~1api~1profile~1file/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_fa5bbff32723f458734591cc9662b09b15430be7ccf8061c7d45ff59884367cf\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"downloadProfile\\\",\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/octet-stream\\\":{\\\"schema\\\":{\\\"format\\\":\\\"binary\\\",\\\"type\\\":\\\"string\\\"}}},\\\"description\\\":\\\"Profile bytes\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"evidenceRef\":{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"jsonPointer\":\"/components\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_b63477abb64c8b7663c450ae3443d225c33af02798f4c97bc0da573a3315d8b1\",\"kind\":\"components\",\"requirementLike\":true,\"text\":\"{\\\"schemas\\\":{\\\"Product\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}},\\\"securitySchemes\\\":{\\\"bearerAuth\\\":{\\\"scheme\\\":\\\"bearer\\\",\\\"type\\\":\\\"http\\\"}}}\"},{\"contentHash\":\"3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57\",\"evidenceRef\":{\"contentHash\":\"3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57\",\"jsonPointer\":\"/servers\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},\"id\":\"chunk_e0375bd9de2ac1591c40c4ea5731c3af7c5666cdd3640b66e0bc11e580fbfee9\",\"kind\":\"servers\",\"requirementLike\":false,\"text\":\"[{\\\"url\\\":\\\"http://127.0.0.1:3000\\\"}]\"}],\"diagnostics\":[],\"inventory\":{\"operations\":[{\"method\":\"GET\",\"operation\":{\"operationId\":\"getHealth\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"status\":{\"const\":\"ok\"}},\"required\":[\"status\"],\"type\":\"object\"}}},\"description\":\"Healthy service\"}}},\"path\":\"/health\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Bearer token\"}}},\"path\":\"/api/auth/token\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"refreshToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Fresh token with credentials\"}}},\"path\":\"/api/auth/refresh\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"listProducts\",\"parameters\":[{\"in\":\"query\",\"name\":\"limit\",\"schema\":{\"default\":2,\"maximum\":100,\"minimum\":1,\"type\":\"integer\"}},{\"in\":\"query\",\"name\":\"offset\",\"schema\":{\"default\":0,\"minimum\":0,\"type\":\"integer\"}}],\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"items\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"},\"type\":\"array\"},\"nextOffset\":{\"type\":\"integer\"},\"total\":{\"type\":\"integer\"}},\"required\":[\"items\",\"total\",\"nextOffset\"],\"type\":\"object\"}}},\"description\":\"Paginated products\"}}},\"path\":\"/api/products\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"getProduct\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products/{id}\"},{\"method\":\"PUT\",\"operation\":{\"operationId\":\"updateProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Updated product\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products/{id}\"},{\"method\":\"DELETE\",\"operation\":{\"operationId\":\"deleteProduct\",\"responses\":{\"200\":{\"description\":\"Deletion result\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products/{id}\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"getCart\",\"responses\":{\"200\":{\"description\":\"Persistent cart\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/cart\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"setCartItem\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"productId\":{\"type\":\"string\"},\"quantity\":{\"minimum\":1,\"type\":\"integer\"}},\"required\":[\"productId\",\"quantity\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Cart updated\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/cart\"},{\"method\":\"DELETE\",\"operation\":{\"operationId\":\"clearCart\",\"responses\":{\"200\":{\"description\":\"Cart cleared\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/cart\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"listOrders\",\"responses\":{\"200\":{\"description\":\"Orders\"},\"401\":{\"description\":\"Authentication required\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/orders\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createOrder\",\"parameters\":[{\"in\":\"header\",\"name\":\"Idempotency-Key\",\"required\":true,\"schema\":{\"minLength\":1,\"type\":\"string\"}}],\"responses\":{\"200\":{\"description\":\"Idempotent replay\"},\"201\":{\"description\":\"Persisted order\"},\"401\":{\"description\":\"Authentication required\"},\"422\":{\"description\":\"Empty cart\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/orders\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createUser\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"email\":{\"format\":\"email\",\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"Cleanup-owned user\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/users\"},{\"method\":\"DELETE\",\"operation\":{\"operationId\":\"deleteUser\",\"responses\":{\"200\":{\"description\":\"Delete owned user\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/users/{id}\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"uploadProfile\",\"requestBody\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"File uploaded\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/profile/file\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"downloadProfile\",\"responses\":{\"200\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"description\":\"Profile bytes\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/profile/file\"}],\"specification\":\"OpenAPI\"},\"revision\":{\"chunks\":[{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"jsonPointer\":\"/paths/~1health/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"jsonPointer\":\"/paths/~1api~1auth~1token/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"jsonPointer\":\"/paths/~1api~1auth~1refresh/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"jsonPointer\":\"/paths/~1api~1products/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"jsonPointer\":\"/paths/~1api~1products/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/put\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d\",\"jsonPointer\":\"/paths/~1api~1cart/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"jsonPointer\":\"/paths/~1api~1cart/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b\",\"jsonPointer\":\"/paths/~1api~1cart/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"jsonPointer\":\"/paths/~1api~1orders/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"jsonPointer\":\"/paths/~1api~1orders/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"jsonPointer\":\"/paths/~1api~1users/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657\",\"jsonPointer\":\"/paths/~1api~1users~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"jsonPointer\":\"/paths/~1api~1profile~1file/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38\",\"jsonPointer\":\"/paths/~1api~1profile~1file/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"jsonPointer\":\"/components\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"},{\"contentHash\":\"3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57\",\"jsonPointer\":\"/servers\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"contentHash\":\"a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881\",\"id\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\",\"mediaType\":\"application/vnd.oai.openapi\",\"parentId\":null,\"parserVersion\":\"1.0.0\",\"sizeBytes\":14932,\"status\":\"ready\",\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},\"archivedAt\":null},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+        "--source-revision",
+        "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+      ],
+      "startedAt": "2026-10-06T13:36:17.564Z",
+      "durationMs": 308.1470289999852,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_bdf21f72-2473-4bb6-a42e-9879a5041e53",
+        "data": {
+          "job": {
+            "createdAt": "2026-10-06T13:36:17.848Z",
+            "id": "dsc_01a1116d-e7b8-71d5-9b80-67a4be37cbed",
+            "inputsFingerprint": "57931050668a8b25bd1fcb137ab7d57703d89df6d3431494e2be9af4f429d91d",
+            "limits": {
+              "attemptTimeoutMs": 900000,
+              "executionTimeoutMs": 7200000,
+              "maxAttempts": 2
+            },
+            "perFeatureResults": [
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                    "length": 195,
+                    "offset": 165,
+                    "relativePath": "PRD.md",
+                    "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-89716fda6689",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                    "length": 662,
+                    "offset": 386,
+                    "relativePath": "PRD.md",
+                    "sourceRevisionId": "svr_01a1116d-e53a-768d-8f41-3e1315cc6090"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-8cd99ce647f8",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                    "jsonPointer": "/paths/~1health/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-90f333a4b9db",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                    "jsonPointer": "/paths/~1api~1auth~1token/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-948dfc6beace",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                    "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-989c05ce897a",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                    "jsonPointer": "/paths/~1api~1products/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-9e86141ad331",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                    "jsonPointer": "/paths/~1api~1products/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-a0646e2107e4",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                    "jsonPointer": "/paths/~1api~1products~1{id}/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-a4c417e6675f",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                    "jsonPointer": "/paths/~1api~1products~1{id}/put",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-a9d1ba2d6174",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                    "jsonPointer": "/paths/~1api~1cart/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-af93c4c03c69",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                    "jsonPointer": "/paths/~1api~1orders/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-b382bdb7f89f",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                    "jsonPointer": "/paths/~1api~1orders/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-b46f464824e0",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                    "jsonPointer": "/paths/~1api~1users/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-bb9e0c31c423",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                    "jsonPointer": "/paths/~1api~1profile~1file/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-bf0e79c2504e",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                    "jsonPointer": "/components",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+                  }
+                ],
+                "featureId": "fea_01a1116d-e7b4-76d1-86b2-c0592c7979ce",
+                "status": "partial"
+              }
+            ],
+            "phase": "completed",
+            "usage": {
+              "modelCalls": 0,
+              "status": "partial"
+            },
+            "version": 2,
+            "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+          },
+          "codeSnapshot": {
+            "baseSha": null,
+            "createdAt": "2026-10-06T13:36:17.844Z",
+            "dirtyHash": null,
+            "excludes": [],
+            "headSha": null,
+            "id": "csp_01a1116d-e7b3-70c4-9394-e900b98cb8c9",
+            "manifestHash": "107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e",
+            "repoRef": "/tmp/tm-eval-WXHrSg/repo",
+            "skippedFiles": [
+              {
+                "path": ".testmaster",
+                "reason": "default_exclude"
+              },
+              {
+                "path": "openapi.yaml",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "PRD.md",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "testmaster.config.json",
+                "reason": "unsupported_or_binary"
+              }
+            ],
+            "version": 1,
+            "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+          },
+          "diff": null,
+          "featureMap": {
+            "features": [
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-89716fda6689",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-8cd99ce647f8",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-90f333a4b9db",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-948dfc6beace",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-989c05ce897a",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-9e86141ad331",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-a0646e2107e4",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-a4c417e6675f",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-a9d1ba2d6174",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-af93c4c03c69",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-b382bdb7f89f",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-b46f464824e0",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-bb9e0c31c423",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-bf0e79c2504e",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              },
+              {
+                "createdAt": "2026-10-06T13:36:17.844Z",
+                "endpointRefs": [],
+                "id": "fea_01a1116d-e7b4-76d1-86b2-c0592c7979ce",
+                "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "version": 1,
+                "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+              }
+            ],
+            "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+            "sourceRevisionIds": [
+              "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+              "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+            ],
+            "status": "partial",
+            "version": 1
+          },
+          "status": "partial",
+          "summary": {
+            "authPatterns": [],
+            "coverage": "partial",
+            "detectorVersion": "1.0.0",
+            "endpoints": [],
+            "entrypoints": [],
+            "existingTests": [],
+            "externalServices": [],
+            "features": [],
+            "fileRefs": [],
+            "imports": [],
+            "manifestHash": "107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e",
+            "routes": [],
+            "scannedFiles": [],
+            "schemas": [],
+            "skippedFiles": [
+              {
+                "path": ".testmaster",
+                "reason": "default_exclude"
+              },
+              {
+                "path": "openapi.yaml",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "PRD.md",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "testmaster.config.json",
+                "reason": "unsupported_or_binary"
+              }
+            ],
+            "symbols": [],
+            "techStack": [],
+            "testHooks": [],
+            "warnings": []
+          },
+          "warnings": [
+            "Static analysis is partial; no live target observations or complete code coverage are claimed."
+          ]
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_bdf21f72-2473-4bb6-a42e-9879a5041e53\",\"data\":{\"job\":{\"createdAt\":\"2026-10-06T13:36:17.848Z\",\"id\":\"dsc_01a1116d-e7b8-71d5-9b80-67a4be37cbed\",\"inputsFingerprint\":\"57931050668a8b25bd1fcb137ab7d57703d89df6d3431494e2be9af4f429d91d\",\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"perFeatureResults\":[{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"length\":195,\"offset\":165,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-89716fda6689\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"length\":662,\"offset\":386,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-8cd99ce647f8\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"jsonPointer\":\"/paths/~1health/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-90f333a4b9db\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"jsonPointer\":\"/paths/~1api~1auth~1token/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-948dfc6beace\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"jsonPointer\":\"/paths/~1api~1auth~1refresh/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-989c05ce897a\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"jsonPointer\":\"/paths/~1api~1products/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-9e86141ad331\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"jsonPointer\":\"/paths/~1api~1products/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-a0646e2107e4\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-a4c417e6675f\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/put\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-a9d1ba2d6174\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"jsonPointer\":\"/paths/~1api~1cart/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-af93c4c03c69\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"jsonPointer\":\"/paths/~1api~1orders/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-b382bdb7f89f\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"jsonPointer\":\"/paths/~1api~1orders/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-b46f464824e0\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"jsonPointer\":\"/paths/~1api~1users/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-bb9e0c31c423\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"jsonPointer\":\"/paths/~1api~1profile~1file/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-bf0e79c2504e\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"jsonPointer\":\"/components\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"}],\"featureId\":\"fea_01a1116d-e7b4-76d1-86b2-c0592c7979ce\",\"status\":\"partial\"}],\"phase\":\"completed\",\"usage\":{\"modelCalls\":0,\"status\":\"partial\"},\"version\":2,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},\"codeSnapshot\":{\"baseSha\":null,\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"dirtyHash\":null,\"excludes\":[],\"headSha\":null,\"id\":\"csp_01a1116d-e7b3-70c4-9394-e900b98cb8c9\",\"manifestHash\":\"107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e\",\"repoRef\":\"/tmp/tm-eval-WXHrSg/repo\",\"skippedFiles\":[{\"path\":\".testmaster\",\"reason\":\"default_exclude\"},{\"path\":\"openapi.yaml\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"PRD.md\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"testmaster.config.json\",\"reason\":\"unsupported_or_binary\"}],\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},\"diff\":null,\"featureMap\":{\"features\":[{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-89716fda6689\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-8cd99ce647f8\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-90f333a4b9db\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-948dfc6beace\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-989c05ce897a\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-9e86141ad331\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-a0646e2107e4\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-a4c417e6675f\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-a9d1ba2d6174\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-af93c4c03c69\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-b382bdb7f89f\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-b46f464824e0\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-bb9e0c31c423\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-bf0e79c2504e\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"createdAt\":\"2026-10-06T13:36:17.844Z\",\"endpointRefs\":[],\"id\":\"fea_01a1116d-e7b4-76d1-86b2-c0592c7979ce\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"version\":1,\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"}],\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"status\":\"partial\",\"version\":1},\"status\":\"partial\",\"summary\":{\"authPatterns\":[],\"coverage\":\"partial\",\"detectorVersion\":\"1.0.0\",\"endpoints\":[],\"entrypoints\":[],\"existingTests\":[],\"externalServices\":[],\"features\":[],\"fileRefs\":[],\"imports\":[],\"manifestHash\":\"107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e\",\"routes\":[],\"scannedFiles\":[],\"schemas\":[],\"skippedFiles\":[{\"path\":\".testmaster\",\"reason\":\"default_exclude\"},{\"path\":\"openapi.yaml\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"PRD.md\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"testmaster.config.json\",\"reason\":\"unsupported_or_binary\"}],\"symbols\":[],\"techStack\":[],\"testHooks\":[],\"warnings\":[]},\"warnings\":[\"Static analysis is partial; no live target observations or complete code coverage are claimed.\"]},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+        "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+      ],
+      "startedAt": "2026-10-06T13:36:17.872Z",
+      "durationMs": 155510.05509699997,
+      "exitCode": 5,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_f2b95a28-0088-4644-9aa0-a7ce048159c8",
+        "error": {
+          "code": "INVALID_ARGUMENT",
+          "message": "Requirement references evidence outside supplied sources",
+          "details": {},
+          "retryable": false,
+          "nextActions": []
+        }
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_f2b95a28-0088-4644-9aa0-a7ce048159c8\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Requirement references evidence outside supplied sources\",\"details\":{},\"retryable\":false,\"nextActions\":[]}}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "usage"
+      ],
+      "startedAt": "2026-10-06T13:38:53.382Z",
+      "durationMs": 275.93310200003907,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_64d04146-575d-4f76-be3d-fde7a9f36769",
+        "data": {
+          "calls": [
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:36:50.454Z",
+              "finishReason": "stop",
+              "id": "mdl_01a1116e-6711-76a6-80ef-178eefc60280",
+              "inputRefs": [
+                "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+                "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+                "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+                "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+                "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+                "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c"
+              ],
+              "latency": 32184,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "success",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "5c52429d0351e766742bb62eea9a8a2f4af562ea7b23d490693b196c26b73d51",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "86a84e36-d3dc-469d-90bd-ce32682ae4f6",
+              "responseHash": "c8f6b8b0f902ef099b40910e4be740a5c4fbf735437395c31b64abed457836a1",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 2857,
+                "outputTokens": 2268,
+                "reasoningTokens": 537
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            },
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:37:30.839Z",
+              "finishReason": "stop",
+              "id": "mdl_01a1116f-04d6-729c-913f-3a8efe96d91d",
+              "inputRefs": [
+                "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+                "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+                "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+                "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+                "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+                "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b"
+              ],
+              "latency": 40293,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "invalid",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "017605db37af0edab0b2ebbf8dcd9ad378f13a3d17e7f90a4958bc5c3342e2a3",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "daeaf11c-90f8-43b4-98bc-b2e68a7e17fe",
+              "responseHash": "64ccc745ca7bd1d62648f3eb54eeb213e4989c04a596d66f8c70469379c03bfe",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 4526,
+                "outputTokens": 2676,
+                "reasoningTokens": 1077
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            },
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:38:14.355Z",
+              "finishReason": "stop",
+              "id": "mdl_01a1116f-aed3-77e8-bfdf-3e27490d1b0e",
+              "inputRefs": [
+                "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+                "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+                "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+                "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+                "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+                "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b"
+              ],
+              "latency": 43516,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "success",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "6bf722003b59c8624c206a475bffb619b2ad65f3528e68f073a4cf0e5b36d499",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 1,
+              "reservationId": "1929d22d-d0b0-4527-8b04-e6aa16b5b7d0",
+              "responseHash": "21260001364fa0a42bdd009a7190e7f298e6cd776aab5dabad8b327d8354be77",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 4654,
+                "outputTokens": 2743,
+                "reasoningTokens": 1290
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            },
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:38:53.374Z",
+              "finishReason": "stop",
+              "id": "mdl_01a11170-473e-7446-9e72-15f819fb5553",
+              "inputRefs": [
+                "chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479",
+                "chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d",
+                "chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c",
+                "chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b",
+                "chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6",
+                "chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a"
+              ],
+              "latency": 38911,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "success",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "26d5144dfa63d3398467fc51e2b99b7568683ef9ad093be10dd826a4b7b3635c",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "65a5beba-3c48-47ab-b941-6dcfef29064a",
+              "responseHash": "c5c5f5bc69c00ac72a90c919ae5a6050be9e4624ae74581ae31afd9eedc1199c",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 6060,
+                "outputTokens": 2476,
+                "reasoningTokens": 1917
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            }
+          ],
+          "tokens": {
+            "inputTokens": 18097,
+            "outputTokens": 10163,
+            "reasoningTokens": 4821
+          },
+          "cost": "unknown",
+          "measuredCosts": [],
+          "unknownCostCalls": 4,
+          "budgetRemaining": null,
+          "reservations": {
+            "reserved": 0,
+            "settled": 4,
+            "released": 0
+          },
+          "tokenBudget": null,
+          "runtimeMs": 154904,
+          "storageBytes": 0,
+          "runs": [],
+          "eval:chargedTokens": 28260
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_64d04146-575d-4f76-be3d-fde7a9f36769\",\"data\":{\"calls\":[{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:36:50.454Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a1116e-6711-76a6-80ef-178eefc60280\",\"inputRefs\":[\"chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a\",\"chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583\",\"chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844\",\"chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0\",\"chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb\",\"chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c\"],\"latency\":32184,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"success\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"5c52429d0351e766742bb62eea9a8a2f4af562ea7b23d490693b196c26b73d51\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"86a84e36-d3dc-469d-90bd-ce32682ae4f6\",\"responseHash\":\"c8f6b8b0f902ef099b40910e4be740a5c4fbf735437395c31b64abed457836a1\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":2857,\"outputTokens\":2268,\"reasoningTokens\":537},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:37:30.839Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a1116f-04d6-729c-913f-3a8efe96d91d\",\"inputRefs\":[\"chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867\",\"chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb\",\"chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92\",\"chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437\",\"chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c\",\"chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b\"],\"latency\":40293,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"invalid\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"017605db37af0edab0b2ebbf8dcd9ad378f13a3d17e7f90a4958bc5c3342e2a3\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"daeaf11c-90f8-43b4-98bc-b2e68a7e17fe\",\"responseHash\":\"64ccc745ca7bd1d62648f3eb54eeb213e4989c04a596d66f8c70469379c03bfe\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":4526,\"outputTokens\":2676,\"reasoningTokens\":1077},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:38:14.355Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a1116f-aed3-77e8-bfdf-3e27490d1b0e\",\"inputRefs\":[\"chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867\",\"chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb\",\"chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92\",\"chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437\",\"chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c\",\"chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b\"],\"latency\":43516,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"success\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"6bf722003b59c8624c206a475bffb619b2ad65f3528e68f073a4cf0e5b36d499\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":1,\"reservationId\":\"1929d22d-d0b0-4527-8b04-e6aa16b5b7d0\",\"responseHash\":\"21260001364fa0a42bdd009a7190e7f298e6cd776aab5dabad8b327d8354be77\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":4654,\"outputTokens\":2743,\"reasoningTokens\":1290},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:38:53.374Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a11170-473e-7446-9e72-15f819fb5553\",\"inputRefs\":[\"chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479\",\"chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d\",\"chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c\",\"chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b\",\"chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6\",\"chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a\"],\"latency\":38911,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"success\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"26d5144dfa63d3398467fc51e2b99b7568683ef9ad093be10dd826a4b7b3635c\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"65a5beba-3c48-47ab-b941-6dcfef29064a\",\"responseHash\":\"c5c5f5bc69c00ac72a90c919ae5a6050be9e4624ae74581ae31afd9eedc1199c\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":6060,\"outputTokens\":2476,\"reasoningTokens\":1917},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"}],\"tokens\":{\"inputTokens\":18097,\"outputTokens\":10163,\"reasoningTokens\":4821},\"cost\":\"unknown\",\"measuredCosts\":[],\"unknownCostCalls\":4,\"budgetRemaining\":null,\"reservations\":{\"reserved\":0,\"settled\":4,\"released\":0},\"tokenBudget\":null,\"runtimeMs\":154904,\"storageBytes\":0,\"runs\":[]},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "usage"
+      ],
+      "startedAt": "2026-10-06T13:38:53.658Z",
+      "durationMs": 280.9118919998873,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_cc076a34-6e98-444f-b240-18a173bd7864",
+        "data": {
+          "calls": [
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:36:50.454Z",
+              "finishReason": "stop",
+              "id": "mdl_01a1116e-6711-76a6-80ef-178eefc60280",
+              "inputRefs": [
+                "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+                "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+                "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+                "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+                "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+                "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c"
+              ],
+              "latency": 32184,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "success",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "5c52429d0351e766742bb62eea9a8a2f4af562ea7b23d490693b196c26b73d51",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "86a84e36-d3dc-469d-90bd-ce32682ae4f6",
+              "responseHash": "c8f6b8b0f902ef099b40910e4be740a5c4fbf735437395c31b64abed457836a1",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 2857,
+                "outputTokens": 2268,
+                "reasoningTokens": 537
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            },
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:37:30.839Z",
+              "finishReason": "stop",
+              "id": "mdl_01a1116f-04d6-729c-913f-3a8efe96d91d",
+              "inputRefs": [
+                "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+                "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+                "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+                "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+                "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+                "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b"
+              ],
+              "latency": 40293,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "invalid",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "017605db37af0edab0b2ebbf8dcd9ad378f13a3d17e7f90a4958bc5c3342e2a3",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "daeaf11c-90f8-43b4-98bc-b2e68a7e17fe",
+              "responseHash": "64ccc745ca7bd1d62648f3eb54eeb213e4989c04a596d66f8c70469379c03bfe",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 4526,
+                "outputTokens": 2676,
+                "reasoningTokens": 1077
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            },
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:38:14.355Z",
+              "finishReason": "stop",
+              "id": "mdl_01a1116f-aed3-77e8-bfdf-3e27490d1b0e",
+              "inputRefs": [
+                "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+                "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+                "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+                "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+                "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+                "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b"
+              ],
+              "latency": 43516,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "success",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "6bf722003b59c8624c206a475bffb619b2ad65f3528e68f073a4cf0e5b36d499",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 1,
+              "reservationId": "1929d22d-d0b0-4527-8b04-e6aa16b5b7d0",
+              "responseHash": "21260001364fa0a42bdd009a7190e7f298e6cd776aab5dabad8b327d8354be77",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 4654,
+                "outputTokens": 2743,
+                "reasoningTokens": 1290
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            },
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T13:38:53.374Z",
+              "finishReason": "stop",
+              "id": "mdl_01a11170-473e-7446-9e72-15f819fb5553",
+              "inputRefs": [
+                "chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479",
+                "chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d",
+                "chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c",
+                "chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b",
+                "chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6",
+                "chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a"
+              ],
+              "latency": 38911,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+              "outcome": "success",
+              "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+              "promptHash": "26d5144dfa63d3398467fc51e2b99b7568683ef9ad093be10dd826a4b7b3635c",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "65a5beba-3c48-47ab-b941-6dcfef29064a",
+              "responseHash": "c5c5f5bc69c00ac72a90c919ae5a6050be9e4624ae74581ae31afd9eedc1199c",
+              "sourceRevisionIds": [
+                "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+                "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": 6060,
+                "outputTokens": 2476,
+                "reasoningTokens": 1917
+              },
+              "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+            }
+          ],
+          "tokens": {
+            "inputTokens": 18097,
+            "outputTokens": 10163,
+            "reasoningTokens": 4821
+          },
+          "cost": "unknown",
+          "measuredCosts": [],
+          "unknownCostCalls": 4,
+          "budgetRemaining": null,
+          "reservations": {
+            "reserved": 0,
+            "settled": 4,
+            "released": 0
+          },
+          "tokenBudget": null,
+          "runtimeMs": 154904,
+          "storageBytes": 0,
+          "runs": [],
+          "eval:chargedTokens": 28260
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_cc076a34-6e98-444f-b240-18a173bd7864\",\"data\":{\"calls\":[{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:36:50.454Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a1116e-6711-76a6-80ef-178eefc60280\",\"inputRefs\":[\"chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a\",\"chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583\",\"chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844\",\"chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0\",\"chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb\",\"chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c\"],\"latency\":32184,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"success\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"5c52429d0351e766742bb62eea9a8a2f4af562ea7b23d490693b196c26b73d51\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"86a84e36-d3dc-469d-90bd-ce32682ae4f6\",\"responseHash\":\"c8f6b8b0f902ef099b40910e4be740a5c4fbf735437395c31b64abed457836a1\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":2857,\"outputTokens\":2268,\"reasoningTokens\":537},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:37:30.839Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a1116f-04d6-729c-913f-3a8efe96d91d\",\"inputRefs\":[\"chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867\",\"chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb\",\"chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92\",\"chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437\",\"chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c\",\"chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b\"],\"latency\":40293,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"invalid\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"017605db37af0edab0b2ebbf8dcd9ad378f13a3d17e7f90a4958bc5c3342e2a3\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"daeaf11c-90f8-43b4-98bc-b2e68a7e17fe\",\"responseHash\":\"64ccc745ca7bd1d62648f3eb54eeb213e4989c04a596d66f8c70469379c03bfe\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":4526,\"outputTokens\":2676,\"reasoningTokens\":1077},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:38:14.355Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a1116f-aed3-77e8-bfdf-3e27490d1b0e\",\"inputRefs\":[\"chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867\",\"chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb\",\"chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92\",\"chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437\",\"chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c\",\"chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b\"],\"latency\":43516,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"success\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"6bf722003b59c8624c206a475bffb619b2ad65f3528e68f073a4cf0e5b36d499\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":1,\"reservationId\":\"1929d22d-d0b0-4527-8b04-e6aa16b5b7d0\",\"responseHash\":\"21260001364fa0a42bdd009a7190e7f298e6cd776aab5dabad8b327d8354be77\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":4654,\"outputTokens\":2743,\"reasoningTokens\":1290},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"},{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T13:38:53.374Z\",\"finishReason\":\"stop\",\"id\":\"mdl_01a11170-473e-7446-9e72-15f819fb5553\",\"inputRefs\":[\"chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479\",\"chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d\",\"chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c\",\"chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b\",\"chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6\",\"chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a\"],\"latency\":38911,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e\",\"outcome\":\"success\",\"projectId\":\"prj_01a1116d-e1f5-74d6-9b33-a1869c775369\",\"promptHash\":\"26d5144dfa63d3398467fc51e2b99b7568683ef9ad093be10dd826a4b7b3635c\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"65a5beba-3c48-47ab-b941-6dcfef29064a\",\"responseHash\":\"c5c5f5bc69c00ac72a90c919ae5a6050be9e4624ae74581ae31afd9eedc1199c\",\"sourceRevisionIds\":[\"svr_01a1116d-e53a-768d-8f41-3e1315cc6090\",\"svr_01a1116d-e65b-7322-87f6-98e9185c06b3\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":6060,\"outputTokens\":2476,\"reasoningTokens\":1917},\"workspaceId\":\"ws_01a1116d-e1eb-7768-944b-cf842772b130\"}],\"tokens\":{\"inputTokens\":18097,\"outputTokens\":10163,\"reasoningTokens\":4821},\"cost\":\"unknown\",\"measuredCosts\":[],\"unknownCostCalls\":4,\"budgetRemaining\":null,\"reservations\":{\"reserved\":0,\"settled\":4,\"released\":0},\"tokenBudget\":null,\"runtimeMs\":154904,\"storageBytes\":0,\"runs\":[]},\"warnings\":[]}\n",
+      "stderr": ""
+    }
+  ],
+  "decisions": [
+    {
+      "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+      "reviewer": "preregistered external rule-based evaluator",
+      "humanReview": false
+    }
+  ],
+  "oracleVerdicts": [
+    {
+      "side": "healthy",
+      "check": "ordersAuthorization",
+      "healthy": true,
+      "defective": false,
+      "observed": {
+        "status": 401,
+        "leakedOrder": false
+      }
+    },
+    {
+      "side": "mutant",
+      "check": "ordersAuthorization",
+      "healthy": false,
+      "defective": true,
+      "observed": {
+        "status": 200,
+        "leakedOrder": true
+      }
+    }
+  ],
+  "usage": {
+    "calls": [
+      {
+        "cacheHit": false,
+        "cost": "unknown",
+        "createdAt": "2026-10-06T13:36:50.454Z",
+        "finishReason": "stop",
+        "id": "mdl_01a1116e-6711-76a6-80ef-178eefc60280",
+        "inputRefs": [
+          "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+          "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+          "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+          "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+          "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+          "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c"
+        ],
+        "latency": 32184,
+        "model": "qwen3.8-flash",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "outcome": "success",
+        "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+        "promptHash": "5c52429d0351e766742bb62eea9a8a2f4af562ea7b23d490693b196c26b73d51",
+        "provider": "quantforge",
+        "purpose": "normalize",
+        "repairAttempt": 0,
+        "reservationId": "86a84e36-d3dc-469d-90bd-ce32682ae4f6",
+        "responseHash": "c8f6b8b0f902ef099b40910e4be740a5c4fbf735437395c31b64abed457836a1",
+        "sourceRevisionIds": [
+          "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+          "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+        ],
+        "transportAttempt": 0,
+        "usage": {
+          "inputTokens": 2857,
+          "outputTokens": 2268,
+          "reasoningTokens": 537
+        },
+        "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+      },
+      {
+        "cacheHit": false,
+        "cost": "unknown",
+        "createdAt": "2026-10-06T13:37:30.839Z",
+        "finishReason": "stop",
+        "id": "mdl_01a1116f-04d6-729c-913f-3a8efe96d91d",
+        "inputRefs": [
+          "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+          "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+          "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+          "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+          "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+          "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b"
+        ],
+        "latency": 40293,
+        "model": "qwen3.8-flash",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "outcome": "invalid",
+        "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+        "promptHash": "017605db37af0edab0b2ebbf8dcd9ad378f13a3d17e7f90a4958bc5c3342e2a3",
+        "provider": "quantforge",
+        "purpose": "normalize",
+        "repairAttempt": 0,
+        "reservationId": "daeaf11c-90f8-43b4-98bc-b2e68a7e17fe",
+        "responseHash": "64ccc745ca7bd1d62648f3eb54eeb213e4989c04a596d66f8c70469379c03bfe",
+        "sourceRevisionIds": [
+          "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+          "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+        ],
+        "transportAttempt": 0,
+        "usage": {
+          "inputTokens": 4526,
+          "outputTokens": 2676,
+          "reasoningTokens": 1077
+        },
+        "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+      },
+      {
+        "cacheHit": false,
+        "cost": "unknown",
+        "createdAt": "2026-10-06T13:38:14.355Z",
+        "finishReason": "stop",
+        "id": "mdl_01a1116f-aed3-77e8-bfdf-3e27490d1b0e",
+        "inputRefs": [
+          "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+          "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+          "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+          "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+          "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+          "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b"
+        ],
+        "latency": 43516,
+        "model": "qwen3.8-flash",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "outcome": "success",
+        "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+        "promptHash": "6bf722003b59c8624c206a475bffb619b2ad65f3528e68f073a4cf0e5b36d499",
+        "provider": "quantforge",
+        "purpose": "normalize",
+        "repairAttempt": 1,
+        "reservationId": "1929d22d-d0b0-4527-8b04-e6aa16b5b7d0",
+        "responseHash": "21260001364fa0a42bdd009a7190e7f298e6cd776aab5dabad8b327d8354be77",
+        "sourceRevisionIds": [
+          "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+          "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+        ],
+        "transportAttempt": 0,
+        "usage": {
+          "inputTokens": 4654,
+          "outputTokens": 2743,
+          "reasoningTokens": 1290
+        },
+        "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+      },
+      {
+        "cacheHit": false,
+        "cost": "unknown",
+        "createdAt": "2026-10-06T13:38:53.374Z",
+        "finishReason": "stop",
+        "id": "mdl_01a11170-473e-7446-9e72-15f819fb5553",
+        "inputRefs": [
+          "chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479",
+          "chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d",
+          "chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c",
+          "chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b",
+          "chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6",
+          "chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a"
+        ],
+        "latency": 38911,
+        "model": "qwen3.8-flash",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "outcome": "success",
+        "projectId": "prj_01a1116d-e1f5-74d6-9b33-a1869c775369",
+        "promptHash": "26d5144dfa63d3398467fc51e2b99b7568683ef9ad093be10dd826a4b7b3635c",
+        "provider": "quantforge",
+        "purpose": "normalize",
+        "repairAttempt": 0,
+        "reservationId": "65a5beba-3c48-47ab-b941-6dcfef29064a",
+        "responseHash": "c5c5f5bc69c00ac72a90c919ae5a6050be9e4624ae74581ae31afd9eedc1199c",
+        "sourceRevisionIds": [
+          "svr_01a1116d-e53a-768d-8f41-3e1315cc6090",
+          "svr_01a1116d-e65b-7322-87f6-98e9185c06b3"
+        ],
+        "transportAttempt": 0,
+        "usage": {
+          "inputTokens": 6060,
+          "outputTokens": 2476,
+          "reasoningTokens": 1917
+        },
+        "workspaceId": "ws_01a1116d-e1eb-7768-944b-cf842772b130"
+      }
+    ],
+    "tokens": {
+      "inputTokens": 18097,
+      "outputTokens": 10163,
+      "reasoningTokens": 4821
+    },
+    "cost": "unknown",
+    "measuredCosts": [],
+    "unknownCostCalls": 4,
+    "budgetRemaining": null,
+    "reservations": {
+      "reserved": 0,
+      "settled": 4,
+      "released": 0
+    },
+    "tokenBudget": null,
+    "runtimeMs": 154904,
+    "storageBytes": 0,
+    "runs": [],
+    "eval:chargedTokens": 28260
+  },
+  "durationMs": 157851.54431100003,
+  "workspace": "/tmp/tm-eval-WXHrSg",
+  "score": {
+    "trialId": "trial-08",
+    "caseId": "shop-defect-005",
+    "detected": false,
+    "conditionalEligible": true,
+    "exclusions": [],
+    "sensitiveRevisionIds": [],
+    "healthyValid": 0,
+    "healthyFailed": 0,
+    "healthyUnavailable": 0
+  }
+}

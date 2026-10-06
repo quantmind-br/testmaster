@@ -1,0 +1,279 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M2-agent-execution",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T13:44:09.538Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M2-agent-execution",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_345ec3b4-299c-44b4-84ac-c1804660fefa",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_45d7536e-b160-4543-95bf-9ec3a27c186f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4ae19982-c374-4569-9f0e-093606bb2380",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_66beb298-24a0-4b9f-8c8c-347e4b25ea2f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2cbd1b15-b4ba-4d83-b0b3-08a5c2cbc74c",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a11174-f341-77ff-a802-7cec8079d0ab",
+    "run_01a11175-118b-72db-b116-736acb13a32e",
+    "run_01a11175-157a-74a5-ba4e-01d7f6eeef7c"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "check": "supplementalModelUsage",
+      "calls": [
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:43:43.310Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11174-b3cd-7297-9336-c7db2e01b2e3",
+          "inputRefs": [],
+          "latency": 9591,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "promptHash": "1646fc48aa706fb3010b611f4d694f6e384a627e9a980ee135f1efa4d2a5a8f1",
+          "provider": "quantforge",
+          "purpose": "resolve_action",
+          "repairAttempt": 0,
+          "reservationId": "51667c4f-a1cd-4fc4-aed6-851d4f61eccf",
+          "responseHash": "f67055f9ce54f6d18490b2ad746513b3c6e39b96730444b71c8344a39658d48f",
+          "sourceRevisionIds": [],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 532,
+            "outputTokens": 339,
+            "reasoningTokens": 326
+          },
+          "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:43:50.344Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11174-cf48-7222-a1be-aee3ef34e9c4",
+          "inputRefs": [],
+          "latency": 6288,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "promptHash": "ad7d9209d6116de27a8610968f04103e0fa373868bf6ce310ee2ce6f45a0bd1c",
+          "provider": "quantforge",
+          "purpose": "resolve_action",
+          "repairAttempt": 0,
+          "reservationId": "f8406e9a-fa1a-4db0-8848-783c170fbd23",
+          "responseHash": "53aaa402b21de3bf5b75cbf10f994ff3a2779fb6a5f4aa9ecd990c4a2d31ba9d",
+          "sourceRevisionIds": [],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 487,
+            "outputTokens": 146,
+            "reasoningTokens": 137
+          },
+          "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:43:58.628Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11174-efa4-737e-afd4-bd5e388722f4",
+          "inputRefs": [],
+          "latency": 7360,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "promptHash": "102f52c5372b7dd13c32be163db9f931abb5655d0e01e27d4aee8d809e772905",
+          "provider": "quantforge",
+          "purpose": "resolve_action",
+          "repairAttempt": 0,
+          "reservationId": "00830a73-ce07-430d-84d3-0e6c751daf75",
+          "responseHash": "2145c484a21243a7f9ffb92e7e2de1513d8f9e6a3e384398d43ea3c746fc0253",
+          "sourceRevisionIds": [],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 292,
+            "outputTokens": 224,
+            "reasoningTokens": 216
+          },
+          "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:44:06.760Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11175-0f68-7671-a79c-605da7cd078a",
+          "inputRefs": [],
+          "latency": 6232,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "promptHash": "c46a344d257676cb1032cb96cdcc7a032e44986a086acc9e71fc7ec4781fc7bd",
+          "provider": "quantforge",
+          "purpose": "resolve_action",
+          "repairAttempt": 0,
+          "reservationId": "5e9e6d1b-025f-4ae3-86e6-6a020b823624",
+          "responseHash": "4778ee5901fd044b8c1dee734a902ec2a442e65ffb84b5e902c850cd193d099c",
+          "runId": "run_01a11174-f341-77ff-a802-7cec8079d0ab",
+          "sourceRevisionIds": [],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 462,
+            "outputTokens": 221,
+            "reasoningTokens": 213
+          },
+          "workspaceId": "ws_01a11174-861d-736c-8319-2ad0dc9e7922"
+        }
+      ],
+      "tokens": {
+        "inputTokens": 1773,
+        "outputTokens": 930,
+        "reasoningTokens": 892
+      },
+      "cost": "unknown",
+      "measuredCosts": [],
+      "unknownCostCalls": 4,
+      "budgetRemaining": null,
+      "reservations": {
+        "reserved": 0,
+        "settled": 4,
+        "released": 0
+      },
+      "tokenBudget": null,
+      "runtimeMs": 29471,
+      "storageBytes": 539474,
+      "runs": [
+        {
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "runId": "run_01a11174-f341-77ff-a802-7cec8079d0ab",
+          "storageBytes": 191333,
+          "runtimeMs": 6232
+        },
+        {
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "runId": "run_01a11175-118b-72db-b116-736acb13a32e",
+          "storageBytes": 174412,
+          "runtimeMs": 0
+        },
+        {
+          "projectId": "prj_01a11174-8627-7400-a3e2-e4b06a57f2dd",
+          "runId": "run_01a11175-157a-74a5-ba4e-01d7f6eeef7c",
+          "storageBytes": 173729,
+          "runtimeMs": 0
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Partial link-grounded exploration; semantic assertions are not delegated to the model."
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j01-j06-health-degraded",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:14:56.621Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j01-j06-health-degraded",
+        "--base-url",
+        "http://127.0.0.1:36537",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_267698e6-93f1-4b34-bdb2-53b928861869",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-DPUdas/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f2c09b55-3e11-4510-a067-669e15fe85e6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115a-4eac-77e2-9410-1e6e7ff8a808",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_0659bd42-d2d7-4f7b-9cb3-51d9ad758115",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a1115a-51f4-72c5-94c3-c67d72443a3e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_047ec9cf-42d8-4aa3-a6ea-042c72a36b39",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1115a-51f4-72c5-94c3-c67d72443a3e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cd8af53d-72fb-4826-842d-0204a39fad27",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a1115a-51f4-72c5-94c3-c67d72443a3e",
+        "--raw",
+        "--out",
+        "/tmp/tm-m1-DPUdas/repo/evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82404029-9669-408a-b985-fccbe0926f03",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a1115a-51f4-72c5-94c3-c67d72443a3e",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-DPUdas/repo/failure-report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3377b955-c9f5-4e87-b5bc-68315767dd3e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a1115a-51f4-72c5-94c3-c67d72443a3e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_51b93a7c-23c4-47f4-b074-f02060fbd254",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115a-51f4-72c5-94c3-c67d72443a3e"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "serviceHealth",
+      "healthy": false,
+      "defective": true,
+      "observed": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "date": "Tue, 06 Oct 2026 13:14:56 GMT",
+          "connection": "keep-alive",
+          "keep-alive": "timeout=5",
+          "transfer-encoding": "chunked"
+        },
+        "body": {
+          "status": "degraded"
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

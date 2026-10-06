@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-doctor-preconditions",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:15:43.753Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-doctor-preconditions",
+        "--base-url",
+        "http://127.0.0.1:46519",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0eb5abd6-4d04-4732-9f5a-6b5d74778156",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-vNBw31/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e484fb60-163c-45e8-bbc8-e16e90a54e7c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "doctor",
+        "--target",
+        "http://127.0.0.1:46519",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3f2c2722-83c7-4393-9a8c-aa02e0e51557",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "doctor",
+        "--target",
+        "http://127.0.0.1:46519",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_1379ff13-44fe-435b-a3a1-954d23e30496",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115b-0a3a-73e3-8348-d8b275d5b905",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_80d98eab-7f8e-4d3d-a435-ab0bc4b2f155",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a1115b-11d7-75ca-87f7-cf00113641a0",
+        "--format",
+        "ndjson",
+        "--output",
+        "text",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115b-11d7-75ca-87f7-cf00113641a0"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "doctorTargetModelAndMissingSandbox",
+      "healthy": true,
+      "targetDown": {
+        "status": "FAIL",
+        "diagnostics": [
+          "target_unreachable"
+        ]
+      },
+      "modelAbsent": {
+        "status": "ABSENT",
+        "diagnostics": [
+          "model_not_configured"
+        ],
+        "requiredForReplay": false
+      },
+      "blockedRun": "run_01a1115b-11d7-75ca-87f7-cf00113641a0"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-invalid-policy",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:18:06.519Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-invalid-policy",
+        "--base-url",
+        "http://127.0.0.1:46185",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_33d43175-bb82-47bd-9147-14d4efccad8a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115d-4022-7219-a523-065892898c8a"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "proxyAbsentBeforeEffects",
+      "healthy": true,
+      "runId": "run_01a1115d-4022-7219-a523-065892898c8a",
+      "targetHits": 0,
+      "executorCalls": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

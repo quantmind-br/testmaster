@@ -1,0 +1,377 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j04-revision-pinning",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:15:09.098Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j04-revision-pinning",
+        "--base-url",
+        "http://127.0.0.1:32861",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9b35cb2a-7b0b-4603-8eee-da17e3bdd3f4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-XnX0sW/repo/a.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_02aabfc7-eb42-4b6e-bb9c-863a42ce555e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "revision",
+        "get",
+        "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2d7ce2bc-6f5b-4cc3-afc1-cd628a468f60",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a655c204-4da0-4c9e-9af3-0cb7f0c350cd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ef3e5b8e-4562-437c-a874-b72456d65178",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115a-713f-70e9-82f5-31005d36d7f2",
+        "--revision",
+        "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7bb0bd40-47ec-4227-b6b3-e65d647ba30f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a1115a-7820-70b8-8506-35b032c9154a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_08f4fb51-b0f1-4403-904d-1c2580da9bbc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a1115a-7820-70b8-8506-35b032c9154a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_908c115b-0c6d-4d7c-bc3d-82dbd59dbcf4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "revision",
+        "create",
+        "tst_01a1115a-713f-70e9-82f5-31005d36d7f2",
+        "--plan",
+        "/tmp/tm-m1-XnX0sW/repo/b.json",
+        "--parent",
+        "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ee754e79-6595-463e-a209-462f656fece9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "get",
+        "tst_01a1115a-713f-70e9-82f5-31005d36d7f2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f573536b-1676-4f62-a56d-4e5e1b72d8e2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "revision",
+        "promote",
+        "rev_01a1115a-7cba-71cd-9c89-2c2e3b5fbba2",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_685bc6ce-77b3-4a4c-b3ec-18364ce450af",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a1115a-7820-70b8-8506-35b032c9154a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6276f802-b01a-4130-bcca-56557d54abee",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "wait",
+        "run_01a1115a-7820-70b8-8506-35b032c9154a",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_524fb1e8-fd19-4384-88db-9d4a8577e005",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a1115a-7820-70b8-8506-35b032c9154a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_949470f8-ca98-44b6-9253-91b396d162d1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "revision",
+        "get",
+        "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fc1c7d4f-c901-447e-944d-5bc5373c9638",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115a-713f-70e9-82f5-31005d36d7f2",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_3661a5d9-1371-4fe7-b6a3-b08358a64675",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "revision",
+        "update",
+        "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+        "--plan",
+        "/tmp/tm-m1-XnX0sW/repo/b.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_7d8fcbec-1761-400f-8b45-fc23c90eb3d1",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid command arguments",
+        "details": {
+          "reason": "commander.unknownCommand"
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "revision",
+        "get",
+        "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c54bac3d-078a-4525-be34-dde19a237027",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "start",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 143,
+      "signal": null,
+      "requestId": "cli_7917d1ef-543c-4853-bb7a-74cfea81011d",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Command interrupted",
+        "details": {
+          "signal": "SIGTERM",
+          "receipts": []
+        },
+        "retryable": true,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115a-7820-70b8-8506-35b032c9154a",
+    "run_01a1115a-8645-769d-b8c4-a75c7c26d009"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "revisionPublicationPinning",
+      "healthy": true,
+      "runId": "run_01a1115a-7820-70b8-8506-35b032c9154a",
+      "revisionA": "rev_01a1115a-7144-726d-8c7a-fb5252c54518",
+      "revisionB": "rev_01a1115a-7cba-71cd-9c89-2c2e3b5fbba2",
+      "contentHashA": "53f03e3ecfc748f949162a652072b9773b3729b5c81b792032496e8dff1c162b"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

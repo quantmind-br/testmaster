@@ -564,6 +564,8 @@
         "Static replay module graph excludes gateway; replay runs with model consent revoked; gateway provider contract is independent of runner."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-agent/M2-agent-execution.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "tools/src/test/replay-isolation.test.ts",
         "packages/model-gateway/src/gateway.test.ts",
         "validation/results/M2-agent-execution.json",
@@ -3818,19 +3820,22 @@
       "sourceFile": "SPEC.md",
       "milestone": "M2",
       "ownerRole": "Core",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
         "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff"
       ],
       "oracle": ["Only A/B revisions created once, C retained; explicit rejection is separate."],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "packages/application/src/ai/core.test.ts",
         "validation/results/j03-m2-live-subset-review.json",
         "validation/journeys/m2-proposals.live.test.ts"
       ],
       "code": ["packages/application/src/ai/proposals.ts"],
       "note": "M2 subset acceptance, retry/idempotency and concurrent duplicate tests.",
+      "blockedReason": "Current medium J03 normalized four requirements for exactly three independent inputs; expected count three failed. Proposal generation, A/B/C subset, retained-C, concurrency, authorization and CAS checks were not reached. Unit controls passed; old live evidence is historical, not current verification.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff"
@@ -4104,7 +4109,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M2",
       "ownerRole": "Quality",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "validation/journeys/m2-discovery.live.test.ts::J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries"
       ],
@@ -4112,6 +4117,8 @@
         "PRD/API conflicts retain source refs; adjudication chooses desired requirement; fixed base/head/dirtyHash, ignores/parser errors and injection policy checked."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "validation/journeys/m2-discovery.live.test.ts",
         "validation/results/j02-m2-live-discovery.json"
       ],
@@ -4122,6 +4129,7 @@
         "packages/application/src/ai/proposals.ts"
       ],
       "note": "M2 core/CLI journey only; M4 web review UI is outside scope.",
+      "blockedReason": "Current medium J02 failed normalization with INVALID_ARGUMENT: Conflict evidence is not grounded. Full benchmark normalization failed all eight trials. Adjudication and downstream proposal acceptance were not reached; old successful manifests are historical, not current verification.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-discovery.live.test.ts::J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries"
@@ -4155,7 +4163,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M2",
       "ownerRole": "Quality",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff",
         "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff"
@@ -4164,12 +4172,15 @@
         "Repeated/concurrent acceptance creates exactly two revisions; C retained; invalid/unauthorized refusal; stale edit reports diff."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "validation/journeys/m2-proposals.live.test.ts",
         "validation/results/j03-m2-live-subset-review.json",
         "packages/application/src/ai/core.test.ts"
       ],
       "code": ["packages/application/src/ai/proposals.ts"],
       "note": "M2 core/CLI journey, not M4 multiuser browser tabs.",
+      "blockedReason": "Current medium J03 normalized four requirements for exactly three independent inputs; expected count three failed. Proposal generation, A/B/C subset, retained-C, concurrency, authorization and CAS checks were not reached. Unit controls passed; old live evidence is historical, not current verification.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff"
@@ -4568,6 +4579,8 @@
         "All eight targets preserve foreign bytes, backup modes, old blocks; symlinks/duplicate markers/drift/concurrency refused; unauthorized MCP write refused."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/unit/j14-agent-skills.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "validation/journeys/j14-agent-skills.test.ts",
         "validation/results/j14-agent-skills.json",
         "apps/mcp/src/mcp.test.ts"
@@ -5479,6 +5492,8 @@
         "AST-only summary/ignores, Python no source execution, pinned diff/dirtyHash, auth critical smoke, partial impact/exclusion reports."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "packages/planner/src/code/summary.test.ts",
         "packages/application/src/ai/discovery.docker.test.ts",
         "validation/journeys/m2-discovery.live.test.ts",
@@ -5632,7 +5647,7 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M2",
       "ownerRole": "Core",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
         "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff",
@@ -5643,6 +5658,9 @@
         "Subset/CAS/idempotent receipts preserve C, permissions/validation block invalid accept, candidate promotion requires replay verification."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+        "validation/results/m2-round4-qwen38-medium/live-agent/M2-agent-execution.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "packages/application/src/ai/core.test.ts",
         "validation/results/j03-m2-live-subset-review.json",
         "validation/results/M2-agent-execution.json",
@@ -5653,6 +5671,7 @@
         "packages/planner/src/proposals/index.ts"
       ],
       "note": "M2 local acceptance, generated proposals are not proof of passing behavior; later healing is disabled.",
+      "blockedReason": "Current medium closure: J02 normalization rejected ungrounded conflict evidence; J03 returned four requirements instead of the required three, so generated subset/CAS/concurrency checks were not reached. Earlier green manifests remain historical; current live acceptance is unverified. Deterministic unit/Docker checks passed; no acceptance assertions were weakened.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff"
@@ -5955,6 +5974,13 @@
         "Skills preserve ownership; preregistration freezes model/prompt/decoding/dataset/budget and paired mutant oracle scoring."
       ],
       "evidence": [
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.json",
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.md",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.json",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.md",
+        "validation/results/m2-round4-qwen38-medium/verification.json",
+        "validation/results/m2-round4-qwen38-medium/closure.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "validation/results/j14-agent-skills.json",
         "docs/adr/009-agent-targets.md",
         "evals/preregistration.json",
@@ -5973,7 +5999,7 @@
         "tools/src/evals/scoring.ts"
       ],
       "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
-      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+      "blockedReason": "Round 4 medium: eight complete ledgers, 0/8 primary and conditional detections (Wilson 95% [0,0.3244156195108769]), all full normalizations rejected ungrounded evidence, zero generated/accepted revisions or paired replays. Independent-family holdout, human intent/ground-truth review and two-reviewer adjudication remain unmet. Prior rounds remain unchanged; current measurement does not establish generation quality."
     },
     {
       "id": "M3-01",
@@ -8387,7 +8413,7 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M2",
       "ownerRole": "Core",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "validation/journeys/m2-discovery.live.test.ts::J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries"
       ],
@@ -8395,6 +8421,8 @@
         "Normalized text/acceptance/provenance/confidence and conflicting source refs survive adjudication; approval remains explicit and separate."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "validation/journeys/m2-discovery.live.test.ts",
         "validation/results/j02-m2-live-discovery.json"
       ],
@@ -8403,6 +8431,7 @@
         "packages/planner/src/requirements/index.ts"
       ],
       "note": "Verified desired PRD versus formal source normalization; code-inferred conflict-specific acceptance stays open under AI-001.",
+      "blockedReason": "Current medium J02 failed normalization with INVALID_ARGUMENT: Conflict evidence is not grounded. Full benchmark normalization failed all eight trials. Adjudication and downstream proposal acceptance were not reached; old successful manifests are historical, not current verification.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-discovery.live.test.ts::J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries"
@@ -8594,6 +8623,8 @@
         "Explicit fixed base/head/dirtyHash and selected/excluded dependency impact; auth changes require critical smoke; uncertainty is partial."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "packages/planner/src/code/summary.test.ts",
         "packages/application/src/ai/sources-discovery.test.ts",
         "validation/results/j02-m2-live-discovery.json"
@@ -8625,7 +8656,7 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M2",
       "ownerRole": "Core",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
         "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff"
@@ -8634,6 +8665,8 @@
         "Generated batch revisions/CAS, editing/reject, invalid refusal and idempotent subset preserve nonselected proposals."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "packages/application/src/ai/core.test.ts",
         "validation/results/j03-m2-live-subset-review.json"
       ],
@@ -8642,6 +8675,7 @@
         "packages/planner/src/proposals/index.ts"
       ],
       "note": "Local proposal lifecycle is tested, separate from execution verification.",
+      "blockedReason": "Current medium J03 normalized four requirements for exactly three independent inputs; expected count three failed. Proposal generation, A/B/C subset, retained-C, concurrency, authorization and CAS checks were not reached. Unit controls passed; old live evidence is historical, not current verification.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff"
@@ -10473,6 +10507,8 @@
         "Only valid authorized proposals accepted with retained remainder; new generated revision remains inactive until new replay verification/promotion."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-agent/M2-agent-execution.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "packages/application/src/ai/core.test.ts",
         "validation/results/M2-agent-execution.json",
         "packages/application/src/ai/code-import.test.ts",
@@ -12948,6 +12984,7 @@
         "Vitest unit excludes docker/live; separate projects serialize external suites; result files label class/runner/externalDependency."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
         "vitest.config.ts",
         "validation/results/j01-j06-healthy.json",
         "validation/results/j01-j06-health-degraded.json",
@@ -13035,6 +13072,12 @@
         "Scoring requires independent oracle, healthy pass and same generated revision mutant failure; no self-judge approval."
       ],
       "evidence": [
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.json",
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.md",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.json",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.md",
+        "validation/results/m2-round4-qwen38-medium/verification.json",
+        "validation/results/m2-round4-qwen38-medium/closure.json",
         "tools/src/evals/scoring.test.ts",
         "fixtures/reference-shop/oracle/index.js",
         "evals/preregistration.json",
@@ -13050,7 +13093,7 @@
         "fixtures/reference-shop/oracle/index.js"
       ],
       "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
-      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+      "blockedReason": "Round 4 medium: eight complete ledgers, 0/8 primary and conditional detections (Wilson 95% [0,0.3244156195108769]), all full normalizations rejected ungrounded evidence, zero generated/accepted revisions or paired replays. Independent-family holdout, human intent/ground-truth review and two-reviewer adjudication remain unmet. Prior rounds remain unchanged; current measurement does not establish generation quality."
     },
     {
       "id": "VAL-004",
@@ -13473,6 +13516,7 @@
         "Authorized source context excludes defect labels/oracle; preregistration explicitly states mutant-level holdout is not family holdout."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
         "evals/preregistration.json",
         "evals/corpus/manifest.json",
         "validation/results/j02-m2-live-discovery.json"
@@ -13659,6 +13703,7 @@
         "Conflict preserves both source references; explicit selected requirement and reason persist with version/CAS."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j02/j02-m2-live-discovery.json",
         "validation/results/j02-m2-live-discovery.json",
         "evals/corpus/manifest.json",
         "evals/preregistration.json"
@@ -14024,7 +14069,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M2",
       "ownerRole": "Quality",
-      "status": "verified",
+      "status": "implemented",
       "scenario": [
         "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff",
         "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
@@ -14035,6 +14080,9 @@
         "Subset/duplicate/CAS retains C, creates two revisions once; immutable Run revision and generated candidate active-revision separation."
       ],
       "evidence": [
+        "validation/results/m2-round4-qwen38-medium/live-j03/j03-m2-live-subset-review.json",
+        "validation/results/m2-round4-qwen38-medium/live-agent/M2-agent-execution.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "validation/results/j03-m2-live-subset-review.json",
         "packages/application/src/ai/core.test.ts",
         "validation/results/M2-agent-execution.json",
@@ -14044,6 +14092,7 @@
       ],
       "code": ["packages/application/src/ai/proposals.ts", "packages/application/src/worker.ts"],
       "note": "Verified M2 authoring/concurrency and M1 revision pinning. Healing assertion auto-apply is M3 and unavailable, not a tested enabled healing path.",
+      "blockedReason": "Current medium closure: J02 normalization rejected ungrounded conflict evidence; J03 returned four requirements instead of the required three, so generated subset/CAS/concurrency checks were not reached. Earlier green manifests remain historical; current live acceptance is unverified. Deterministic unit/Docker checks passed; no acceptance assertions were weakened.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff"
@@ -14585,14 +14634,22 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M2",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "tools/src/evals/freeze.test.ts::refuses changed thresholds, removed cases and changed budgets before round execution",
         "tools/src/evals/scoring.test.ts::retains infrastructure and invalid-output misses in the planned denominator"
       ],
       "oracle": [
         "Preregistered dataset/model/prompt/decoding/budget, fixed trial IDs and error/retry ledgers."
       ],
       "evidence": [
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.json",
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.md",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.json",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.md",
+        "validation/results/m2-round4-qwen38-medium/verification.json",
+        "validation/results/m2-round4-qwen38-medium/closure.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "evals/preregistration.json",
         "evals/preregistration.md",
         "evals/corpus/manifest.json",
@@ -14603,9 +14660,28 @@
         "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
         "evals/rounds/m2-round3-qwen38/preregistration.json"
       ],
-      "code": ["tools/src/evals/run.ts", "tools/src/evals/scoring.ts"],
-      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
-      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+      "code": [
+        "tools/src/evals/run.ts",
+        "tools/src/evals/scoring.ts",
+        "tools/src/evals/freeze.ts",
+        "tools/src/evals/freeze.test.ts",
+        "tools/src/evals/scoring.test.ts"
+      ],
+      "note": "Round 4 measurement obligations verified independently: committed registration, eight fixed complete trial/error ledgers, exact scoring recomputation, effective medium configuration hashes, declared strata/intervals/empty secondary denominators and unknown monetary cost retained. Primary and conditional 0/8; all normalization failures remain misses. This verifies measurement integrity only, not graduation, human review or public release.",
+      "coverage": {
+        "positive": [
+          "tools/src/evals/freeze.test.ts::refuses changed thresholds, removed cases and changed budgets before round execution"
+        ],
+        "negative": [
+          "tools/src/evals/scoring.test.ts::retains infrastructure and invalid-output misses in the planned denominator"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/evals/scoring.test.ts",
+            "assertion": "expect(report.primary).toMatchObject({ successes: 1, n: 3 });"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-039",
@@ -14613,14 +14689,22 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M2",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "tools/src/evals/scoring.test.ts::matches published binomial examples and boundaries",
         "tools/src/evals/scoring.test.ts::reports empty secondary denominators and refuses duplicate case inflation"
       ],
       "oracle": [
         "Wilson intervals, independent-case denominators, stratified split/exclusions/cost and anti-parity limitation reporting."
       ],
       "evidence": [
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.json",
+        "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.md",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.json",
+        "evals/rounds/m2-round4-qwen38-medium/preregistration.md",
+        "validation/results/m2-round4-qwen38-medium/verification.json",
+        "validation/results/m2-round4-qwen38-medium/closure.json",
+        "validation/results/m2-round4-qwen38-medium/offline.json",
         "evals/preregistration.json",
         "evals/preregistration.md",
         "evals/corpus/manifest.json",
@@ -14631,9 +14715,28 @@
         "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
         "evals/rounds/m2-round3-qwen38/preregistration.json"
       ],
-      "code": ["tools/src/evals/run.ts", "tools/src/evals/scoring.ts"],
-      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
-      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+      "code": [
+        "tools/src/evals/run.ts",
+        "tools/src/evals/scoring.ts",
+        "tools/src/evals/freeze.ts",
+        "tools/src/evals/freeze.test.ts",
+        "tools/src/evals/scoring.test.ts"
+      ],
+      "note": "Round 4 measurement obligations verified independently: committed registration, eight fixed complete trial/error ledgers, exact scoring recomputation, effective medium configuration hashes, declared strata/intervals/empty secondary denominators and unknown monetary cost retained. Primary and conditional 0/8; all normalization failures remain misses. This verifies measurement integrity only, not graduation, human review or public release.",
+      "coverage": {
+        "positive": [
+          "tools/src/evals/scoring.test.ts::matches published binomial examples and boundaries"
+        ],
+        "negative": [
+          "tools/src/evals/scoring.test.ts::reports empty secondary denominators and refuses duplicate case inflation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/evals/scoring.test.ts",
+            "assertion": "expect(summarize([input]).proposalValidity.status).toBe(\"insufficientData\");"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-040",
@@ -15583,6 +15686,16 @@
         "n": 8,
         "decision": "blocked",
         "reason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+      },
+      {
+        "area": "model-pipeline-round4-qwen38-medium",
+        "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+        "approvedTarget": null,
+        "observation": 0,
+        "interval": [0, 0.3244156195108769],
+        "n": 8,
+        "decision": "blocked",
+        "reason": "Round 4 medium completed eight observed trial ledgers but 0/8 full normalizations: ungrounded evidence rejected; no proposals, accepted revisions or paired replay. Primary and conditional 0/8; 25 calls, 183006 measured tokens, unknown money. J02 and J03 failed; fixture-draft agent journey passed. Independent-family holdout/human prerequisites and public-release obligations remain unmet; historical failures are not repaired or erased."
       }
     ]
   }

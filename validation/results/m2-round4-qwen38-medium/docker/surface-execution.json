@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "surface-execution",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T13:17:58.836Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "surface-execution",
+        "--base-url",
+        "http://127.0.0.1:35027",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_93b7f5bc-3827-4e1e-9d8d-855ef493f6dc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-rOzyDF/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fb09be76-60b0-451d-b8ff-0522bb38e3b9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115d-0998-734c-a477-082118f0f1d3",
+        "--revision",
+        "rev_01a1115d-099d-70af-983e-1a439e1f1238",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_693df32d-2307-4c6a-b48b-6a7ecba6cf8c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-rOzyDF/repo/playwright.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f3c362b7-1dd1-43ae-b65a-25e134cd0904",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1115d-16bc-721a-ab58-434f28dab5cd",
+        "--revision",
+        "rev_01a1115d-16c0-71fc-8bf4-caf26752765c",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_214522f5-69cb-48c9-a66c-68be0147653d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "reconcile",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1899aa1e-33af-416f-ba42-b8edd24aa489",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "server",
+        "start",
+        "--port",
+        "37239",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_16a3d9a3-65cd-44f1-a432-553443380d45",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1115d-0cd8-7187-9370-9c961de1f0c7",
+    "run_01a1115d-112b-7746-8936-1c2006494d73",
+    "run_01a1115d-19e8-773e-8b08-a9aa4d192a77",
+    "run_01a1115d-1d60-742b-80bb-073c1254c80d"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "sameRevisionCliApi",
+      "runner": "http",
+      "revisionId": "rev_01a1115d-099d-70af-983e-1a439e1f1238",
+      "runId": "run_01a1115d-112b-7746-8936-1c2006494d73",
+      "cliRunId": "run_01a1115d-0cd8-7187-9370-9c961de1f0c7",
+      "receiptLostBeforeDelivery": true
+    },
+    {
+      "check": "sameRevisionCliApi",
+      "runner": "playwright",
+      "revisionId": "rev_01a1115d-16c0-71fc-8bf4-caf26752765c",
+      "runId": "run_01a1115d-1d60-742b-80bb-073c1254c80d",
+      "cliRunId": "run_01a1115d-19e8-773e-8b08-a9aa4d192a77",
+      "receiptLostBeforeDelivery": false
+    },
+    {
+      "check": "scopeDenialsCasAndEvidenceState",
+      "httpRace": [
+        200,
+        412
+      ],
+      "staleEligible": false,
+      "partialEligible": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

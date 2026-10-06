@@ -1,0 +1,428 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j02-m2-live-discovery",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T13:40:51.091Z",
+  "passed": false,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "error": "AssertionError: requirement normalize --source-revision svr_01a11170-c0fd-776f-b584-fb9da52274fb svr_01a11170-c21b-7359-8190-e6e6427cb8c4 stderr= stdout={\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_e0dfb4fd-2d75-4050-8773-4d5f6f11d9e3\",\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"Conflict evidence is not grounded\",\"details\":{},\"retryable\":false,\"nextActions\":[]}}\n: expected 5 to be +0 // Object.is equality",
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j02-m2-live-discovery",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b5be7c75-939a-4019-90c9-3753e25c0119",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7ec991f2-bf01-45fc-bb07-58ca50716bde",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_acd609d7-204a-451f-8405-a204ffc008b1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5c9aad94-079c-459a-b454-38c1a47f6eb9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "prd.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_df9b5bf3-7b2f-4bb0-9ed5-ba91c2d5539a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "api.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f7631573-1052-4289-bfa1-234fdeb994b7",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+        "--source-revision",
+        "svr_01a11170-c21b-7359-8190-e6e6427cb8c4",
+        "--exclude",
+        "excluded.js",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f7607613-481b-4044-8bd0-6cd86cc1543e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+        "--source-revision",
+        "svr_01a11170-c21b-7359-8190-e6e6427cb8c4",
+        "--exclude",
+        "excluded.js",
+        "--resume",
+        "dsc_01a11170-c366-711d-9372-7f0c8aac89f6",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_15914d1e-feb3-47ef-ba26-069cd037c988",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_8c47e6b5-8478-4d97-abe3-a8c469d3cc0e",
+      "error": {
+        "code": "PRECONDITION_REQUIRED",
+        "message": "Diff discovery requires --base and --head or --working-tree",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "e6fc336665f8ece03bdce53470b6598f5bfdfd05",
+        "--head",
+        "25e5030922b5189a6d2ad4e49afe6776fd6cefae",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4a32a424-8f08-4218-9b58-5c54f46c2360",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "25e5030922b5189a6d2ad4e49afe6776fd6cefae",
+        "--working-tree",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f4b07eb3-d2a2-446e-970c-54e73ece6f6a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+        "svr_01a11170-c21b-7359-8190-e6e6427cb8c4",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_e0dfb4fd-2d75-4050-8773-4d5f6f11d9e3",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Conflict evidence is not grounded",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bc85d3bd-0b34-4f9e-99b5-78587bd4bf74",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "check": "supplementalModelUsage",
+      "calls": [
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:40:04.123Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11171-5b96-7787-8a04-7e1d5591f94d",
+          "inputRefs": [
+            "chunk_22879c01b9feb5e032a8535e41c1a936e481bcf6dd9ac2b7fc24d9a573e86fb3",
+            "chunk_2fa46793cf275f2577ce5cc66e569a437d6ed09769017082dddf8f119fd16d0d",
+            "chunk_5d0e6596c50d841a2cb13abf5ff0fa56df6f5fce1df627f9b8db0e969987aaa3",
+            "chunk_d2c015a1b6764778a5b1aaa17dd171ad0d16e01525caa2e0897342b03a449e12",
+            "chunk_0712bbc89e8b8accd51a87429467732cfb6db038a4106dba4b33472314dded25"
+          ],
+          "latency": 37284,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "invalid",
+          "projectId": "prj_01a11170-bc4d-74ea-8d56-0365e7068fda",
+          "promptHash": "ae52ba230238ab9fc6c64cd323b355954c4e8ae2acc8e8f9bb77d6f5cfa61406",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 0,
+          "reservationId": "24d03f59-ef21-40ed-8b33-40ed53f38aef",
+          "responseHash": "0e6be3af0701e113d7f39c284b2f0b19ce71c7dca3a792d48d65a47ba9689944",
+          "sourceRevisionIds": [
+            "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+            "svr_01a11170-c21b-7359-8190-e6e6427cb8c4"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 2376,
+            "outputTokens": 1813,
+            "reasoningTokens": 1135
+          },
+          "workspaceId": "ws_01a11170-bc42-7113-bd36-0484ca4238d5"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:40:30.261Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11171-c1b5-7209-84f9-ba8cff2cdf94",
+          "inputRefs": [
+            "chunk_22879c01b9feb5e032a8535e41c1a936e481bcf6dd9ac2b7fc24d9a573e86fb3",
+            "chunk_2fa46793cf275f2577ce5cc66e569a437d6ed09769017082dddf8f119fd16d0d",
+            "chunk_5d0e6596c50d841a2cb13abf5ff0fa56df6f5fce1df627f9b8db0e969987aaa3",
+            "chunk_d2c015a1b6764778a5b1aaa17dd171ad0d16e01525caa2e0897342b03a449e12",
+            "chunk_0712bbc89e8b8accd51a87429467732cfb6db038a4106dba4b33472314dded25"
+          ],
+          "latency": 26137,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a11170-bc4d-74ea-8d56-0365e7068fda",
+          "promptHash": "8d55b6780e67117235b3090e4665bc89e069f6ee72305f4ca054043a401d854b",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 1,
+          "reservationId": "d67022a8-1eb9-4b5d-9610-a0de77a404ec",
+          "responseHash": "80bf415f467121de7bebad68a3627a09e2013aea622cd92045b7c82fe08e487c",
+          "sourceRevisionIds": [
+            "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+            "svr_01a11170-c21b-7359-8190-e6e6427cb8c4"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 2448,
+            "outputTokens": 1475,
+            "reasoningTokens": 768
+          },
+          "workspaceId": "ws_01a11170-bc42-7113-bd36-0484ca4238d5"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T13:40:50.802Z",
+          "finishReason": "stop",
+          "id": "mdl_01a11172-11ef-70f7-90d5-280d65983466",
+          "inputRefs": [
+            "batch-1-health-200-response",
+            "batch-1-health-503-only"
+          ],
+          "latency": 20445,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a11170-bc4d-74ea-8d56-0365e7068fda",
+          "promptHash": "f358b731a0c3315f3169b0b2580187244e29e01246d3ec98f0d16537296b0768",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 0,
+          "reservationId": "03e41a4f-3bec-422f-8a10-1e2e055d0fa0",
+          "responseHash": "de5b3a2fc547afeb6d980df79578cd8ea9fe1be0b064bed50e54cb3ed6e66cf4",
+          "sourceRevisionIds": [
+            "svr_01a11170-c0fd-776f-b584-fb9da52274fb",
+            "svr_01a11170-c21b-7359-8190-e6e6427cb8c4"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 1806,
+            "outputTokens": 1078,
+            "reasoningTokens": 575
+          },
+          "workspaceId": "ws_01a11170-bc42-7113-bd36-0484ca4238d5"
+        }
+      ],
+      "tokens": {
+        "inputTokens": 6630,
+        "outputTokens": 4366,
+        "reasoningTokens": 2478
+      },
+      "cost": "unknown",
+      "measuredCosts": [],
+      "unknownCostCalls": 3,
+      "budgetRemaining": null,
+      "reservations": {
+        "reserved": 0,
+        "settled": 3,
+        "released": 0
+      },
+      "tokenBudget": null,
+      "runtimeMs": 83866,
+      "storageBytes": 0,
+      "runs": []
+    }
+  ],
+  "failureDiagnostics": {
+    "runs": [],
+    "artifacts": []
+  },
+  "limitations": [
+    "Live model generation and authoring only; no execution or passing-test claim."
+  ]
+}

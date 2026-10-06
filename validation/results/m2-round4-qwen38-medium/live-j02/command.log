@@ -1,0 +1,37 @@
+
+ RUN  v5.0.3 /home/diogo/dev/testmaster
+
+ ❯ |live| validation/journeys/m2-discovery.live.test.ts (1 test | 1 failed) 88039ms
+   × J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries 88039ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |live| validation/journeys/m2-discovery.live.test.ts > J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries
+AssertionError: requirement normalize --source-revision svr_01a11170-c0fd-776f-b584-fb9da52274fb svr_01a11170-c21b-7359-8190-e6e6427cb8c4 stderr= stdout={"schemaVersion":"1.0.0","requestId":"cli_e0dfb4fd-2d75-4050-8773-4d5f6f11d9e3","error":{"code":"INVALID_ARGUMENT","message":"Conflict evidence is not grounded","details":{},"retryable":false,"nextActions":[]}}
+: expected 5 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 5
+
+ ❯ Journey.command validation/journeys/harness.ts:256:7
+    254|       result.exitCode,
+    255|       `${args.join(" ")} stderr=${result.stderr} stdout=${result.stdou…
+    256|     ).toBe(expectedExit);
+       |       ^
+    257|     expect(result.json, `Exactly one JSON document required: ${result.…
+    258|     return expectedExit === 0 ? data(result.json) : object(result.json…
+ ❯ validation/journeys/m2-discovery.live.test.ts:164:28
+ ❯ journey validation/journeys/harness.ts:480:5
+ ❯ validation/journeys/m2-discovery.live.test.ts:11:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  10:39:22
+   Duration  88.30s (tests 100%)
+
