@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "method": "automatic",
+  "reviewer": "orchestrator",
+  "observedAt": "2026-10-06T03:14:42.433Z",
+  "passed": true,
+  "scope": "M0-M2 explicit coverage links and fail-closed registry checks",
+  "inventory": {
+    "ok": true,
+    "definitionCount": 446,
+    "errors": []
+  },
+  "coverage": {
+    "verifiedItems": 196,
+    "missingStructuredLinks": 0,
+    "capabilities": 65
+  },
+  "controls": [
+    {
+      "change": "intact",
+      "errors": []
+    },
+    {
+      "change": "removed-negative",
+      "errors": [
+        "API-001: release requires explicit positive and negative scenario links or a blockedReason for unverified scope"
+      ]
+    },
+    {
+      "change": "removed-assertion",
+      "errors": [
+        "API-001: protected critical assertion missing or unsafe: validation/journeys/surface-execution.docker.test.ts"
+      ]
+    }
+  ],
+  "limitations": [
+    "Existing unit/Docker/live results retain their historical timestamps; mapping does not rerun or independently certify them.",
+    "Public release remains blocked by named unverified obligations and failed/blocked per-area decisions."
+  ],
+  "verification": {
+    "build": {
+      "command": "pnpm build",
+      "exitCode": 0
+    },
+    "lint": {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "warnings": 63
+    },
+    "tests": {
+      "command": "pnpm exec vitest run --project unit tools/src/traceability",
+      "files": 4,
+      "passed": 15
+    },
+    "cli": {
+      "command": "node apps/cli/dist/main.js --output json capabilities",
+      "exitCode": 0
+    },
+    "preregistration": {
+      "command": "node tools/dist/evals/run.js --check --registration evals/rounds/m2-round2/preregistration.json",
+      "plannedTrials": 8,
+      "liveCalls": 0,
+      "dockerCalls": 0
+    }
+  }
+}
