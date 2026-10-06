@@ -15,6 +15,7 @@ import type {
   TokenUsage,
 } from "./types.js";
 
+const maxRepairIssues = 20;
 const forbiddenDataClasses: Record<string, true> = {
   credentials: true,
   secrets: true,
@@ -419,12 +420,20 @@ export class ModelGateway {
           if (result.finishReason === "length" || result.finishReason === "content_filter")
             throw error;
           invalid = true;
-          if (error instanceof ContractError)
+          if (error instanceof ContractError) {
+            // Union-heavy schemas report every failed alternative; unbounded feedback grew repair
+            // prompts past admitted input limits, so repairs carry a bounded issue sample.
+            const issues = error.issues ?? [];
             validationFailure = canonicalJson({
               code: error.code,
-              issues: error.issues,
+              issues: issues.slice(0, maxRepairIssues).map((issue) => ({
+                ...issue,
+                message: issue.message.slice(0, 300),
+              })),
+              omittedIssues: Math.max(0, issues.length - maxRepairIssues),
               message: error.message,
             });
+          }
         }
         if (!invalid)
           await this.record(

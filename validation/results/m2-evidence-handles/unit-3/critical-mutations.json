@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0.0",
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "observedAt": "2026-10-06T19:26:40.246Z",
+  "passed": true,
+  "n": 3,
+  "killed": 3,
+  "survivors": [],
+  "invalid": [],
+  "equivalent": [],
+  "observations": [
+    {
+      "control": "healthy implementation",
+      "passed": true,
+      "tests": 3
+    },
+    {
+      "invariant": "revision immutability",
+      "implementation": "packages/persistence/migrations/sqlite/0001_initial.sql",
+      "status": "killed",
+      "equivalent": false,
+      "invalid": false,
+      "detection": "revision immutability"
+    },
+    {
+      "invariant": "secrets redaction",
+      "implementation": "packages/domain/src/redaction.ts",
+      "status": "killed",
+      "equivalent": false,
+      "invalid": false,
+      "detection": "secret redaction"
+    },
+    {
+      "invariant": "assertion invariance",
+      "implementation": "packages/planner/src/agent/index.ts",
+      "status": "killed",
+      "equivalent": false,
+      "invalid": false,
+      "detection": "assertion invariance"
+    }
+  ],
+  "limitations": [
+    "M0–M2 critical revision/redaction/assertion guards only. Gate SHA is an unavailable M3 surface and is not tested."
+  ]
+}

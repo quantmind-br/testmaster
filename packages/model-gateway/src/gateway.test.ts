@@ -237,6 +237,53 @@ describe("policy-controlled model requests", () => {
     expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "invalid", "success"]);
   });
 
+  it("bounds repair feedback for union-heavy schema failures", async () => {
+    const step = { id: "s", kind: "action", operation: "request", input: { method: "BREW" } };
+    const invalid = {
+      proposals: [
+        {
+          plan: {
+            schemaVersion: "1.0.0",
+            kind: "executable",
+            name: "Broken",
+            type: "backend",
+            runner: "http",
+            requirementRefs: [],
+            steps: Array.from({ length: 40 }, (_, index) => ({ ...step, id: `s${index}` })),
+          },
+          requirementRefs: ["req_01900000-0000-7000-8000-000000000001"],
+          evidenceIds: ["E1"],
+          warnings: [],
+        },
+      ],
+    };
+    const f = await fixture((_req, res) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [{ message: { content: JSON.stringify(invalid) }, finish_reason: "stop" }],
+        }),
+      ),
+    );
+    // Production admission limits (ModelService): repairs must stay within them.
+    await expect(
+      f.gateway.complete({
+        ...testRequest,
+        responseSchema: "AIProposalsOutput",
+        dataPolicy: { ...testRequest.dataPolicy, maxInputBytes: 1048576, maxInputTokens: 100000 },
+      }),
+    ).rejects.toMatchObject({ details: { repairs: 2 } });
+    const prompts = f.payloads
+      .filter((payload) => payload.includes('"messages"'))
+      .map((payload) => JSON.parse(payload).messages as { content: string }[]);
+    const feedback = JSON.parse(
+      String(prompts[1]?.at(-1)?.content.match(/validation: (\{.*\})\. Return/su)?.[1]),
+    ) as { issues: unknown[]; omittedIssues: number };
+    expect(feedback.issues).toHaveLength(20);
+    expect(feedback.omittedIssues).toBeGreaterThan(0);
+    expect(Buffer.byteLength(prompts[1]?.at(-1)?.content ?? "")).toBeLessThan(12000);
+  });
+
   it("preserves unknown usage and unknown costs", async () => {
     const f = await fixture((_req, res) =>
       res.end(JSON.stringify({ model: "model", choices: completion.choices })),
