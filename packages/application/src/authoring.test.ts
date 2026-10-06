@@ -39,7 +39,7 @@ async function context(): Promise<ServiceContext> {
     displayName: "Owner",
     disabledAt: null,
   });
-  return { database, entities, workspaceId, principalId, authorize() {} };
+  return { database, entities, workspaceId, principalId, authorize() {}, authorizeNamed() {} };
 }
 function code(action: () => unknown, expected: string): void {
   try {

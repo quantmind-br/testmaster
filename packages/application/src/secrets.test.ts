@@ -48,6 +48,7 @@ async function fixture(): Promise<{
     workspaceId,
     principalId: "local",
     authorize: vi.fn(),
+    authorizeNamed: vi.fn(),
   };
   return { service: new SecretsService(ctx, config), ctx, home, config };
 }

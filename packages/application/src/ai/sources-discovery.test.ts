@@ -47,7 +47,14 @@ async function fixture() {
     displayName: "Owner",
     disabledAt: null,
   });
-  const ctx: ServiceContext = { database, entities, workspaceId, principalId, authorize() {} };
+  const ctx: ServiceContext = {
+    database,
+    entities,
+    workspaceId,
+    principalId,
+    authorize() {},
+    authorizeNamed() {},
+  };
   const config: ResolvedConfig = {
     cwd,
     dataDir,

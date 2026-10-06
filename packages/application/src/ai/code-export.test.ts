@@ -40,7 +40,14 @@ async function setup() {
     displayName: "Owner",
     disabledAt: null,
   });
-  const ctx: ServiceContext = { database, entities, workspaceId, principalId, authorize() {} };
+  const ctx: ServiceContext = {
+    database,
+    entities,
+    workspaceId,
+    principalId,
+    authorize() {},
+    authorizeNamed() {},
+  };
   new ProjectsService(ctx).create({ name: "Shop" });
   const tests = new TestsService(ctx);
   const test = tests.create({ plan: scaffoldPlan("backend") });

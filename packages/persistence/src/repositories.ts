@@ -442,7 +442,7 @@ export class LeaseRepository {
   expire(now = new Date().toISOString()): string[] {
     return this.database.withTx(() => {
       const expired = this.database.all(
-        "SELECT workspace_id,id,fence,resource_id FROM job_leases WHERE state='leased' AND lease_expires_at<=?",
+        `SELECT workspace_id,id,fence,resource_id FROM job_leases WHERE state='leased' AND lease_expires_at<=? AND queue NOT IN (${auxiliaryQueueSql})`,
         now,
       );
       for (const row of expired) {
@@ -472,12 +472,317 @@ export class LeaseRepository {
   resume(workspaceId: string, jobId: string, expectedFence: number): void {
     this.database.withTx(() => {
       const changed = this.database.run(
-        "UPDATE job_leases SET state='queued',dispatchable=1 WHERE workspace_id=? AND id=? AND fence=? AND state='reconciliation_required'",
+        `UPDATE job_leases SET state='queued',dispatchable=1 WHERE workspace_id=? AND id=? AND fence=? AND state='reconciliation_required' AND queue NOT IN (${auxiliaryQueueSql})`,
         workspaceId,
         jobId,
         expectedFence,
       );
       if (!changed.changes) throw new StaleFenceError();
+    });
+  }
+}
+export const auxiliaryQueues = ["analysis", "healing", "delivery"] as const;
+export type AuxiliaryQueue = (typeof auxiliaryQueues)[number];
+const auxiliaryQueueSql = auxiliaryQueues.map((queue) => `'${queue}'`).join(",");
+/** Validated, authorization-relevant job input; the actor is rechecked before dispatch. */
+export interface AuxiliaryPayload {
+  operation: string;
+  targetId: string;
+  actorId: string;
+  evidenceHash: string;
+  configHash: string;
+  options: Record<string, unknown>;
+}
+export interface AuxiliaryJob {
+  workspaceId: string;
+  jobId: string;
+  queue: AuxiliaryQueue;
+  resourceId: string;
+  state: "queued" | "leased" | "completed" | "cancelled" | "reconciliation_required";
+  fence: number;
+  attempts: number;
+  availableAt: string;
+  payload: AuxiliaryPayload;
+  /** Durable progress markers (for example, a paid model call that has started). */
+  progress: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+}
+export interface AuxiliaryFence {
+  workspaceId: string;
+  jobId: string;
+  owner: string;
+  fence: number;
+}
+/**
+ * Non-run work (diagnosis, healing, check delivery) over `job_leases`. Never joins Runs, never
+ * creates Attempts and never reopens terminal state. A lease lost after a paid call started is
+ * settled, not requeued, so recovery cannot silently reissue the call.
+ */
+export class AuxiliaryLeaseRepository {
+  constructor(readonly database: PersistenceDatabase) {}
+  static resourceId(queue: AuxiliaryQueue, payload: AuxiliaryPayload): string {
+    return semanticHash({
+      queue,
+      targetId: payload.targetId,
+      evidenceHash: payload.evidenceHash,
+      operation: payload.operation,
+      configHash: payload.configHash,
+    });
+  }
+  private validate(queue: string, payload: AuxiliaryPayload): asserts queue is AuxiliaryQueue {
+    if (!(auxiliaryQueues as readonly string[]).includes(queue))
+      throw new ContractError("INVALID_ARGUMENT", "Queue is not an auxiliary queue", { queue });
+    const text = (value: unknown, max = 200) =>
+      typeof value === "string" && value.length > 0 && value.length <= max;
+    if (
+      !payload ||
+      !text(payload.operation) ||
+      !text(payload.targetId) ||
+      !text(payload.actorId) ||
+      !/^[0-9a-f]{64}$/.test(String(payload.evidenceHash)) ||
+      !/^[0-9a-f]{64}$/.test(String(payload.configHash)) ||
+      !payload.options ||
+      typeof payload.options !== "object" ||
+      Array.isArray(payload.options) ||
+      Object.keys(payload).some(
+        (key) =>
+          !["operation", "targetId", "actorId", "evidenceHash", "configHash", "options"].includes(
+            key,
+          ),
+      )
+    )
+      throw new ContractError("INVALID_ARGUMENT", "Auxiliary job payload is invalid", { queue });
+  }
+  private decode(row: Record<string, unknown>): AuxiliaryJob {
+    const data = JSON.parse(String(row.data_json)) as {
+      payload: AuxiliaryPayload;
+      progress?: Record<string, unknown>;
+      result?: Record<string, unknown> | null;
+    };
+    return {
+      workspaceId: String(row.workspace_id),
+      jobId: String(row.id),
+      queue: String(row.queue) as AuxiliaryQueue,
+      resourceId: String(row.resource_id),
+      state: String(row.state) as AuxiliaryJob["state"],
+      fence: Number(row.fence),
+      attempts: Number(row.attempts),
+      availableAt: String(row.available_at),
+      payload: data.payload,
+      progress: data.progress ?? {},
+      result: data.result ?? null,
+    };
+  }
+  /** Idempotent by semantic resource identity; an identical request returns the stored job. */
+  enqueue(
+    workspaceId: string,
+    queue: AuxiliaryQueue,
+    payload: AuxiliaryPayload,
+    availableAt = new Date().toISOString(),
+  ): { job: AuxiliaryJob; created: boolean } {
+    this.validate(queue, payload);
+    const resourceId = AuxiliaryLeaseRepository.resourceId(queue, payload);
+    const run = () => {
+      const existing = this.find(workspaceId, queue, resourceId);
+      if (existing) return { job: existing, created: false };
+      const id = uuidV7IdGenerator.next("job");
+      this.database.run(
+        "INSERT INTO job_leases(workspace_id,id,created_at,queue,resource_id,available_at,priority,data_json) VALUES(?,?,?,?,?,?,0,?)",
+        workspaceId,
+        id,
+        new Date().toISOString(),
+        queue,
+        resourceId,
+        availableAt,
+        canonicalJson({ payload, progress: {}, result: null }),
+      );
+      return { job: this.get(workspaceId, id) as AuxiliaryJob, created: true };
+    };
+    return this.database.db.isTransaction ? run() : this.database.withTx(run);
+  }
+  get(workspaceId: string, jobId: string): AuxiliaryJob | null {
+    const row = this.database.get(
+      `SELECT * FROM job_leases WHERE workspace_id=? AND id=? AND queue IN (${auxiliaryQueueSql})`,
+      workspaceId,
+      jobId,
+    );
+    return row ? this.decode(row) : null;
+  }
+  find(workspaceId: string, queue: AuxiliaryQueue, resourceId: string): AuxiliaryJob | null {
+    const row = this.database.get(
+      "SELECT * FROM job_leases WHERE workspace_id=? AND queue=? AND resource_id=?",
+      workspaceId,
+      queue,
+      resourceId,
+    );
+    return row ? this.decode(row) : null;
+  }
+  /** Jobs of one queue whose payload targets `targetId`, newest first. */
+  forTarget(workspaceId: string, queue: AuxiliaryQueue, targetId: string): AuxiliaryJob[] {
+    return this.database
+      .all(
+        "SELECT * FROM job_leases WHERE workspace_id=? AND queue=? AND json_extract(data_json,'$.payload.targetId')=? ORDER BY created_at DESC,id DESC",
+        workspaceId,
+        queue,
+        targetId,
+      )
+      .map((row) => this.decode(row));
+  }
+  claim(request: {
+    workspaceId: string;
+    owner: string;
+    queue: AuxiliaryQueue;
+    jobId?: string;
+    leaseMs?: number;
+    now?: string;
+  }): (AuxiliaryFence & { job: AuxiliaryJob }) | null {
+    if (!(auxiliaryQueues as readonly string[]).includes(request.queue))
+      throw new ContractError("INVALID_ARGUMENT", "Queue is not an auxiliary queue");
+    return this.database.withTx(() => {
+      const now = request.now ?? new Date().toISOString();
+      const row = this.database.get(
+        `SELECT * FROM job_leases WHERE workspace_id=? AND queue=? AND state='queued' AND dispatchable=1 AND available_at<=?${request.jobId ? " AND id=?" : ""} ORDER BY priority DESC,available_at,id LIMIT 1`,
+        request.workspaceId,
+        request.queue,
+        now,
+        ...(request.jobId ? [request.jobId] : []),
+      );
+      if (!row) return null;
+      const fence = Number(row.fence) + 1;
+      const changed = this.database.run(
+        "UPDATE job_leases SET state='leased',lease_owner=?,lease_expires_at=?,fence=?,attempts=attempts+1 WHERE workspace_id=? AND id=? AND state='queued' AND fence=?",
+        request.owner,
+        new Date(Date.parse(now) + (request.leaseMs ?? 60000)).toISOString(),
+        fence,
+        request.workspaceId,
+        row.id,
+        row.fence,
+      );
+      if (!changed.changes) return null;
+      const job = this.get(request.workspaceId, String(row.id)) as AuxiliaryJob;
+      return {
+        workspaceId: request.workspaceId,
+        jobId: job.jobId,
+        owner: request.owner,
+        fence,
+        job,
+      };
+    });
+  }
+  private assertCurrent(fence: AuxiliaryFence, now = new Date().toISOString()): AuxiliaryJob {
+    const row = this.database.get(
+      `SELECT * FROM job_leases WHERE workspace_id=? AND id=? AND lease_owner=? AND fence=? AND state='leased' AND lease_expires_at>? AND queue IN (${auxiliaryQueueSql})`,
+      fence.workspaceId,
+      fence.jobId,
+      fence.owner,
+      fence.fence,
+      now,
+    );
+    if (!row) throw new StaleFenceError();
+    return this.decode(row);
+  }
+  heartbeat(fence: AuxiliaryFence, leaseMs = 60000, now = new Date().toISOString()): string {
+    return this.database.withTx(() => {
+      this.assertCurrent(fence, now);
+      const expires = new Date(Date.parse(now) + leaseMs).toISOString();
+      this.database.run(
+        "UPDATE job_leases SET lease_expires_at=? WHERE workspace_id=? AND id=? AND fence=?",
+        expires,
+        fence.workspaceId,
+        fence.jobId,
+        fence.fence,
+      );
+      return expires;
+    });
+  }
+  /** Durably records progress before an irreversible effect (for example a paid model call). */
+  mark(fence: AuxiliaryFence, progress: Record<string, unknown>): void {
+    const apply = () => {
+      const job = this.assertCurrent(fence);
+      this.database.run(
+        "UPDATE job_leases SET data_json=? WHERE workspace_id=? AND id=? AND fence=?",
+        canonicalJson({ payload: job.payload, progress: { ...job.progress, ...progress }, result: null }),
+        fence.workspaceId,
+        fence.jobId,
+        fence.fence,
+      );
+    };
+    if (this.database.db.isTransaction) apply();
+    else this.database.withTx(apply);
+  }
+  finish(
+    fence: AuxiliaryFence,
+    state: "completed" | "cancelled",
+    result: Record<string, unknown>,
+  ): void {
+    const apply = () => {
+      const job = this.assertCurrent(fence);
+      this.database.run(
+        "UPDATE job_leases SET state=?,lease_owner=NULL,lease_expires_at=NULL,data_json=? WHERE workspace_id=? AND id=? AND fence=?",
+        state,
+        canonicalJson({ payload: job.payload, progress: job.progress, result }),
+        fence.workspaceId,
+        fence.jobId,
+        fence.fence,
+      );
+    };
+    if (this.database.db.isTransaction) apply();
+    else this.database.withTx(apply);
+  }
+  /** Retries deterministic work only; a job whose paid effect started stays settled-required. */
+  release(fence: AuxiliaryFence, retryAt: string): void {
+    this.database.withTx(() => {
+      const job = this.assertCurrent(fence);
+      if (job.progress.paidCallStarted)
+        throw new ContractError("PRECONDITION_FAILED", "Paid call outcome must be settled");
+      this.database.run(
+        "UPDATE job_leases SET state='queued',lease_owner=NULL,lease_expires_at=NULL,available_at=? WHERE workspace_id=? AND id=? AND fence=?",
+        retryAt,
+        fence.workspaceId,
+        fence.jobId,
+        fence.fence,
+      );
+    });
+  }
+  /**
+   * Expired auxiliary leases: deterministic work returns to the queue; work that had started a
+   * paid call moves to `reconciliation_required` and must be settled without a new call.
+   */
+  expire(now = new Date().toISOString()): { requeued: string[]; settlementRequired: string[] } {
+    return this.database.withTx(() => {
+      const requeued: string[] = [];
+      const settlementRequired: string[] = [];
+      for (const row of this.database.all(
+        `SELECT * FROM job_leases WHERE state='leased' AND lease_expires_at<=? AND queue IN (${auxiliaryQueueSql})`,
+        now,
+      )) {
+        const job = this.decode(row);
+        const paid = Boolean(job.progress.paidCallStarted);
+        this.database.run(
+          "UPDATE job_leases SET state=?,lease_owner=NULL,lease_expires_at=NULL WHERE workspace_id=? AND id=? AND fence=?",
+          paid ? "reconciliation_required" : "queued",
+          job.workspaceId,
+          job.jobId,
+          job.fence,
+        );
+        (paid ? settlementRequired : requeued).push(job.jobId);
+      }
+      return { requeued, settlementRequired };
+    });
+  }
+  /** Settles a `reconciliation_required` job with a recorded result; never reissues the call. */
+  settle(workspaceId: string, jobId: string, result: Record<string, unknown>): AuxiliaryJob {
+    return this.database.withTx(() => {
+      const job = this.get(workspaceId, jobId);
+      if (!job || job.state !== "reconciliation_required")
+        throw new ContractError("PRECONDITION_FAILED", "Job does not require settlement");
+      this.database.run(
+        "UPDATE job_leases SET state='completed',data_json=? WHERE workspace_id=? AND id=? AND state='reconciliation_required'",
+        canonicalJson({ payload: job.payload, progress: job.progress, result }),
+        workspaceId,
+        jobId,
+      );
+      return this.get(workspaceId, jobId) as AuxiliaryJob;
     });
   }
 }

@@ -150,6 +150,8 @@ export class Application {
         )
           throw new ContractError("FORBIDDEN", "Raw evidence requires artifacts:raw permission");
       },
+      authorizeNamed: (action, resourceType, projectId, environmentId) =>
+        this.authorizeNamed(action, resourceType, projectId, environmentId ?? null),
     };
     this.audit = new AuditService(this.context, config.cwd);
     this.projects = new ProjectsService(this.context);
@@ -308,6 +310,64 @@ export class Application {
     }
     if (matching.some((grant) => !grant.deny))
       auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "allowed");
+  }
+  /**
+   * Named authority is never implied by generic W/X. Local role defaults apply only without a
+   * bearer identity; remote identities need a matching unexpired, non-denied resource grant.
+   */
+  private authorizeNamed(
+    action: "approve" | "delete",
+    resourceType: "HealingProposal" | "Artifact",
+    projectId: string,
+    environmentId: string | null,
+  ): void {
+    try {
+      this.authorizePermission("R", projectId);
+      const principal = this.context.entities.get(
+        "Principal",
+        this.context.workspaceId,
+        this.context.principalId,
+      );
+      if (action === "approve" && principal?.kind !== "human")
+        throw new ContractError("FORBIDDEN", "Approval requires an enabled human principal");
+      const membership = this.database.get(
+        "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
+        this.context.workspaceId,
+        this.context.principalId,
+      );
+      const role = String(membership?.role);
+      const roleDefaults: Record<typeof action, string[]> = {
+        approve: ["org_owner", "org_admin", "maintainer", "reviewer"],
+        delete: ["org_owner", "org_admin"],
+      };
+      const aliases: Record<typeof resourceType, string[]> = {
+        HealingProposal: ["HealingProposal", "healing", "*"],
+        Artifact: ["Artifact", "artifacts", "*"],
+      };
+      const grants = this.identity?.grants ?? [];
+      for (const grant of grants) validate("PermissionGrant", grant);
+      const matching = grants.filter(
+        (grant) =>
+          aliases[resourceType].includes(grant.resourceType) &&
+          grant.actions.includes(action) &&
+          (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()) &&
+          (!grant.projectIds.length || grant.projectIds.includes(projectId)) &&
+          (!grant.environmentIds.length ||
+            (environmentId !== null && grant.environmentIds.includes(environmentId))),
+      );
+      const allowed = this.identity
+        ? matching.some((grant) => !grant.deny)
+        : roleDefaults[action].includes(role);
+      if (role === "viewer" || matching.some((grant) => grant.deny) || !allowed)
+        throw new ContractError("FORBIDDEN", "Action is not authorized", {
+          scope: `${resourceType === "HealingProposal" ? "healing" : "artifacts"}:${action}`,
+        });
+      auditSecurity(this.context, "grant", projectId, "allowed");
+    } catch (error) {
+      if (this.context.workspaceId)
+        auditSecurity(this.context, "authorization", projectId, "denied");
+      throw error;
+    }
   }
   async init(options: { name?: string; baseUrl?: string; overwrite?: boolean } = {}): Promise<{
     workspaceId: string;

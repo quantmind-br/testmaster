@@ -36,7 +36,14 @@ async function setup() {
     displayName: "Owner",
     disabledAt: null,
   });
-  const ctx: ServiceContext = { database, entities, workspaceId, principalId, authorize() {} };
+  const ctx: ServiceContext = {
+    database,
+    entities,
+    workspaceId,
+    principalId,
+    authorize() {},
+    authorizeNamed() {},
+  };
   const project = new ProjectsService(ctx).create({ name: "Shop" });
   return {
     cwd,

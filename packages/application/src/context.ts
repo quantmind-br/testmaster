@@ -16,6 +16,16 @@ export interface ServiceContext {
   correlationId?: string;
   authorize(scope: Scope, projectId?: string): void;
   authorizeRaw?(projectId: string, environmentId: string): void;
+  /**
+   * Named resource authority (`healing:approve`, `artifacts:delete`) evaluated against role
+   * defaults and resource-scoped PermissionGrants; generic W/X never implies it.
+   */
+  authorizeNamed(
+    action: "approve" | "delete",
+    resourceType: "HealingProposal" | "Artifact",
+    projectId: string,
+    environmentId?: string | null,
+  ): void;
 }
 export function entity(
   ctx: ServiceContext,
