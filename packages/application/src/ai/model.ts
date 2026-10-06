@@ -33,6 +33,7 @@ export interface ModelInput {
   model?: string;
   signal?: AbortSignal;
   deadlineMs?: number;
+  reasoningEffort?: ModelRequest["reasoningEffort"];
 }
 export class ModelService {
   readonly ledger: SqliteBudgetLedger;
@@ -106,6 +107,7 @@ export class ModelService {
         "INVALID_ARGUMENT",
         "Model deadline may only narrow the configured ceiling",
       );
+    const reasoningEffort = input.reasoningEffort ?? model.reasoningEffort;
     // Static loading would import the gateway on deterministic replay paths (ARCH-002).
     const { ModelGateway } = await import("@testmaster/model-gateway");
     const gateway = new ModelGateway({
@@ -134,7 +136,12 @@ export class ModelService {
         { role: "user", content: canonicalJson({ untrustedData: input.data }) },
       ],
       modelConfigHash: sha256(
-        canonicalJson({ provider: provider.id, model: model.id, capabilities: model.capabilities }),
+        canonicalJson({
+          provider: provider.id,
+          model: model.id,
+          capabilities: model.capabilities,
+          reasoningEffort: reasoningEffort ?? null,
+        }),
       ),
       promptVersion: promptVersions[input.purpose],
       schemaVersion: "1.0.0",
@@ -143,6 +150,7 @@ export class ModelService {
       locale: this.config.effectiveConfig.config.environment?.locale ?? "en-US",
       policyHash: this.config.effectiveConfig.policyHash,
       deadlineMs: input.deadlineMs ?? 180000,
+      ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
       dataPolicy: {
         dataClasses: input.dataClasses ?? ["documents"],
         maxInputBytes: 1048576,

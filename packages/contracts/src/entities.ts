@@ -537,6 +537,7 @@ export const ModelRequest = Obj({
   schemaVersion: Name,
   inputRefs: refs,
   responseSchema: Name,
+  reasoningEffort: Type.Optional(Enum(["low", "medium", "high"])),
   policyHash: ContentDigest,
 });
 export const ModelResponse = Obj({

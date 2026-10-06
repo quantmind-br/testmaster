@@ -76,6 +76,9 @@ export class ModelGateway {
         capability: input.model,
         milestone: "M2",
       });
+    const reasoningEffort = input.reasoningEffort ?? declared.reasoningEffort;
+    if (reasoningEffort !== undefined && !["low", "medium", "high"].includes(reasoningEffort))
+      throw new ContractError("INVALID_ARGUMENT", "Invalid reasoning effort");
     const required = new Set(input.requiredCapabilities ?? []);
     if (input.responseSchema) required.add("structuredJson");
     if (input.tools?.length) required.add("toolCalls");
@@ -141,6 +144,7 @@ export class ModelGateway {
         purpose: input.purpose,
         messages,
         tools: tools ?? null,
+        reasoningEffort: reasoningEffort ?? null,
         dataClasses: input.dataPolicy.dataClasses,
         maxInputBytes: input.dataPolicy.maxInputBytes,
         maxInputTokens: input.dataPolicy.maxInputTokens,
@@ -177,6 +181,7 @@ export class ModelGateway {
       };
       if (input.responseSchema) payload.response_format = { type: "json_object" };
       if (tools?.length) payload.tools = tools;
+      if (reasoningEffort !== undefined) payload.reasoning_effort = reasoningEffort;
       const promptText = canonicalJson(payload);
       const promptBytes = Buffer.byteLength(promptText);
       // One token per UTF-8 byte is a conservative upper bound, not measured provider usage.

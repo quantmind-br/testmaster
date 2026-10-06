@@ -21,7 +21,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
   delete process.env.FAKE_KEY;
 });
-async function fixture() {
+async function fixture(reasoningEffort?: "low" | "medium" | "high") {
   const root = await mkdtemp(join(tmpdir(), "tm-ai-core-"));
   roots.push(root);
   const home = join(root, "home");
@@ -70,7 +70,16 @@ async function fixture() {
       defaultProfile: "test",
       profiles: {
         test: {
-          modelProviders: [{ ...testProvider, baseUrl: `http://127.0.0.1:${address.port}/v1` }],
+          modelProviders: [
+            {
+              ...testProvider,
+              baseUrl: `http://127.0.0.1:${address.port}/v1`,
+              models: testProvider.models.map((model) => ({
+                ...model,
+                ...(reasoningEffort ? { reasoningEffort } : {}),
+              })),
+            },
+          ],
         },
       },
     }),
@@ -128,6 +137,21 @@ it("records consent before data crosses a real boundary, and source injection ca
   f.app.model.revokeConsent(f.projectId, "fake");
   await expect(f.app.model.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
   expect(f.counts().completions).toBe(1);
+});
+it("uses profile reasoning effort unless an application call overrides it", async () => {
+  const f = await fixture("medium");
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
+  const input = {
+    projectId: f.projectId,
+    purpose: "normalize" as const,
+    responseSchema: "Money",
+    data: "Return Money JSON",
+  };
+  await f.app.model.complete(input);
+  await f.app.model.complete({ ...input, reasoningEffort: "high" });
+  expect(f.payloads.map((payload) => payload.reasoning_effort)).toEqual(["medium", "high"]);
+  const records = f.app.usage.get(f.projectId).calls;
+  expect(records[0]?.modelConfigHash).not.toBe(records[1]?.modelConfigHash);
 });
 it("bounded model repairs never persist ready requirements or active tests", async () => {
   const f = await fixture();

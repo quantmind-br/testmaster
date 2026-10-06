@@ -78,12 +78,13 @@ export interface ModelPrice {
   outputPerMillion: string;
   version: string;
 }
+export type ReasoningEffort = "low" | "medium" | "high";
 export interface ProviderConfig {
   id: string;
   kind: "openai-compatible";
   baseUrl: string;
   apiKeyEnv: string;
-  models: { id: string; capabilities: ModelCapabilities }[];
+  models: { id: string; capabilities: ModelCapabilities; reasoningEffort?: ReasoningEffort }[];
   prices?: Record<string, ModelPrice>;
 }
 export interface ModelMessage {
@@ -127,6 +128,7 @@ export interface ModelRequest {
   tools?: ModelTool[];
   requiredCapabilities?: (keyof ModelCapabilities)[];
   deadlineMs: number;
+  reasoningEffort?: ReasoningEffort;
   dataPolicy: {
     dataClasses: string[];
     maxInputBytes: number;

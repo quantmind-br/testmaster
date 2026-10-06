@@ -321,7 +321,7 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
             );
           for (const entry of provider.models) {
             const model = object(entry, "Model");
-            knownKeys(model, ["id", "capabilities"], "Model");
+            knownKeys(model, ["id", "capabilities", "reasoningEffort"], "Model");
             if (
               typeof model.id !== "string" ||
               !model.id ||
@@ -329,6 +329,12 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
               typeof model.capabilities !== "object"
             )
               throw new ContractError("INVALID_ARGUMENT", "Invalid declared model");
+            if (
+              model.reasoningEffort !== undefined &&
+              (typeof model.reasoningEffort !== "string" ||
+                !["low", "medium", "high"].includes(model.reasoningEffort))
+            )
+              throw new ContractError("INVALID_ARGUMENT", "Invalid model reasoning effort");
             const capabilities = object(model.capabilities, "Model capabilities");
             knownKeys(
               capabilities,

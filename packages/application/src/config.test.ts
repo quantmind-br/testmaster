@@ -47,6 +47,34 @@ it("preserves unaffected profile fields while flags and TESTMASTER environment w
   expect(result.effectiveConfig.origins["execution.stepTimeoutMs"]).toBe("profile");
 });
 
+it("rejects unsupported profile reasoning effort instead of ignoring it", async () => {
+  const paths = await fixture();
+  await writeFile(
+    join(paths.home, ".config/testmaster/profiles.json"),
+    JSON.stringify({
+      defaultProfile: "test",
+      profiles: {
+        test: {
+          modelProviders: [
+            {
+              id: "local",
+              kind: "openai-compatible",
+              baseUrl: "http://127.0.0.1:1234/v1",
+              apiKeyEnv: "KEY",
+              models: [
+                { id: "model", capabilities: { structuredJson: true }, reasoningEffort: "extreme" },
+              ],
+            },
+          ],
+        },
+      },
+    }),
+  );
+  await expect(resolveConfig({ ...paths, env: {} })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+  });
+});
+
 it("rejects unknown repository and flag keys rather than silently dropping security requests", async () => {
   const paths = await fixture();
   await writeFile(

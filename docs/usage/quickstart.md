@@ -75,6 +75,11 @@ at execution time; configuring a model does not authorize data transfer or estab
 }
 ```
 
+To control reasoning effort, add `"reasoningEffort": "medium"` to the model entry
+(alongside `id` and `capabilities`). Supported values: `low`, `medium`, `high`.
+When omitted, the provider default applies. TestMaster sends `reasoning_effort` only
+when configured; it still omits token ceilings, sampling parameters and `enable_thinking`.
+
 ```bash
 echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.json
 testmaster consent grant --provider quantforge --data-class documents code_summary requirements plans --allow-unknown-cost

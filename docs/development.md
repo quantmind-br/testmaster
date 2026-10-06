@@ -417,11 +417,15 @@ them; an operator must inspect preserved data before attempting a corrected upgr
 
 ### Provider-controlled generation
 
-Model requests contain model/messages and, when needed, response_format/tools only.
+Model requests contain model/messages and, when needed, response_format/tools and
+reasoning_effort. Configure reasoningEffort (low, medium or high) on a model entry in the
+user profile; an explicit ModelService.complete call overrides the model setting. Omission
+uses the provider default. Invalid values are rejected before network access. The effective
+effort participates in the model configuration hash, prompt hash and gateway cache key and
+is preserved during repairs. Provider rejection remains an error, never a silent fallback.
 TestMaster does not send max_tokens, max_completion_tokens, temperature, top_p, seed,
-penalties, enable_thinking or reasoning_effort. Reasoning remains at the provider default;
-the application neither disables it nor selects its effort. Proposal budgets accept only
-deadlineMs. Consent, input admission, cancellation, response validation and accounting
+penalties or enable_thinking. Proposal budgets accept only deadlineMs. Consent, input
+admission, cancellation, response validation and accounting
 remain local. Output capability metadata is used only for conservative budget reservations,
 falling back to declared context capacity or the admitted input allowance; no token limit is
 sent upstream. Such reservations are estimates, not a provider-enforced spending guarantee.
@@ -429,5 +433,5 @@ Measured usage is settled even when it exceeds the estimate; unknown charges rem
 
 Historical evaluation registrations/results retain their original decoding settings and
 frozen hashes. They cannot be rerun with this changed implementation; another evaluation
-requires a new committed registration that records provider-controlled generation defaults.
+requires a new committed registration that records generation defaults and configured reasoning effort.
 

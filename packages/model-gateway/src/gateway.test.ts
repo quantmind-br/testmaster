@@ -151,6 +151,54 @@ describe("policy-controlled model requests", () => {
     expect(f.counts().completions).toBe(2);
   });
 
+  it("separates cached completions by reasoning effort and preserves effort during repairs", async () => {
+    const attempts = new Map<string, number>();
+    const f = await fixture((_req, res, body) => {
+      const effort = JSON.parse(body).reasoning_effort;
+      const attempt = (attempts.get(effort) ?? 0) + 1;
+      attempts.set(effort, attempt);
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: {
+                content:
+                  attempt === 1
+                    ? "invalid"
+                    : JSON.stringify({
+                        amount: effort === "high" ? 2 : 1,
+                        currency: "USD",
+                        scale: 2,
+                      }),
+              },
+            },
+          ],
+        }),
+      );
+    });
+    expect(
+      (await f.gateway.complete({ ...testRequest, reasoningEffort: "low" })).output,
+    ).toMatchObject({ amount: 1 });
+    expect(
+      (await f.gateway.complete({ ...testRequest, reasoningEffort: "high" })).output,
+    ).toMatchObject({ amount: 2 });
+    expect((await f.gateway.complete({ ...testRequest, reasoningEffort: "low" })).cacheHit).toBe(
+      true,
+    );
+    expect(attempts).toEqual(
+      new Map([
+        ["low", 2],
+        ["high", 2],
+      ]),
+    );
+    const before = f.counts().requests;
+    await expect(
+      f.gateway.complete({ ...testRequest, reasoningEffort: "invalid" as "low" }),
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    expect(f.counts().requests).toBe(before);
+  });
+
   it("records invalid repairs and never returns invalid-after-two-repairs", async () => {
     const f = await fixture((_req, res) =>
       res.end(
