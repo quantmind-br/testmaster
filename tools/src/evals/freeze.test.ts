@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { assertFrozenFiles, assertRegistrationUnchanged, committedRegistration } from "./freeze.js";
+import { checkPreregistration } from "./run.js";
 
 type FrozenRegistration = {
   graduation: { minPrimaryWilsonLower: number };
@@ -57,4 +58,28 @@ it("refuses unsafe registration paths for committedRegistration", async () => {
   await expect(committedRegistration("/root", "HEAD", "/etc/passwd")).rejects.toThrow(
     "Unsafe registration path",
   );
+});
+
+it("rejects invalid preregistered effort before reading the manifest", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-effort-freeze-"));
+  try {
+    for (const decoding of [
+      { reasoning_effort: "extreme" },
+      { reasoning_effort: null },
+      { reasoning_effort: 7 },
+      null,
+      [],
+      "medium",
+    ]) {
+      await writeFile(
+        join(root, "registration.json"),
+        JSON.stringify({ decoding, dataset: { manifest: "nonexistent.json" } }),
+      );
+      await expect(checkPreregistration(root, "registration.json")).rejects.toThrow(
+        "Invalid preregistered reasoning_effort",
+      );
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

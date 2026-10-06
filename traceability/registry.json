@@ -3841,7 +3841,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(first.exitCode, first.stderr).toBe(0);\n      expect(concurrent.exitCode, concurrent.stderr).toBe(0);"
+            "assertion": "expect(first.exitCode, first.stderr).toBe(0);\n        expect(concurrent.exitCode, concurrent.stderr).toBe(0);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -4180,7 +4180,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(first.exitCode, first.stderr).toBe(0);\n      expect(concurrent.exitCode, concurrent.stderr).toBe(0);"
+            "assertion": "expect(first.exitCode, first.stderr).toBe(0);\n        expect(concurrent.exitCode, concurrent.stderr).toBe(0);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -5708,11 +5708,11 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(\n        proposals.every(\n          (proposal) => proposal.validation === \"valid\" && proposal.state === \"proposed\",\n        ),\n      ).toBe(true);"
+            "assertion": "expect(\n          proposals.every(\n            (proposal) => proposal.validation === \"valid\" && proposal.state === \"proposed\",\n          ),\n        ).toBe(true);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(() =>\n          unauthorized.proposals.accept(batchId, {\n            proposalIds: [text(a.id)],\n            expectedVersion: Number(batch.version),\n            idempotencyKey: \"unauthorized\",\n          }),\n        ).toThrow(expect.objectContaining({ code: \"FORBIDDEN\" }));"
+            "assertion": "expect(() =>\n            unauthorized.proposals.accept(batchId, {\n              proposalIds: [text(a.id)],\n              expectedVersion: Number(batch.version),\n              idempotencyKey: \"unauthorized\",\n            }),\n          ).toThrow(expect.objectContaining({ code: \"FORBIDDEN\" }));"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -5720,7 +5720,7 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(() =>\n          app.proposals.accept(batchId, {\n            proposalIds: [text(c.id)],\n            expectedVersion: Number(batch.version),\n            idempotencyKey: \"invalid-candidate\",\n          }),\n        ).toThrow(expect.objectContaining({ code: \"INVALID_ARGUMENT\" }));"
+            "assertion": "expect(() =>\n            app.proposals.accept(batchId, {\n              proposalIds: [text(c.id)],\n              expectedVersion: Number(batch.version),\n              idempotencyKey: \"invalid-candidate\",\n            }),\n          ).toThrow(expect.objectContaining({ code: \"INVALID_ARGUMENT\" }));"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -5784,7 +5784,7 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(object(object(stale.error).details).diff).toMatchObject({\n        expectedVersion: retained.version,\n        currentVersion: edit.version,\n        current: expectedEdited,\n      });"
+            "assertion": "expect(object(object(stale.error).details).diff).toMatchObject({\n          expectedVersion: retained.version,\n          currentVersion: edit.version,\n          current: expectedEdited,\n        });"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -5796,7 +5796,7 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(items(afterRefusal.proposals).find((proposal) => proposal.id === c.id)?.plan).toEqual(\n        expectedEdited,\n      );"
+            "assertion": "expect(\n          items(afterRefusal.proposals).find((proposal) => proposal.id === c.id)?.plan,\n        ).toEqual(expectedEdited);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -5804,23 +5804,23 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(Number(database.prepare(\"SELECT count(*) AS n FROM test_revisions\").get()?.n)).toBe(\n          2,\n        );"
+            "assertion": "expect(\n            Number(database.prepare(\"SELECT count(*) AS n FROM test_revisions\").get()?.n),\n          ).toBe(2);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(\n          calls.some((call) => call.purpose === \"normalize\" && call.outcome === \"success\"),\n        ).toBe(true);"
+            "assertion": "expect(\n            calls.some((call) => call.purpose === \"normalize\" && call.outcome === \"success\"),\n          ).toBe(true);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(calls.some((call) => call.purpose === \"plan\" && call.outcome === \"success\")).toBe(\n          true,\n        );"
+            "assertion": "expect(calls.some((call) => call.purpose === \"plan\" && call.outcome === \"success\")).toBe(\n            true,\n          );"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(\n          calls.every(\n            (call) => call.provider === metadata.provider && call.model === metadata.model,\n          ),\n        ).toBe(true);"
+            "assertion": "expect(\n            calls.every(\n              (call) => call.provider === metadata.provider && call.model === metadata.model,\n            ),\n          ).toBe(true);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(\n          calls\n            .filter((call) => call.outcome === \"success\")\n            .every(\n              (call) =>\n                Number(object(call.usage).inputTokens) > 0 &&\n                Number(object(call.usage).outputTokens) > 0,\n            ),\n        ).toBe(true);"
+            "assertion": "expect(\n            calls\n              .filter((call) => call.outcome === \"success\")\n              .every(\n                (call) =>\n                  Number(object(call.usage).inputTokens) > 0 &&\n                  Number(object(call.usage).outputTokens) > 0,\n              ),\n          ).toBe(true);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -5832,7 +5832,7 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(usage).toMatchObject({ cost: \"unknown\", runtimeMs: null, storageBytes: null });"
+            "assertion": "expect(usage).toMatchObject({ cost: \"unknown\" });"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
@@ -8425,11 +8425,11 @@
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(items(summary.skippedFiles)).toEqual(\n        expect.arrayContaining([\n          { path: \".env\", reason: \"default_exclude\" },\n          { path: \"ignored.js\", reason: \"gitignore\" },\n          { path: \"excluded.js\", reason: \"config_exclude\" },\n          { path: \"broken.js\", reason: \"analysis_failed\" },\n        ]),\n      );"
+            "assertion": "expect(items(summary.skippedFiles)).toEqual(\n          expect.arrayContaining([\n            { path: \".env\", reason: \"default_exclude\" },\n            { path: \"ignored.js\", reason: \"gitignore\" },\n            { path: \"excluded.js\", reason: \"config_exclude\" },\n            { path: \"broken.js\", reason: \"analysis_failed\" },\n          ]),\n        );"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(items(summary.warnings)).toEqual(\n        expect.arrayContaining([\n          expect.objectContaining({ path: \"broken.js\", code: \"analysis_failed\" }),\n        ]),\n      );"
+            "assertion": "expect(items(summary.warnings)).toEqual(\n          expect.arrayContaining([\n            expect.objectContaining({ path: \"broken.js\", code: \"analysis_failed\" }),\n          ]),\n        );"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
@@ -8449,7 +8449,7 @@
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(items(object(diff.impact).excludedFiles)).toEqual(\n        expect.arrayContaining([expect.objectContaining({ path: \"src/unchanged.js\" })]),\n      );"
+            "assertion": "expect(items(object(diff.impact).excludedFiles)).toEqual(\n          expect.arrayContaining([expect.objectContaining({ path: \"src/unchanged.js\" })]),\n        );"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
@@ -8465,11 +8465,11 @@
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(items(conflict.sourceRefs).map((ref) => ref.sourceRevisionId)).toEqual(\n        expect.arrayContaining([desiredRevision, formalRevision]),\n      );"
+            "assertion": "expect(items(conflict.sourceRefs).map((ref) => ref.sourceRevisionId)).toEqual(\n          expect.arrayContaining([desiredRevision, formalRevision]),\n        );"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(\n        items(adjudicated.conflicts).find((value) => value.id === conflict.id)?.resolution,\n      ).toMatchObject({ selectedRequirementId: chosen.id });"
+            "assertion": "expect(\n          items(adjudicated.conflicts).find((value) => value.id === conflict.id)?.resolution,\n        ).toMatchObject({ selectedRequirementId: chosen.id });"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
@@ -8493,7 +8493,7 @@
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(\n        items(detail.proposals).every((proposal) =>\n          (proposal.requirementRefs as unknown[]).includes(chosen.id),\n        ),\n      ).toBe(true);"
+            "assertion": "expect(\n          items(detail.proposals).every((proposal) =>\n            (proposal.requirementRefs as unknown[]).includes(chosen.id),\n          ),\n        ).toBe(true);"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
@@ -8509,7 +8509,7 @@
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(\n        JSON.parse(await readFile(join(session.home, \".config/testmaster/policy.json\"), \"utf8\")),\n      ).toEqual({ allowedModelProviders: [\"quantforge\"] });"
+            "assertion": "expect(\n          JSON.parse(await readFile(join(session.home, \".config/testmaster/policy.json\"), \"utf8\")),\n        ).toEqual({ allowedModelProviders: [\"quantforge\"] });"
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
@@ -8517,7 +8517,7 @@
           },
           {
             "path": "validation/journeys/m2-discovery.live.test.ts",
-            "assertion": "expect(items(remaining.items).map((value) => value.id)).not.toContain(\n        object(invalid.source).id,\n      );"
+            "assertion": "expect(items(remaining.items).map((value) => value.id)).not.toContain(\n          object(invalid.source).id,\n        );"
           }
         ]
       }
@@ -14054,7 +14054,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(first.exitCode, first.stderr).toBe(0);\n      expect(concurrent.exitCode, concurrent.stderr).toBe(0);"
+            "assertion": "expect(first.exitCode, first.stderr).toBe(0);\n        expect(concurrent.exitCode, concurrent.stderr).toBe(0);"
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",

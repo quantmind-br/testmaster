@@ -27,6 +27,7 @@ interface Registration {
     apiKeyEnv: string;
     model: string;
   };
+  decoding?: { reasoning_effort?: "low" | "medium" | "high" };
   budget: {
     maxTokens: number;
     maxWallTimeMs: number;
@@ -34,6 +35,19 @@ interface Registration {
     normalizationConservativeTokens?: number;
     planConservativeTokens?: number;
   };
+}
+function registeredReasoningEffort(
+  registration: Registration,
+): "low" | "medium" | "high" | undefined {
+  const decoding: unknown = registration.decoding;
+  if (decoding === undefined) return undefined;
+  if (decoding === null || typeof decoding !== "object" || Array.isArray(decoding))
+    throw new Error("Invalid preregistered reasoning_effort");
+  const effort = (decoding as Record<string, unknown>).reasoning_effort;
+  if (effort === undefined) return undefined;
+  if (effort !== "low" && effort !== "medium" && effort !== "high")
+    throw new Error("Invalid preregistered reasoning_effort");
+  return effort;
 }
 interface CommandRecord {
   args: string[];
@@ -107,11 +121,12 @@ export async function runEvaluation(
   if (isAbsolute(registrationPath) || rel === ".." || rel.startsWith("../"))
     throw new Error(`Unsafe registration path: ${registrationPath}`);
   const preregistrationBytes = await readFile(resolve(root, registrationPath));
+  const registration = JSON.parse(preregistrationBytes.toString()) as Registration;
+  const reasoningEffort = registeredReasoningEffort(registration);
   assertRegistrationUnchanged(
     preregistrationBytes,
     await committedRegistration(root, preregistrationCommit, registrationPath),
   );
-  const registration = JSON.parse(preregistrationBytes.toString()) as Registration;
   const manifestBytes = await readFile(join(root, registration.dataset.manifest));
   if (createHash("sha256").update(manifestBytes).digest("hex") !== registration.dataset.sha256)
     throw new Error(
@@ -221,6 +236,7 @@ export async function runEvaluation(
                 models: [
                   {
                     id: registration.provider.model,
+                    ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
                     capabilities: {
                       structuredJson: true,
                       toolCalls: true,
@@ -835,6 +851,7 @@ export async function runEvaluation(
     runner: "real-cli-docker",
     provider: registration.provider.id,
     model: registration.provider.model,
+    reasoningEffort: reasoningEffort ?? null,
     chargedTokens,
     tokens,
     measuredCosts: Object.values(measuredCosts),
@@ -865,6 +882,7 @@ export async function runEvaluation(
     "",
     `Round: ${runId}. Preregistration commit: ${preregistrationCommit}.`,
     "",
+    `- Settings: provider ${report.provider}; model ${report.model}; reasoning effort ${report.reasoningEffort ?? "provider default"}`,
     `- Primary, all planned trials: ${metric(report.primary)}`,
     `- Conditional oracle-confirmed non-infrastructure cohort: ${metric(report.conditional)}`,
     `- Healthy false failures: ${metric(report.healthyFalseFailure)}`,
@@ -920,6 +938,7 @@ export async function checkPreregistration(
   const registration = JSON.parse(
     await readFile(resolve(root, registrationPath), "utf8"),
   ) as Registration;
+  registeredReasoningEffort(registration);
   const manifestBytes = await readFile(join(root, registration.dataset.manifest));
   if (createHash("sha256").update(manifestBytes).digest("hex") !== registration.dataset.sha256)
     throw new Error("Corpus hash differs from preregistration");

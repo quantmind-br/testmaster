@@ -434,4 +434,11 @@ Measured usage is settled even when it exceeds the estimate; unknown charges rem
 Historical evaluation registrations/results retain their original decoding settings and
 frozen hashes. They cannot be rerun with this changed implementation; another evaluation
 requires a new committed registration that records generation defaults and configured reasoning effort.
+The evaluator validates `decoding.reasoning_effort` before frozen-input checks and uses it
+in each isolated trial profile; reports disclose the resolved effort (null means provider
+default). Current M2 supplemental journeys use medium, an 8192-token local output reservation
+and a 100000-token project admission quota. Neither reservation is a remote output/spend cap.
+Failed journeys capture supplemental model usage before removing their isolated workspace.
+Round-specific captures preserve prior `validation/results` bytes and do not alter historical
+benchmark ledgers. Measurement integrity is separate from generation graduation/public release.
 
