@@ -6,9 +6,7 @@
   "dataset": {
     "manifest": "evals/corpus/manifest.json",
     "sha256": "016dfc28cb5030abac53839c279b3161952e663b0dac9fa02e6a64776ec79e16",
-    "applicationFamilies": [
-      "reference-shop"
-    ],
+    "applicationFamilies": ["reference-shop"],
     "splitSeed": "testmaster-m2-eval-2026-10-05",
     "splitAlgorithm": "Sort defective case IDs by ascending hex SHA-256(seed + ':' + caseId); first six development, last two mutant-level holdout. Trial order is this same fixed order.",
     "development": [
@@ -19,10 +17,7 @@
       "shop-defect-007",
       "shop-defect-008"
     ],
-    "holdout": [
-      "shop-defect-003",
-      "shop-defect-005"
-    ],
+    "holdout": ["shop-defect-003", "shop-defect-005"],
     "holdoutDisclosure": "Mutant-level holdout cases shop-defect-003 (health-degraded) and shop-defect-005 (orders-auth-bypass) were executed, observed, and analyzed in Round 1. They are no longer unseen. Round 2 makes no validation holdout or unseen-family generalization claims; partition provenance is retained solely for descriptive stratification.",
     "outOfScope": [
       "shop-baseline (paired healthy control in each trial, not a defect trial)",
@@ -58,12 +53,7 @@
     "response_format": {
       "type": "json_object"
     },
-    "omitted": [
-      "top_p",
-      "seed",
-      "tools",
-      "reasoning_effort"
-    ],
+    "omitted": ["top_p", "seed", "tools", "reasoning_effort"],
     "deadlineMs": 180000,
     "maxInputBytes": 1048576,
     "maxInputTokens": 100000,
