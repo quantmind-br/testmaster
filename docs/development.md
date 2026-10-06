@@ -37,6 +37,23 @@ Tests live next to the code as `src/**/*.test.ts` and are excluded from `tsc` ou
 Permanent tests exercise observable behaviour (state transitions, denials, hashes, exit codes,
 real browser/API outcomes). No tests that pin wording, wiring or defaults.
 
+The adversarial sandbox Docker suite requires `tcpdump` and permission to run
+`sudo -n tcpdump` on loopback for a bounded controlled-target packet recording. It fails
+explicitly when capture is unavailable; the container itself never receives extra capabilities.
+The suite exercises browser/CDP/broker, JavaScript/meta navigation, service-worker and iframe
+requests and WebSocket reconnect denial. WebSockets remain unsupported (fail closed); DNS has
+no proxy cache and is revalidated on every fresh socket. Chromium launch failure reports
+`blocked/security_precondition_failed` and never retries without its sandbox.
+Python runner images remove build-time pip/uv installers after their frozen dependency sync;
+runtime dependencies require a reviewed rebuilt image. `python/runtime.json` records the pinned
+image ID and exact package versions. Shared evidence text uses known-secret and common sensitive
+header/URL/JSON/form/e-mail/document patterns; this is not a guarantee of unknown PII anonymity.
+Controller-side raw-pattern hits and malformed JSON/NDJSON are withheld as `redaction_failed`,
+and protocol artifact chunks never enter public observation events. Archive extraction accepts
+an AbortSignal and removes incomplete staging on failure/cancellation; nested archives are
+rejected by both extension and magic, never recursively unpacked.
+
+
 ## Conventions
 
 - Code, identifiers, comments and commit messages in English; Conventional Commits.
@@ -65,6 +82,68 @@ unless `--cancel-on-interrupt`; interruption of an ephemeral owner cancels and c
 Attempts run only through the hardened sandbox. Explicit unsafe process execution requires
 both `--unsafe-local` and operator authorization and is labelled `isolation: none`.
 
+Worker admission reserves aggregate CPU, memory, PIDs and scratch disk before the lease claim
+in the same transaction. CPU and RAM retain 25% host headroom; browser, HTTP and Python have
+independent pool slots. A job that cannot fit stays queued without an Attempt, and published worker
+metadata includes verified image IDs and its resource budgets. `worker.run({capacity})` can narrow
+operator budgets for a smaller dedicated host; repository run flags cannot expand those budgets.
+Queued cancellation completes the job atomically without a container; repeated and terminal
+cancellation never adds a second event or cleanup. Security enforcement absence returns a durable
+blocked Run with `security_precondition_failed`, never an implicit process fallback. Admission
+receipts remain in durable Run events even after the seven-day idempotency window expires.
+
+Evidence filesystem publication keeps `.partial` until the fenced transaction publishes every
+Snapshot and Artifact reference together. A renamed bundle without DB references is an orphan,
+not authorized evidence; GC rechecks leases/references before deletion. Storage publication
+failure does not rewrite accepted assertion outcomes: the independent evidence gate fails.
+`worker reconcile --dry-run` requires admin authority and lists actions without changing state.
+SQLite storage preflight rejects incompatible network/FUSE filesystems. A real preallocated
+4 MiB `.control-plane.reserve` is released under disk pressure or SQLITE_FULL for recovery
+metadata; it is not an artifact quota or a substitute for operator disk capacity monitoring.
+Backups derive object and bundle metadata selection from the online DB snapshot. Missing or
+corrupt objects stay listed in the evidence index, and `backup:last-warning` records incomplete
+backups. Restore merges the current controller's secret version/revocation metadata and
+retention tombstones, keeps admission suspended, invalidates tokens/leases, and still requires
+operator review. Vault keys/ciphertext have separate recovery: absent keys never generate a
+replacement during release. Ciphertexts carry key IDs; admin `secret rewrap` atomically re-encrypts
+all objects, retaining old keys until admin `secret retire-key OLD_ID --apply` confirms no references.
+Retired-key denylisting precedes physical key deletion. Interrupted rewrap is recoverable with
+retained keys. `backup review` and `backup resume-run` require separate explicit admin decisions.
+Fault preloads live only in `validation/journeys/crash-publication-hook.mjs`, require explicit
+Node `--import` plus an acceptance gate, and are never imported by product admission; setting
+the acceptance environment flags alone has no effect.
+
+Admission records immutable source revision/hash links, configured and generation model hashes
+when available, runner/browser image digests, exact build-input and seccomp hashes, policy and
+seed. The manifest and published Snapshot carry that sealed provenance; unavailable source,
+repository SHA, dependency lock, browser version or remote provider snapshot is explicitly
+listed as a reproduction limitation rather than invented. Strict rerun without overrides
+creates a new Run linked by `originalRunId`, preserving the original environment revision,
+effective configuration and policy; changed image/capabilities or tampered inputs/evidence
+refuse with `security_precondition_failed` and a typed incompatibility. Explicit revision or
+environment overrides create a fresh admission. Retried Attempts never silently adopt a new
+image lock. No model is called by deterministic rerun.
+
+Reports reopening verified bundles declare `evidence-replay`; manifests distinguish
+`strict-execution-replay` from fresh agent-mode `fresh-llm-regeneration`. External target/data
+changes, platform-dependent rendering and unavailable remote model snapshots preclude bitwise
+determinism claims even when the pinned execution succeeds.
+
+Reports publish five independent coverage metrics (`requirement`, `route`, `operation`, `code`,
+`execution`) plus spec-10 named execution rates. Each ratio carries numerator, denominator,
+known/unknown state, scope and definition; an absent inventory is `insufficientData`, an explicit
+empty denominator is `notApplicable`, and neither renders as a percentage. Requirement coverage
+is scenario mapping, not independent verification; OpenAPI coverage requires passing status and
+schema assertions for the declared method/path/status/media pair. Partial route exploration and
+uninstrumented code retain unknown denominators. Duplicate selections and extra dependency Runs
+are reported separately and never inflate the frozen requested denominator.
+
+Runtime boundaries are persisted as fenced `attempt.timing` events, using Linux boot-bound
+monotonic clock readings and separate UTC timestamps. Reports never subtract UTC timestamps.
+Queue, preparation, execution, collection, analysis and end-to-end durations remain separate;
+unrequested analysis and unavailable/reboot-crossing timing are null, not zero. `durationMs` and
+JUnit time refer only to measured execution, not preparation or optional model analysis.
+
 Configuration precedence is flag, `TESTMASTER_*`, project config, selected user profile,
 defaults. `resolveConfig` exposes each leaf origin and the policy digest. The user profile
 file is `{defaultProfile?, profiles: {name: {config?, policy?, endpoint?, projectId?, modelProviders?}}}`.
@@ -83,8 +162,31 @@ uses the TestCase version for CAS; an admitted Run never moves to a later revisi
 Production mutation approvals bind actor, revision/environment hashes, origins, actions
 and policy, and are consumed in the admission transaction. Plan lint/scaffold/dry-run are
 offline APIs and do not open the database. Evidence downloads verify committed IDs/hashes;
-raw trace/video requires explicit `--raw`. Reports derive from the same committed snapshot.
+raw trace/video export requires explicit `--raw` and separate `artifacts:raw` authorization;
+authenticated sessions need a scoped raw grant (viewer and explicit deny always reject).
+Run admission also checks the raw grant before enabling trace/video or full HTTP body capture;
+production capture needs a current matching `artifacts:raw` approval before any browser starts.
+The implicit local owner may request raw explicitly. Production export additionally requires
+`--approval ID` bound to `artifacts:raw`, the actor, exact revision/environment, origins and
+current policy. MCP pages never expose raw bytes. Reports derive from the same committed snapshot.
 Backup restore writes an isolated directory, suspends admission and requires operator review.
+
+Browser downloads accept authorized HTTP origins and same-origin blob URLs, never opaque
+blobs. The real-browser acceptance matrix exercises iframe child assertions, popup aliases,
+upload/download byte roundtrips, waits, ambiguous hooks, console/network channels and opt-in
+trace/video. Context cookies and profiles are never reused across attempts or target environments.
+HTTP 500 responses preserve target evidence and fail the configured oracle; a broken upstream
+transport remains inconclusive rather than receiving a synthetic gateway status. A rejected
+static credential is `manual_auth_required` unless HTTP 401 itself satisfies the explicit oracle.
+
+Request/response bodies stay in runner memory for assertions and declared captures, but are
+not persisted by default. HTTP traces retain body SHA-256/byte size/content type, status,
+monotonic duration and headers limited to content-type/content-length/cache-control/etag/
+last-modified/retry-after. JSON errors retain only redacted error/message/code fields bounded
+to a 512-character failure excerpt. Browser network logs do not store request/response bodies.
+Explicit `artifacts.httpBodies: "on"` (or `TESTMASTER_HTTP_BODIES=on`) writes separate
+`restrictedRaw.http` evidence, requiring the same scoped raw permission and production approval
+as trace/video. The sanitized metadata trace remains useful without that opt-in.
 
 Required producer dependencies are expanded into separate pinned Runs; requested and expanded
 denominators remain separate. Consumers wait for a successful producer gate, exact revision,
@@ -100,6 +202,16 @@ tombstones produce an expired/partial evidence view. `operational_state` keys
 `retention:legal-hold:<workspaceId>[:<runId>|:<artifactId>]` (any value except `released` holds).
 Storage use at 80% warns; at 90% new admission suspends. Only the pressure-owned
 `suspended_storage` state is automatically recovered; restore/manual suspensions are not.
+SEC-025 requires ephemeral browser profiles and containers to be torn down cleanly on Attempt exit.
+If container teardown or browser-profile removal fails, the business verdict of the Run is preserved,
+the run gate and cleanup outcome evaluate to `failed`, and the worker/runner-slot enters persistent
+quarantine recorded in `operational_state` (`worker:quarantine:<workspaceId>`) along with an active
+incident (`incident:<incidentId>`) and outbox records (`worker.quarantined`, `incident.created`).
+A quarantined worker refuses to claim or dispatch any queued execution across process restarts until
+an authorized operator explicitly runs `testmaster worker clear-quarantine` (with `A` permission).
+The clear operation audits the action (`worker.quarantine.clear`), verifies that leftover containers
+or profiles are removed (or safely removes them), and refuses unsafe clear while leftovers remain.
+
 
 Report entries expose `freshness.state` (`current` or `stale`) by comparing the admitted test
 and environment revisions against their current active revisions. Reasons and current IDs
@@ -117,14 +229,42 @@ transcript is `validation/results/quickstart-m1.md`.
 M2 source/discovery/requirement/proposal/usage commands share application services. Declare
 OpenAI-compatible `modelProviders` only in the selected user profile, grant their IDs in the
 operator policy's `allowedModelProviders`, then explicitly `consent grant --provider ID
---data-class documents requirements` for the project before normalization/planning. Revocation
-is durable and audited. Repo content cannot configure providers or tools. Model costs without
-prices remain `unknown`; a monetary ceiling refuses unknown reservations rather than assuming zero.
+--data-class documents requirements --allow-unknown-cost` for an unpriced provider before
+normalization/planning. Unknown-cost consent defaults to false, is stored with data-class
+consent, audited by its digest, and revoked with the grant. Repo content cannot configure
+providers or tools. Prices remain `unknown`, never zero; monetary ceilings refuse unknown
+reservations. `budget set --tokens N` (or authenticated `POST /v1/projects/{id}/budget`
+with `{ "tokens": N }` and an Idempotency-Key) sets the independent cumulative project
+input+output quota. The initial ceiling is 100,000 tokens; reservations atomically charge
+conservative prompt bytes plus maximum output, then reconcile measured tokens. Two concurrent
+model compute slots per project bound even unpriced/local requests; settlement/release frees
+a slot. Lost usage retains its conservative token charge. `usage` reports tokenBudget, model wall runtimeMs, and
+recorded evidence storageBytes with per-Run attribution; lowering quotas never cancels
+already admitted deterministic replay or deletes evidence. Normalization extracts bounded
+chunk batches with prior grounded statements and exact deduplication, followed by a bounded
+conflicts-only reconciliation that retains all requirements and exact source references.
+The configured model output ceiling is respected. A length finish records `output_truncated`
+and stops without blind repair calls; schema-invalid completed responses retain bounded repairs.
 
 Sources retain immutable bytes/hash/parser revisions and expose `invalid` or `needs_input`
 instead of empty successful input. Discovery uses AST-only summaries, confines its repo root,
 requires explicit diff base/head (or base plus working tree), and resumes only the same complete
 input fingerprint. Deterministic discovery is labelled partial until observed exploration grounds it.
+Git analysis is read-only and bounded to 30 seconds per command. It drops credentials and
+Git environment overrides, disables hooks/fsmonitor/helpers/external diff and all transport
+protocols, ignores submodule internals, and never checks out or initializes imported code.
+The hostile-repository CLI acceptance checks marker files, unchanged Git configuration/remotes,
+excluded credentials and zero network connections. Fork workflow text remains data; GitHub App
+tokens and immutable check-SHA publication are unavailable until M4.
+
+Network privacy acceptance uses Linux `strace` (required on the test host) to observe connection
+addresses from the whole CLI process tree, plus Node fetch/undici/net/tls/dns diagnostics and
+sealed container egress logs. It records no socket payloads or request headers. The Docker
+journey runs init/doctor/lint/create/replay/rerun/evidence/report with default privacy settings
+and no model key; a separate live-model journey exercises the same recorder positively through
+real normalization, proposal generation and code export. Observations are retained under
+`validation/results/network-*.json`; these checks do not claim M4 web or GitHub integration.
+
 Requirements preserve conflicting source refs; reviewers adjudicate conflicts and explicitly approve
 selected requirements. Generated executable proposals need typed nontrivial assertions and grounded
 refs. `plan accept --only ... --expected-version N --idempotency-key KEY` atomically creates only
@@ -200,6 +340,17 @@ compensation preserves the owning Run's original verdict and records a separate 
   choices; requests/time/model-call budgets and an empty mutation allowlist are enforced
   independently of page text. `ExploreService.begin` exposes a durable job receipt, completion,
   read/resume and cancellation for API/MCP callers.
+  `--feature ID...` observes each expected feature's admitted route independently; unauthenticated
+  login barriers remain `unreachable` with `login_required`. `ready` means the operator-declared
+  `testmaster:completionText` was observed (the feature-state extension labels it `full`); absent
+  completion evidence remains `partial`, never complete coverage by route visitation alone.
+  `--job ID --retry-feature ID...` creates a new job/cost ledger for only eligible selected features,
+  preserving all unselected results and the original job. `--video` is explicit restricted-raw opt-in,
+  requires raw/admin permission, and is refused for production exploration. Default exploration has
+  no video. Updating a source or discovery fingerprint clears descendant requirement approvals and
+  makes retained proposal batches stale, without rewriting immutable revisions or pinned Runs.
+  Code-role source inference cannot acquire explicit authority from model output; conflicting
+  implementation versus desired PRD remains subject to reviewer adjudication.
 - `test run --mode agent --revision REV` requires an accepted generated proposal. Resolution
   flags name existing action steps; the model chooses only typed actions grounded in sanitized
   browser observations. Assertions remain deterministic and immutable. A passing agent Attempt
@@ -224,5 +375,43 @@ compensation preserves the owning Run's original verdict and records a separate 
   Imported code exports preserve authored bytes and the admitted `runtime-lock.json`; format
   translation is refused, and authored harness-specific fixtures still require that harness.
   Standalone projects do not implement supervisor grants/approval/egress/redaction: use an
-  authorized target and external isolation. Docker export tests exercise byte-identical generated
-  helpers through `AttemptExecutor` against healthy and semantic-mutant fixtures.
+  authorized target and external isolation. `validation/journeys/export-standalone.docker.test.ts`
+  invokes the real CLI export, then directly runs `npx --no-install playwright test` or
+  `python -m pytest` inside the pinned upstream Playwright base images. Only third-party
+  dependencies are pre-staged from the immutable runner images; their versions match the
+  exported locks. No TestMaster package, reporter, AttemptExecutor, model credentials, or
+  registry installation is present on this execution path. A dedicated internal Docker
+  network connects only the hardened test container and reference shop. Healthy and
+  semantic-mutant outcomes are recorded in `validation/results/m2-export-standalone.json`.
+  `integration-workflow.docker.test.ts` exercises create/read/update/query through the
+  real CLI HTTP runner. Request traces include captured-variable bindings and typed
+  capture origins; sensitive resolved values are explicitly redacted. Independent SQLite
+  and raw HTTP checks prove persistence, and an ignored-update mutant fails `update_value`.
+
+### Surface contract validation
+
+`contract validate --schema ExecutablePlan|ProjectConfig|RunRequest --document FILE`,
+`POST /v1/contracts/validate` and the MCP `testmaster_validate_document` tool share the
+same strict catalog and semantic validator. Validation is read-only and rejects document
+bytes above 1 MiB before schema traversal. JSON pointers and rules are unchanged across
+transports. REST and MCP require a read-authorized installation token; validation never
+creates a Source, Test or Run. Rejected MCP calls are append-only audited with actor/tool
+identity and a safe outcome hash, not submitted argument bytes.
+
+MCP evidence distinguishes byte integrity (`verified` or `partial`) from freshness
+(`current` or `stale`). `verificationEligible` is false for partial, stale or nonpassing
+evidence; a historically passing Run is not rewritten when its evidence expires.
+`Application.open({imageLockPath})` can select an explicitly pinned deployment image lock;
+request-scoped identities retain that lock, and unavailable images disable runner advertising.
+
+Catalog persistence conformance iterates every public entity family, generates parent
+fixtures from catalog schemas and relational foreign keys, and pairs DTOs with JSON,
+stored data and durable outbox payloads. Families outside local persistence are explicitly
+bound to their disabled milestone capability, not silently skipped. Migration
+`0004_contract_constraints.sql` adds scalar enum/limit checks derived from the catalog;
+regenerate both engines with `node packages/persistence/dist/generate-contract-constraints.js`.
+SQLite validates existing rows before installing triggers, and PostgreSQL validates before
+adding CHECK constraints. Incompatible historical rows stop the migration without rewriting
+them; an operator must inspect preserved data before attempting a corrected upgrade.
+
+

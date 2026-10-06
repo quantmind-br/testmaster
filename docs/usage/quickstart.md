@@ -51,7 +51,10 @@ testmaster test rerun "$TEST_ID" --wait --output json
 
 Model providers are declared only in the user profile `~/.config/testmaster/profiles.json`, allowed by the
 operator policy `~/.config/testmaster/policy.json`, and require explicit consent per project, provider and
-data class. Without consent no byte is sent to the provider.
+data class. Without consent no byte is sent to the provider. Unpriced models additionally require an
+explicit unknown-cost grant and a cumulative project token ceiling. The historical evaluation model
+`deepseek-v4.1-flash` is currently absent from QuantForge's authenticated inventory; the example below
+does not imply current provider availability. Configure only an explicitly chosen, available model.
 
 ```json
 {
@@ -74,7 +77,8 @@ data class. Without consent no byte is sent to the provider.
 
 ```bash
 echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.json
-testmaster consent grant --provider quantforge --data-class documents code_summary requirements plans
+testmaster consent grant --provider quantforge --data-class documents code_summary requirements plans --allow-unknown-cost
+testmaster budget set --tokens 12000000
 testmaster source add PRD.md --role prd --format markdown
 testmaster source add openapi.yaml --role api --format openapi
 testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>
