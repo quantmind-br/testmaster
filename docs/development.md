@@ -272,7 +272,10 @@ real normalization, proposal generation and code export. Observations are retain
 
 Requirements preserve conflicting source refs; reviewers adjudicate conflicts and explicitly approve
 selected requirements. Generated executable proposals need typed nontrivial assertions and grounded
-refs. `plan accept --only ... --expected-version N --idempotency-key KEY` atomically creates only
+refs, and must match the requested `--type` (`backend` → `http`, `frontend` → `playwright`);
+any other plan rejects the batch. Generation sees each requirement's evidence locators (path,
+JSON pointer) next to its handle but cites only handles.
+`plan accept --only ... --expected-version N --idempotency-key KEY` atomically creates only
 selected generated revisions and preserves retained proposals. Edits are CAS and return a diff on
 conflict. J02/J03 live journeys record their exercised evidence in `validation/results/`.
 M3–M6 groups report their milestone rather than returning successful placeholders.

@@ -332,6 +332,63 @@ it("subset retries and concurrent duplicates create only selected generated revi
   expect(rejection.retained).toEqual([]);
   expect(f.app.proposals.get(batch.id).state).toBe("accepted");
 });
+it("backend generation rejects frontend plans and sends evidence locators with handles", async () => {
+  const f = await fixture();
+  await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must report ok.");
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "prd.md"),
+    format: "markdown",
+  });
+  f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"], true);
+  f.setOutput({
+    requirements: [
+      {
+        key: "health",
+        text: "Health reports ok",
+        acceptanceCriteria: ["Health reports ok"],
+        evidenceIds: ["E1"],
+        originKind: "explicit",
+        confidence: null,
+        reason: "PRD",
+      },
+    ],
+    conflicts: [],
+    openQuestions: [],
+  });
+  const [requirement] = (
+    await f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [source.revision.id],
+    })
+  ).requirements;
+  if (!requirement) throw new Error("Missing normalized requirement");
+  f.app.requirements.approve(requirement.id, requirement.version ?? 1);
+  const proposal = (type: "frontend" | "backend") => {
+    const plan = scaffoldPlan(type);
+    plan.requirementRefs = [requirement.id];
+    return {
+      proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
+    };
+  };
+  f.setOutput(proposal("frontend"));
+  await expect(f.app.proposals.generate({ projectId: f.projectId })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: "Generated proposals must be backend plans using the http runner",
+  });
+  expect(f.app.proposals.list(f.projectId)).toEqual([]);
+  const prompt = ((f.payloads.at(-1)?.messages ?? []) as { content: string }[])
+    .map((message) => message.content)
+    .join("\n");
+  expect(prompt).toContain(`"evidenceId":"E1"`);
+  expect(prompt).toContain(`"relativePath":"prd.md"`);
+  f.setOutput(proposal("backend"));
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  expect(f.app.proposals.detail(batch.id).proposals[0]?.evidenceRefs).toEqual(
+    requirement.sourceRefs,
+  );
+});
 it("rejects trivial body visibility as a generated business oracle", () => {
   const plan = scaffoldPlan("frontend");
   plan.steps = [

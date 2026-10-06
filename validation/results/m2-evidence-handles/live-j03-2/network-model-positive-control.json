@@ -1,0 +1,286 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "network-model-positive-control",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T18:06:28.603Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "network-model-positive-control",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2315a289-39fb-4e9a-b7bf-6d3e8d82e795",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d993feca-ae35-4dd5-a436-65762136d81b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_189bb567-f3c6-4bb4-91f8-be7ad50b3c90",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2e431e37-482b-4f7e-ad0b-ba4a271a5705",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "health.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9bbf21e7-df45-41ba-953b-8d738e5993c0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a11264-c610-7777-98fe-b91ca8324e69",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3da16e80-4dbd-4be5-beb1-2644a385d4a3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a11264-e883-72e5-92f4-fff08f36d64c",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f684528b-acd1-4659-9b0f-3c23124fc062",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "generate",
+        "--type",
+        "backend",
+        "--requirement",
+        "req_01a11264-e883-72e5-92f4-fff08f36d64c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cbcf64ed-5ca0-4fc9-a78e-c53d4770f598",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a11265-38a4-702e-89b3-ce5d131584f8",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_13238465-e6b8-4559-80d5-b5f43c78e72d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a11265-38a4-702e-89b3-ce5d131584f8",
+        "--only",
+        "pro_01a11265-38a7-70d6-892a-067c09c60783",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "network-boundary-accept",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4d196b25-2961-469b-8765-19434c508c73",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8dd6e36a-b919-4c49-8813-14f89656ca08",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "export",
+        "tst_01a11265-3d47-76fa-829b-9be82ea9ca1c",
+        "--format",
+        "pytest",
+        "--out",
+        "exported",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8093ff6e-5d39-4cc0-bfc6-6d9a757ef203",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "check": "realModelPositiveBoundaryControlAndIndependentGenerationExport",
+      "healthy": true,
+      "observedRequests": [
+        {
+          "pid": 1708706,
+          "kind": "undici",
+          "target": "https://api.quantforge.com.br/v1/models"
+        },
+        {
+          "pid": 1708706,
+          "kind": "undici",
+          "target": "https://api.quantforge.com.br/v1/chat/completions"
+        },
+        {
+          "pid": 1709463,
+          "kind": "undici",
+          "target": "https://api.quantforge.com.br/v1/models"
+        },
+        {
+          "pid": 1709463,
+          "kind": "undici",
+          "target": "https://api.quantforge.com.br/v1/chat/completions"
+        }
+      ],
+      "modelCalls": 2,
+      "testSpriteRequests": 0,
+      "evidence": "validation/results/network-model-positive-control-model-network.json"
+    }
+  ],
+  "limitations": [
+    "Real authorized QuantForge model; no provider version or quality/generalization claim. Controller sockets observed via strace; browser/container boundary exercised separately."
+  ]
+}

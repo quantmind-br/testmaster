@@ -93,21 +93,25 @@ export class ProposalsService {
     const catalog = new EvidenceCatalog(
       requirements.flatMap((item) => item.sourceRefs) as SourceEvidenceRef[],
     );
+    const type = input.type ?? "backend";
+    const runner = type === "backend" ? "http" : "playwright";
     const output = await this.model.complete<unknown>({
       projectId: input.projectId,
       purpose: "plan",
       responseSchema: "AIProposalsOutput",
       data: {
-        // Models cite opaque evidence handles instead of copying hashes and locators.
+        // Locators (paths, JSON pointers) stay visible; outputs cite only the opaque handles.
         requirements: requirements.map(({ sourceRefs, ...requirement }) => ({
           ...requirement,
-          evidenceIds: catalog.handles(sourceRefs as SourceEvidenceRef[]),
+          evidence: (sourceRefs as SourceEvidenceRef[]).map((ref) => ({
+            evidenceId: catalog.handle(ref),
+            ...ref,
+          })),
         })),
-        type: input.type ?? "backend",
+        type,
         sourceSnapshotId: snapshot.fingerprint,
       },
-      instructions:
-        "Return exactly one independent executable proposal per supplied requirement, not an intent. Copy requirement IDs exactly and cite only the evidenceIds supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.",
+      instructions: `Return exactly one independent executable proposal per supplied requirement, not an intent. Every plan must have type "${type}" and runner "${runner}". Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
       sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
       dataClasses: ["requirements"],
       ...input.budget,
@@ -120,6 +124,11 @@ export class ProposalsService {
       requirements.map((item) => item.id),
       catalog,
     );
+    if (generated.proposals.some(({ plan }) => plan.type !== type || plan.runner !== runner))
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        `Generated proposals must be ${type} plans using the ${runner} runner`,
+      );
     if (
       generated.proposals.length !== requirements.length ||
       requirements.some(
