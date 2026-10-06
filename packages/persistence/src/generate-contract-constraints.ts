@@ -1,11 +1,14 @@
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { generatedConstraintMigrations } from "./contract-projections.js";
+import {
+  type ConstraintMigration,
+  constraintMigrations,
+  generatedConstraintMigrations,
+} from "./contract-projections.js";
 
-for (const [engine, sql] of Object.entries(generatedConstraintMigrations()))
-  await writeFile(
-    fileURLToPath(
-      new URL(`../migrations/${engine}/0004_contract_constraints.sql`, import.meta.url),
-    ),
-    sql,
-  );
+for (const migration of Object.keys(constraintMigrations) as ConstraintMigration[])
+  for (const [engine, sql] of Object.entries(generatedConstraintMigrations(migration)))
+    await writeFile(
+      fileURLToPath(new URL(`../migrations/${engine}/${migration}.sql`, import.meta.url)),
+      sql,
+    );

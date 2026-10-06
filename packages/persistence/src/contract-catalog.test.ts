@@ -13,6 +13,8 @@ import {
   unavailableEntityCapabilities,
 } from "./contract-fixtures.js";
 import {
+  type ConstraintMigration,
+  constraintMigrations,
   contractProjections,
   generatedConstraintMigrations,
   projectionRules,
@@ -108,13 +110,12 @@ it("every public entity has catalog-generated DTO/null/default/enum/limit/event 
           `Unclassified public family ${kind}`,
         ).toContain(kind);
     }
-    for (const [engine, bytes] of Object.entries(generatedConstraintMigrations()))
-      expect(
-        await readFile(
-          new URL(`../migrations/${engine}/0004_contract_constraints.sql`, import.meta.url),
-          "utf8",
-        ),
-      ).toBe(bytes);
+    for (const migration of Object.keys(constraintMigrations) as ConstraintMigration[])
+      for (const [engine, bytes] of Object.entries(generatedConstraintMigrations(migration)))
+        expect(
+          await readFile(new URL(`../migrations/${engine}/${migration}.sql`, import.meta.url), "utf8"),
+          `${engine}/${migration}`,
+        ).toBe(bytes);
     for (const rule of projectionRules()) {
       expect(rule.schema).toBeDefined();
       expect(catalogValue(rule.schema, jsonSchema(rule.kind))).not.toBeUndefined();

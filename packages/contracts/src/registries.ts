@@ -203,7 +203,18 @@ const features: Record<Milestone, readonly string[]> = {
     "resources-cleanup",
     "model-accounting",
   ],
-  M3: ["analysis", "healing", "run-comparison", "batch-comparison", "flake-study", "ci"],
+  M3: [
+    "analysis",
+    "healing",
+    "run-comparison",
+    "batch-comparison",
+    "flake-study",
+    "quarantine",
+    "selective-run",
+    "integration-planning",
+    "artifact-deletion",
+    "ci",
+  ],
   M4: [
     "server",
     "postgres",
@@ -236,9 +247,9 @@ export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.f
         id,
         Object.freeze({
           id,
-          enabled: ["M0", "M1", "M2"].includes(milestone),
+          enabled: ["M0", "M1", "M2", "M3"].includes(milestone),
           milestone: milestone as Milestone,
-          disabledReason: ["M0", "M1", "M2"].includes(milestone)
+          disabledReason: ["M0", "M1", "M2", "M3"].includes(milestone)
             ? null
             : `Available in ${milestone}`,
           ...(milestone === "M2" && ["plan", "generate_code", "agent-mode"].includes(id)

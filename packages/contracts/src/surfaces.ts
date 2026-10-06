@@ -111,6 +111,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ],
   ["GET,POST", "/projects/{id}/tests", "tests:R/W", "M1", "TestRevisionInput", "TestCase"],
   ["GET,PATCH,DELETE", "/tests/{id}", "tests:R/W", "M1", "TestMetadataInput", "TestCase"],
+  ["GET,PUT,DELETE", "/tests/{id}/quarantine", "tests:R/W", "M3", "QuarantineInput", "QuarantineRecord"],
   ["GET,POST", "/tests/{id}/revisions", "tests:R/W", "M1", "TestRevisionInput", "TestRevision"],
   ["POST", "/tests/{id}/promote", "tests:W", "M2", "PromoteInput", "TestCase"],
   ["GET", "/revisions/{id}/code", "tests:R", "M2", "Empty", "CodeReference"],
@@ -123,8 +124,10 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/runs/{id}/events", "runs:R", "M1", "Empty", "Event"],
   ["GET", "/runs/{id}/bundle", "artifacts:R", "M1", "Empty", "ArtifactManifest"],
   ["GET", "/artifacts/{id}", "artifacts:R", "M1", "Empty", "Binary"],
-  ["GET,POST", "/runs/{id}/analysis", "runs:R/analysis:X", "M3", "BudgetInput", "Analysis"],
-  ["POST", "/runs/{id}/healing-proposals", "healing:W", "M3", "BudgetInput", "HealingProposal"],
+  ["GET", "/runs/{id}/analysis", "runs:R", "M3", "Empty", "Analysis"],
+  ["POST", "/runs/{id}/analysis", "analysis:X", "M3", "AnalysisInput", "Analysis"],
+  ["POST", "/runs/{id}/healing-proposals", "healing:W", "M3", "HealingInput", "HealingProposal"],
+  ["GET", "/healing-proposals/{id}", "healing:R", "M3", "Empty", "HealingProposal"],
   [
     "POST",
     "/healing-proposals/{id}/approve",
@@ -138,12 +141,15 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "/healing-proposals/{id}/reject",
     "healing:approve",
     "M3",
-    "CancelInput",
+    "HealingRejectInput",
     "HealingProposal",
   ],
   ["POST", "/run-comparisons", "runs:R", "M3", "RunComparisonRequest", "ComparisonResult"],
   ["POST", "/batch-comparisons", "runs:R", "M3", "BatchComparisonRequest", "ComparisonResult"],
   ["POST", "/flake-studies", "runs:X", "M3", "FlakeStudyInput", "BatchReceipt"],
+  ["GET", "/flake-studies/{id}", "runs:R", "M3", "Empty", "FlakeStudyReport"],
+  ["POST", "/execution-previews", "runs:R", "M3", "SelectionInput", "SelectionPreview"],
+  ["POST", "/selective-runs", "runs:X", "M3", "SelectionInput", "BatchReceipt"],
   ["POST", "/batches", "runs:X", "M1", "BatchRequest", "BatchReceipt"],
   ["GET", "/batches/{id}", "runs:R", "M1", "Empty", "BatchReceipt"],
   ["POST", "/batches/{id}/cancel", "runs:X", "M1", "CancelInput", "BatchCancelReceipt"],
@@ -198,8 +204,8 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ),
   ["GET,POST", "/approvals", "approvals:R/W", "M1", "Approval", "Approval"],
   ["POST", "/approvals/{id}/revoke", "approvals:W", "M1", "Empty", "Approval"],
-  ["DELETE", "/artifacts/{id}", "artifacts:delete", "M4", "Empty", "DeletionOperation"],
-  ["GET", "/deletion-operations/{id}", "deletion:R", "M4", "Empty", "DeletionOperation"],
+  ["DELETE", "/artifacts/{id}", "artifacts:delete", "M3", "Empty", "DeletionOperation"],
+  ["GET", "/deletion-operations/{id}", "deletion:R", "M3", "Empty", "DeletionOperation"],
   ...["drain", "revoke"].map(
     (path) => ["POST", `/workers/{id}/${path}`, "workers:A", "M4", "Empty", "Worker"] as const,
   ),
@@ -234,8 +240,6 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
         const parts = scope.slice(colon + 1).split("/");
         resolvedScope = `${prefix}:${parts[Math.min(index, parts.length - 1)]}`;
       }
-      if (path === "/runs/{id}/analysis")
-        resolvedScope = method === "GET" ? "runs:R" : "analysis:X";
       return {
         method,
         path,
@@ -366,12 +370,22 @@ export const mcpTools = {
   },
   testmaster_compare_runs: {
     milestone: "M3",
-    input: Obj({ left: id("run"), right: id("run") }),
+    input: Obj({
+      left: id("run"),
+      right: id("run"),
+      cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
+      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+    }),
     output: "ComparisonResult",
   },
   testmaster_propose_healing: {
     milestone: "M3",
-    input: Obj({ failedRunId: id("run"), budget: Json }),
+    input: Obj({
+      failedRunId: id("run"),
+      budget: Type.Optional(
+        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
+      ),
+    }),
     output: "HealingProposal",
   },
   testmaster_approve_healing: {
@@ -390,6 +404,6 @@ export const mcpToolCatalog = Object.entries(mcpTools).map(([name, tool]) => ({
   milestone: tool.milestone,
   inputSchema: `Mcp_${name}`,
   outputSchema: tool.output,
-  enabled: tool.milestone !== "M3",
-  disabledReason: tool.milestone === "M3" ? "Available in M3" : null,
+  enabled: true,
+  disabledReason: null,
 }));

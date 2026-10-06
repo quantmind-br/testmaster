@@ -105,9 +105,25 @@ export function scalarPredicate(schema: Record<string, unknown>, expression: str
     rules.push(`length(${expression}) <= ${Number(schema.maxLength)}`);
   return rules.length ? `(${rules.join(" AND ")})` : "1=1";
 }
-export function generatedConstraintMigrations(): Record<"sqlite" | "postgres", string> {
+/** Tables introduced after 0004 receive their generated constraints in their own forward migration. */
+export const constraintMigrations = {
+  "0004_contract_constraints": null,
+  "0007_m3_contract_constraints": ["analyses", "healing_proposals", "deliveries"],
+} as const satisfies Record<string, readonly string[] | null>;
+export type ConstraintMigration = keyof typeof constraintMigrations;
+export function generatedConstraintMigrations(
+  migration: ConstraintMigration = "0004_contract_constraints",
+): Record<"sqlite" | "postgres", string> {
+  const later = new Set<string>(
+    Object.values(constraintMigrations).flatMap((tables) => (tables ? [...tables] : [])),
+  );
+  const selected = constraintMigrations[migration];
   const rules = projectionRules().filter(
-    (rule) => scalarPredicate(rule.schema, rule.column) !== "1=1",
+    (rule) =>
+      scalarPredicate(rule.schema, rule.column) !== "1=1" &&
+      (selected
+        ? (selected as readonly string[]).includes(rule.table)
+        : !later.has(rule.table)),
   );
   const grouped = new Map<string, ScalarRule[]>();
   for (const rule of rules) {

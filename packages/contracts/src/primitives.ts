@@ -150,8 +150,20 @@ export const EvidenceRef = Obj(
     page: Type.Optional(Positive),
     jsonPointer: Type.Optional(JsonPointer),
     contentHash: Type.Optional(ContentDigest),
+    /** Persisted execution evidence without a committed bundle; resolved by scoped compound binding. */
+    runId: Type.Optional(id("run")),
+    attemptId: Type.Optional(id("att")),
+    stepId: Type.Optional(Name),
+    observationSeq: Type.Optional(Nonnegative),
   },
-  { minProperties: 1 },
+  {
+    minProperties: 1,
+    dependentRequired: {
+      attemptId: ["runId"],
+      stepId: ["runId", "attemptId"],
+      observationSeq: ["runId"],
+    },
+  },
 );
 export const Pagination = Obj({
   limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 50 })),

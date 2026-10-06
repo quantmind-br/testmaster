@@ -2,11 +2,8 @@ import { entities, jsonSchema, validate } from "@testmaster/contracts";
 import { contractProjections } from "./contract-projections.js";
 
 export const unavailableEntityCapabilities: Record<string, string> = {
-  Analysis: "analysis",
-  HealingProposal: "healing",
   Schedule: "schedules",
   ScheduledFire: "schedules",
-  Delivery: "deliveries",
   VisualBaseline: "visual-baselines",
 };
 export function catalogValue(
@@ -59,6 +56,7 @@ export function catalogValue(
   const prefix = /^\^([a-z]+)_/.exec(pattern)?.[1];
   if (prefix) return `${prefix}_00000000-0000-4000-8000-000000000001`;
   if (pattern.includes("{64}")) return "a".repeat(64);
+  if (pattern.includes("{40}")) return "a".repeat(40);
   if (pattern.includes("Z$")) return "2026-10-05T00:00:00.000Z";
   if (pattern.includes("^/")) return "/value";
   if (pattern.includes("[0-9]")) return "0";

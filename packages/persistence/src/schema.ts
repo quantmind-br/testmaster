@@ -134,6 +134,42 @@ export const tableCatalog = {
     fields: ["projectId", "approval", "expiresAt", "tombstoneAt"],
   },
   Evaluation: { table: "evaluations", fields: ["corpusDigest"] },
+  Analysis: {
+    table: "analyses",
+    fields: ["runId", "snapshotId", "parentId", "modelCallId", "source", "failureKind"],
+  },
+  HealingProposal: {
+    table: "healing_proposals",
+    fields: [
+      "failedRunId",
+      "testId",
+      "analysisId",
+      "baseRevisionId",
+      "candidateRevisionId",
+      "risk",
+      "status",
+      "approvalMode",
+      "reviewerId",
+      "verificationRunId",
+    ],
+  },
+  Delivery: {
+    table: "deliveries",
+    fields: [
+      "eventId",
+      "destinationRef",
+      "checkName",
+      "subjectSha",
+      "reportHash",
+      "payloadHash",
+      "batchId",
+      "attempts",
+      "nextAttemptAt",
+      "state",
+      "checkStatus",
+      "externalId",
+    ],
+  },
 } as const;
 export type EntityKind = keyof typeof tableCatalog;
 export const immutableKinds: Partial<Record<EntityKind, true>> = {
@@ -143,6 +179,7 @@ export const immutableKinds: Partial<Record<EntityKind, true>> = {
   TestRevision: true,
   Snapshot: true,
   AuditEvent: true,
+  Analysis: true,
 };
 export function columnName(field: string): string {
   return field === "index"
