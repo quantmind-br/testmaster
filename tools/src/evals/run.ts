@@ -2,9 +2,10 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checks, startShop } from "../../../evals/fixture.mjs";
+import { assertFrozenFiles, assertRegistrationUnchanged, committedRegistration } from "./freeze.js";
 import type { Pair, Proportion, Replay, TrialError, TrialScoreInput } from "./scoring.js";
 import { scoreTrial, summarize } from "./scoring.js";
 
@@ -19,7 +20,13 @@ interface Registration {
   id: string;
   dataset: { manifest: string; sha256: string; development: string[]; holdout: string[] };
   frozenFiles: Record<string, string>;
-  budget: { maxTokens: number; maxWallTimeMs: number; perModelCommandConservativeTokens: number };
+  budget: {
+    maxTokens: number;
+    maxWallTimeMs: number;
+    perModelCommandConservativeTokens: number;
+    normalizationConservativeTokens?: number;
+    planConservativeTokens?: number;
+  };
 }
 interface CommandRecord {
   args: string[];
@@ -58,27 +65,52 @@ class EvaluationFailure extends Error {
     super(message);
   }
 }
+function deriveCommandConservativeTokens(args: string[], registration: Registration): number {
+  if (args[0] === "requirement" && args[1] === "normalize") {
+    if (registration.budget.normalizationConservativeTokens !== undefined) {
+      return registration.budget.normalizationConservativeTokens;
+    }
+    if (registration.budget.perModelCommandConservativeTokens !== undefined) {
+      return registration.budget.perModelCommandConservativeTokens;
+    }
+    throw new EvaluationFailure(
+      "budget_unaccountable",
+      "Cannot derive conservative upper bound for normalization before network",
+      { args },
+    );
+  }
+  if (args[0] === "plan" && args[1] === "generate") {
+    return (
+      registration.budget.planConservativeTokens ??
+      registration.budget.perModelCommandConservativeTokens ??
+      6 * (100000 + 8192)
+    );
+  }
+  return registration.budget.perModelCommandConservativeTokens ?? 6 * (100000 + 8192);
+}
 
-export async function runEvaluation(root: string, preregistrationCommit: string): Promise<void> {
+export async function runEvaluation(
+  root: string,
+  preregistrationCommit: string,
+  registrationPath = "evals/preregistration.json",
+): Promise<void> {
   if (!/^[a-f0-9]{40,64}$/.test(preregistrationCommit))
     throw new Error("Supply the orchestrator's committed preregistration hash");
-  const preregistrationBytes = await readFile(join(root, "evals/preregistration.json"));
+  const rel = relative(resolve(root), resolve(root, registrationPath)).replaceAll("\\", "/");
+  if (isAbsolute(registrationPath) || rel === ".." || rel.startsWith("../"))
+    throw new Error(`Unsafe registration path: ${registrationPath}`);
+  const preregistrationBytes = await readFile(resolve(root, registrationPath));
+  assertRegistrationUnchanged(
+    preregistrationBytes,
+    await committedRegistration(root, preregistrationCommit, registrationPath),
+  );
   const registration = JSON.parse(preregistrationBytes.toString()) as Registration;
   const manifestBytes = await readFile(join(root, registration.dataset.manifest));
   if (createHash("sha256").update(manifestBytes).digest("hex") !== registration.dataset.sha256)
     throw new Error(
       "Corpus differs from committed preregistration; preregister a distinct round before live calls",
     );
-  for (const [path, expected] of Object.entries(registration.frozenFiles)) {
-    if (
-      createHash("sha256")
-        .update(await readFile(join(root, path)))
-        .digest("hex") !== expected
-    )
-      throw new Error(
-        `Frozen input changed: ${path}; preregister a distinct round before live calls`,
-      );
-  }
+  await assertFrozenFiles(root, registration.frozenFiles);
   const manifest = JSON.parse(manifestBytes.toString()) as { cases: Case[] };
   const cases = manifest.cases;
   const runId = `${registration.id}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
@@ -203,7 +235,7 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
     let phase = "setup";
     let trialCharge = 0;
     let previousCallCount = 0;
-    let unmeasuredReservations = 0;
+    const unmeasuredReservations: number[] = [];
     const command = async (
       args: string[],
       modelCommand = false,
@@ -219,19 +251,17 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
           "wall_time_exhausted",
         );
       if (modelCommand) {
-        if (
-          chargedTokens + registration.budget.perModelCommandConservativeTokens >
-          registration.budget.maxTokens
-        )
+        const requiredTokens = deriveCommandConservativeTokens(args, registration);
+        if (chargedTokens + requiredTokens > registration.budget.maxTokens)
           throw new EvaluationFailure(
             "budget_exhausted",
             "Insufficient conservative token reservation",
-            { chargedTokens },
+            { chargedTokens, requiredTokens },
             "budget_exhausted",
           );
-        chargedTokens += registration.budget.perModelCommandConservativeTokens;
-        trialCharge += registration.budget.perModelCommandConservativeTokens;
-        unmeasuredReservations += 1;
+        chargedTokens += requiredTokens;
+        trialCharge += requiredTokens;
+        unmeasuredReservations.push(requiredTokens);
       }
       const before = performance.now();
       const record: CommandRecord = {
@@ -348,9 +378,9 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
             typeof object(call.usage).outputTokens === "number",
         )
       ) {
-        unmeasuredReservations = Math.max(0, unmeasuredReservations - 1);
-        const settled =
-          measured + unmeasuredReservations * registration.budget.perModelCommandConservativeTokens;
+        unmeasuredReservations.pop();
+        const pendingReservations = unmeasuredReservations.reduce((sum, v) => sum + v, 0);
+        const settled = measured + pendingReservations;
         chargedTokens += settled - trialCharge;
         trialCharge = settled;
       }
@@ -428,12 +458,14 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
         "grant",
         "--provider",
         "quantforge",
+        "--allow-unknown-cost",
         "--data-class",
         "documents",
         "code_summary",
         "requirements",
         "plans",
       ]);
+      await command(["budget", "set", "--tokens", String(registration.budget.maxTokens)]);
       phase = "sources";
       const revisions: string[] = [];
       for (const [basename, role, format] of [
@@ -483,7 +515,7 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
             revisions.includes(String(ref.sourceRevisionId)),
           );
         const eligible =
-          requirement.originKind === "user_spec" &&
+          (requirement.originKind === "explicit" || requirement.originKind === "user_spec") &&
           grounded &&
           !conflicted.has(String(requirement.id)) &&
           Array.isArray(requirement.acceptanceCriteria) &&
@@ -495,7 +527,7 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
           eligible,
           reason: eligible
             ? "explicit grounded nonconflicting requirement"
-            : "inference, missing grounding/criteria, unresolved conflict or fixed 12-requirement cap",
+            : "inferred/observed, missing grounding/criteria, unresolved conflict or fixed 12-requirement cap",
         });
         if (eligible)
           approved.push(
@@ -734,13 +766,28 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
           recursive: true,
         });
       } catch (error) {
-        trial.errors.push({
-          phase: "evidence",
-          code: "evidence_copy_unavailable",
-          message: String(error),
-          evidence: { dataDir },
-          exclusion: null,
-        });
+        const isEnoent =
+          typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+        const hasAttempts = trial.pairs.some(
+          (p) => Boolean(p.healthy.runId) || Boolean(p.mutant.runId),
+        );
+        if (isEnoent && !hasAttempts) {
+          trial.errors.push({
+            phase: "evidence",
+            code: "no_attempts",
+            message: "No test runs executed; runs evidence directory was not created",
+            evidence: { dataDir },
+            exclusion: null,
+          });
+        } else {
+          trial.errors.push({
+            phase: "evidence",
+            code: "evidence_copy_unavailable",
+            message: String(error),
+            evidence: { dataDir },
+            exclusion: null,
+          });
+        }
       }
       await flush();
     }
@@ -856,21 +903,20 @@ export async function runEvaluation(root: string, preregistrationCommit: string)
   console.log(JSON.stringify({ runId, directory, primary: report.primary, label: report.label }));
 }
 
-export async function checkPreregistration(root: string): Promise<void> {
+export async function checkPreregistration(
+  root: string,
+  registrationPath = "evals/preregistration.json",
+): Promise<void> {
+  const rel = relative(resolve(root), resolve(root, registrationPath)).replaceAll("\\", "/");
+  if (isAbsolute(registrationPath) || rel === ".." || rel.startsWith("../"))
+    throw new Error(`Unsafe registration path: ${registrationPath}`);
   const registration = JSON.parse(
-    await readFile(join(root, "evals/preregistration.json"), "utf8"),
+    await readFile(resolve(root, registrationPath), "utf8"),
   ) as Registration;
   const manifestBytes = await readFile(join(root, registration.dataset.manifest));
   if (createHash("sha256").update(manifestBytes).digest("hex") !== registration.dataset.sha256)
     throw new Error("Corpus hash differs from preregistration");
-  for (const [path, expected] of Object.entries(registration.frozenFiles)) {
-    if (
-      createHash("sha256")
-        .update(await readFile(join(root, path)))
-        .digest("hex") !== expected
-    )
-      throw new Error(`Frozen input changed: ${path}`);
-  }
+  await assertFrozenFiles(root, registration.frozenFiles);
   const manifest = JSON.parse(manifestBytes.toString()) as { cases: Case[] };
   const ids = [...registration.dataset.development, ...registration.dataset.holdout];
   if (
@@ -894,6 +940,11 @@ export async function checkPreregistration(root: string): Promise<void> {
     registration.budget.perModelCommandConservativeTokens !== 6 * (100000 + 8192)
   )
     throw new Error("Invalid preregistered budget");
+  if (
+    registration.budget.normalizationConservativeTokens !== undefined &&
+    registration.budget.normalizationConservativeTokens !== 7 * 6 * (100000 + 8192)
+  )
+    throw new Error("Invalid preregistered normalization budget");
   console.log(
     JSON.stringify({
       mode: "check",
@@ -908,11 +959,33 @@ export async function checkPreregistration(root: string): Promise<void> {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-  if (process.argv[2] === "--check") await checkPreregistration(root);
-  else if (process.argv[2] === "--execute-preregistered" && process.argv[3])
-    await runEvaluation(root, process.argv[3]);
+  const argv = process.argv.slice(2);
+  let mode: "check" | "execute" | null = null;
+  let commit: string | null = null;
+  let registrationPath = "evals/preregistration.json";
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    if (arg === "--registration" && i + 1 < argv.length) {
+      registrationPath = argv[++i]!;
+    } else if (arg === "--check") {
+      mode = "check";
+      if (i + 1 < argv.length && !argv[i + 1]!.startsWith("--")) {
+        registrationPath = argv[++i]!;
+      }
+    } else if (arg === "--execute-preregistered") {
+      mode = "execute";
+      if (i + 1 < argv.length && !argv[i + 1]!.startsWith("--")) {
+        commit = argv[++i]!;
+      }
+      if (i + 1 < argv.length && !argv[i + 1]!.startsWith("--")) {
+        registrationPath = argv[++i]!;
+      }
+    }
+  }
+  if (mode === "check") await checkPreregistration(root, registrationPath);
+  else if (mode === "execute" && commit) await runEvaluation(root, commit, registrationPath);
   else
     throw new Error(
-      "Use --check (offline) or, only after phase-2 authorization, --execute-preregistered <preregistration-commit>",
+      "Use --check [--registration <path>] (offline) or, only after phase-2 authorization, --execute-preregistered <commit> [--registration <path>]",
     );
 }
