@@ -1,0 +1,306 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "m2-round5-qwen38-evidence-handles-reference-shop-2026-10-06",
+  "status": "preregistered-not-executed",
+  "label": "experimental",
+  "dataset": {
+    "manifest": "evals/corpus/manifest.json",
+    "sha256": "016dfc28cb5030abac53839c279b3161952e663b0dac9fa02e6a64776ec79e16",
+    "applicationFamilies": [
+      "reference-shop"
+    ],
+    "splitSeed": "testmaster-m2-eval-2026-10-05",
+    "splitAlgorithm": "Sort defective case IDs by ascending hex SHA-256(seed + ':' + caseId); first six development, last two mutant-level holdout. Trial order is this same fixed order.",
+    "development": [
+      "shop-defect-004",
+      "shop-defect-001",
+      "shop-defect-002",
+      "shop-defect-006",
+      "shop-defect-007",
+      "shop-defect-008"
+    ],
+    "holdout": [
+      "shop-defect-003",
+      "shop-defect-005"
+    ],
+    "holdoutDisclosure": "Mutant-level holdout cases shop-defect-003 (health-degraded) and shop-defect-005 (orders-auth-bypass) were executed, observed, and analyzed in Round 1. They are no longer unseen. Round 5 makes no validation holdout or unseen-family generalization claims; partition provenance is retained solely for descriptive stratification.",
+    "outOfScope": [
+      "shop-baseline (paired healthy control in each trial, not a defect trial)",
+      "shop-defect-009 (selector-drift is nonfunctional/M3, excluded from business-defect pilot)",
+      "Unseen application families (only reference-shop available in current corpus)",
+      "Human-adjudicated ground truth labels (corpus manifest retains development-only reviewer field)",
+      "Autonomous repair/healing (M3 capability; healing:off enforced in trial config)",
+      "Interactive or exploratory human intervention (fully automated pipeline)",
+      "Continuous-learning model updates or online fine-tuning"
+    ],
+    "limitations": [
+      "Census of eight defect cases across one reference-shop application family; feasibility/coverage pilot only",
+      "Mutant holdout was observed in Round 1; no validation holdout or generalization claims",
+      "Descriptive Wilson confidence intervals; trials are clustered within a single application",
+      "Corpus labels and empty-cart conflict lack independent human consensus",
+      "Monetary tariff unavailable from provider; cost remains strictly unknown, never zero",
+      "Remote model snapshot unavailable; weights may vary without provider versioning"
+    ]
+  },
+  "provider": {
+    "id": "quantforge",
+    "kind": "openai-compatible",
+    "baseUrl": "https://api.quantforge.com.br/v1",
+    "apiKeyEnv": "QUANTFORGE_API_KEY",
+    "model": "qwen3.8-flash",
+    "prices": null,
+    "snapshot": "Unavailable: provider can change remote weights without a versioned snapshot",
+    "executionDependencyStatus": "Operator authorized this exact endpoint/model with QUANTFORGE_API_KEY; no new inventory probe or immutable remote snapshot is claimed."
+  },
+  "decoding": {
+    "response_format": {
+      "type": "json_object"
+    },
+    "omitted": [
+      "max_tokens",
+      "max_completion_tokens",
+      "temperature",
+      "top_p",
+      "seed",
+      "presence_penalty",
+      "frequency_penalty",
+      "enable_thinking",
+      "tools"
+    ],
+    "deadlineMs": 180000,
+    "maxInputBytes": 1048576,
+    "maxInputTokens": 100000,
+    "maxStructuralRepairs": 2,
+    "maxTransportRetriesPerRepair": 1,
+    "transportRetryCondition": "Only without a usable response",
+    "localValidation": "Strict shared Ajv schema plus proposal semantic validation",
+    "cache": "Fresh project/HOME per trial; no shared cache",
+    "reasoning_effort": "medium",
+    "commandDeadlineMs": 600000,
+    "commandKillGraceMs": 15000,
+    "deadlineDisclosure": "Per-model deadline remains 180000 ms. Evaluator CLI command limit is 600000 ms plus 15000 ms kill grace, bounded by remaining wall time; it does not replace the model deadline. HTTP 500 with a usable response is not retried externally."
+  },
+  "promptVersions": {
+    "normalize": "normalize-3-evidence-handles",
+    "plan": "plan-2-evidence-handles",
+    "schemaVersion": "1.0.0"
+  },
+  "frozenFiles": {
+    "fixtures/reference-shop/artifacts/PRD.md": "77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b",
+    "fixtures/reference-shop/artifacts/openapi.yaml": "a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881",
+    "fixtures/reference-shop/oracle/index.js": "c2923499f9f20653ab0be8ac296039fd2b3f8f21a7cfc05acf0a1d888499d531",
+    "packages/application/src/ai/model.ts": "95d24fd1032929f500b54498a847b2e1e21a9d9094b345c40aa2abb52a5299b4",
+    "packages/model-gateway/src/gateway.ts": "5874bde8147ef6ea96bdcc8375fb3ce1b7740f8ec7df4a6a942ed83f15f1817f",
+    "packages/application/src/ai/requirements.ts": "b767ac35931dc9b0e4f75e2a3ff631951bae9c5907f5d721274af0810056a077",
+    "packages/application/src/ai/proposals.ts": "8e9f4cd8ccae996627ddf66a5cc5e2c57490ff3b8eb6f8cb928e6c0b5cd75822",
+    "packages/application/src/ai/normalization.ts": "bd2daa32f894a63e1c9bb390933dfa0ab72a2299a7e272fb61d43ae3a78f18fe",
+    "tools/src/evals/run.ts": "26f18360b4dd7e9ad91cd922ebad3453b3bcb95d31caa1f86764d375fb565984",
+    "tools/src/evals/freeze.ts": "4a24dba716902074a1d7ee8b890be743479f865c095c395e0db9dbd55c3589c3",
+    "tools/src/evals/scoring.ts": "f0394127feabf72305a84318ca69b8a53ff30db4733e8ba385fa2ae76cfa5e42",
+    "evals/fixture.mjs": "c0963c1987f358bc5e73a4f2cf5735fad2e8810ece11a60c67d023104881a3cc",
+    "packages/application/src/runs.ts": "2f6239ec65cdaf608774e02f15b5e14ff86dd1e4595e324d11eb9550a34e0050",
+    "packages/application/src/worker.ts": "69a1fd7ec30c410b4e51de3db365b87445075c3b0aef29c7b258e870bf6c9de9",
+    "packages/application/src/provenance.ts": "102e4b9b67fc61e57de1a487d50e55c734c8216a52d5cc174462cf99ede8c1ec",
+    "packages/application/src/ai/sources.ts": "69ac61dcb3c1aa0763d8ed3cd1f7d3fa27a30bca94e62662809847fb47488a27",
+    "packages/application/src/ai/discovery.ts": "c51fca3873ff4477baa60ab0b842bf3547c197fde8e0c0e7d673c936312df49b",
+    "packages/application/src/ai/usage.ts": "eb264ccaf1670e3df872640e09c30ce7a609e7d679bd64a318f2cbd387e2d8de",
+    "packages/application/src/config.ts": "a375b7c58c620d76615998b4559f1937e6ceafe6c09171366cb8d55b0b563b13",
+    "packages/model-gateway/src/provider.ts": "e233e8883a172aebf10c71927aaefffc86f8a17fd85530fb1a305d6484e442a8",
+    "packages/persistence/src/usage.ts": "b5018636e06598f599da6d64875073a5d4a25625b599e0baedd40134eaf60531",
+    "packages/persistence/src/repositories.ts": "b5c5d0e9cbafd63165d05906c7efc392764f3ce04b90c41a76f7e0bb019a5fc7",
+    "packages/persistence/src/database.ts": "04f296faa792b22d57fbc0891551cc2ad60ca0affbde390e68e19d97fa9a74c8",
+    "packages/contracts/src/catalog.ts": "0a98dd2a9d5cc12016dbb64660bf100eabd32a6e78e4d9376a86aba7fa35961c",
+    "packages/contracts/src/validation.ts": "d11a8fa116767eb914ed55ccde60c66d9c6154839758552e3ffa03adc8d1db61",
+    "packages/contracts/src/protocol.ts": "c755e067f4970bdc0ecf1b8267b03ac5da08730178a76dfc956a4f1d5197c2a5",
+    "packages/contracts/src/operations.ts": "e5bae73cf01776a8031d269eb4ea2c823a5fc0757cd508d0488e2b928796f288",
+    "packages/contracts/src/registries.ts": "9efbb42ade6e6d9b7d614cc1300a95453a1c842bfc79df4ec1ab5931b1577631",
+    "packages/runner/src/http.ts": "85158657b7554bdc8dcfb790a981b87b2fcb4d58c1a0d7611f3edd6e5864a355",
+    "packages/runner/src/runtime.ts": "6b29df57bd0368f5dcdf63749fe28f4647645a650dd1c15715a0a28be74664f6",
+    "packages/runner/src/browser.ts": "c8b41a082ad44e6e31335021541689dfb7e6cb1096e1f4c15267ab3e1f25d4cf",
+    "packages/sandbox/src/attempt/executor.ts": "2cb018789129d162a20ade56105ab0e151f060dac3b93ffccb96f95acf7c79b6",
+    "packages/sandbox/src/docker/executor.ts": "db197931a324bc927b9ea075cf242aba1e192c9090dbde0c801d28bd377ec799",
+    "packages/planner/src/requirements/index.ts": "d4176b54a3d488e5d3c0a84509947d918a7589881c49fb0c07e89cce64f02166",
+    "packages/planner/src/proposals/index.ts": "2f2f9f4cddc8af76b03f46c7412ad68db9f50b5c1f651702a2db063e461b5ec6",
+    "apps/cli/src/usage.ts": "b949a68df7c5b9960043ade018a64c1ecf7f7aed12e52f6924c21f4d9273923d",
+    "apps/cli/src/requirements.ts": "b4599c76ac3bb9150d65d7ef7ec95569fb8fd93b8744e5eca939721e7c12e629",
+    "apps/cli/src/plans.ts": "2b3e355f4ecf16aac280afe5ff68413a118a47b665473efa98a787aea4e0bb55",
+    "apps/cli/src/execution.ts": "006274764430d67c179109385ed9d5f681fcf6ab0434fea0e121a74e28836208",
+    "fixtures/reference-shop/src/index.js": "0ed76b9da22fa78b27f62731d748ed058a3ca72f93cda2d38716dbf536cbed58",
+    "containers/images.lock.json": "1d5d98884f1f082b0398f3c487e62fb50bff851b1682ad9059e7d3fecdf58919",
+    "containers/seccomp_profile.json": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+    "pnpm-lock.yaml": "e5c0238e7acbbb16327d342465c704adb7e5b44c18c29804f91b7209b8f6e637",
+    "packages/application/src/application.ts": "0596b08e98c039ca3174b7d6afd687cd2c2d35d42af0b5de45c9346319ae9b6f",
+    "packages/contracts/src/entities.ts": "465701dd3f0e628ebe3c412a320fd0d93e89e21fb884b96ac746b77145cc5089",
+    "validation/journeys/m2-support.ts": "e26570079db072045778710302befce9e09b122798fe085324a912cc14e973fe",
+    "validation/journeys/m2-discovery.live.test.ts": "a40a3fadb29da749d6e6b413d83f8b9491c036e04de6fef5b486f41707d9ddb3",
+    "validation/journeys/m2-proposals.live.test.ts": "02c3eceb4bb1bfa4f5503e1a5b8b25c830959794ff9d8e09b76d6126a2b65246",
+    "validation/journeys/m2-agent.live.test.ts": "69d0fd497c6bcdd8be9050b5a9901cd9310ae8530c381532343f915dd6c22514",
+    "validation/journeys/harness.ts": "5025613dee26dc1a2cd9db6ca2d9147589253ab63462cefed4d95c935ea96287",
+    "packages/planner/src/sources/evidence.ts": "ddc4ae7ad51bc5416a980aa2c39af9af010b1970bf868c3fa8e009e15dae9f38",
+    "packages/planner/src/sources/index.ts": "186b4704f195a574a1042ecb7f56af8cc85862a2ff8135d25de7d51645fe2c1f",
+    "packages/contracts/schemas/AIRequirementsOutput.json": "d4f6e9f72c95df3b29a2840a277c409eb36fe809073d8714f45e7ab76a352349",
+    "packages/contracts/schemas/AIRequirementConflictsOutput.json": "0a5b62f1624501efa5404c9fb05a0795e2662c3812172e0a4ab4e112bfcfc4e5",
+    "packages/contracts/schemas/AIProposalsOutput.json": "93d3806605fbb78a317fada310b3685939a4fc8bead5f4e6bb8cd11441827ddd"
+  },
+  "pipeline": {
+    "runner": "Built real CLI, hardened Docker executor, deterministic replay only",
+    "steps": [
+      "independent oracle on separate fresh healthy and mutant instances before live generation; verdicts never enter model input",
+      "init fresh project/HOME and user-level provider, grant explicit consent with --allow-unknown-cost and configure cumulative token cap",
+      "source add unchanged full PRD and OpenAPI",
+      "discover --scope codebase with source revisions and NO application source, mutant labels or oracle code",
+      "requirement normalize both sources using bounded chunk extraction batches and separate cross-source reconciliation",
+      "separate rule-based evaluator checks contract-valid explicit and user_spec origin, source-revision grounding and nonempty acceptance criteria; inferred and observed requirements stay unapproved; unresolved conflicts stay unapproved",
+      "approve qualifying nonconflicting explicit/user_spec requirements up to fixed 12 cap",
+      "plan generate --type backend once per approved requirement",
+      "accept every valid executable proposal without editing, selecting by outcomes or weakening assertions",
+      "replay each accepted immutable revision on a fresh healthy instance and a fresh mutant instance",
+      "usage, step results, events and sealed artifact manifests retained in per-trial ledger; report no_attempts when runs directory is absent because zero runs executed"
+    ],
+    "review": "Authorized external rule-based evaluator, not generating model, checks contract-valid explicit and user_spec origin, source-revision membership and nonempty acceptance criteria. Inferred and observed requirements are rejected. Shared local proposal validation checks deterministic nontrivial assertions and allowed operations. This is NOT independent human semantic intent review; unsupported intent remains a stated limitation. Independent raw-HTTP/read-only-SQLite oracle plus paired replay decides final behavioral credit. No knowledge of a proposal's run outcomes at its acceptance. Decisions and retained items are recorded. Conflicts are not adjudicated without the required two independent human reviewers.",
+    "selection": "All nonconflicting grounded originKind in {explicit, user_spec} requirements, sorted by text then id, first 12 at most. Excess recorded as scope truncation before generation. Inferred and observed requirements are rejected. Never filter by target mutant labels. Plan each separately to avoid multi-proposal output-length confounding; no regeneration or proposal edits.",
+    "execution": {
+      "concurrency": 1,
+      "maxAttempts": 1,
+      "mode": "replay",
+      "healing": "off",
+      "attemptTimeoutMs": 120000,
+      "executionTimeoutMs": 150000,
+      "stepTimeoutMs": 5000,
+      "locale": "en-US",
+      "timezone": "UTC"
+    },
+    "commandDeadline": "600000 ms per command, 15000 ms kill grace; per-model deadline 180000 ms remains independent."
+  },
+  "sample": {
+    "plannedTrials": 8,
+    "trialsPerMutant": 1,
+    "independentApplicationFamilies": 1,
+    "justification": "Eight fixed business mutants, one trial each, one previously observed family. Round 5 uses provider-owned sampling/output defaults and medium reasoning effort; multiple decoding axes differ from Round 3, so score changes cannot be attributed solely to effort."
+  },
+  "budget": {
+    "maxTokens": 12000000,
+    "maxWallTimeMs": 7200000,
+    "perModelCommandConservativeTokens": 649152,
+    "normalizationConservativeTokens": 4544064,
+    "planConservativeTokens": 649152,
+    "accounting": "Local admission estimates: reserve 7 * 6 * (100000 + 8192) = 4544064 tokens before normalization and 1 * 6 * (100000 + 8192) = 649152 before each plan command. These are not upper bounds on remote output or spend: wire output ceilings are omitted and measured usage can exceed estimates. Settle to provider input+output usage; unknown usage retains its reservation. Reasoning tokens are separate and not added twice to completion tokens. Admit only within the unchanged local quota; no refill. Monetary tariff and cost remain unknown, never zero.",
+    "stop": "All eight scheduled trials recorded, or budget/wall deadline, missing key, or unsafe condition. Never stop on good/bad scores. Unstarted trials receive not_started ledgers and remain in end-to-end denominator; no replacements. No outer transport/pipeline retries; gateway's bounded retries remain recorded."
+  },
+  "metrics": {
+    "primary": "Detected mutant / all 8 planned trials. Detected iff independent oracle verifies healthy=true and mutant defective=true AND at least one same accepted immutable generated revision passes healthy (outcome and gate passed) and fails mutant with a reliable required assertion failure. Action/transport/timeout failure alone never earns detection credit.",
+    "conditional": "Detected / oracle-confirmed trials excluding only predeclared infrastructure exclusions; all exclusions and misses remain in primary denominator.",
+    "secondary": [
+      "Healthy false-failure rate: failed healthy generated replays / healthy replays with passed or failed business outcome; unavailable replay outcomes reported separately",
+      "Proposal validity: valid returned proposals / all returned proposals; failed generation with no returned proposals is an error, not an invented proposal denominator; raw invalid response proposal count may be unavailable",
+      "Measured input/output/reasoning tokens, conservative budget charge, unknown usage calls, known/unknown monetary cost",
+      "Monotonic command/trial/wall latency; no p95/p99 population claim",
+      "Per-mutant, failure category, development and mutant-level holdout strata"
+    ]
+  },
+  "exclusions": {
+    "conditionalOnly": [
+      "oracle_error",
+      "oracle_mismatch",
+      "sandbox_unavailable",
+      "worker_lost",
+      "provider_transport",
+      "provider_timeout",
+      "budget_exhausted",
+      "wall_time_exhausted",
+      "missing_key",
+      "not_started"
+    ],
+    "neverExclude": [
+      "invalid_model_output",
+      "invalid_proposal",
+      "no_approved_requirements",
+      "no_accepted_tests",
+      "no_attempts",
+      "healthy_assertion_failure",
+      "generated_action_failure",
+      "policy_denial",
+      "unresolved_conflict",
+      "inconclusive_without_proven_infrastructure_cause"
+    ],
+    "rule": "Exclusions need explicit structured error/verdict evidence, not exit code alone. Any exclusion blocks detection credit. Unknown INTERNAL/PRECONDITION failures are misses unless independently substantiated. Record all errors with phase, code, reason, command index and classification, including gateway retries and repair outcomes. Equivalent/invalid mutant reclassification requires independent review, cannot be inferred from a passing generated test."
+  },
+  "analysis": {
+    "interval": "Two-sided Wilson 95%, z=1.96",
+    "zeroDenominator": "insufficientData; estimate and bounds null",
+    "effectiveN": "8 planned defect cases, at most 8 completed trials, 1 application-family cluster; repeated proposals and calls never increase primary n",
+    "comparisons": "No model comparison or parity claim; stratified descriptive results only"
+  },
+  "graduation": {
+    "minIndependentFamilies": 30,
+    "minIndependentCases": 100,
+    "minTrialsPerCase": 3,
+    "minPrimaryWilsonLower": 0.8,
+    "minHoldoutWilsonLower": 0.8,
+    "maxHealthyFalseFailureWilsonUpper": 0.05,
+    "requiresIndependentHumanLabels": true,
+    "requiresNoCriticalSafetyFailure": true,
+    "decision": "This single-family eight-trial pilot cannot meet prerequisites; capabilities remain experimental regardless of observed scores."
+  },
+  "disclosures": {
+    "round1Execution": {
+      "roundId": "m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z",
+      "preregistrationCommit": "f37c3604399446e34a97c763dd0a507b4349660f",
+      "primaryResult": "0/8 detected (0.0%, Wilson 95% [0.0%, 32.4%])",
+      "diagnosis": "22 of 23 model calls hit 8192 output tokens with finishReason=length, misclassified as schema invalid and blindly repaired. Trial 03 produced 17 valid requirements with originKind=explicit, all rejected by Round 1 user_spec-only rule. Missing runs directory reported as evidence_copy_unavailable when zero runs were attempted."
+    },
+    "round1InformedFixes": [
+      "Gateway finishReason=length classification: treated as output_truncated and stopped immediately without blind repair attempts",
+      "Chunked requirement normalization: source chunks split into batches <=6 chunks/6000 bytes with separate grounded cross-source reconciliation call",
+      "Amended origin filter: accepts contract-valid originKind in {explicit, user_spec} with source grounding, nonempty criteria, and no conflicts; rejects inferred and observed",
+      "Explicit unknown-cost consent and cumulative token budget: consent grant passes --allow-unknown-cost and project budget set to 12,000,000 tokens",
+      "Evidence collector accuracy: missing .testmaster/runs directory when zero attempts ran reports no_attempts rather than fabricated evidence loss",
+      "Conservative command reservation: normalization reserves 4,544,064 tokens (7 calls * 6 requests * 108,192 tokens) before execution and settles to measured usage"
+    ],
+    "holdoutObservation": "Mutant-level holdout cases shop-defect-003 and shop-defect-005 were observed in Round 1. No validation holdout or unseen-family generalization claims are made.",
+    "round2Execution": {
+      "status": "not-executed",
+      "model": "deepseek-v4.1-flash",
+      "reason": "Assigned model unavailable; archived registration preserved unchanged."
+    },
+    "round3Changes": [
+      "Operator explicitly selected qwen3.8-flash at the same QuantForge endpoint. Temperature, output ceiling, corpus, thresholds and stopping rules unchanged.",
+      "Evaluator profile, consent and report model now derive from committed provider registration instead of hardcoded deepseek selection.",
+      "Capabilities no longer suppress every M2 surface; execution-dependent M2 operations retain sandbox checks."
+    ],
+    "round3Execution": {
+      "report": "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
+      "primaryResult": "0/8; normalization HTTP 500 twice around 127 seconds, unknown usage retained reservations; other trials stopped by local budget. Historical outputs remain unchanged."
+    },
+    "round4Changes": [
+      "Provider owns sampling and output defaults; no output-token ceiling or temperature on the wire.",
+      "Operator explicitly selected reasoning_effort medium; evaluator resolves registered effort into isolated profiles.",
+      "Current supplemental journeys are separate acceptance observations, not benchmark denominator additions.",
+      "Observed Round 3 failures and previously observed holdout are disclosed; no causal attribution solely to effort."
+    ],
+    "round4Execution": {
+      "registrationCommit": "116f682e197727e867f2b4937caacbbb0be37fc8",
+      "resultsCommit": "c345b3bdb70232a3ee534aaafe4c62d9e4487395",
+      "report": "evals/results/m2-round4-qwen38-medium-reference-shop-2026-10-06-2026-10-06T13-20-17-575Z/report.json",
+      "primaryResult": "0/8; all eight full-source normalizations rejected ungrounded evidence (seven requirement refs, one conflict ref); no proposals, accepted revisions or paired replays.",
+      "tokens": {
+        "input": 115986,
+        "output": 67020,
+        "reasoning": 32537
+      },
+      "cost": "unknown"
+    },
+    "round5Changes": [
+      "Outcome-informed fix after Round 4 (commit 661477a1a45f6092213c0846861bc386598772f2): a replay of Round 4 trial-02 inputs showed the model copying evidence objects and adding fabricated artifactId/snapshotId/page/jsonPointer fields. Model requests now label supplied evidence E1..En and outputs cite evidenceIds; the application resolves them to exact supplied refs and rejects unknown handles. Grounding strictness is unchanged.",
+      "Normalization instructions additionally exclude titles/headings and ask for one requirement per distinct source statement; proposal instructions cite only supplied evidenceIds.",
+      "Model configuration, corpus, cases, order, budgets, thresholds, stopping and scoring are unchanged from Round 4. Round 5 is not independent of Round 4: the fix was designed after observing Round 4 failures on the same corpus.",
+      "Post-fix supplemental live journeys (J02, J03, agent, normalization, discovery gaps, network model boundary) were executed before this registration at commit 661477a1a45f6092213c0846861bc386598772f2; evidence is under validation/results/m2-evidence-handles/ and is not part of this round."
+    ]
+  },
+  "supplementalAcceptance": {
+    "status": "not part of Round 5",
+    "priorEvidence": "validation/results/m2-evidence-handles/",
+    "separateFromPrimaryDenominator": true,
+    "automaticReruns": false
+  }
+}
