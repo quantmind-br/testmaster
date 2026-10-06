@@ -669,11 +669,13 @@ export class Application {
       http: true,
       python: true,
       docker: true,
+      "agent-mode": true,
+      resolve_action: true,
+      "resources-cleanup": true,
     };
     const features = Object.values(capabilityRegistry).map((feature) => {
       const enabled =
         feature.enabled &&
-        feature.milestone !== "M2" &&
         (!sandboxFeatures[feature.id] || imageReady) &&
         (feature.id !== "unsafe-local" ||
           this.config.profilePolicy.security.allowUnsafeProcessExecution);
@@ -682,9 +684,7 @@ export class Application {
         enabled,
         disabledReason: enabled
           ? null
-          : feature.milestone === "M2"
-            ? "M2 application surface is not yet enabled"
-            : (feature.disabledReason ?? "Policy or sandbox unavailable"),
+          : (feature.disabledReason ?? "Policy or sandbox unavailable"),
       };
     });
     return {

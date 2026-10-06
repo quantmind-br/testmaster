@@ -36,10 +36,36 @@ it("capabilities HTTP endpoint refuses to advertise missing runner images and di
           enabled: boolean;
           disabledReason: string | null;
         }[];
-        for (const id of ["local-execution", "playwright", "http", "python", "docker"]) {
+        for (const id of [
+          "local-execution",
+          "playwright",
+          "http",
+          "python",
+          "docker",
+          "agent-mode",
+          "resolve_action",
+          "resources-cleanup",
+        ]) {
           const feature = features.find((f) => f.id === id);
           expect(feature).toMatchObject({ enabled: false });
           expect(feature?.disabledReason).toBeTruthy();
+        }
+        for (const id of [
+          "source-markdown",
+          "source-pdf",
+          "source-openapi",
+          "code-summary",
+          "code-diff",
+          "code-import",
+          "code-export",
+          "mcp",
+          "agent-skills",
+          "model-accounting",
+        ]) {
+          expect(features.find((f) => f.id === id)).toMatchObject({
+            enabled: true,
+            disabledReason: null,
+          });
         }
         expect(
           features

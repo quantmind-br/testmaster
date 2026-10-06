@@ -20,6 +20,13 @@ interface Registration {
   id: string;
   dataset: { manifest: string; sha256: string; development: string[]; holdout: string[] };
   frozenFiles: Record<string, string>;
+  provider: {
+    id: string;
+    kind: "openai-compatible";
+    baseUrl: string;
+    apiKeyEnv: string;
+    model: string;
+  };
   budget: {
     maxTokens: number;
     maxWallTimeMs: number;
@@ -144,13 +151,13 @@ export async function runEvaluation(
       workspace: null,
     };
   });
-  const key = process.env.QUANTFORGE_API_KEY;
+  const key = process.env[registration.provider.apiKeyEnv];
   const redact = (value: string) => (key ? value.split(key).join("[REDACTED]") : value);
   if (!key)
     stopReason = new EvaluationFailure(
       "missing_key",
-      "QUANTFORGE_API_KEY is absent",
-      { env: "QUANTFORGE_API_KEY" },
+      `${registration.provider.apiKeyEnv} is absent`,
+      { env: registration.provider.apiKeyEnv },
       "missing_key",
     );
   const flush = async () => {
@@ -207,13 +214,13 @@ export async function runEvaluation(
           eval: {
             modelProviders: [
               {
-                id: "quantforge",
-                kind: "openai-compatible",
-                baseUrl: "https://api.quantforge.com.br/v1",
-                apiKeyEnv: "QUANTFORGE_API_KEY",
+                id: registration.provider.id,
+                kind: registration.provider.kind,
+                baseUrl: registration.provider.baseUrl,
+                apiKeyEnv: registration.provider.apiKeyEnv,
                 models: [
                   {
-                    id: "deepseek-v4.1-flash",
+                    id: registration.provider.model,
                     capabilities: {
                       structuredJson: true,
                       toolCalls: true,
@@ -230,7 +237,7 @@ export async function runEvaluation(
     );
     await writeFile(
       join(home, ".config/testmaster/policy.json"),
-      JSON.stringify({ allowedModelProviders: ["quantforge"] }),
+      JSON.stringify({ allowedModelProviders: [registration.provider.id] }),
     );
     let phase = "setup";
     let trialCharge = 0;
@@ -457,7 +464,7 @@ export async function runEvaluation(
         "consent",
         "grant",
         "--provider",
-        "quantforge",
+        registration.provider.id,
         "--allow-unknown-cost",
         "--data-class",
         "documents",
@@ -826,8 +833,8 @@ export async function runEvaluation(
     preregistrationSha256: createHash("sha256").update(preregistrationBytes).digest("hex"),
     class: "live-model-evaluation",
     runner: "real-cli-docker",
-    provider: "quantforge",
-    model: "deepseek-v4.1-flash",
+    provider: registration.provider.id,
+    model: registration.provider.model,
     chargedTokens,
     tokens,
     measuredCosts: Object.values(measuredCosts),

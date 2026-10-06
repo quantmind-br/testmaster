@@ -4,7 +4,7 @@ import { ModelGateway } from "./gateway.js";
 import { grantedConsent, TestBudgetLedger, testRequest } from "./test-support.js";
 import type { ModelCallRecord } from "./types.js";
 
-it("QuantForge deepseek-v4.1-flash returns locally validated JSON and measured usage", async () => {
+it("QuantForge qwen3.8-flash returns locally validated JSON and measured usage", async () => {
   expect(process.env.QUANTFORGE_API_KEY).toBeTruthy();
   const records: ModelCallRecord[] = [];
   const endpoint = "https://api.quantforge.com.br/v1";
@@ -16,9 +16,7 @@ it("QuantForge deepseek-v4.1-flash returns locally validated JSON and measured u
         kind: "openai-compatible",
         baseUrl: endpoint,
         apiKeyEnv: "QUANTFORGE_API_KEY",
-        models: [
-          { id: "deepseek-v4.1-flash", capabilities: { structuredJson: true, toolCalls: true } },
-        ],
+        models: [{ id: "qwen3.8-flash", capabilities: { structuredJson: true, toolCalls: true } }],
       },
     ],
     allowedProviders: ["quantforge"],
@@ -38,13 +36,13 @@ it("QuantForge deepseek-v4.1-flash returns locally validated JSON and measured u
   const result = await gateway.complete({
     ...testRequest,
     provider: "quantforge",
-    model: "deepseek-v4.1-flash",
+    model: "qwen3.8-flash",
     maxOutputTokens: 1024,
     deadlineMs: 60_000,
     cache: false,
   });
   expect(validate("Money", result.output)).toEqual({ amount: 1, currency: "USD", scale: 2 });
-  expect(result.resolvedModel).toBe("deepseek-v4.1-flash");
+  expect(result.resolvedModel).toBe("qwen3.8-flash");
   expect(result.usage.inputTokens).toBeGreaterThan(0);
   expect(result.usage.outputTokens).toBeGreaterThan(0);
   expect(result.cost).toBe("unknown");

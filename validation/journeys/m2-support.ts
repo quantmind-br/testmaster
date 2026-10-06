@@ -4,7 +4,7 @@ import { expect } from "vitest";
 import { type Journey, type JourneyMetadata, text } from "./harness.js";
 
 export const provider = "quantforge";
-export const model = "deepseek-v4.1-flash";
+export const model = "qwen3.8-flash";
 export const metadata: JourneyMetadata = {
   class: "live-model-e2e",
   runner: "real-cli-and-model",
