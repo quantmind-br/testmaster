@@ -90,8 +90,7 @@ try {
     "--offline",
     "--store-dir",
     store.trim(),
-    "--cache-dir",
-    cache,
+    `--config.cache-dir=${cache}`,
   ]);
   await run("pnpm", ["build"]);
   await run("pnpm", ["test"]);
