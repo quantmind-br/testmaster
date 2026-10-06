@@ -243,6 +243,11 @@ recorded evidence storageBytes with per-Run attribution; lowering quotas never c
 already admitted deterministic replay or deletes evidence. Normalization extracts bounded
 chunk batches with prior grounded statements and exact deduplication, followed by a bounded
 conflicts-only reconciliation that retains all requirements and exact source references.
+Models never copy evidence objects: each request labels supplied chunks or requirement evidence
+with opaque handles (`E1`, `E2`, …) and outputs cite only `evidenceIds`. The application resolves
+handles to the exact supplied `EvidenceRef`s before persistence; an unknown handle rejects the
+whole output. Copied refs gained fabricated locator fields (artifact/snapshot/page/pointer) in a
+replay of Round 4 trial-02, matching the grounding rejections of all Round 4 normalizations.
 The configured model output ceiling is respected. A length finish records `output_truncated`
 and stops without blind repair calls; schema-invalid completed responses retain bounded repairs.
 

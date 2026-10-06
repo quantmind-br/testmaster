@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-post-timeout-no-repeat",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:53:01.017Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-post-timeout-no-repeat",
+        "--base-url",
+        "http://127.0.0.1:44165",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6c890553-00fb-42c5-94d9-2e4db7faa8d6",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111eb-0bb1-77e1-8845-f2f13cd79362"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "committedPostNotRepeated",
+      "healthy": true,
+      "posts": 1,
+      "runId": "run_01a111eb-0bb1-77e1-8845-f2f13cd79362",
+      "persistedUsers": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

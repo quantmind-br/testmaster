@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-batch-selection",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:50:23.081Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-batch-selection",
+        "--base-url",
+        "http://127.0.0.1:35607",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_65bab3d2-5d10-45bd-bb17-f375ed1af9b6",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111e8-a404-73ad-bbd9-a907e418018d",
+    "run_01a111e8-a405-728e-b33a-e29cd57ff739"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "admittedSuiteSelection",
+      "healthy": true,
+      "batchId": "bat_01a111e8-a403-7408-be54-4a4ac97c071b",
+      "admittedTests": [
+        "tst_01a111e8-a323-71b7-8e33-2571adef03a4",
+        "tst_01a111e8-a325-73a4-a42e-a2a8bbd226c1"
+      ],
+      "excludedLater": "tst_01a111e8-a325-73a4-a42e-a2a8bbd226c1",
+      "addedLater": "tst_01a111e8-a676-779c-b25f-1fe221fe5052"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

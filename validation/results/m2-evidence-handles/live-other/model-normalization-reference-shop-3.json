@@ -1,0 +1,198 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "model-normalization-reference-shop-3",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T16:17:03.660Z",
+  "passed": false,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "error": "AssertionError: requirement normalize --source-revision svr_01a111fb-514f-76b8-b152-0043d846a4b3 svr_01a111fb-5296-76e4-8b74-eafa12eb3ed0 stderr= stdout={\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_a488204d-d59d-48ad-bb00-7537d950ea1e\",\"error\":{\"code\":\"UNAVAILABLE\",\"message\":\"Provider rejected request\",\"details\":{\"status\":500},\"retryable\":true,\"nextActions\":[]}}\n: expected 10 to be +0 // Object.is equality",
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "model-normalization-reference-shop-3",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_07661c21-5173-409c-8b5c-c653683cf073",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_365a0f32-0c99-4db9-8489-a4d62d46abc9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a6bdc654-87b7-44d6-b7c3-875b8c7025b2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9867b54c-9340-4d31-ae99-6c8c77bad7fe",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "2000000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7643f6f6-419b-494e-8a55-2046ebb192d5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "PRD.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c93939fc-fc12-4f0f-8548-9fe67d45c1a2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "openapi.yaml",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3beb6fc2-2158-403a-8016-cb92424a7cb7",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a111fb-514f-76b8-b152-0043d846a4b3",
+        "svr_01a111fb-5296-76e4-8b74-eafa12eb3ed0",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 10,
+      "signal": null,
+      "requestId": "cli_a488204d-d59d-48ad-bb00-7537d950ea1e",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Provider rejected request",
+        "details": {
+          "status": 500
+        },
+        "retryable": true,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    }
+  ],
+  "failureDiagnostics": {
+    "runs": [],
+    "artifacts": []
+  },
+  "limitations": [
+    "Three live normalization trials of one reference-shop family; no generated-test quality or unseen-family claim."
+  ]
+}

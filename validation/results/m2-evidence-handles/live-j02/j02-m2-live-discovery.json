@@ -1,0 +1,698 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j02-m2-live-discovery",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T15:55:50.416Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j02-m2-live-discovery",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7f8b0182-a117-4777-af3d-6c6c56639805",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_432dab1a-9c8d-4747-b652-13fe9a628761",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_27114485-93e2-43f9-8149-c601646a2dcc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_518cad82-ba08-4199-a461-0c87d95bc47b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "prd.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_da1a9af2-b9b8-4a6d-be25-b1771e15c515",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "api.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_40ecc7c9-8eca-40a8-b111-3e02e46c418a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0",
+        "--source-revision",
+        "svr_01a111ec-5f9b-72d6-b7c1-e44a91df2bb1",
+        "--exclude",
+        "excluded.js",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_40bc8582-a473-4265-9995-d9b40858cd51",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0",
+        "--source-revision",
+        "svr_01a111ec-5f9b-72d6-b7c1-e44a91df2bb1",
+        "--exclude",
+        "excluded.js",
+        "--resume",
+        "dsc_01a111ec-60fb-77a2-863a-051e9d96f707",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_320408fa-67d6-49d6-a526-4303200f1fff",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_94ae4f57-ee05-43ad-a682-79c037a33c27",
+      "error": {
+        "code": "PRECONDITION_REQUIRED",
+        "message": "Diff discovery requires --base and --head or --working-tree",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "544dfd1df14f353e75c15e977982cf73cded0731",
+        "--head",
+        "59b708bf5385733654e1086e3967275f53b32f5c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b89729de-6375-48f8-931e-4e4ed2ce6f13",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "59b708bf5385733654e1086e3967275f53b32f5c",
+        "--working-tree",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d4251da1-d26b-4668-894b-fd29a26a6ee2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0",
+        "svr_01a111ec-5f9b-72d6-b7c1-e44a91df2bb1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f19cdb62-e643-42be-9a34-37363b19a8bb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "adjudicate",
+        "conflict-1",
+        "--selected-requirement",
+        "req_01a111ed-25de-7256-abb8-8ead7a208874",
+        "--reason",
+        "Reviewer chooses explicit PRD status 200 over formal status 503",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_26a3acf9-c670-4fde-a355-d93187684a52",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "get",
+        "req_01a111ed-25de-7256-abb8-8ead7a208874",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ca847347-5202-4930-b8db-0b79e20f1be8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "update",
+        "req_01a111ed-25de-7256-abb8-8ead7a208874",
+        "--text",
+        "GET /health endpoint MUST return HTTP 200.",
+        "--criterion",
+        "GET /health returns exactly HTTP status 200",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a5bafae6-0805-489b-9885-b33f353512c5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f1568234-9307-497a-82ce-d7e6d42840d1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a111ed-25de-7256-abb8-8ead7a208874",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_af4d5be4-5c21-41f7-be6f-110c05ea7530",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "generate",
+        "--type",
+        "backend",
+        "--requirement",
+        "req_01a111ed-25de-7256-abb8-8ead7a208874",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_acfc7244-005a-4442-a7e4-d32cda5601bd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a111ed-9f7e-77ce-8868-a4a910843b83",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ede62962-8840-4ea5-a32c-45453370b15d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "malformed.json",
+        "--role",
+        "prd",
+        "--format",
+        "prd-json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4a7785d2-00c0-4bc9-a954-871d63dd063d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "injected-provider",
+        "--data-class",
+        "documents",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_dc0cd336-85ce-45e2-8715-6643ec514465",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Provider is not authorized by the user profile",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4fc9a0e1-fdd8-49d1-83e5-a8f02d990247",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "get",
+        "src_01a111ed-a279-72f1-98f2-5af8371312ba",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6541d678-0cc2-46d6-8826-643b15a2e33d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "archive",
+        "src_01a111ed-a279-72f1-98f2-5af8371312ba",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_120ca45b-0b55-413d-a3d4-5f674f0084ab",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f712c0f6-974a-49e9-b8fa-ae1b7b077a14",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e3bc2de9-18c1-4d48-a07e-6e5890579f36",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "check": "groundedConflictAndPolicy",
+      "sourceHashes": [
+        "14622fa9de2df66ff8ab04419943fc97786c42bce91de2b20abcfdc9b74bdd7f",
+        "f26554bc4b28c9a56d57c45a55bdf2e7d893b6daf28d1888858dde2bb23b82ee"
+      ],
+      "conflictId": "conflict-1",
+      "selectedRequirementId": "req_01a111ed-25de-7256-abb8-8ead7a208874",
+      "base": "544dfd1df14f353e75c15e977982cf73cded0731",
+      "head": "59b708bf5385733654e1086e3967275f53b32f5c",
+      "proposalIds": [
+        "pro_01a111ed-9f81-77c4-83dc-0667e71f568e"
+      ],
+      "preservedProviderPolicy": true
+    },
+    {
+      "check": "supplementalModelUsage",
+      "calls": [
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:54:43.282Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ec-a2cf-7042-8954-33195c8d9d3f",
+          "inputRefs": [
+            "chunk_22879c01b9feb5e032a8535e41c1a936e481bcf6dd9ac2b7fc24d9a573e86fb3",
+            "chunk_2fa46793cf275f2577ce5cc66e569a437d6ed09769017082dddf8f119fd16d0d",
+            "chunk_5d0e6596c50d841a2cb13abf5ff0fa56df6f5fce1df627f9b8db0e969987aaa3",
+            "chunk_d2c015a1b6764778a5b1aaa17dd171ad0d16e01525caa2e0897342b03a449e12",
+            "chunk_0712bbc89e8b8accd51a87429467732cfb6db038a4106dba4b33472314dded25"
+          ],
+          "latency": 15119,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "invalid",
+          "projectId": "prj_01a111ec-5905-74bb-b2cd-a5e324804c1a",
+          "promptHash": "d6525b9142dad83757c8340534b74812ab445d869539abc49c00f0c56926fade",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 0,
+          "reservationId": "d6022e17-5545-4a2d-ba31-b35bd67787b4",
+          "responseHash": "ac97889fcffde0c120b90743595d7f314bd29b104bdf2daf2352b0c14635af39",
+          "sourceRevisionIds": [
+            "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0",
+            "svr_01a111ec-5f9b-72d6-b7c1-e44a91df2bb1"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 1186,
+            "outputTokens": 726,
+            "reasoningTokens": 477
+          },
+          "workspaceId": "ws_01a111ec-58f7-75fa-9e90-3aba4129df59"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:55:02.552Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ec-ee18-758d-9a94-3ff30d5a1c2c",
+          "inputRefs": [
+            "chunk_22879c01b9feb5e032a8535e41c1a936e481bcf6dd9ac2b7fc24d9a573e86fb3",
+            "chunk_2fa46793cf275f2577ce5cc66e569a437d6ed09769017082dddf8f119fd16d0d",
+            "chunk_5d0e6596c50d841a2cb13abf5ff0fa56df6f5fce1df627f9b8db0e969987aaa3",
+            "chunk_d2c015a1b6764778a5b1aaa17dd171ad0d16e01525caa2e0897342b03a449e12",
+            "chunk_0712bbc89e8b8accd51a87429467732cfb6db038a4106dba4b33472314dded25"
+          ],
+          "latency": 19269,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a111ec-5905-74bb-b2cd-a5e324804c1a",
+          "promptHash": "b4d2be2332fe60d4c04a5cc51e0373ebdf2527517bcc8ce0a853e2b95f580e56",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 1,
+          "reservationId": "b84574b5-fd31-447b-9662-9bfa45589ce5",
+          "responseHash": "c483e186bd373aa09dec7394ea1f3fe8b1586e2bf284c229e34ee9cd25a82ae6",
+          "sourceRevisionIds": [
+            "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0",
+            "svr_01a111ec-5f9b-72d6-b7c1-e44a91df2bb1"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 1258,
+            "outputTokens": 1083,
+            "reasoningTokens": 777
+          },
+          "workspaceId": "ws_01a111ec-58f7-75fa-9e90-3aba4129df59"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:55:16.829Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ed-25db-76ff-9551-cd3a6f15c0d8",
+          "inputRefs": [
+            "batch-1-health-status-200",
+            "batch-1-health-status-503"
+          ],
+          "latency": 14217,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a111ec-5905-74bb-b2cd-a5e324804c1a",
+          "promptHash": "42c890290d54bab8c667236f83c3d7964224a61e1942896d46a2078d2caedd0a",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 0,
+          "reservationId": "6b627c5f-2040-457b-8fc2-c25c68b20713",
+          "responseHash": "771bee1e67bbb473c445ee9186a4e3d2c6a3103f64e0fef0184c7e6b164a1758",
+          "sourceRevisionIds": [
+            "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0",
+            "svr_01a111ec-5f9b-72d6-b7c1-e44a91df2bb1"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 1040,
+            "outputTokens": 725,
+            "reasoningTokens": 474
+          },
+          "workspaceId": "ws_01a111ec-58f7-75fa-9e90-3aba4129df59"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:55:47.746Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ed-9dac-72dc-9c4f-c00ebfc0e607",
+          "inputRefs": [],
+          "latency": 28779,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a111ec-5905-74bb-b2cd-a5e324804c1a",
+          "promptHash": "f54850cb1565e5300db34ec8c882aa1d5bfe462c912b0cc913b95bdd140f530c",
+          "provider": "quantforge",
+          "purpose": "plan",
+          "repairAttempt": 0,
+          "reservationId": "a37cb05c-7d17-407f-bdb3-70ea7caf3f35",
+          "responseHash": "5616c106a7cd0e3ed603c85f3f49367183aec147200c6cd66c0dea6938ee1aab",
+          "sourceRevisionIds": [
+            "svr_01a111ec-5e5b-735c-9a46-1ed806d5c0e0"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 8420,
+            "outputTokens": 1717,
+            "reasoningTokens": 1295
+          },
+          "workspaceId": "ws_01a111ec-58f7-75fa-9e90-3aba4129df59"
+        }
+      ],
+      "tokens": {
+        "inputTokens": 11904,
+        "outputTokens": 4251,
+        "reasoningTokens": 3023
+      },
+      "cost": "unknown",
+      "measuredCosts": [],
+      "unknownCostCalls": 4,
+      "budgetRemaining": null,
+      "reservations": {
+        "reserved": 0,
+        "settled": 4,
+        "released": 0
+      },
+      "tokenBudget": null,
+      "runtimeMs": 77384,
+      "storageBytes": 0,
+      "runs": []
+    }
+  ],
+  "limitations": [
+    "Live model generation and authoring only; no execution or passing-test claim."
+  ]
+}

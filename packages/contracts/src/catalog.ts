@@ -8,6 +8,9 @@ import * as Protocol from "./protocol.js";
 import { ErrorEnvelope, mcpTools, SuccessEnvelope } from "./surfaces.js";
 
 const names = Type.Array(P.Name);
+/** Model-facing citation of supplied evidence (`E1`, `E2`, …); resolved by the application. */
+const EvidenceHandle = Type.String({ pattern: "^E[1-9][0-9]{0,5}$" });
+const evidenceIds = (minItems: number) => Type.Array(EvidenceHandle, { minItems, maxItems: 100 });
 const supplemental = {
   DocumentValidationInput: P.Obj({
     schema: P.Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
@@ -20,7 +23,7 @@ const supplemental = {
         key: P.Name,
         text: P.Description,
         acceptanceCriteria: Type.Array(P.Description, { minItems: 1 }),
-        sourceRefs: Type.Array(P.EvidenceRef, { minItems: 1 }),
+        evidenceIds: evidenceIds(1),
         originKind: P.Enum(["explicit", "user_spec", "inferred", "observed"]),
         confidence: Type.Union([Type.Number({ minimum: 0, maximum: 1 }), Type.Null()]),
         reason: P.Description,
@@ -31,7 +34,7 @@ const supplemental = {
       P.Obj({
         keys: Type.Array(P.Name, { minItems: 2 }),
         reason: P.Description,
-        sourceRefs: Type.Array(P.EvidenceRef, { minItems: 2 }),
+        evidenceIds: evidenceIds(2),
       }),
     ),
     openQuestions: Type.Array(P.Description),
@@ -41,7 +44,7 @@ const supplemental = {
       P.Obj({
         keys: Type.Array(P.Name, { minItems: 2 }),
         reason: P.Description,
-        sourceRefs: Type.Array(P.EvidenceRef, { minItems: 2 }),
+        evidenceIds: evidenceIds(2),
       }),
     ),
     openQuestions: Type.Array(P.Description),
@@ -51,7 +54,7 @@ const supplemental = {
       P.Obj({
         plan: Plans.ExecutablePlan,
         requirementRefs: Type.Array(P.id("req"), { minItems: 1 }),
-        evidenceRefs: Type.Array(P.EvidenceRef, { minItems: 1 }),
+        evidenceIds: evidenceIds(1),
         warnings: names,
       }),
       { minItems: 1, maxItems: 50 },

@@ -10,8 +10,8 @@ import type { ResolvedConfig } from "../config.js";
 import { requireEntity, type ServiceContext } from "../context.js";
 
 export const promptVersions = {
-  normalize: "normalize-2-bounded",
-  plan: "plan-1",
+  normalize: "normalize-3-evidence-handles",
+  plan: "plan-2-evidence-handles",
   resolve_action: "resolve-action-1",
   generate_code: "generate-code-1",
   summarize: "summarize-1",

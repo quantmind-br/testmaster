@@ -1,0 +1,287 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m2-integration-workflow-healthy",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:52:22.851Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m2-integration-workflow-healthy",
+        "--base-url",
+        "http://127.0.0.1:37809",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_af8ac3bf-b1f4-420e-87e9-a24bcc329618",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "workflow-auth",
+        "--from-env",
+        "WORKFLOW_AUTH",
+        "--allowed-origin",
+        "http://127.0.0.1:37809",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_041bc80b-534a-488f-bae6-34f615d43dff",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-5xFNEA/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8e479f5b-2f5a-4ff0-8bc1-8edf8e458692",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a111ea-7199-75f0-b2db-43c17aee5c8d",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_64a8c04d-f84a-4f2d-abaa-5d728756027b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a111ea-74ff-73bb-9c18-24a5909795ea",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d769667d-01c7-4bff-88d8-c42bd6a269bd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a111ea-74ff-73bb-9c18-24a5909795ea",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f3e1c050-4c1c-4049-92d0-c1b13dcd1e87",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111ea-74ff-73bb-9c18-24a5909795ea"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "independentSqliteAndRawHttpPersistence",
+      "mutant": "healthy",
+      "runId": "run_01a111ea-74ff-73bb-9c18-24a5909795ea",
+      "row": {
+        "id": "93256a0c-c62d-40bc-aa7d-3d239055936f",
+        "name": "Workflow updated",
+        "price_cents": 456
+      },
+      "capturedValueFlow": {
+        "create": {
+          "request": {
+            "method": "POST",
+            "url": "http://127.0.0.1:37809/api/products",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "bodyMetadata": {
+              "sha256": "d1ab7c2ad358546d63972415d0c6bf62e57bd35be1f83c928b39a6e164adb115",
+              "sizeBytes": 45,
+              "contentType": "application/json"
+            },
+            "bindings": []
+          },
+          "captures": [
+            {
+              "name": "product_id",
+              "variableRef": "create.product_id",
+              "valueType": "string",
+              "sensitive": true,
+              "resolved": "[REDACTED]"
+            }
+          ],
+          "response": {
+            "status": 201,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "476cb95f9cb2672fc8a41568a10ae698b693c4cb20fbd683a41f318fe8d8211b",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 579.853331
+          }
+        },
+        "read": {
+          "request": {
+            "method": "GET",
+            "url": "http://127.0.0.1:37809/api/products/[REDACTED]",
+            "headers": {},
+            "bodyMetadata": {
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "contentType": null
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "476cb95f9cb2672fc8a41568a10ae698b693c4cb20fbd683a41f318fe8d8211b",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 36.67919600000005
+          }
+        },
+        "update": {
+          "request": {
+            "method": "PUT",
+            "url": "http://127.0.0.1:37809/api/products/[REDACTED]",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "bodyMetadata": {
+              "sha256": "3b3d4f52af44024bb0bdd4d47972c00305bd6becad1aa001bd7e1cde58b05400",
+              "sizeBytes": 44,
+              "contentType": "application/json"
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "8b6cfad88c697e0fb9c1763a372cb5c23bb7c2c3cf5ffe56612d2e1e74c42e19",
+              "sizeBytes": 88,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 53.16224800000009
+          }
+        },
+        "query": {
+          "request": {
+            "method": "GET",
+            "url": "http://127.0.0.1:37809/api/products/[REDACTED]",
+            "headers": {},
+            "bodyMetadata": {
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "contentType": null
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "8b6cfad88c697e0fb9c1763a372cb5c23bb7c2c3cf5ffe56612d2e1e74c42e19",
+              "sizeBytes": 88,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 54.55692700000009
+          }
+        }
+      },
+      "failingStep": null
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

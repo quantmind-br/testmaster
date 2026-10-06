@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "W4-A-server-api",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:54:05.065Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "W4-A-server-api",
+        "--base-url",
+        "http://127.0.0.1:42149",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9b0d9a57-848d-445c-b542-12e6ecb36600",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "server",
+        "start",
+        "--port",
+        "38591",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_152c116e-ac1e-40d1-9ff2-75813119e143",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111ec-070e-7099-946d-25b5cba2cc0a"
+  ],
+  "oracleVerdicts": [
+    {
+      "api": {
+        "runId": "run_01a111ec-070e-7099-946d-25b5cba2cc0a",
+        "terminal": "passed",
+        "events": [
+          "event: run.timing_queued",
+          "event: run.accepted",
+          "event: run.receipt",
+          "event: attempt.claimed",
+          "event: attempt.deadline",
+          "event: run.phase_changed",
+          "event: run.snapshot_sealed",
+          "event: attempt.runner_started",
+          "event: step.started",
+          "event: step.finished",
+          "event: step.started",
+          "event: step.finished",
+          "event: step.started",
+          "event: step.finished",
+          "event: runner.finished",
+          "event: run.phase_changed",
+          "event: attempt.timing",
+          "event: run.completed",
+          "event: run.reduced"
+        ],
+        "artifactId": "art_01a111ec-0bce-712e-8cf9-e06d43aa50c8"
+      },
+      "tokenLocationOnly": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,393 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "discovery-feature-matrix",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T15:58:46.122Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "discovery-feature-matrix",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8582e007-0970-4dec-870b-9c14d0266a13",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5a5131ac-cc62-4cb0-8c59-d5c124383088",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_edbf1a13-4a2f-4d31-a070-f56cc23395d0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ff2a5c31-1509-494c-8842-6ef085be9313",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "name": "feature-matrix",
+      "original": {
+        "id": "dsc_01a111ef-c492-71a4-b744-699437b8ed98",
+        "workspaceId": "ws_01a111ef-bff6-751c-9f91-e92b41e42ae4",
+        "createdAt": "2026-10-06T15:58:08.530Z",
+        "version": 2,
+        "inputsFingerprint": "da288fd91afcad401b0a713e05eea3ff2f3a76ce1e35fd01f52fb755d6ec2e7c",
+        "phase": "completed",
+        "perFeatureResults": [
+          {
+            "featureId": "fea_01a111ef-c3a0-706b-9e94-b262b7a1e99d",
+            "status": "ready",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a111ef-c499-7726-a5a3-cd4883232af8",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": []
+          },
+          {
+            "featureId": "fea_01a111ef-c3a2-71f5-8952-d27dffba4889",
+            "status": "partial",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a111ef-ea2c-72e8-bfcc-0a4f703f2389",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": []
+          },
+          {
+            "featureId": "fea_01a111ef-c3a2-71f5-8952-d6ad76ca2e0c",
+            "status": "unreachable",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a111f0-061a-7589-b98f-6d09c9ebfa77",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": [
+              "login_required"
+            ]
+          },
+          {
+            "featureId": "fea_01a111ef-c3a3-72a0-9261-c398f996b7d1",
+            "status": "unreachable",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a111f0-1fc9-72fa-9fd3-d11669e6b5ce",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": [
+              "login_required"
+            ]
+          }
+        ],
+        "limits": {
+          "attemptTimeoutMs": 240000
+        },
+        "usage": {
+          "attempts": [
+            {
+              "jobId": "dsc_01a111ef-c499-7726-a5a3-bf40fb7bf52f",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a111ef-e7c6-7077-9b5a-e37a35d06e8a",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 263,
+                      "outputTokens": 147,
+                      "reasoningTokens": 139
+                    }
+                  }
+                ],
+                "runtimeMs": 9616.701517000001
+              }
+            },
+            {
+              "jobId": "dsc_01a111ef-ea2c-72e8-bfcb-fa8570c4cbc1",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a111f0-04a1-732c-99a9-6af4c623a253",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 244,
+                      "outputTokens": 115,
+                      "reasoningTokens": 107
+                    }
+                  }
+                ],
+                "runtimeMs": 7148.606812
+              }
+            },
+            {
+              "jobId": "dsc_01a111f0-0619-702d-be36-5229575029bf",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a111f0-1e48-772b-a818-b253e959c1de",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 257,
+                      "outputTokens": 77,
+                      "reasoningTokens": 69
+                    }
+                  }
+                ],
+                "runtimeMs": 6573.819559
+              }
+            },
+            {
+              "jobId": "dsc_01a111f0-1fc9-72fa-9fd3-c18008f14f63",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a111f0-39f2-71ae-90e0-045eb48614cc",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 257,
+                      "outputTokens": 114,
+                      "reasoningTokens": 106
+                    }
+                  }
+                ],
+                "runtimeMs": 7091.788266
+              }
+            }
+          ],
+          "modelCalls": 4
+        },
+        "extensions": {
+          "testmaster:projectId": "prj_01a111ef-c001-759f-a669-b244147f556d",
+          "testmaster:environmentRevisionId": "evr_01a111ef-c393-708c-ba52-6ad198bb80ca",
+          "testmaster:retryOf": null,
+          "testmaster:children": [
+            "dsc_01a111ef-c499-7726-a5a3-bf40fb7bf52f",
+            "dsc_01a111ef-ea2c-72e8-bfcb-fa8570c4cbc1",
+            "dsc_01a111f0-0619-702d-be36-5229575029bf",
+            "dsc_01a111f0-1fc9-72fa-9fd3-c18008f14f63"
+          ],
+          "testmaster:partial": true
+        }
+      },
+      "retry": {
+        "id": "dsc_01a111f0-3b80-75bd-b646-28b36f8890c9",
+        "workspaceId": "ws_01a111ef-bff6-751c-9f91-e92b41e42ae4",
+        "createdAt": "2026-10-06T15:58:38.976Z",
+        "version": 2,
+        "inputsFingerprint": "79c0c02ece5d5129255d124908177aa43b93d57ce302e20d90f1ab0d95db1e84",
+        "phase": "completed",
+        "perFeatureResults": [
+          {
+            "errors": [],
+            "evidenceRefs": [
+              {
+                "relativePath": "browser/steps/explore-0-observation.json",
+                "snapshotId": "snp_01a111ef-c499-7726-a5a3-cd4883232af8"
+              }
+            ],
+            "featureId": "fea_01a111ef-c3a0-706b-9e94-b262b7a1e99d",
+            "status": "ready"
+          },
+          {
+            "errors": [],
+            "evidenceRefs": [
+              {
+                "relativePath": "browser/steps/explore-0-observation.json",
+                "snapshotId": "snp_01a111ef-ea2c-72e8-bfcc-0a4f703f2389"
+              }
+            ],
+            "featureId": "fea_01a111ef-c3a2-71f5-8952-d27dffba4889",
+            "status": "partial"
+          },
+          {
+            "errors": [
+              "login_required"
+            ],
+            "evidenceRefs": [
+              {
+                "relativePath": "browser/steps/explore-0-observation.json",
+                "snapshotId": "snp_01a111f0-1fc9-72fa-9fd3-d11669e6b5ce"
+              }
+            ],
+            "featureId": "fea_01a111ef-c3a3-72a0-9261-c398f996b7d1",
+            "status": "unreachable"
+          },
+          {
+            "featureId": "fea_01a111ef-c3a2-71f5-8952-d6ad76ca2e0c",
+            "status": "unreachable",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a111f0-3b81-7587-838c-d1fc9f98588c",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": [
+              "login_required"
+            ]
+          }
+        ],
+        "limits": {
+          "attemptTimeoutMs": 60000
+        },
+        "usage": {
+          "modelCalls": 1,
+          "observedRoutes": 1,
+          "calls": [
+            {
+              "id": "mdl_01a111f0-5546-739b-8e65-9e6e14663c7b",
+              "cost": "unknown",
+              "usage": {
+                "inputTokens": 257,
+                "outputTokens": 139,
+                "reasoningTokens": 131
+              }
+            }
+          ],
+          "runtimeMs": 7140.888185
+        },
+        "extensions": {
+          "testmaster:projectId": "prj_01a111ef-c001-759f-a669-b244147f556d",
+          "testmaster:environmentRevisionId": "evr_01a111ef-c393-708c-ba52-6ad198bb80ca",
+          "testmaster:retryOf": "dsc_01a111ef-c492-71a4-b744-699437b8ed98",
+          "testmaster:featureMap": {
+            "projectId": "prj_01a111ef-c001-759f-a669-b244147f556d",
+            "version": 1,
+            "features": [
+              {
+                "createdAt": "2026-10-06T15:58:08.290Z",
+                "endpointRefs": [],
+                "extensions": {},
+                "id": "fea_01a111ef-c3a2-71f5-8952-d6ad76ca2e0c",
+                "projectId": "prj_01a111ef-c001-759f-a669-b244147f556d",
+                "requirementRefs": [],
+                "routeRefs": [
+                  "/orders"
+                ],
+                "stableKey": "/orders",
+                "version": 1,
+                "workspaceId": "ws_01a111ef-bff6-751c-9f91-e92b41e42ae4"
+              }
+            ],
+            "sourceRevisionIds": [],
+            "status": "partial"
+          },
+          "testmaster:evidenceBundle": {
+            "bundleDir": "/tmp/tm-m1-NU63Nt/repo/.testmaster/runs/ws_01a111ef-bff6-751c-9f91-e92b41e42ae4/run_01a111f0-3b81-7587-838c-c655c0c4aae1/att_01a111f0-3b81-7587-838c-c99d4442aa88",
+            "manifestSha256": "40c3eaa3ecfefa07eb4444c72271c747cd4eb1ed9ea775ea9c798a6767672215"
+          },
+          "testmaster:partial": true,
+          "testmaster:reasonCode": "assertions_satisfied",
+          "testmaster:resolutionFailures": [],
+          "testmaster:featureStates": [
+            {
+              "featureId": "fea_01a111ef-c3a2-71f5-8952-d6ad76ca2e0c",
+              "state": "unreachable",
+              "reason": "login_required"
+            }
+          ],
+          "testmaster:diagnostics": [
+            {
+              "path": "logs/protocol.json",
+              "text": ""
+            }
+          ]
+        }
+      },
+      "deltaModelCalls": 1,
+      "videoBytes": 41154
+    }
+  ],
+  "limitations": [
+    "Full state is bounded to the operator-declared completion text; feature map is not complete code or business coverage."
+  ]
+}

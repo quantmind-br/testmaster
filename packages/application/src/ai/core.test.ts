@@ -175,6 +175,56 @@ it("bounded model repairs never persist ready requirements or active tests", asy
   expect(f.app.tests.list(f.projectId)).toEqual([]);
   expect(f.app.usage.get(f.projectId).calls).toHaveLength(3);
 });
+it("normalization resolves cited evidence handles to exact supplied refs and rejects unknown handles", async () => {
+  const f = await fixture();
+  await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must report ok.");
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "prd.md"),
+    format: "markdown",
+  });
+  f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
+  const requirement = (evidenceIds: string[]) => ({
+    requirements: [
+      {
+        key: "health",
+        text: "Health reports ok",
+        acceptanceCriteria: ["Health reports ok"],
+        evidenceIds,
+        originKind: "explicit",
+        confidence: null,
+        reason: "Explicit PRD",
+      },
+    ],
+    conflicts: [],
+    openQuestions: [],
+  });
+  f.setOutput(requirement(["E99"]));
+  await expect(
+    f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [source.revision.id],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: "Requirement references evidence outside supplied sources",
+  });
+  expect(f.app.requirements.list(f.projectId)).toEqual([]);
+  const last = source.chunks.at(-1);
+  if (!last) throw new Error("No source chunk");
+  f.setOutput(requirement([`E${source.chunks.length}`, `E${source.chunks.length}`]));
+  const normalized = await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [source.revision.id],
+  });
+  expect(normalized.requirements[0]?.sourceRefs).toEqual([last.evidenceRef]);
+  const prompt = ((f.payloads.at(-1)?.messages ?? []) as { content: string }[])
+    .map((message) => message.content)
+    .join("\n");
+  expect(prompt).toContain(`"evidenceId":"E${source.chunks.length}"`);
+  expect(prompt).not.toContain(last.evidenceRef.contentHash);
+});
 it("subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff", async () => {
   const f = await fixture();
   await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must report ok.");
@@ -184,15 +234,13 @@ it("subset retries and concurrent duplicates create only selected generated revi
     path: join(f.root, "prd.md"),
     format: "markdown",
   });
-  const ref = source.chunks[0]?.evidenceRef;
-  if (!ref) throw new Error("No source chunk");
   f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"], true);
   f.setOutput({
     requirements: ["A", "B", "C"].map((key) => ({
       key,
       text: `Health requirement ${key}`,
       acceptanceCriteria: ["Health reports ok"],
-      sourceRefs: [ref],
+      evidenceIds: ["E1"],
       originKind: "user_spec",
       confidence: null,
       reason: "Explicit PRD",
@@ -211,7 +259,7 @@ it("subset retries and concurrent duplicates create only selected generated revi
       const plan = scaffoldPlan("backend");
       plan.name = `Scenario ${index}`;
       plan.requirementRefs = [requirement.id];
-      return { plan, requirementRefs: [requirement.id], evidenceRefs: [ref], warnings: [] };
+      return { plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] };
     }),
   });
   const batch = await f.app.proposals.generate({ projectId: f.projectId });
@@ -378,11 +426,11 @@ it("wrong code inference cannot be laundered into an approved PRD oracle", async
   });
   f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
   f.setOutput({
-    requirements: [desired, code].map((source, index) => ({
+    requirements: [1, desired.chunks.length + 1].map((handle, index) => ({
       key: `r${index}`,
       text: index ? "Healthy is false" : "Healthy is true",
       acceptanceCriteria: [index ? "healthy=false" : "healthy=true"],
-      sourceRefs: [source.chunks[0]?.evidenceRef],
+      evidenceIds: [`E${handle}`],
       originKind: "explicit",
       confidence: null,
       reason: "A compromised model claims both are explicit",
@@ -424,7 +472,7 @@ it("source and code updates supersede descendants without mutating immutable tes
           key: "health",
           text: "Health reports ok",
           acceptanceCriteria: ["Health reports ok"],
-          sourceRefs: [source.chunks[0]?.evidenceRef],
+          evidenceIds: ["E1"],
           originKind: "explicit",
           confidence: null,
           reason: "PRD",
@@ -447,7 +495,7 @@ it("source and code updates supersede descendants without mutating immutable tes
         {
           plan,
           requirementRefs: [requirement.id],
-          evidenceRefs: [source.chunks[0]?.evidenceRef],
+          evidenceIds: ["E1"],
           warnings: [],
         },
       ],

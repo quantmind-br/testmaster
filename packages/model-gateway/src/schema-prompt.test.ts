@@ -37,7 +37,7 @@ it("shares repeated generated executable schema nodes without widening validatio
           ],
         },
         requirementRefs: ["req_01900000-0000-7000-8000-000000000001"],
-        evidenceRefs: [{ sourceRevisionId: "svr_01900000-0000-7000-8000-000000000001" }],
+        evidenceIds: ["E1"],
         warnings: [],
       },
     ],
@@ -49,7 +49,7 @@ it("shares repeated generated executable schema nodes without widening validatio
       {
         plan: { schemaVersion: "1.0.0", kind: "executable", steps: [] },
         requirementRefs: [],
-        evidenceRefs: [],
+        evidenceIds: [],
         warnings: [],
       },
     ],

@@ -1,5 +1,6 @@
 import { ContractError, type ExecutablePlan, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
+import type { EvidenceCatalog } from "../sources/evidence.js";
 import type { SourceEvidenceRef } from "../sources/types.js";
 export interface GeneratedProposal {
   plan: ExecutablePlan;
@@ -38,12 +39,32 @@ export function validateProposalPlan(input: unknown): ExecutablePlan {
     );
   return plan;
 }
-export function validateGeneratedProposals(
+/** Validates model proposal output and resolves evidence handles to supplied refs. */
+export function resolveGeneratedProposals(
   input: unknown,
+  requirementIds: string[],
+  catalog: EvidenceCatalog,
+): GeneratedProposals {
+  const output = validate<{
+    proposals: (Omit<GeneratedProposal, "evidenceRefs"> & { evidenceIds: string[] })[];
+  }>("AIProposalsOutput", input);
+  return validateGeneratedProposals(
+    {
+      proposals: output.proposals.map(({ evidenceIds, ...proposal }) => ({
+        ...proposal,
+        evidenceRefs: catalog.resolve(evidenceIds, "Proposal evidence is not grounded"),
+      })),
+    },
+    requirementIds,
+    catalog.refs,
+  );
+}
+/** Semantic checks over resolved proposals; duplicate plans are dropped. */
+export function validateGeneratedProposals(
+  result: GeneratedProposals,
   requirementIds: string[],
   evidence: SourceEvidenceRef[],
 ): GeneratedProposals {
-  const result = validate<GeneratedProposals>("AIProposalsOutput", input);
   const allowedRequirements = new Set(requirementIds);
   const allowedEvidence = new Set(evidence.map((ref) => canonicalJson(ref)));
   const hashes = new Set<string>();
@@ -54,7 +75,10 @@ export function validateGeneratedProposals(
       (proposal.plan.requirementRefs ?? []).some((id) => !allowedRequirements.has(id))
     )
       throw new ContractError("INVALID_ARGUMENT", "Proposal references an unapproved requirement");
-    if (proposal.evidenceRefs.some((ref) => !allowedEvidence.has(canonicalJson(ref))))
+    if (
+      !proposal.evidenceRefs.length ||
+      proposal.evidenceRefs.some((ref) => !allowedEvidence.has(canonicalJson(ref)))
+    )
       throw new ContractError("INVALID_ARGUMENT", "Proposal evidence is not grounded");
     const hash = semanticHash(proposal.plan, "plan");
     if (hashes.has(hash)) return false;

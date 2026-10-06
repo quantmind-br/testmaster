@@ -1,0 +1,1232 @@
+{
+  "error": null,
+  "normalized": {
+    "requirements": [
+      {
+        "key": "batch-1-SHOP-AUTH-001",
+        "text": "Submitting an empty password displays exactly \"Password is required\" and creates no authenticated session.",
+        "acceptanceCriteria": [
+          "Empty password submission returns error message \"Password is required\" exactly",
+          "No authenticated session is created on empty password submission"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E4 as SHOP-AUTH-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+            "length": 195,
+            "offset": 165,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-AUTH-002",
+        "text": "Order endpoints require a bearer token and return HTTP 401 when the token is absent.",
+        "acceptanceCriteria": [
+          "Requesting an order without a bearer token returns HTTP 401",
+          "Requesting an order with a valid bearer token succeeds"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E4 as SHOP-AUTH-002.",
+        "sourceRefs": [
+          {
+            "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+            "length": 195,
+            "offset": 165,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-PRICE-001",
+        "text": "All prices are represented as integer cents; three Precision Widgets at 1005 cents each total 3015 cents.",
+        "acceptanceCriteria": [
+          "Prices are stored and displayed as integer cents",
+          "3 × 1005 cents equals 3015 cents in checkout"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E6 as SHOP-PRICE-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-SCHEMA-001",
+        "text": "Product objects expose exactly the fields id, name, and priceCents.",
+        "acceptanceCriteria": [
+          "Product JSON contains id, name, and priceCents fields"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E6 as SHOP-SCHEMA-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-PAGING-001",
+        "text": "Offset-based pagination enumerates every product exactly once across all pages.",
+        "acceptanceCriteria": [
+          "Iterating through all pages returns each product exactly once with no duplicates or omissions"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E6 as SHOP-PAGING-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-ORDER-001",
+        "text": "A successful checkout persists an order that remains visible after a page reload.",
+        "acceptanceCriteria": [
+          "After checkout completes, the order appears in the orders list",
+          "Reloading the page still shows the persisted order"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E6 as SHOP-ORDER-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-IDEMPOTENCY-001",
+        "text": "Repeating an order with the same Idempotency-Key returns the original order and never creates a duplicate.",
+        "acceptanceCriteria": [
+          "Second request with same Idempotency-Key returns the first order",
+          "No duplicate order is persisted"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E6 as SHOP-IDEMPOTENCY-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-1-SHOP-EMPTY-001",
+        "text": "Empty-cart checkout returns HTTP 400.",
+        "acceptanceCriteria": [
+          "Submitting checkout with an empty cart returns HTTP 400"
+        ],
+        "originKind": "explicit",
+        "confidence": 0.6,
+        "reason": "Stated in E6 as SHOP-EMPTY-001, but the same chunk flags a conflict with the OpenAPI declaring 422; status pending reviewer adjudication.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-2-SHOP-HEALTH-001",
+        "text": "GET /health returns HTTP 200 with status \"ok\".",
+        "acceptanceCriteria": [
+          "A GET request to /health returns status code 200",
+          "The response body contains status field equal to \"ok\""
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E8 as SHOP-HEALTH-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+            "length": 481,
+            "offset": 1065,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-2-SHOP-HOOK-001",
+        "text": "Checkout exposes data-testid=\"checkout-button\"; renaming the hook is nonfunctional drift, not a business regression.",
+        "acceptanceCriteria": [
+          "Checkout page contains an element with attribute data-testid=\"checkout-button\"",
+          "Renaming this test hook does not constitute a functional regression"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E8 as SHOP-HOOK-001.",
+        "sourceRefs": [
+          {
+            "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+            "length": 481,
+            "offset": 1065,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-2-SHOP-PROFILE-001",
+        "text": "Profile files are uploaded as raw bytes and downloaded without any transformation.",
+        "acceptanceCriteria": [
+          "Uploaded profile file bytes are stored verbatim",
+          "Downloaded profile file bytes are identical to the original upload"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Explicitly stated in E8: raw byte upload/download with no changes.",
+        "sourceRefs": [
+          {
+            "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+            "length": 481,
+            "offset": 1065,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-2-SHOP-TERMS-001",
+        "text": "Terms open in a popup.",
+        "acceptanceCriteria": [
+          "Activating the Terms link opens a popup window rather than navigating in place"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly stated in E8.",
+        "sourceRefs": [
+          {
+            "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+            "length": 481,
+            "offset": 1065,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-2-SHOP-DELIVERY-001",
+        "text": "A same-origin delivery iframe supports Standard and Express shipping options.",
+        "acceptanceCriteria": [
+          "Delivery iframe is loaded from the same origin as the host page",
+          "Both Standard and Express options are available within the iframe"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Explicitly stated in E8.",
+        "sourceRefs": [
+          {
+            "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+            "length": 481,
+            "offset": 1065,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-2-SHOP-CATALOG-001",
+        "text": "Catalog readiness is signaled via data-testid=\"catalog-ready\" after async load; navigation is SPA with browser history.",
+        "acceptanceCriteria": [
+          "An element with data-testid=\"catalog-ready\" appears after asynchronous catalog loading completes",
+          "Page navigation occurs within the SPA without full reload and updates browser history"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Both statements appear together in one sentence in E8.",
+        "sourceRefs": [
+          {
+            "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+            "length": 481,
+            "offset": 1065,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          }
+        ]
+      },
+      {
+        "key": "batch-3-AUTH-CREATE-001",
+        "text": "POST createToken requires a JSON body with email and password (minLength 1) and returns HTTP 200 with a Bearer token.",
+        "acceptanceCriteria": [
+          "Request omitting email or password is rejected",
+          "Password shorter than 1 character is rejected",
+          "Valid email+password returns 200 with Bearer token body"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly defined by the OpenAPI createToken operation schema in E17.",
+        "sourceRefs": [
+          {
+            "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+            "jsonPointer": "/paths/~1api~1auth~1token/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-3-AUTH-REFRESH-001",
+        "text": "POST refreshToken requires email and password (minLength 1) and returns HTTP 200 with a fresh Bearer token.",
+        "acceptanceCriteria": [
+          "Request omitting email or password is rejected",
+          "Password shorter than 1 character is rejected",
+          "Valid email+password returns 200 with fresh token"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Directly defined by the OpenAPI refreshToken operation schema in E18.",
+        "sourceRefs": [
+          {
+            "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+            "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-4-PRODUCTS-LIST-PAGING",
+        "text": "listProducts accepts limit (default 2, min 1, max 100) and offset (default 0, min 0); response contains items, nextOffset, total.",
+        "acceptanceCriteria": [
+          "GET listProducts with no params returns 2 items",
+          "limit > 100 or < 1 is rejected",
+          "Response JSON includes non-null items, nextOffset, and total"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Parameter schemas and response shape are directly declared in the OpenAPI operation E19.",
+        "sourceRefs": [
+          {
+            "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+            "jsonPointer": "/paths/~1api~1products/get",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-4-PRODUCTS-CREATE",
+        "text": "createProduct requires bearerAuth; body must include name (min 1 char) and priceCents (min 0, integer); returns 201.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Body missing name or priceCents returns validation error",
+          "Successful creation returns 201 with id, name, priceCents"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Security, required fields, min constraints, and 201 response are specified in E20.",
+        "sourceRefs": [
+          {
+            "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+            "jsonPointer": "/paths/~1api~1products/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-4-PRODUCTS-GET",
+        "text": "getProduct requires bearerAuth; returns 200 with id, name, priceCents.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Successful GET returns 200 JSON with id, name, priceCents"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Security and response schema are directly declared in E21.",
+        "sourceRefs": [
+          {
+            "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+            "jsonPointer": "/paths/~1api~1products~1{id}/get",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-4-PRODUCTS-UPDATE",
+        "text": "updateProduct requires bearerAuth; body must include name (min 1 char) and priceCents (min 0, integer); returns 200.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Body missing name or priceCents returns validation error",
+          "Successful update returns 200 with updated product"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Security, required body fields, constraints, and 200 response are in E22.",
+        "sourceRefs": [
+          {
+            "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+            "jsonPointer": "/paths/~1api~1products~1{id}/put",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-4-PRODUCTS-DELETE",
+        "text": "deleteProduct requires bearerAuth; returns 200 on success.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Successful delete returns HTTP 200"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Security requirement and 200 response are directly stated in E23.",
+        "sourceRefs": [
+          {
+            "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+            "jsonPointer": "/paths/~1api~1products~1{id}/delete",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-4-CART-GET",
+        "text": "getCart requires bearerAuth and returns a persistent cart on 200.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Successful GET returns HTTP 200 with cart data"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Security and response description are declared in E24.",
+        "sourceRefs": [
+          {
+            "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+            "jsonPointer": "/paths/~1api~1cart/get",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-5-CART-SET-ITEM",
+        "text": "setCartItem requires bearerAuth; body needs productId (string) and quantity (integer, min 1), both required, no extra properties; returns 200 'Cart updated'.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Body missing productId or quantity returns validation error",
+          "quantity < 1 returns validation error",
+          "Extra properties in body are rejected",
+          "Valid request returns HTTP 200 with 'Cart updated'"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Operation schema in E25 defines required fields, constraints, additionalProperties false, and security.",
+        "sourceRefs": [
+          {
+            "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+            "jsonPointer": "/paths/~1api~1cart/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-5-CART-CLEAR",
+        "text": "clearCart requires bearerAuth and returns 200 'Cart cleared'.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Authenticated request returns HTTP 200 with 'Cart cleared'"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Operation in E26 declares bearerAuth security and 200 response.",
+        "sourceRefs": [
+          {
+            "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+            "jsonPointer": "/paths/~1api~1cart/delete",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-5-ORDERS-LIST",
+        "text": "listOrders requires bearerAuth; returns 200 with orders or 401 when unauthenticated.",
+        "acceptanceCriteria": [
+          "Request without bearer token returns HTTP 401",
+          "Authenticated request returns HTTP 200 with orders list"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "E27 declares bearerAuth security plus explicit 401 and 200 responses.",
+        "sourceRefs": [
+          {
+            "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+            "jsonPointer": "/paths/~1api~1orders/get",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-5-ORDERS-CREATE",
+        "text": "createOrder requires bearerAuth and a mandatory Idempotency-Key header (min length 1); returns 201, 200 on replay, 401, or 422 for empty cart.",
+        "acceptanceCriteria": [
+          "Missing Idempotency-Key header rejects the request",
+          "Idempotency-Key shorter than 1 character is rejected",
+          "Request without bearer token returns 401",
+          "First valid request returns 201 'Persisted order'",
+          "Replay with same key returns 200 'Idempotent replay'",
+          "Empty-cart request returns 422"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "E28 specifies required header param, security, and all response codes.",
+        "sourceRefs": [
+          {
+            "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+            "jsonPointer": "/paths/~1api~1orders/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-5-USERS-CREATE",
+        "text": "createUser requires bearerAuth; body needs email (format email) and password (min length 1), no extra properties; returns 201 'Cleanup-owned user'.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Body missing email or password returns validation error",
+          "Non-email-format email string is rejected",
+          "Password shorter than 1 character is rejected",
+          "Extra properties in body are rejected",
+          "Valid request returns HTTP 201 with 'Cleanup-owned user'"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "E29 schema defines required fields, format, minLength, additionalProperties false, and 201 response.",
+        "sourceRefs": [
+          {
+            "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+            "jsonPointer": "/paths/~1api~1users/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-5-USERS-DELETE",
+        "text": "deleteUser requires bearerAuth and returns 200 'Delete owned user'.",
+        "acceptanceCriteria": [
+          "Request without bearer token is rejected",
+          "Authenticated request returns HTTP 200"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "E30 declares bearerAuth security and a 200 response.",
+        "sourceRefs": [
+          {
+            "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+            "jsonPointer": "/paths/~1api~1users~1{id}/delete",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-6-PROFILE-UPLOAD-001",
+        "text": "uploadProfile requires bearerAuth, accepts a required application/octet-stream binary body, and returns HTTP 201.",
+        "acceptanceCriteria": [
+          "Request without bearerAuth token is rejected",
+          "Body must be octet-stream binary; missing body is rejected",
+          "Successful upload returns HTTP 201 with description 'File uploaded'"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Operation E31 declares bearerAuth security, required octet-stream body, and 201 response.",
+        "sourceRefs": [
+          {
+            "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+            "jsonPointer": "/paths/~1api~1profile~1file/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-6-PROFILE-DOWNLOAD-001",
+        "text": "downloadProfile requires bearerAuth and returns HTTP 200 with an application/octet-stream binary body.",
+        "acceptanceCriteria": [
+          "Request without bearerAuth token is rejected",
+          "Successful download returns HTTP 200 with octet-stream binary profile bytes"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "Operation E32 declares bearerAuth security and 200 octet-stream response.",
+        "sourceRefs": [
+          {
+            "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+            "jsonPointer": "/paths/~1api~1profile~1file/get",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      },
+      {
+        "key": "batch-6-SERVER-URL-001",
+        "text": "The API server base URL is http://127.0.0.1:3000.",
+        "acceptanceCriteria": [
+          "OpenAPI servers block declares exactly one URL: http://127.0.0.1:3000"
+        ],
+        "originKind": "explicit",
+        "confidence": 1,
+        "reason": "E34 servers array contains the single entry with that URL.",
+        "sourceRefs": [
+          {
+            "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+            "jsonPointer": "/servers",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      }
+    ],
+    "conflicts": [
+      {
+        "keys": [
+          "batch-1-SHOP-EMPTY-001",
+          "batch-5-ORDERS-CREATE"
+        ],
+        "reason": "The PRD requirement SHOP-EMPTY-001 explicitly states that empty-cart checkout returns HTTP 400, while the OpenAPI specification for the createOrder operation declares HTTP 422 for the same condition. The source text notes this as a deliberate conflict requiring adjudication.",
+        "sourceRefs": [
+          {
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "relativePath": "PRD.md",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34"
+          },
+          {
+            "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+            "jsonPointer": "/paths/~1api~1orders/post",
+            "relativePath": "openapi.yaml",
+            "sourceRevisionId": "svr_01a11162-ab67-7052-aa5a-5a2b38dcc265"
+          }
+        ]
+      }
+    ],
+    "openQuestions": [
+      "E6 marks SHOP-EMPTY-001 as a deliberate conflict: the PRD states HTTP 400 while the OpenAPI declares HTTP 422 for empty-cart checkout. Only one sourceRevisionId exists, so this cannot be recorded as a cross-revision conflict. Reviewer must adjudicate which status code is authoritative.",
+      "E2 notes the license is UNLICENSED and pending maintainer decision; product requirements do not address licensing.",
+      "E10 references an 'intentional status conflict' requiring adjudication but does not specify which prior requirement or HTTP status pair is affected; no second sourceRevisionId is present in these chunks to form a verifiable conflict.",
+      "E12 mentions REFERENCE_SHOP_MUTANT as a negative-control toggle; the exact behavioral difference is not specified in the current chunks.",
+      "E13–E15 describe test-harness and Chromium sandbox configuration for development; are these considered product requirements or purely internal tooling constraints?",
+      "listProducts in E19 does not require bearerAuth while all other product operations do; confirm whether the listing is intentionally public.",
+      "The exact response body schema for deleteProduct (E23) and getCart (E24) is unspecified beyond the description string.",
+      "E28 (current revision) declares 422 for empty-cart createOrder; prior requirement batch-1-SHOP-EMPTY-001 (citing E6) states 400. E6's sourceRevisionId is unknown here, so a cross-revision conflict cannot be confirmed. Reviewer should adjudicate which status code applies.",
+      "E25 setCartItem uses additionalProperties:false but does not define a path parameter or resource identifier; unclear whether the cart item is identified solely by productId or also by an existing item id.",
+      "E29 createUser returns 'Cleanup-owned user' which suggests a test-helper or internal endpoint; product-facing behavior and visibility scope are not stated.",
+      "E34 specifies http://127.0.0.1:3000 which is a localhost address; confirm whether this is the intended production server URL or a development-only entry in the spec."
+    ]
+  },
+  "calls": [
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 1448,
+        "outputTokens": 1424,
+        "reasoningTokens": 549
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-1-SHOP-AUTH-001",
+            "text": "Submitting an empty password displays exactly \"Password is required\" and creates no authenticated session.",
+            "acceptanceCriteria": [
+              "Empty password submission returns error message \"Password is required\" exactly",
+              "No authenticated session is created on empty password submission"
+            ],
+            "evidenceIds": [
+              "E4"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E4 as SHOP-AUTH-001."
+          },
+          {
+            "key": "batch-1-SHOP-AUTH-002",
+            "text": "Order endpoints require a bearer token and return HTTP 401 when the token is absent.",
+            "acceptanceCriteria": [
+              "Requesting an order without a bearer token returns HTTP 401",
+              "Requesting an order with a valid bearer token succeeds"
+            ],
+            "evidenceIds": [
+              "E4"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E4 as SHOP-AUTH-002."
+          },
+          {
+            "key": "batch-1-SHOP-PRICE-001",
+            "text": "All prices are represented as integer cents; three Precision Widgets at 1005 cents each total 3015 cents.",
+            "acceptanceCriteria": [
+              "Prices are stored and displayed as integer cents",
+              "3 × 1005 cents equals 3015 cents in checkout"
+            ],
+            "evidenceIds": [
+              "E6"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E6 as SHOP-PRICE-001."
+          },
+          {
+            "key": "batch-1-SHOP-SCHEMA-001",
+            "text": "Product objects expose exactly the fields id, name, and priceCents.",
+            "acceptanceCriteria": [
+              "Product JSON contains id, name, and priceCents fields"
+            ],
+            "evidenceIds": [
+              "E6"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E6 as SHOP-SCHEMA-001."
+          },
+          {
+            "key": "batch-1-SHOP-PAGING-001",
+            "text": "Offset-based pagination enumerates every product exactly once across all pages.",
+            "acceptanceCriteria": [
+              "Iterating through all pages returns each product exactly once with no duplicates or omissions"
+            ],
+            "evidenceIds": [
+              "E6"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E6 as SHOP-PAGING-001."
+          },
+          {
+            "key": "batch-1-SHOP-ORDER-001",
+            "text": "A successful checkout persists an order that remains visible after a page reload.",
+            "acceptanceCriteria": [
+              "After checkout completes, the order appears in the orders list",
+              "Reloading the page still shows the persisted order"
+            ],
+            "evidenceIds": [
+              "E6"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E6 as SHOP-ORDER-001."
+          },
+          {
+            "key": "batch-1-SHOP-IDEMPOTENCY-001",
+            "text": "Repeating an order with the same Idempotency-Key returns the original order and never creates a duplicate.",
+            "acceptanceCriteria": [
+              "Second request with same Idempotency-Key returns the first order",
+              "No duplicate order is persisted"
+            ],
+            "evidenceIds": [
+              "E6"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E6 as SHOP-IDEMPOTENCY-001."
+          },
+          {
+            "key": "batch-1-SHOP-EMPTY-001",
+            "text": "Empty-cart checkout returns HTTP 400.",
+            "acceptanceCriteria": [
+              "Submitting checkout with an empty cart returns HTTP 400"
+            ],
+            "evidenceIds": [
+              "E6"
+            ],
+            "originKind": "explicit",
+            "confidence": 0.6,
+            "reason": "Stated in E6 as SHOP-EMPTY-001, but the same chunk flags a conflict with the OpenAPI declaring 422; status pending reviewer adjudication."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "E6 marks SHOP-EMPTY-001 as a deliberate conflict: the PRD states HTTP 400 while the OpenAPI declares HTTP 422 for empty-cart checkout. Only one sourceRevisionId exists, so this cannot be recorded as a cross-revision conflict. Reviewer must adjudicate which status code is authoritative.",
+          "E2 notes the license is UNLICENSED and pending maintainer decision; product requirements do not address licensing."
+        ]
+      }
+    },
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 2207,
+        "outputTokens": 1714,
+        "reasoningTokens": 811
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-2-SHOP-HEALTH-001",
+            "text": "GET /health returns HTTP 200 with status \"ok\".",
+            "acceptanceCriteria": [
+              "A GET request to /health returns status code 200",
+              "The response body contains status field equal to \"ok\""
+            ],
+            "evidenceIds": [
+              "E8"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E8 as SHOP-HEALTH-001."
+          },
+          {
+            "key": "batch-2-SHOP-HOOK-001",
+            "text": "Checkout exposes data-testid=\"checkout-button\"; renaming the hook is nonfunctional drift, not a business regression.",
+            "acceptanceCriteria": [
+              "Checkout page contains an element with attribute data-testid=\"checkout-button\"",
+              "Renaming this test hook does not constitute a functional regression"
+            ],
+            "evidenceIds": [
+              "E8"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E8 as SHOP-HOOK-001."
+          },
+          {
+            "key": "batch-2-SHOP-PROFILE-001",
+            "text": "Profile files are uploaded as raw bytes and downloaded without any transformation.",
+            "acceptanceCriteria": [
+              "Uploaded profile file bytes are stored verbatim",
+              "Downloaded profile file bytes are identical to the original upload"
+            ],
+            "evidenceIds": [
+              "E8"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Explicitly stated in E8: raw byte upload/download with no changes."
+          },
+          {
+            "key": "batch-2-SHOP-TERMS-001",
+            "text": "Terms open in a popup.",
+            "acceptanceCriteria": [
+              "Activating the Terms link opens a popup window rather than navigating in place"
+            ],
+            "evidenceIds": [
+              "E8"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly stated in E8."
+          },
+          {
+            "key": "batch-2-SHOP-DELIVERY-001",
+            "text": "A same-origin delivery iframe supports Standard and Express shipping options.",
+            "acceptanceCriteria": [
+              "Delivery iframe is loaded from the same origin as the host page",
+              "Both Standard and Express options are available within the iframe"
+            ],
+            "evidenceIds": [
+              "E8"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Explicitly stated in E8."
+          },
+          {
+            "key": "batch-2-SHOP-CATALOG-001",
+            "text": "Catalog readiness is signaled via data-testid=\"catalog-ready\" after async load; navigation is SPA with browser history.",
+            "acceptanceCriteria": [
+              "An element with data-testid=\"catalog-ready\" appears after asynchronous catalog loading completes",
+              "Page navigation occurs within the SPA without full reload and updates browser history"
+            ],
+            "evidenceIds": [
+              "E8"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Both statements appear together in one sentence in E8."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "E10 references an 'intentional status conflict' requiring adjudication but does not specify which prior requirement or HTTP status pair is affected; no second sourceRevisionId is present in these chunks to form a verifiable conflict.",
+          "E12 mentions REFERENCE_SHOP_MUTANT as a negative-control toggle; the exact behavioral difference is not specified in the current chunks."
+        ]
+      }
+    },
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 2941,
+        "outputTokens": 1323,
+        "reasoningTokens": 1046
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-3-AUTH-CREATE-001",
+            "text": "POST createToken requires a JSON body with email and password (minLength 1) and returns HTTP 200 with a Bearer token.",
+            "acceptanceCriteria": [
+              "Request omitting email or password is rejected",
+              "Password shorter than 1 character is rejected",
+              "Valid email+password returns 200 with Bearer token body"
+            ],
+            "evidenceIds": [
+              "E17"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly defined by the OpenAPI createToken operation schema in E17."
+          },
+          {
+            "key": "batch-3-AUTH-REFRESH-001",
+            "text": "POST refreshToken requires email and password (minLength 1) and returns HTTP 200 with a fresh Bearer token.",
+            "acceptanceCriteria": [
+              "Request omitting email or password is rejected",
+              "Password shorter than 1 character is rejected",
+              "Valid email+password returns 200 with fresh token"
+            ],
+            "evidenceIds": [
+              "E18"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Directly defined by the OpenAPI refreshToken operation schema in E18."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "E13–E15 describe test-harness and Chromium sandbox configuration for development; are these considered product requirements or purely internal tooling constraints?"
+        ]
+      }
+    },
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 3335,
+        "outputTokens": 1906,
+        "reasoningTokens": 1203
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-4-PRODUCTS-LIST-PAGING",
+            "text": "listProducts accepts limit (default 2, min 1, max 100) and offset (default 0, min 0); response contains items, nextOffset, total.",
+            "acceptanceCriteria": [
+              "GET listProducts with no params returns 2 items",
+              "limit > 100 or < 1 is rejected",
+              "Response JSON includes non-null items, nextOffset, and total"
+            ],
+            "evidenceIds": [
+              "E19"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Parameter schemas and response shape are directly declared in the OpenAPI operation E19."
+          },
+          {
+            "key": "batch-4-PRODUCTS-CREATE",
+            "text": "createProduct requires bearerAuth; body must include name (min 1 char) and priceCents (min 0, integer); returns 201.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Body missing name or priceCents returns validation error",
+              "Successful creation returns 201 with id, name, priceCents"
+            ],
+            "evidenceIds": [
+              "E20"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Security, required fields, min constraints, and 201 response are specified in E20."
+          },
+          {
+            "key": "batch-4-PRODUCTS-GET",
+            "text": "getProduct requires bearerAuth; returns 200 with id, name, priceCents.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Successful GET returns 200 JSON with id, name, priceCents"
+            ],
+            "evidenceIds": [
+              "E21"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Security and response schema are directly declared in E21."
+          },
+          {
+            "key": "batch-4-PRODUCTS-UPDATE",
+            "text": "updateProduct requires bearerAuth; body must include name (min 1 char) and priceCents (min 0, integer); returns 200.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Body missing name or priceCents returns validation error",
+              "Successful update returns 200 with updated product"
+            ],
+            "evidenceIds": [
+              "E22"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Security, required body fields, constraints, and 200 response are in E22."
+          },
+          {
+            "key": "batch-4-PRODUCTS-DELETE",
+            "text": "deleteProduct requires bearerAuth; returns 200 on success.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Successful delete returns HTTP 200"
+            ],
+            "evidenceIds": [
+              "E23"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Security requirement and 200 response are directly stated in E23."
+          },
+          {
+            "key": "batch-4-CART-GET",
+            "text": "getCart requires bearerAuth and returns a persistent cart on 200.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Successful GET returns HTTP 200 with cart data"
+            ],
+            "evidenceIds": [
+              "E24"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Security and response description are declared in E24."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "listProducts in E19 does not require bearerAuth while all other product operations do; confirm whether the listing is intentionally public.",
+          "The exact response body schema for deleteProduct (E23) and getCart (E24) is unspecified beyond the description string."
+        ]
+      }
+    },
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 3680,
+        "outputTokens": 2048,
+        "reasoningTokens": 848
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-5-CART-SET-ITEM",
+            "text": "setCartItem requires bearerAuth; body needs productId (string) and quantity (integer, min 1), both required, no extra properties; returns 200 'Cart updated'.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Body missing productId or quantity returns validation error",
+              "quantity < 1 returns validation error",
+              "Extra properties in body are rejected",
+              "Valid request returns HTTP 200 with 'Cart updated'"
+            ],
+            "evidenceIds": [
+              "E25"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Operation schema in E25 defines required fields, constraints, additionalProperties false, and security."
+          },
+          {
+            "key": "batch-5-CART-CLEAR",
+            "text": "clearCart requires bearerAuth and returns 200 'Cart cleared'.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Authenticated request returns HTTP 200 with 'Cart cleared'"
+            ],
+            "evidenceIds": [
+              "E26"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Operation in E26 declares bearerAuth security and 200 response."
+          },
+          {
+            "key": "batch-5-ORDERS-LIST",
+            "text": "listOrders requires bearerAuth; returns 200 with orders or 401 when unauthenticated.",
+            "acceptanceCriteria": [
+              "Request without bearer token returns HTTP 401",
+              "Authenticated request returns HTTP 200 with orders list"
+            ],
+            "evidenceIds": [
+              "E27"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "E27 declares bearerAuth security plus explicit 401 and 200 responses."
+          },
+          {
+            "key": "batch-5-ORDERS-CREATE",
+            "text": "createOrder requires bearerAuth and a mandatory Idempotency-Key header (min length 1); returns 201, 200 on replay, 401, or 422 for empty cart.",
+            "acceptanceCriteria": [
+              "Missing Idempotency-Key header rejects the request",
+              "Idempotency-Key shorter than 1 character is rejected",
+              "Request without bearer token returns 401",
+              "First valid request returns 201 'Persisted order'",
+              "Replay with same key returns 200 'Idempotent replay'",
+              "Empty-cart request returns 422"
+            ],
+            "evidenceIds": [
+              "E28"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "E28 specifies required header param, security, and all response codes."
+          },
+          {
+            "key": "batch-5-USERS-CREATE",
+            "text": "createUser requires bearerAuth; body needs email (format email) and password (min length 1), no extra properties; returns 201 'Cleanup-owned user'.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Body missing email or password returns validation error",
+              "Non-email-format email string is rejected",
+              "Password shorter than 1 character is rejected",
+              "Extra properties in body are rejected",
+              "Valid request returns HTTP 201 with 'Cleanup-owned user'"
+            ],
+            "evidenceIds": [
+              "E29"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "E29 schema defines required fields, format, minLength, additionalProperties false, and 201 response."
+          },
+          {
+            "key": "batch-5-USERS-DELETE",
+            "text": "deleteUser requires bearerAuth and returns 200 'Delete owned user'.",
+            "acceptanceCriteria": [
+              "Request without bearer token is rejected",
+              "Authenticated request returns HTTP 200"
+            ],
+            "evidenceIds": [
+              "E30"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "E30 declares bearerAuth security and a 200 response."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "E28 (current revision) declares 422 for empty-cart createOrder; prior requirement batch-1-SHOP-EMPTY-001 (citing E6) states 400. E6's sourceRevisionId is unknown here, so a cross-revision conflict cannot be confirmed. Reviewer should adjudicate which status code applies.",
+          "E25 setCartItem uses additionalProperties:false but does not define a path parameter or resource identifier; unclear whether the cart item is identified solely by productId or also by an existing item id.",
+          "E29 createUser returns 'Cleanup-owned user' which suggests a test-helper or internal endpoint; product-facing behavior and visibility scope are not stated."
+        ]
+      }
+    },
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 4119,
+        "outputTokens": 2996,
+        "reasoningTokens": 2611
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-6-PROFILE-UPLOAD-001",
+            "text": "uploadProfile requires bearerAuth, accepts a required application/octet-stream binary body, and returns HTTP 201.",
+            "acceptanceCriteria": [
+              "Request without bearerAuth token is rejected",
+              "Body must be octet-stream binary; missing body is rejected",
+              "Successful upload returns HTTP 201 with description 'File uploaded'"
+            ],
+            "evidenceIds": [
+              "E31"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Operation E31 declares bearerAuth security, required octet-stream body, and 201 response."
+          },
+          {
+            "key": "batch-6-PROFILE-DOWNLOAD-001",
+            "text": "downloadProfile requires bearerAuth and returns HTTP 200 with an application/octet-stream binary body.",
+            "acceptanceCriteria": [
+              "Request without bearerAuth token is rejected",
+              "Successful download returns HTTP 200 with octet-stream binary profile bytes"
+            ],
+            "evidenceIds": [
+              "E32"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "Operation E32 declares bearerAuth security and 200 octet-stream response."
+          },
+          {
+            "key": "batch-6-SERVER-URL-001",
+            "text": "The API server base URL is http://127.0.0.1:3000.",
+            "acceptanceCriteria": [
+              "OpenAPI servers block declares exactly one URL: http://127.0.0.1:3000"
+            ],
+            "evidenceIds": [
+              "E34"
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "reason": "E34 servers array contains the single entry with that URL."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "E34 specifies http://127.0.0.1:3000 which is a localhost address; confirm whether this is the intended production server URL or a development-only entry in the spec."
+        ]
+      }
+    },
+    {
+      "schema": "AIRequirementConflictsOutput",
+      "usage": {
+        "inputTokens": 8188,
+        "outputTokens": 2687,
+        "reasoningTokens": 2533
+      },
+      "output": {
+        "conflicts": [
+          {
+            "keys": [
+              "batch-1-SHOP-EMPTY-001",
+              "batch-5-ORDERS-CREATE"
+            ],
+            "reason": "The PRD requirement SHOP-EMPTY-001 explicitly states that empty-cart checkout returns HTTP 400, while the OpenAPI specification for the createOrder operation declares HTTP 422 for the same condition. The source text notes this as a deliberate conflict requiring adjudication.",
+            "evidenceIds": [
+              "E6",
+              "E28"
+            ]
+          }
+        ],
+        "openQuestions": []
+      }
+    }
+  ]
+}

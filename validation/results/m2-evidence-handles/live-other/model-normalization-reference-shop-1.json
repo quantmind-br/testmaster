@@ -1,0 +1,1010 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "model-normalization-reference-shop-1",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T16:06:01.430Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "model-normalization-reference-shop-1",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0b8dc859-1149-48d0-b3f3-3e6d44d2a15b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_730a8e76-bc8d-48ea-85bc-50009d56a681",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_68e2d325-050c-4314-bd8b-27c1575ecd6d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_13ce6677-5b9a-4ce6-90a4-d73ec28344d0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "2000000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7c134cbf-da1e-42aa-8cdc-0c894cecba55",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "PRD.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f6e64a0a-5716-429e-b890-7c71f9d545cd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "openapi.yaml",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d1854d62-c6cc-490e-880e-9c21a8a7eece",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a111f2-9e16-7216-910d-84851d03fa77",
+        "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fb456345-d9d6-48d2-bf6c-a475fdbc5f1c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5a4928e0-cebf-4283-980f-80878770ba5d",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "check": "normalizedSourceSnapshot",
+      "trial": 1,
+      "requirements": [
+        {
+          "id": "req_01a111f6-fa9d-70cf-a5d9-25b597fbc936",
+          "text": "Empty password submission shows exactly \"Password is required\" and creates no authenticated session.",
+          "acceptanceCriteria": [
+            "Submitting empty password returns visible error text \"Password is required\"",
+            "No session is established after empty-password submission"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+              "length": 195,
+              "offset": 165,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa3-7172-ab86-cb08d82df105",
+          "text": "Orders require a bearer token; requests without it return HTTP 401.",
+          "acceptanceCriteria": [
+            "Order endpoint returns 401 when no bearer token is provided",
+            "Authenticated requests succeed with valid token"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+              "length": 195,
+              "offset": 165,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa3-7172-ab86-cf7695330136",
+          "text": "All prices use integer cents; three Precision Widgets at 1005 cents total 3015 cents.",
+          "acceptanceCriteria": [
+            "Prices are stored and displayed as integer cents",
+            "3 × 1005 = 3015 computation is correct"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa3-7172-ab86-d339f2ba8e75",
+          "text": "Products expose fields id, name, and priceCents.",
+          "acceptanceCriteria": [
+            "Product response includes id, name, priceCents",
+            "No additional or missing fields in product schema"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa3-7172-ab86-d51bdb6ed026",
+          "text": "Offset pagination enumerates every product exactly once.",
+          "acceptanceCriteria": [
+            "Iterating pages covers all products with no duplicates or omissions"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-830d823ae233",
+          "text": "A successful checkout persists an order visible after page reload.",
+          "acceptanceCriteria": [
+            "Order returned after checkout still present after browser reload"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-844746c5d67a",
+          "text": "Repeating an order with the same Idempotency-Key returns the original order and never duplicates it.",
+          "acceptanceCriteria": [
+            "Second request with same key returns first order",
+            "No duplicate order row is created"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-8820f8f52fdf",
+          "text": "Empty-cart checkout returns HTTP 400 (PRD); OpenAPI within same doc references HTTP 422.",
+          "acceptanceCriteria": [
+            "Checkout with empty cart returns a 4xx status",
+            "Status code is unambiguous pending reviewer adjudication"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-8ee710e23667",
+          "text": "GET /health returns HTTP 200 with JSON status \"ok\".",
+          "acceptanceCriteria": [
+            "Response code is 200",
+            "Body contains status field with value \"ok\""
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-926275b896a0",
+          "text": "Checkout component exposes data-testid=\"checkout-button\".",
+          "acceptanceCriteria": [
+            "Element with data-testid=\"checkout-button\" is present on checkout page",
+            "Renaming the hook is nonfunctional drift, not a business regression"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-95f950d3d8ff",
+          "text": "Profile files are uploaded as raw bytes and downloaded without changes.",
+          "acceptanceCriteria": [
+            "Uploaded bytes equal downloaded bytes exactly",
+            "No encoding transformation occurs"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-9b4c916b3d6e",
+          "text": "Terms open in a popup window.",
+          "acceptanceCriteria": [
+            "Clicking Terms opens a new popup window rather than navigating the page"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-9ec28d6ed807",
+          "text": "A same-origin delivery iframe supports Standard and Express options.",
+          "acceptanceCriteria": [
+            "Delivery iframe is embedded from same origin",
+            "Both Standard and Express delivery types are selectable"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-a19ec3b7c393",
+          "text": "Catalog readiness is signaled via data-testid=\"catalog-ready\" after async loading.",
+          "acceptanceCriteria": [
+            "data-testid=\"catalog-ready\" is absent during initial async load",
+            "data-testid=\"catalog-ready\" appears once loading completes"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-a5fa36b396d6",
+          "text": "Navigation uses SPA with browser history support.",
+          "acceptanceCriteria": [
+            "Page transitions do not trigger full reloads",
+            "Browser back/forward buttons work within the SPA"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "length": 481,
+              "offset": 1065,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-a8ee3ed242b7",
+          "text": "Browser harness publishes only Playwright server on host loopback, runs non-root in pinned image, binds shop to Docker gateway.",
+          "acceptanceCriteria": [
+            "Only loopback ports are exposed to host",
+            "Container runs as non-root user in the pinned image",
+            "Shop service binds to Docker gateway address"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+              "length": 559,
+              "offset": 2555,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-ac22dbdd0883",
+          "text": "Harness exposes gateway via Playwright WebSocket tunnel due to firewall; does not modify firewall rules.",
+          "acceptanceCriteria": [
+            "Playwright connects through gateway address WebSocket tunnel",
+            "No firewall rule modifications are performed",
+            "Bridge-to-host ingress is not relied upon"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+              "length": 559,
+              "offset": 2555,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-b13aad9e8fdc",
+          "text": "Test-only connectivity does not validate product sandbox egress; human labeling pending; no release or model-quality claims.",
+          "acceptanceCriteria": [
+            "No egress-policy validation is performed by test harness",
+            "Corpus manifest marks human labeling as pending",
+            "No release or model-quality assertion is made"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+              "length": 559,
+              "offset": 2555,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-b4249763eedf",
+          "text": "Chromium is launched with chromiumSandbox: true; the remote server sandbox-disabled default is not used.",
+          "acceptanceCriteria": [
+            "chromiumSandbox flag is set to true",
+            "No reliance on sandbox-disabled remote default",
+            "Sandbox enforcement is mandatory for test execution"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+              "length": 407,
+              "offset": 3116,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa4-7144-88f1-bac040e048db",
+          "text": "Test reads seccomp_profile.json, keeps --cap-drop ALL and no-new-privileges, never falls back on sandbox failure.",
+          "acceptanceCriteria": [
+            "containers/seccomp_profile.json is loaded by test",
+            "--cap-drop ALL and no-new-privileges flags are present",
+            "Sandbox failure causes hard error, not graceful fallback"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+              "length": 407,
+              "offset": 3116,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-ad44d5663a0d",
+          "text": "run-server --unsafe only permits loopback test client to request sandbox enablement; does not alter execution policy.",
+          "acceptanceCriteria": [
+            "--unsafe flag restricts caller to trusted loopback address",
+            "Sandbox enablement is permitted but execution policy unchanged",
+            "Non-loopback callers cannot use --unsafe sandbox request"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+              "length": 407,
+              "offset": 3116,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-b112d732768e",
+          "text": "POST createToken requires email and password (minLength 1) in JSON body; returns 200 Bearer token.",
+          "acceptanceCriteria": [
+            "Request body includes email and password fields, both required",
+            "Password must have at least 1 character",
+            "Successful response returns 200 with a Bearer token"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+              "jsonPointer": "/paths/~1api~1auth~1token/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-b49a7d007b9a",
+          "text": "POST refreshToken requires email and password (minLength 1) in JSON body; returns 200 fresh token with credentials.",
+          "acceptanceCriteria": [
+            "Request body includes email and password fields, both required",
+            "Password must have at least 1 character",
+            "Successful response returns 200 with a fresh token"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+              "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-ba6b93ff9e51",
+          "text": "listProducts supports offset/limit pagination; limit defaults to 2 (1-100), offset >= 0; response has items, total, nextOffset.",
+          "acceptanceCriteria": [
+            "Default limit is 2, max 100, min 1",
+            "Default offset is 0, min 0",
+            "Response includes items, total, nextOffset",
+            "Product items have id, name, priceCents"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+              "jsonPointer": "/paths/~1api~1products/get",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-bce16a8e0a5f",
+          "text": "createProduct requires bearerAuth, name (non-empty string) and priceCents (integer >= 0); returns 201 with id, name, priceCents.",
+          "acceptanceCriteria": [
+            "Requires valid bearer token",
+            "Body requires name (min length 1) and priceCents (>=0)",
+            "Returns 201 with id, name, priceCents",
+            "No additional properties allowed in request or response"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+              "jsonPointer": "/paths/~1api~1products/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-c3c52972b786",
+          "text": "getProduct requires bearerAuth and returns 200 with product fields id, name, priceCents.",
+          "acceptanceCriteria": [
+            "Requires valid bearer token",
+            "Returns 200 with id, name, priceCents",
+            "No additional properties in response"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+              "jsonPointer": "/paths/~1api~1products~1{id}/get",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-c4997e2fe490",
+          "text": "updateProduct requires bearerAuth, name (non-empty) and priceCents (integer >= 0); returns 200 with updated product.",
+          "acceptanceCriteria": [
+            "Requires valid bearer token",
+            "Body requires name (min length 1) and priceCents (>=0)",
+            "Returns 200 with id, name, priceCents",
+            "No additional properties allowed"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+              "jsonPointer": "/paths/~1api~1products~1{id}/put",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-cabba8704043",
+          "text": "deleteProduct requires bearerAuth and returns 200 with a deletion result description.",
+          "acceptanceCriteria": [
+            "Requires valid bearer token",
+            "Returns 200 on successful deletion"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+              "jsonPointer": "/paths/~1api~1products~1{id}/delete",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-ccf602388eb7",
+          "text": "getCart requires bearerAuth and returns 200 with a persistent cart response.",
+          "acceptanceCriteria": [
+            "Requires valid bearer token",
+            "Returns 200 described as 'Persistent cart'"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+              "jsonPointer": "/paths/~1api~1cart/get",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-d1273baf97d6",
+          "text": "setCartItem requires JSON body with productId (string) and quantity (integer >= 1); both required; bearer auth; returns 200 Cart updated.",
+          "acceptanceCriteria": [
+            "Body rejects missing productId or quantity",
+            "Quantity of 0 or negative is invalid",
+            "No auth token yields rejection",
+            "Valid request returns 200"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+              "jsonPointer": "/paths/~1api~1cart/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-d659f1111ad9",
+          "text": "clearCart requires bearer auth and returns 200 with description 'Cart cleared'.",
+          "acceptanceCriteria": [
+            "Valid bearer token yields 200 'Cart cleared'",
+            "Missing token is rejected"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+              "jsonPointer": "/paths/~1api~1cart/delete",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-dac4c41c1178",
+          "text": "listOrders requires bearer auth; returns 200 with Orders or 401 when authentication is missing.",
+          "acceptanceCriteria": [
+            "Valid token returns 200 with order list",
+            "Missing token returns 401"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+              "jsonPointer": "/paths/~1api~1orders/get",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-dc66badcf642",
+          "text": "createOrder requires Idempotency-Key header (non-empty string) and bearer auth; returns 200 replay, 201 new order, 401, or 422 empty cart.",
+          "acceptanceCriteria": [
+            "Missing Idempotency-Key header is rejected",
+            "Same key twice returns 200 not 201",
+            "Empty cart returns 422",
+            "No token returns 401"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+              "jsonPointer": "/paths/~1api~1orders/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-e140bc5e2be9",
+          "text": "createUser requires JSON body with email (format: email) and password (minLength 1), both required; bearer auth; returns 201 Cleanup-owned user.",
+          "acceptanceCriteria": [
+            "Body must include valid email and non-empty password",
+            "Missing fields are rejected",
+            "Valid request returns 201"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+              "jsonPointer": "/paths/~1api~1users/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-e7d707b7834a",
+          "text": "deleteUser requires bearer auth and returns 200 with description 'Delete owned user'.",
+          "acceptanceCriteria": [
+            "Valid token returns 200 'Delete owned user'",
+            "Missing token is rejected"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+              "jsonPointer": "/paths/~1api~1users~1{id}/delete",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-eaf179593a67",
+          "text": "uploadProfile requires bearerAuth and accepts a mandatory application/octet-stream binary body; returns 201 on success.",
+          "acceptanceCriteria": [
+            "Bypassing bearerAuth yields 401",
+            "Body is parsed as raw binary octet-stream",
+            "Successful upload returns HTTP 201 with 'File uploaded' description"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+              "jsonPointer": "/paths/~1api~1profile~1file/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-eceb148a3434",
+          "text": "downloadProfile requires bearerAuth and returns 200 with application/octet-stream binary 'Profile bytes'.",
+          "acceptanceCriteria": [
+            "Bypassing bearerAuth yields 401",
+            "Response content-type is application/octet-stream with binary format",
+            "Successful download returns HTTP 200"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+              "jsonPointer": "/paths/~1api~1profile~1file/get",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-f1e3e51dd404",
+          "text": "Product schema forbids additional properties; priceCents is an integer with minimum 0; id, name, priceCents are all required.",
+          "acceptanceCriteria": [
+            "Sending an extra field in Product JSON causes validation rejection",
+            "priceCents of -1 is rejected; 0 and positive integers are accepted",
+            "id, name, priceCents are all required in every Product representation"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+              "jsonPointer": "/components",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-f6506821cbfd",
+          "text": "bearerAuth security scheme is http/bearer; all profile endpoints require it.",
+          "acceptanceCriteria": [
+            "Authorization header uses Bearer scheme per http bearer definition",
+            "Profile upload and download endpoints reject requests lacking valid bearer token"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+              "jsonPointer": "/paths/~1api~1profile~1file/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            },
+            {
+              "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+              "jsonPointer": "/paths/~1api~1profile~1file/get",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            },
+            {
+              "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+              "jsonPointer": "/components",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        },
+        {
+          "id": "req_01a111f6-faa5-714a-8ed6-fbf4e9c0c6c1",
+          "text": "API servers list declares a single loopback URL http://127.0.0.1:3000.",
+          "acceptanceCriteria": [
+            "Server is reachable only on loopback interface",
+            "No non-loopback network exposure is configured in OpenAPI servers"
+          ],
+          "sourceRefs": [
+            {
+              "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+              "jsonPointer": "/servers",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ]
+        }
+      ],
+      "conflicts": [
+        {
+          "id": "conflict-1",
+          "requirementIds": [
+            "req_01a111f6-faa4-7144-88f1-8820f8f52fdf",
+            "req_01a111f6-faa5-714a-8ed6-dc66badcf642"
+          ],
+          "reason": "For the same operation (checkout / createOrder) under the same condition (empty cart), the PRD (E6, revision svr_01a111f2-9e16-7216-910d-84851d03fa77) specifies HTTP 400, while the OpenAPI spec (E28, revision svr_01a111f2-9f4f-710b-b72e-2023e7d450dd) specifies HTTP 422. These are two distinct source revisions. The PRD itself labels this a 'Deliberate conflict for adjudication' and instructs that neither is silently authoritative; that disclaimer is not a resolution. The requirement batch-1-SHOP-EMPTY-001's reason field asserts the conflict is 'within same chunk/revision,' but the authoritative 422 definition lives in E28 under the OpenAPI revision, making this a genuine cross-revision disagreement requiring human adjudication.",
+          "sourceRefs": [
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "length": 662,
+              "offset": 386,
+              "relativePath": "PRD.md",
+              "sourceRevisionId": "svr_01a111f2-9e16-7216-910d-84851d03fa77"
+            },
+            {
+              "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+              "jsonPointer": "/paths/~1api~1orders/post",
+              "relativePath": "openapi.yaml",
+              "sourceRevisionId": "svr_01a111f2-9f4f-710b-b72e-2023e7d450dd"
+            }
+          ],
+          "resolution": null
+        }
+      ]
+    },
+    {
+      "check": "referenceShopNormalization",
+      "trial": 1,
+      "requirements": 40,
+      "conflicts": 1,
+      "pass": true,
+      "modelCalls": [
+        {
+          "id": "mdl_01a111f3-0131-722e-96cf-d37d949981ff",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 1454,
+            "outputTokens": 1525,
+            "reasoningTokens": 730
+          }
+        },
+        {
+          "id": "mdl_01a111f3-6de6-720e-a8c5-c3ed86707d19",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 2155,
+            "outputTokens": 1594,
+            "reasoningTokens": 949
+          }
+        },
+        {
+          "id": "mdl_01a111f4-5987-764d-a469-9deaf1531e96",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 2921,
+            "outputTokens": 3391,
+            "reasoningTokens": 2405
+          }
+        },
+        {
+          "id": "mdl_01a111f4-ef00-74e7-a762-ed8284f0e68c",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 3993,
+            "outputTokens": 2611,
+            "reasoningTokens": 1527
+          }
+        },
+        {
+          "id": "mdl_01a111f5-a3b0-7093-ae6c-0914ab134359",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 4386,
+            "outputTokens": 2027,
+            "reasoningTokens": 1221
+          }
+        },
+        {
+          "id": "mdl_01a111f6-1a91-76a7-8600-f492baf3a46e",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 4772,
+            "outputTokens": 2208,
+            "reasoningTokens": 1315
+          }
+        },
+        {
+          "id": "mdl_01a111f6-fa9a-71ba-af49-1fe5533673c0",
+          "finishReason": "stop",
+          "failureReason": null,
+          "repairAttempt": 0,
+          "usage": {
+            "inputTokens": 9137,
+            "outputTokens": 3565,
+            "reasoningTokens": 3109
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Three live normalization trials of one reference-shop family; no generated-test quality or unseen-family claim."
+  ]
+}

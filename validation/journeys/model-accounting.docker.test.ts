@@ -21,7 +21,7 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
     };
     const user = body.messages.find((message) => message.content.includes('"untrustedData"'));
     const input = JSON.parse(user?.content ?? "{}").untrustedData as {
-      chunks: { evidenceRef: unknown }[];
+      chunks: { evidenceId: string }[];
     };
     completions++;
     received.resolve();
@@ -41,7 +41,7 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
                     key: "health",
                     text: "Health reports ok",
                     acceptanceCriteria: ["GET /health status is ok"],
-                    sourceRefs: [input.chunks[0]?.evidenceRef],
+                    evidenceIds: [input.chunks[0]?.evidenceId],
                     originKind: "explicit",
                     confidence: null,
                     reason: "Explicit PRD",

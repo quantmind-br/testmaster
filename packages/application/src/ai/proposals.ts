@@ -14,7 +14,8 @@ import {
   IdempotencyRepository,
 } from "@testmaster/persistence";
 import {
-  type GeneratedProposals,
+  EvidenceCatalog,
+  resolveGeneratedProposals,
   type SourceEvidenceRef,
   validateGeneratedProposals,
   validateProposalPlan,
@@ -89,25 +90,35 @@ export class ProposalsService {
     )
       throw new ContractError("INVALID_ARGUMENT", "Select known approved requirements");
     for (const requirement of requirements) this.requireApproved(requirement, snapshot.conflicts);
-    const evidence = requirements.flatMap((item) => item.sourceRefs) as SourceEvidenceRef[];
-    const output = await this.model.complete<GeneratedProposals>({
+    const catalog = new EvidenceCatalog(
+      requirements.flatMap((item) => item.sourceRefs) as SourceEvidenceRef[],
+    );
+    const output = await this.model.complete<unknown>({
       projectId: input.projectId,
       purpose: "plan",
       responseSchema: "AIProposalsOutput",
-      data: { requirements, type: input.type ?? "backend", sourceSnapshotId: snapshot.fingerprint },
+      data: {
+        // Models cite opaque evidence handles instead of copying hashes and locators.
+        requirements: requirements.map(({ sourceRefs, ...requirement }) => ({
+          ...requirement,
+          evidenceIds: catalog.handles(sourceRefs as SourceEvidenceRef[]),
+        })),
+        type: input.type ?? "backend",
+        sourceSnapshotId: snapshot.fingerprint,
+      },
       instructions:
-        "Return exactly one independent executable proposal per supplied requirement, not an intent. Copy requirement IDs and evidence refs exactly. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.",
-      sourceRevisionIds: [...new Set(evidence.map((ref) => ref.sourceRevisionId))],
+        "Return exactly one independent executable proposal per supplied requirement, not an intent. Copy requirement IDs exactly and cite only the evidenceIds supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.",
+      sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
       dataClasses: ["requirements"],
       ...input.budget,
       ...(input.provider ? { provider: input.provider } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(input.signal ? { signal: input.signal } : {}),
     });
-    const generated = validateGeneratedProposals(
+    const generated = resolveGeneratedProposals(
       output.output,
       requirements.map((item) => item.id),
-      evidence,
+      catalog,
     );
     if (
       generated.proposals.length !== requirements.length ||
@@ -224,19 +235,20 @@ export class ProposalsService {
         });
       if (current.state !== "proposed")
         throw new ContractError("PRECONDITION_FAILED", "Only retained proposals may be edited");
+      const evidenceRefs = current.evidenceRefs as SourceEvidenceRef[];
       validateGeneratedProposals(
         {
           proposals: [
             {
               plan,
               requirementRefs: current.requirementRefs,
-              evidenceRefs: current.evidenceRefs,
+              evidenceRefs,
               warnings: current.warnings,
             },
           ],
         },
         current.requirementRefs,
-        current.evidenceRefs as SourceEvidenceRef[],
+        evidenceRefs,
       );
       const next = { ...current, plan, version: expectedVersion + 1 };
       this.ctx.entities.update("Proposal", this.ctx.workspaceId, id, expectedVersion, next);

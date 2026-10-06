@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "browser-lease-expiry",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:49:59.772Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "browser-lease-expiry",
+        "--base-url",
+        "http://127.0.0.1:46459",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9e619ea5-49ce-4cbd-af1c-8b06ad1f3503",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111e8-4b6e-77a1-aa26-d54b15e92614"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "lease loss reaps Chromium and fences next assertion",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

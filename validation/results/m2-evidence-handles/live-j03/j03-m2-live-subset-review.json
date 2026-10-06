@@ -1,0 +1,1107 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j03-m2-live-subset-review",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "qwen3.8-flash",
+  "observedAt": "2026-10-06T15:57:07.862Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j03-m2-live-subset-review",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0d35a476-24aa-4512-b6e6-0688a5699376",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c9b14774-09e2-4ded-8bbb-d15e42db3737",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ca5d58d9-f95f-4f61-a1a1-292b9cba8e11",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0040859e-c22f-47a8-a7fa-8b9323e154b0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "three-requirements.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_25079efb-b50b-438f-b492-1a29e2f93506",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a111ed-c381-76dc-a676-d772727ac449",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b203b3c2-a8af-44cc-ab7e-eff41c724a22",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a111ee-1dcd-740c-a384-22974205025a",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8bce2831-6795-4b4e-99e0-87fd45c39184",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a111ee-1dd2-74ea-a08b-2cf25d29a1f1",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0c97b480-9c00-4e66-b672-09562feab3b1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a111ee-1dd2-74ea-a08b-315b0ddf044d",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_db3f0e6a-67bc-4f22-8b13-1d4dd3f1892e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "generate",
+        "--type",
+        "backend",
+        "--requirement",
+        "req_01a111ee-1dcd-740c-a384-22974205025a",
+        "--requirement",
+        "req_01a111ee-1dd2-74ea-a08b-2cf25d29a1f1",
+        "--requirement",
+        "req_01a111ee-1dd2-74ea-a08b-315b0ddf044d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_49273684-8a6c-40df-a0e2-690acba130eb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ae12e8ff-9b9b-431c-abcb-db3b8c7b7bc1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--only",
+        "pro_01900000-0000-7000-8000-000000000001",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "unknown-candidate",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_09cb51f4-247e-47e5-a3b5-a0a82945e9c8",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Unknown or already decided proposal",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--only",
+        "pro_01a111ee-bcbd-72e6-b94f-d204e5f2f302",
+        "pro_01a111ee-bcbc-7092-beb4-6a5c44ae1d1d",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "journey-accept-a-and-b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_42e9a152-d2a1-42d7-9975-39593e5b3d34",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--only",
+        "pro_01a111ee-bcbd-72e6-b94f-d204e5f2f302",
+        "pro_01a111ee-bcbc-7092-beb4-6a5c44ae1d1d",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "journey-accept-a-and-b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_134d814d-e668-4896-a1d9-e9839a26cca8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--only",
+        "pro_01a111ee-bcbd-72e6-b94f-d204e5f2f302",
+        "pro_01a111ee-bcbc-7092-beb4-6a5c44ae1d1d",
+        "--expected-version",
+        "1",
+        "--idempotency-key",
+        "journey-accept-a-and-b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0a9fae04-1689-4886-9c15-66c60c30c2fb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_85aa327f-38eb-48d1-a918-0ad91afff861",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4720ebce-0e57-4881-9bd9-cb31a17cbc32",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "edit",
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d",
+        "--plan",
+        "/tmp/tm-m1-go1M65/repo/edited-c.json",
+        "--expected-version",
+        "3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_30017a4f-6751-47b8-943c-66eee953a228",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "edit",
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d",
+        "--plan",
+        "/tmp/tm-m1-go1M65/repo/edited-c.json",
+        "--expected-version",
+        "3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_35eb3f3a-73f3-4cf0-a98c-e470e7f99817",
+      "error": {
+        "code": "REVISION_CONFLICT",
+        "message": "Proposal changed",
+        "details": {
+          "diff": {
+            "expectedVersion": 3,
+            "currentVersion": 4,
+            "submitted": {
+              "kind": "executable",
+              "name": "GET /health returns HTTP 200 reviewed C",
+              "requirementRefs": [
+                "req_01a111ee-1dcd-740c-a384-22974205025a"
+              ],
+              "runner": "http",
+              "schemaVersion": "1.0.0",
+              "steps": [
+                {
+                  "description": "Send GET request to /health endpoint",
+                  "id": "get-health",
+                  "input": {
+                    "method": "GET",
+                    "pathSegments": [
+                      {
+                        "literal": "health"
+                      }
+                    ]
+                  },
+                  "kind": "action",
+                  "operation": "request",
+                  "risk": "read",
+                  "required": true,
+                  "timeoutMs": 30000
+                },
+                {
+                  "description": "Assert that the HTTP response status code is exactly 200 as required",
+                  "expectation": {
+                    "predicate": "statusIn",
+                    "values": [
+                      200
+                    ]
+                  },
+                  "id": "assert-status-200",
+                  "input": {
+                    "responseStepId": "get-health"
+                  },
+                  "kind": "assertion",
+                  "operation": "assert",
+                  "risk": "read",
+                  "required": true,
+                  "timeoutMs": 30000
+                }
+              ],
+              "type": "backend",
+              "dependsOn": [],
+              "cleanup": [],
+              "tags": [],
+              "priority": "normal"
+            },
+            "current": {
+              "cleanup": [],
+              "dependsOn": [],
+              "kind": "executable",
+              "name": "GET /health returns HTTP 200 reviewed C",
+              "priority": "normal",
+              "requirementRefs": [
+                "req_01a111ee-1dcd-740c-a384-22974205025a"
+              ],
+              "runner": "http",
+              "schemaVersion": "1.0.0",
+              "steps": [
+                {
+                  "description": "Send GET request to /health endpoint",
+                  "id": "get-health",
+                  "input": {
+                    "method": "GET",
+                    "pathSegments": [
+                      {
+                        "literal": "health"
+                      }
+                    ]
+                  },
+                  "kind": "action",
+                  "operation": "request",
+                  "required": true,
+                  "risk": "read",
+                  "timeoutMs": 30000
+                },
+                {
+                  "description": "Assert that the HTTP response status code is exactly 200 as required",
+                  "expectation": {
+                    "predicate": "statusIn",
+                    "values": [
+                      200
+                    ]
+                  },
+                  "id": "assert-status-200",
+                  "input": {
+                    "responseStepId": "get-health"
+                  },
+                  "kind": "assertion",
+                  "operation": "assert",
+                  "required": true,
+                  "risk": "read",
+                  "timeoutMs": 30000
+                }
+              ],
+              "tags": [],
+              "type": "backend"
+            }
+          }
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "accept",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--only",
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d",
+        "--expected-version",
+        "2",
+        "--idempotency-key",
+        "journey-stale-batch",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_566753ee-91a3-4c5f-bd18-8143d4db94fd",
+      "error": {
+        "code": "REVISION_CONFLICT",
+        "message": "Proposal batch changed",
+        "details": {
+          "diff": {
+            "expectedVersion": 2,
+            "currentVersion": 3,
+            "proposals": [
+              {
+                "batchId": "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+                "createdAt": "2026-10-06T15:57:00.989Z",
+                "evidenceRefs": [
+                  {
+                    "contentHash": "240f90e55af40ffc43b6cfe50b1a66f78c95759d0338eacee768337b0d479307",
+                    "length": 142,
+                    "offset": 332,
+                    "relativePath": "three-requirements.md",
+                    "sourceRevisionId": "svr_01a111ed-c381-76dc-a676-d772727ac449"
+                  }
+                ],
+                "extensions": {
+                  "testmaster:candidateRevisionId": "rev_01a111ee-c226-76c8-954c-af5e893309cd",
+                  "testmaster:testId": "tst_01a111ee-c21c-75e3-96b1-2a408a6fbc1f"
+                },
+                "id": "pro_01a111ee-bcbd-72e6-b94f-d204e5f2f302",
+                "plan": {
+                  "kind": "executable",
+                  "name": "GET /health JSON property /service equals \"reference-shop\"",
+                  "requirementRefs": [
+                    "req_01a111ee-1dd2-74ea-a08b-315b0ddf044d"
+                  ],
+                  "runner": "http",
+                  "schemaVersion": "1.0.0",
+                  "steps": [
+                    {
+                      "description": "Send GET request to /health endpoint to inspect JSON body",
+                      "id": "get-health",
+                      "input": {
+                        "capture": [
+                          {
+                            "from": "jsonPointer",
+                            "name": "service",
+                            "pointer": "/service",
+                            "sensitive": false,
+                            "valueType": "string"
+                          }
+                        ],
+                        "method": "GET",
+                        "pathSegments": [
+                          {
+                            "literal": "health"
+                          }
+                        ]
+                      },
+                      "kind": "action",
+                      "operation": "request",
+                      "risk": "read"
+                    },
+                    {
+                      "description": "Assert that JSON pointer /service equals the string \"reference-shop\" per acceptance criterion",
+                      "expectation": {
+                        "predicate": "jsonEquals",
+                        "value": {
+                          "literal": "reference-shop"
+                        }
+                      },
+                      "id": "assert-service-value",
+                      "input": {
+                        "jsonPointer": "/service",
+                        "responseStepId": "get-health"
+                      },
+                      "kind": "assertion",
+                      "operation": "assert",
+                      "risk": "read"
+                    }
+                  ],
+                  "type": "backend"
+                },
+                "requirementRefs": [
+                  "req_01a111ee-1dd2-74ea-a08b-315b0ddf044d"
+                ],
+                "state": "accepted",
+                "validation": "valid",
+                "version": 2,
+                "warnings": [],
+                "workspaceId": "ws_01a111ed-bee5-717b-869f-f18df21406fd"
+              },
+              {
+                "batchId": "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+                "createdAt": "2026-10-06T15:57:00.989Z",
+                "evidenceRefs": [
+                  {
+                    "contentHash": "d979529b683610a8a5b99f62f98b5479a4ace5ef9e086779349582149859ffee",
+                    "length": 123,
+                    "offset": 184,
+                    "relativePath": "three-requirements.md",
+                    "sourceRevisionId": "svr_01a111ed-c381-76dc-a676-d772727ac449"
+                  }
+                ],
+                "extensions": {
+                  "testmaster:candidateRevisionId": "rev_01a111ee-c3a7-7016-8ca6-b7ca093fcefb",
+                  "testmaster:testId": "tst_01a111ee-c3a6-70cb-bf9b-9a76c7276f25"
+                },
+                "id": "pro_01a111ee-bcbc-7092-beb4-6a5c44ae1d1d",
+                "plan": {
+                  "kind": "executable",
+                  "name": "GET /health JSON property /healthy equals boolean true",
+                  "requirementRefs": [
+                    "req_01a111ee-1dd2-74ea-a08b-2cf25d29a1f1"
+                  ],
+                  "runner": "http",
+                  "schemaVersion": "1.0.0",
+                  "steps": [
+                    {
+                      "description": "Send GET request to /health endpoint to inspect JSON body",
+                      "id": "get-health",
+                      "input": {
+                        "capture": [
+                          {
+                            "from": "jsonPointer",
+                            "name": "healthy",
+                            "pointer": "/healthy",
+                            "sensitive": false,
+                            "valueType": "boolean"
+                          }
+                        ],
+                        "method": "GET",
+                        "pathSegments": [
+                          {
+                            "literal": "health"
+                          }
+                        ]
+                      },
+                      "kind": "action",
+                      "operation": "request",
+                      "risk": "read"
+                    },
+                    {
+                      "description": "Assert that JSON pointer /healthy equals boolean true per acceptance criterion",
+                      "expectation": {
+                        "predicate": "jsonEquals",
+                        "value": {
+                          "literal": true
+                        }
+                      },
+                      "id": "assert-healthy-true",
+                      "input": {
+                        "jsonPointer": "/healthy",
+                        "responseStepId": "get-health"
+                      },
+                      "kind": "assertion",
+                      "operation": "assert",
+                      "risk": "read"
+                    }
+                  ],
+                  "type": "backend"
+                },
+                "requirementRefs": [
+                  "req_01a111ee-1dd2-74ea-a08b-2cf25d29a1f1"
+                ],
+                "state": "accepted",
+                "validation": "valid",
+                "version": 2,
+                "warnings": [],
+                "workspaceId": "ws_01a111ed-bee5-717b-869f-f18df21406fd"
+              },
+              {
+                "batchId": "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+                "createdAt": "2026-10-06T15:57:00.770Z",
+                "evidenceRefs": [
+                  {
+                    "contentHash": "4a96cbe6a0043f8f49fd330bd8bc152b6feb08e43039432a777fdbccfbd6c2db",
+                    "length": 83,
+                    "offset": 77,
+                    "relativePath": "three-requirements.md",
+                    "sourceRevisionId": "svr_01a111ed-c381-76dc-a676-d772727ac449"
+                  }
+                ],
+                "id": "pro_01a111ee-bbe2-735f-a544-d4f83158430d",
+                "plan": {
+                  "cleanup": [],
+                  "dependsOn": [],
+                  "kind": "executable",
+                  "name": "GET /health returns HTTP 200 reviewed C",
+                  "priority": "normal",
+                  "requirementRefs": [
+                    "req_01a111ee-1dcd-740c-a384-22974205025a"
+                  ],
+                  "runner": "http",
+                  "schemaVersion": "1.0.0",
+                  "steps": [
+                    {
+                      "description": "Send GET request to /health endpoint",
+                      "id": "get-health",
+                      "input": {
+                        "method": "GET",
+                        "pathSegments": [
+                          {
+                            "literal": "health"
+                          }
+                        ]
+                      },
+                      "kind": "action",
+                      "operation": "request",
+                      "required": true,
+                      "risk": "read",
+                      "timeoutMs": 30000
+                    },
+                    {
+                      "description": "Assert that the HTTP response status code is exactly 200 as required",
+                      "expectation": {
+                        "predicate": "statusIn",
+                        "values": [
+                          200
+                        ]
+                      },
+                      "id": "assert-status-200",
+                      "input": {
+                        "responseStepId": "get-health"
+                      },
+                      "kind": "assertion",
+                      "operation": "assert",
+                      "required": true,
+                      "risk": "read",
+                      "timeoutMs": 30000
+                    }
+                  ],
+                  "tags": [],
+                  "type": "backend"
+                },
+                "requirementRefs": [
+                  "req_01a111ee-1dcd-740c-a384-22974205025a"
+                ],
+                "state": "proposed",
+                "validation": "valid",
+                "version": 4,
+                "warnings": [],
+                "workspaceId": "ws_01a111ed-bee5-717b-869f-f18df21406fd"
+              }
+            ]
+          }
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "edit",
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d",
+        "--plan",
+        "invalid-c.json",
+        "--expected-version",
+        "4",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_0debe9ab-d106-4075-9960-691b2fe25dbb",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps",
+              "rule": "minItems",
+              "message": "must NOT have fewer than 1 items"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "get",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_69a6269a-0275-42e9-aa00-e08ecf3e493d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "plan",
+        "reject",
+        "pbt_01a111ee-bbe0-7475-9d86-bad3477aeb12",
+        "--only",
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d",
+        "--expected-version",
+        "3",
+        "--idempotency-key",
+        "journey-reject-candidate-c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ad543f8f-37ff-4d90-bb7f-1dfa788826d0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_69f3afeb-bd0e-4f64-95f2-e6619d80ee24",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "revoke",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_48dd2f00-a6d6-484a-b003-ea99a80d89c8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ca9b39d4-8f6a-4b91-8234-dfd4baf459ff",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "usage",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_142199e3-5568-41d1-9c58-40664da7112e",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "modelConfiguration",
+      "provider": "quantforge",
+      "model": "qwen3.8-flash",
+      "reasoningEffort": "medium",
+      "contextTokens": 128000,
+      "outputReservationTokens": 8192,
+      "tokenBudget": 100000
+    },
+    {
+      "check": "atomicSubsetAcceptance",
+      "proposalIds": [
+        "pro_01a111ee-bcbd-72e6-b94f-d204e5f2f302",
+        "pro_01a111ee-bcbc-7092-beb4-6a5c44ae1d1d",
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d"
+      ],
+      "acceptedTestIds": [
+        "tst_01a111ee-c21c-75e3-96b1-2a408a6fbc1f",
+        "tst_01a111ee-c3a6-70cb-bf9b-9a76c7276f25"
+      ],
+      "revisionIds": [
+        "rev_01a111ee-c3a7-7016-8ca6-b7ca093fcefb",
+        "rev_01a111ee-c226-76c8-954c-af5e893309cd"
+      ],
+      "retainedAfterAcceptance": [
+        "pro_01a111ee-bbe2-735f-a544-d4f83158430d"
+      ],
+      "idempotencyKey": "journey-accept-a-and-b",
+      "revisionCount": 2,
+      "auditEventIds": [
+        "aud_01a111ee-bcbe-7564-8dea-ca26dee83bee",
+        "aud_01a111ee-c3ab-74c6-845f-d5d753b0f6ce",
+        "aud_01a111ee-d31e-7726-bcd8-0f4c055cad4f"
+      ],
+      "modelCalls": [
+        {
+          "id": "mdl_01a111ed-f444-77dc-87c2-79ec42bf618a",
+          "provider": "quantforge",
+          "model": "qwen3.8-flash",
+          "purpose": "normalize",
+          "usage": {
+            "inputTokens": 1238,
+            "outputTokens": 582,
+            "reasoningTokens": 409
+          },
+          "cost": "unknown",
+          "responseHash": "c3c9fd3eac0d49ef8800ee8ff0bce2ced27355710904f3c414cf0995373c120b"
+        },
+        {
+          "id": "mdl_01a111ee-1dcc-733e-93bb-01ca68b5e77e",
+          "provider": "quantforge",
+          "model": "qwen3.8-flash",
+          "purpose": "normalize",
+          "usage": {
+            "inputTokens": 975,
+            "outputTokens": 407,
+            "reasoningTokens": 322
+          },
+          "cost": "unknown",
+          "responseHash": "2060e69add83f530a1e441f272c18e8ceada4fe21d6bbdf25dc6ccb230de18be"
+        },
+        {
+          "id": "mdl_01a111ee-b9fa-7455-a372-e9140f04e91b",
+          "provider": "quantforge",
+          "model": "qwen3.8-flash",
+          "purpose": "plan",
+          "usage": {
+            "inputTokens": 8927,
+            "outputTokens": 2368,
+            "reasoningTokens": 1417
+          },
+          "cost": "unknown",
+          "responseHash": "445f5d01662a1cf2c41e8d0dd78b45f3a5ddcb38980443e109cef1e81ce1a2c4"
+        }
+      ]
+    },
+    {
+      "check": "supplementalModelUsage",
+      "calls": [
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:56:09.672Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ed-f444-77dc-87c2-79ec42bf618a",
+          "inputRefs": [
+            "chunk_4d46ac907ffbc84f53311f4b6d91336f577946da09517f2cfe96f2e4e19a1ac9",
+            "chunk_9cf9c4e970f795b3fa03fdb17016d884cd32b777518810e02f8ec5b50773b89b",
+            "chunk_b7c0f952d5cb9743e4446586b07251b6753b76fa2797d5f869527484674e03f9",
+            "chunk_c6010082e92cd69a2151d27b4fbfe8c3405c4a62c5ba4fb1587ab0e1477fa515",
+            "chunk_f7353d9b80426e89c1a68342f19128f161232a22a596ed5a00a89583cb2110e7",
+            "chunk_1f134271ecf40b3f8f53f571cd9acf87ae69399d92cf76e8580ea08eccb6b054"
+          ],
+          "latency": 12069,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a111ed-bef0-737d-817c-b074c57fd154",
+          "promptHash": "9ecf49b6d178eedc378a259b419b1c4d8d46cdfcce8cee0b89c0c3956ef7c761",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 0,
+          "reservationId": "919ba9bb-e50c-4b94-b9e0-2baae6b11b1f",
+          "responseHash": "c3c9fd3eac0d49ef8800ee8ff0bce2ced27355710904f3c414cf0995373c120b",
+          "sourceRevisionIds": [
+            "svr_01a111ed-c381-76dc-a676-d772727ac449"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 1238,
+            "outputTokens": 582,
+            "reasoningTokens": 409
+          },
+          "workspaceId": "ws_01a111ed-bee5-717b-869f-f18df21406fd"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:56:20.300Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ee-1dcc-733e-93bb-01ca68b5e77e",
+          "inputRefs": [
+            "chunk_06a5c6bb4a6b9dfbc80affda1466a148448e3b31aa70cd7d31a209802ee4bde6"
+          ],
+          "latency": 10566,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a111ed-bef0-737d-817c-b074c57fd154",
+          "promptHash": "66d8f4185b6e122fd921916fb4ded5f5d16fa902d222ab353492fddbaaeb56f6",
+          "provider": "quantforge",
+          "purpose": "normalize",
+          "repairAttempt": 0,
+          "reservationId": "aa7a1142-95df-43b6-b994-bd871ab7117b",
+          "responseHash": "2060e69add83f530a1e441f272c18e8ceada4fe21d6bbdf25dc6ccb230de18be",
+          "sourceRevisionIds": [
+            "svr_01a111ed-c381-76dc-a676-d772727ac449"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 975,
+            "outputTokens": 407,
+            "reasoningTokens": 322
+          },
+          "workspaceId": "ws_01a111ed-bee5-717b-869f-f18df21406fd"
+        },
+        {
+          "cacheHit": false,
+          "cost": "unknown",
+          "createdAt": "2026-10-06T15:57:00.548Z",
+          "finishReason": "stop",
+          "id": "mdl_01a111ee-b9fa-7455-a372-e9140f04e91b",
+          "inputRefs": [],
+          "latency": 38551,
+          "model": "qwen3.8-flash",
+          "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+          "outcome": "success",
+          "projectId": "prj_01a111ed-bef0-737d-817c-b074c57fd154",
+          "promptHash": "138fafe09ba393c23c1685729eacccd85f16ce13a2a09231285a2704cde88b43",
+          "provider": "quantforge",
+          "purpose": "plan",
+          "repairAttempt": 0,
+          "reservationId": "b3e96507-bf57-4a6c-91b5-4d7843212c33",
+          "responseHash": "445f5d01662a1cf2c41e8d0dd78b45f3a5ddcb38980443e109cef1e81ce1a2c4",
+          "sourceRevisionIds": [
+            "svr_01a111ed-c381-76dc-a676-d772727ac449"
+          ],
+          "transportAttempt": 0,
+          "usage": {
+            "inputTokens": 8927,
+            "outputTokens": 2368,
+            "reasoningTokens": 1417
+          },
+          "workspaceId": "ws_01a111ed-bee5-717b-869f-f18df21406fd"
+        }
+      ],
+      "tokens": {
+        "inputTokens": 11140,
+        "outputTokens": 3357,
+        "reasoningTokens": 2148
+      },
+      "cost": "unknown",
+      "measuredCosts": [],
+      "unknownCostCalls": 3,
+      "budgetRemaining": null,
+      "reservations": {
+        "reserved": 0,
+        "settled": 3,
+        "released": 0
+      },
+      "tokenBudget": null,
+      "runtimeMs": 61186,
+      "storageBytes": 0,
+      "runs": []
+    }
+  ],
+  "limitations": [
+    "Live model generation and authoring only; no execution or passing-test claim."
+  ]
+}

@@ -1,0 +1,245 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j17-backup-restore",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:47:09.996Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j17-backup-restore",
+        "--base-url",
+        "http://127.0.0.1:45817",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_103467f8-0e40-4437-bcef-336e34157ead",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-vPhC8c/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ef6650af-8ade-4e1f-92f0-50bc4b47513a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a111e5-a73c-73eb-b230-dcd6f75ae6e9",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4afb034b-6ed0-406a-8bb9-cf0b3897d0e4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a111e5-aaa4-77dc-bbe5-0f1741d5e7a6",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d27d0b54-34ae-444a-8c79-b878dc6e7890",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "backup",
+        "create",
+        "--out",
+        "/tmp/tm-m1-vPhC8c/backup",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_024cf639-ed6c-47a3-89a2-688b2c40f7ad",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "backup",
+        "restore",
+        "/tmp/tm-m1-vPhC8c/backup",
+        "--out",
+        "/tmp/tm-m1-vPhC8c/restored-data",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_173b3413-5c04-43b6-9ed3-afba7c9cc591",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a111e5-aaa4-77dc-bbe5-0f1741d5e7a6",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_823113d0-9b06-46a2-b171-b665815340d2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "project",
+        "get",
+        "prj_01a111e5-a526-7097-8b6f-158626a5b59a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7c8583e8-7813-46cb-ac7e-9b0e9e836f0b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "get",
+        "tst_01a111e5-a73c-73eb-b230-dcd6f75ae6e9",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_072221f8-52f8-4d79-972f-a7ee4052036f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a111e5-aaa4-77dc-bbe5-0f1741d5e7a6",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f26435ee-47c1-4e21-be7e-d3ac1ed1c8c3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a111e5-a73c-73eb-b230-dcd6f75ae6e9",
+        "--env",
+        "env_01a111e5-a529-717e-9d62-85ebb26c16b5",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_7444b8ba-3aa5-4397-b944-b37b50c3aab8",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Database admission is suspended pending restore review",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a111e5-aaa4-77dc-bbe5-0f1741d5e7a6",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6ac18baf-d8f6-4c18-997c-1bcd0beea731",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111e5-aaa4-77dc-bbe5-0f1741d5e7a6"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "isolatedRestoreRetainsIdsWithoutEffects",
+      "healthy": true,
+      "runId": "run_01a111e5-aaa4-77dc-bbe5-0f1741d5e7a6",
+      "workspaceId": "ws_01a111e5-a51b-7678-9579-66e51254ed29",
+      "projectId": "prj_01a111e5-a526-7097-8b6f-158626a5b59a",
+      "originalHash": "37bbed8eed2f1b501c0b6d35f1a28fab59fabc2df3b79e48e980aea18f5f58a7",
+      "targetRequestsAfterRestore": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

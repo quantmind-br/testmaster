@@ -15,7 +15,7 @@
         "required": [
           "plan",
           "requirementRefs",
-          "evidenceRefs",
+          "evidenceIds",
           "warnings"
         ],
         "properties": {
@@ -7620,52 +7620,13 @@
               "type": "string"
             }
           },
-          "evidenceRefs": {
+          "evidenceIds": {
             "minItems": 1,
+            "maxItems": 100,
             "type": "array",
             "items": {
-              "additionalProperties": false,
-              "minProperties": 1,
-              "type": "object",
-              "properties": {
-                "artifactId": {
-                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                  "type": "string"
-                },
-                "sourceRevisionId": {
-                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                  "type": "string"
-                },
-                "snapshotId": {
-                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                  "type": "string"
-                },
-                "relativePath": {
-                  "minLength": 1,
-                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
-                  "type": "string"
-                },
-                "offset": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "length": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "page": {
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "jsonPointer": {
-                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                  "type": "string"
-                },
-                "contentHash": {
-                  "pattern": "^[0-9a-f]{64}$",
-                  "type": "string"
-                }
-              }
+              "pattern": "^E[1-9][0-9]{0,5}$",
+              "type": "string"
             }
           },
           "warnings": {

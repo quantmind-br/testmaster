@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "discovery-descendant-invalidation",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:53:55.609Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "discovery-descendant-invalidation",
+        "--base-url",
+        "http://127.0.0.1:36315",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_867b36b8-db94-4078-bee0-16d5ff2276e1",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "name": "pinned-run-survives-invalidation",
+      "admittedRunId": "run_01a111eb-dac3-778f-9f78-c2762cd16c61",
+      "replayRunId": "run_01a111eb-e215-7740-8963-5865eeb4c7a2",
+      "staleBatchId": "pbt_01a111eb-dad8-77a3-b2d6-2aec1c94c0b9",
+      "beforeFingerprint": "4900b4ac8d9c6d326b69294ee7a3d6d1b141bbcd26b2377c1412e638aedb09cc",
+      "afterFingerprint": "db4f20ee865a80d1c1c301e18e05b4c907b692bf106a3257b7919d4766ffdf85"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

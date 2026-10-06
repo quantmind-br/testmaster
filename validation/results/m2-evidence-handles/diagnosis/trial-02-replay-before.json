@@ -1,0 +1,327 @@
+{
+  "error": "Requirement references evidence outside supplied sources",
+  "calls": [
+    {
+      "schema": "AIRequirementsOutput",
+      "usage": {
+        "inputTokens": 2857,
+        "outputTokens": 3728,
+        "reasoningTokens": 774
+      },
+      "output": {
+        "requirements": [
+          {
+            "key": "batch-1-001",
+            "text": "Submitting an empty password shows exactly 'Password is required' and creates no authenticated session.",
+            "acceptanceCriteria": [
+              "Empty password submission displays 'Password is required'.",
+              "No authenticated session is created on empty password."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000001",
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000001",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/6-7"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.97,
+            "reason": "Directly stated as SHOP-AUTH-001 in PRD."
+          },
+          {
+            "key": "batch-1-002",
+            "text": "Orders require a bearer token and return HTTP 401 without it.",
+            "acceptanceCriteria": [
+              "Request to orders endpoint without bearer token yields HTTP 401.",
+              "Valid bearer token is required for order access."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000001",
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000001",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/6-7"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.97,
+            "reason": "Directly stated as SHOP-AUTH-002 in PRD."
+          },
+          {
+            "key": "batch-1-003",
+            "text": "All prices are integer cents; 3 Precision Widgets at 1005 cents each total 3015 cents.",
+            "acceptanceCriteria": [
+              "Price values are integers representing cents.",
+              "3 × 1005 = 3015 cents total for Precision Widgets."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000002",
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/10"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.96,
+            "reason": "Directly stated as SHOP-PRICE-001 with concrete example."
+          },
+          {
+            "key": "batch-1-004",
+            "text": "Products expose id, name and priceCents fields.",
+            "acceptanceCriteria": [
+              "Product representation includes id, name, and priceCents."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000002",
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/11"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.95,
+            "reason": "Directly stated as SHOP-SCHEMA-001 in PRD."
+          },
+          {
+            "key": "batch-1-005",
+            "text": "Offset pagination enumerates every product exactly once.",
+            "acceptanceCriteria": [
+              "Paginating through all pages yields each product once with no duplicates or gaps."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000002",
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/12"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.95,
+            "reason": "Directly stated as SHOP-PAGING-001 in PRD."
+          },
+          {
+            "key": "batch-1-006",
+            "text": "A successful checkout persists an order that remains visible after a page reload.",
+            "acceptanceCriteria": [
+              "Order is stored after checkout.",
+              "Order is retrievable after reloading the page."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000002",
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/13"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.96,
+            "reason": "Directly stated as SHOP-ORDER-001 in PRD."
+          },
+          {
+            "key": "batch-1-007",
+            "text": "Repeating an order Idempotency-Key returns the original order and never duplicates it.",
+            "acceptanceCriteria": [
+              "Second request with same Idempotency-Key returns identical order.",
+              "No additional order record is created on repeat."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000002",
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/14"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.96,
+            "reason": "Directly stated as SHOP-IDEMPOTENCY-001 in PRD."
+          },
+          {
+            "key": "batch-1-008",
+            "text": "Empty-cart checkout returns a defined HTTP error; status code is ambiguous (400 vs 422).",
+            "acceptanceCriteria": [
+              "Checkout with empty cart must return an HTTP error status.",
+              "Status code must be 400 or 422 per unresolved decision."
+            ],
+            "sourceRefs": [
+              {
+                "artifactId": "art_00000000-0000-4000-8000-000000000002",
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "page": 1,
+                "relativePath": "PRD.md",
+                "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+                "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+                "jsonPointer": "/lines/15"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 0.85,
+            "reason": "SHOP-EMPTY-001 states requirement but flags internal contradiction with OpenAPI; only one revision available."
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": [
+          "SHOP-EMPTY-001 cites HTTP 400 in PRD but references OpenAPI declaring HTTP 422. Only one sourceRevisionId (svr_01a11162) is present, so no cross-revision conflict can be recorded. Reviewer must adjudicate whether the OpenAPI spec is a separate revision.",
+          "License for the project is listed as 'UNLICENSED, pending maintainer decision'—product requirements may depend on licensing constraints.",
+          "SHOP-PAGING-001 does not specify a maximum page size or behavior for invalid offsets."
+        ]
+      },
+      "ungrounded": [
+        {
+          "owner": "batch-1-001",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000001",
+            "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+            "length": 195,
+            "offset": 165,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000001",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/6-7"
+          }
+        },
+        {
+          "owner": "batch-1-002",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000001",
+            "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+            "length": 195,
+            "offset": 165,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000001",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/6-7"
+          }
+        },
+        {
+          "owner": "batch-1-003",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000002",
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/10"
+          }
+        },
+        {
+          "owner": "batch-1-004",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000002",
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/11"
+          }
+        },
+        {
+          "owner": "batch-1-005",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000002",
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/12"
+          }
+        },
+        {
+          "owner": "batch-1-006",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000002",
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/13"
+          }
+        },
+        {
+          "owner": "batch-1-007",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000002",
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/14"
+          }
+        },
+        {
+          "owner": "batch-1-008",
+          "ref": {
+            "artifactId": "art_00000000-0000-4000-8000-000000000002",
+            "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+            "length": 662,
+            "offset": 386,
+            "page": 1,
+            "relativePath": "PRD.md",
+            "snapshotId": "snp_00000000-0000-4000-8000-000000000002",
+            "sourceRevisionId": "svr_01a11162-aa3e-743f-a760-4373118c5d34",
+            "jsonPointer": "/lines/15"
+          }
+        }
+      ]
+    }
+  ]
+}

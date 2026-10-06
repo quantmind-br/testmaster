@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-drain-after-claim",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-06T15:50:20.911Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-drain-after-claim",
+        "--base-url",
+        "http://127.0.0.1:40831",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2e11e4f7-9fb1-47fe-ba2f-2bc425b0cff5",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a111e8-9ed1-7750-a947-6121553ef707",
+    "run_01a111e8-9f07-70cf-963e-d89dda329bce"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "drainStopsNewClaims",
+      "healthy": true,
+      "completedRun": "run_01a111e8-9ed1-7750-a947-6121553ef707",
+      "queuedRun": "run_01a111e8-9f07-70cf-963e-d89dda329bce",
+      "targetHits": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
