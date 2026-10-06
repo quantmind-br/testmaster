@@ -55,14 +55,9 @@ export class ModelGateway {
     if (
       !Number.isSafeInteger(input.deadlineMs) ||
       input.deadlineMs <= 0 ||
-      input.deadlineMs > 2_147_483_647 ||
-      !Number.isSafeInteger(input.maxOutputTokens) ||
-      input.maxOutputTokens <= 0
+      input.deadlineMs > 2_147_483_647
     ) {
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "A positive deadline and output token limit are required",
-      );
+      throw new ContractError("INVALID_ARGUMENT", "A positive deadline is required");
     }
     const signal = AbortSignal.any([
       AbortSignal.timeout(input.deadlineMs),
@@ -84,7 +79,6 @@ export class ModelGateway {
     const required = new Set(input.requiredCapabilities ?? []);
     if (input.responseSchema) required.add("structuredJson");
     if (input.tools?.length) required.add("toolCalls");
-    if (input.reasoningEffort) required.add("reasoningControls");
     for (const capability of required) {
       if (!declared.capabilities[capability])
         throw new ContractError(
@@ -92,12 +86,6 @@ export class ModelGateway {
           "Required model capability is unavailable",
           { capability, milestone: "M2" },
         );
-    }
-    if (
-      declared.capabilities.maxOutputTokens !== undefined &&
-      input.maxOutputTokens > declared.capabilities.maxOutputTokens
-    ) {
-      throw new ContractError("INVALID_ARGUMENT", "Output token limit exceeds model capability");
     }
     const price = provider.prices?.[input.model];
     if (!price && !input.dataPolicy.allowUnknownCost)
@@ -153,9 +141,6 @@ export class ModelGateway {
         purpose: input.purpose,
         messages,
         tools: tools ?? null,
-        temperature: input.temperature ?? 0,
-        maxOutputTokens: input.maxOutputTokens,
-        reasoningEffort: input.reasoningEffort ?? null,
         dataClasses: input.dataPolicy.dataClasses,
         maxInputBytes: input.dataPolicy.maxInputBytes,
         maxInputTokens: input.dataPolicy.maxInputTokens,
@@ -189,12 +174,9 @@ export class ModelGateway {
       const payload: Record<string, unknown> = {
         model: input.model,
         messages,
-        max_tokens: input.maxOutputTokens,
-        temperature: input.temperature ?? 0,
       };
       if (input.responseSchema) payload.response_format = { type: "json_object" };
       if (tools?.length) payload.tools = tools;
-      if (input.reasoningEffort) payload.reasoning_effort = input.reasoningEffort;
       const promptText = canonicalJson(payload);
       const promptBytes = Buffer.byteLength(promptText);
       // One token per UTF-8 byte is a conservative upper bound, not measured provider usage.
@@ -204,7 +186,7 @@ export class ModelGateway {
         promptBytes > input.dataPolicy.maxInputBytes ||
         promptBytes > input.dataPolicy.maxInputTokens ||
         (declared.capabilities.contextTokens !== undefined &&
-          promptBytes + input.maxOutputTokens > declared.capabilities.contextTokens)
+          promptBytes > declared.capabilities.contextTokens)
       )
         throw new ContractError(
           "PAYLOAD_TOO_LARGE",
@@ -234,7 +216,12 @@ export class ModelGateway {
       let lastResult: ModelResult<T> | undefined;
       for (let transportAttempt = 0; transportAttempt <= 1; transportAttempt += 1) {
         await this.authorize(input, provider, signal);
-        const estimate = price ? pricedCost(price, promptBytes, input.maxOutputTokens) : "unknown";
+        // Reserve locally for provider-controlled generation; never send a token ceiling.
+        const outputReservation =
+          declared.capabilities.maxOutputTokens ??
+          declared.capabilities.contextTokens ??
+          input.dataPolicy.maxInputTokens;
+        const estimate = price ? pricedCost(price, promptBytes, outputReservation) : "unknown";
         const reservation = await this.options.budgetLedger.reserve({
           workspaceId: input.workspaceId,
           projectId: input.projectId,
@@ -242,7 +229,7 @@ export class ModelGateway {
           provider: input.provider,
           model: input.model,
           estimate,
-          reservedTokens: promptBytes + input.maxOutputTokens,
+          reservedTokens: promptBytes + outputReservation,
           idempotencyKey: `${invocationId}:${repairAttempt}:${transportAttempt}`,
         });
         if (!reservation.ok)
@@ -364,7 +351,6 @@ export class ModelGateway {
               {
                 reasonCode:
                   result.finishReason === "length" ? "output_truncated" : "content_filtered",
-                maxOutputTokens: input.maxOutputTokens,
               },
             );
           result.reasoningContent =

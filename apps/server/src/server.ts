@@ -809,7 +809,7 @@ function dispatch(
       return app.proposals.generate({
         projectId: id,
         idempotencyKey: execution.key,
-        budget: body.budget as { maxOutputTokens?: number; deadlineMs?: number },
+        budget: body.budget as { deadlineMs?: number },
         ...(scope[0] ? { type: scope[0] as "frontend" | "backend" } : {}),
         ...(requirementIds ? { requirementIds } : {}),
       });

@@ -32,7 +32,6 @@ export interface ModelInput {
   provider?: string;
   model?: string;
   signal?: AbortSignal;
-  maxOutputTokens?: number;
   deadlineMs?: number;
 }
 export class ModelService {
@@ -143,9 +142,7 @@ export class ModelService {
       inputRefs: input.inputRefs ?? [],
       locale: this.config.effectiveConfig.config.environment?.locale ?? "en-US",
       policyHash: this.config.effectiveConfig.policyHash,
-      maxOutputTokens: input.maxOutputTokens ?? model.capabilities.maxOutputTokens ?? 8192,
       deadlineMs: input.deadlineMs ?? 180000,
-      temperature: 0,
       dataPolicy: {
         dataClasses: input.dataClasses ?? ["documents"],
         maxInputBytes: 1048576,

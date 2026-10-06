@@ -332,17 +332,10 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
             const capabilities = object(model.capabilities, "Model capabilities");
             knownKeys(
               capabilities,
-              [
-                "structuredJson",
-                "toolCalls",
-                "vision",
-                "contextTokens",
-                "maxOutputTokens",
-                "reasoningControls",
-              ],
+              ["structuredJson", "toolCalls", "vision", "contextTokens", "maxOutputTokens"],
               "Model capabilities",
             );
-            for (const key of ["structuredJson", "toolCalls", "vision", "reasoningControls"])
+            for (const key of ["structuredJson", "toolCalls", "vision"])
               if (capabilities[key] !== undefined && typeof capabilities[key] !== "boolean")
                 throw new ContractError(
                   "INVALID_ARGUMENT",

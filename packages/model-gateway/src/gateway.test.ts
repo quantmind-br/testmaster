@@ -125,6 +125,32 @@ describe("policy-controlled model requests", () => {
     expect(result.cost).toBe("unknown");
   });
 
+  it("leaves generation and reasoning defaults to the provider, including repair requests", async () => {
+    const f = await fixture((_req, res, body, number) => {
+      const payload = JSON.parse(body) as Record<string, unknown>;
+      const unexpected = Object.keys(payload).filter(
+        (key) => !["model", "messages", "response_format"].includes(key),
+      );
+      if (unexpected.length) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: "Generation overrides are not accepted" }));
+        return;
+      }
+      res.end(
+        JSON.stringify(
+          number === 1
+            ? { ...completion, choices: [{ message: { content: "invalid JSON" } }] }
+            : completion,
+        ),
+      );
+    });
+    const result = await f.gateway.complete(testRequest);
+    expect(result.output).toEqual({ amount: 1, currency: "USD", scale: 2 });
+    expect(result.reasoningContent).toBe("Checked required fields.");
+    expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "success"]);
+    expect(f.counts().completions).toBe(2);
+  });
+
   it("records invalid repairs and never returns invalid-after-two-repairs", async () => {
     const f = await fixture((_req, res) =>
       res.end(

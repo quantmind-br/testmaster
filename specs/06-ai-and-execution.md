@@ -80,13 +80,13 @@ Plano declarativo de HTTP suporta capture JSON Pointer ou header, tipos, secretR
 
 ## 6. Geração por IA
 
-`ModelRequest`: purpose (`summarize|normalize|plan|resolve_action|generate_code|classify|heal`), modelId, modelConfigHash, promptVersion, sourceRefs, responseSchemaVersion, maxOutputTokens, deadlineMs, budgetReservationId e dataPolicy. `ModelResponse`: parsed output, rawResponseRef redacted opcional, usage measured/estimated/unknown, latency, finishReason, warnings.
+`ModelRequest`: purpose (`summarize|normalize|plan|resolve_action|generate_code|classify|heal`), modelId, modelConfigHash, promptVersion, sourceRefs, responseSchemaVersion, deadlineMs, budgetReservationId e dataPolicy. `ModelResponse`: parsed output, rawResponseRef redacted opcional, usage measured/estimated/unknown, latency, finishReason, warnings.
 
-Capacidades: structured JSON/tool calls/vision/contextTokens/maxOutputTokens/reasoning controls. Provedor ausente ou capability necessária faltando: `CAPABILITY_UNAVAILABLE`; nunca trocar modelo ou remoto sem política. Truncation/context overflow: reduzir inputs por chunk grounded e reexecutar dentro do budget, mantendo refs; não truncar silent.
+Capacidades: structured JSON/tool calls/vision/contextTokens/maxOutputTokens. Limites declarados do modelo são metadados para admissão e reserva local, não parâmetros de geração. A aplicação não envia `max_tokens`, `max_completion_tokens`, temperature, top-p, seed, penalidades ou controles de thinking/reasoning; geração e raciocínio usam defaults do provider. Provedor ausente ou capability necessária faltando: `CAPABILITY_UNAVAILABLE`; nunca trocar modelo ou remoto sem política. Truncation/context overflow: reduzir inputs por chunk grounded e reexecutar dentro do budget, mantendo refs; não truncar silent.
 
 Loop de validação com no máximo 2 reparos estruturais por request, cada um contabilizado. Schema inválido persistente → candidate invalid e diagnóstico. AST analysis de código rejeita imports fora lock/allowlist, downloads/deps em runtime, timeout desativado e assertions vazias; análise estática não equivale a sandbox seguro. Compile/syntax valid não equivale a comportamento validado.
 
-Caching: chave inclui modelo/config/prompt/schema/source revisions/locale/policy. Cache semântico aproximado não pode servir código de outro projeto. Resultados com secrets ou dados de tenant nunca compartilhados. Temperature zero não garante determinismo remoto; registrar response hash e modelo resolvido.
+Caching: chave inclui modelo/config/prompt/schema/source revisions/locale/policy. Cache semântico aproximado não pode servir código de outro projeto. Resultados com secrets ou dados de tenant nunca compartilhados. Defaults remotos de geração não garantem determinismo; registrar response hash e modelo resolvido.
 
 Aprovação automática opt-in (`--accept-generated`) só fora CI, com policy e verificações completas, auditada; não aprova lacunas `needs_input` ou relaxa assertions. Base: aprovação humana ou agente externo autorizado com papel separado.
 

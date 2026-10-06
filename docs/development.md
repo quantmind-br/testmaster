@@ -415,3 +415,19 @@ adding CHECK constraints. Incompatible historical rows stop the migration withou
 them; an operator must inspect preserved data before attempting a corrected upgrade.
 
 
+### Provider-controlled generation
+
+Model requests contain model/messages and, when needed, response_format/tools only.
+TestMaster does not send max_tokens, max_completion_tokens, temperature, top_p, seed,
+penalties, enable_thinking or reasoning_effort. Reasoning remains at the provider default;
+the application neither disables it nor selects its effort. Proposal budgets accept only
+deadlineMs. Consent, input admission, cancellation, response validation and accounting
+remain local. Output capability metadata is used only for conservative budget reservations,
+falling back to declared context capacity or the admitted input allowance; no token limit is
+sent upstream. Such reservations are estimates, not a provider-enforced spending guarantee.
+Measured usage is settled even when it exceeds the estimate; unknown charges remain held.
+
+Historical evaluation registrations/results retain their original decoding settings and
+frozen hashes. They cannot be rerun with this changed implementation; another evaluation
+requires a new committed registration that records provider-controlled generation defaults.
+

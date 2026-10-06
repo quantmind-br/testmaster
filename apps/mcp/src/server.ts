@@ -486,7 +486,7 @@ export class TestMasterMcp {
           projectId: String(args.projectId),
           sourceSnapshotId: String(args.sourceSnapshotId),
           type: args.type as "frontend" | "backend",
-          budget: args.budget as { maxOutputTokens?: number; deadlineMs?: number },
+          budget: args.budget as { deadlineMs?: number },
           signal,
         });
       case "testmaster_review_plan":

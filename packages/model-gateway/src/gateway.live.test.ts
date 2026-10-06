@@ -37,7 +37,6 @@ it("QuantForge qwen3.8-flash returns locally validated JSON and measured usage",
     ...testRequest,
     provider: "quantforge",
     model: "qwen3.8-flash",
-    maxOutputTokens: 1024,
     deadlineMs: 60_000,
     cache: false,
   });

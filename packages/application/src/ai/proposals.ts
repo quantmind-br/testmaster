@@ -46,13 +46,10 @@ export class ProposalsService {
     model?: string;
     signal?: AbortSignal;
     idempotencyKey?: string;
-    budget?: { maxOutputTokens?: number; deadlineMs?: number };
+    budget?: { deadlineMs?: number };
   }): Promise<StoredBatch> {
     this.ctx.authorize("W", input.projectId);
-    if (
-      input.budget &&
-      Object.keys(input.budget).some((key) => !["maxOutputTokens", "deadlineMs"].includes(key))
-    )
+    if (input.budget && Object.keys(input.budget).some((key) => key !== "deadlineMs"))
       throw new ContractError("INVALID_ARGUMENT", "Unsupported generation budget key");
     if (input.idempotencyKey) {
       const { signal: _signal, idempotencyKey: _key, ...body } = input;

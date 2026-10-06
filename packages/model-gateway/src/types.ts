@@ -70,7 +70,6 @@ export interface ModelCapabilities {
   vision?: boolean;
   contextTokens?: number;
   maxOutputTokens?: number;
-  reasoningControls?: boolean;
 }
 export interface ModelPrice {
   currency: string;
@@ -127,10 +126,7 @@ export interface ModelRequest {
   responseSchema?: string;
   tools?: ModelTool[];
   requiredCapabilities?: (keyof ModelCapabilities)[];
-  maxOutputTokens: number;
   deadlineMs: number;
-  temperature?: number;
-  reasoningEffort?: "low" | "medium" | "high";
   dataPolicy: {
     dataClasses: string[];
     maxInputBytes: number;
