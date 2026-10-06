@@ -480,10 +480,11 @@
       ],
       "evidence": [
         "validation/journeys/surface-capabilities.docker.test.ts",
-        "validation/results/surface-missing-image.json"
+        "validation/results/surface-missing-image.json",
+        "validation/results/m2-capabilities-qwen38.json"
       ],
       "code": ["packages/application/src/application.ts", "apps/server/src/server.ts"],
-      "note": "Explicit imageLockPath composition option retains same deployment lock through request identities; global image lock not modified.",
+      "note": "Runtime reports implemented M2 surfaces; missing images disable sandbox-dependent M1/M2 operations while model-free services remain available. M3-M6 remain unavailable; provider consent and model configuration checked at invocation, not an availability-network probe.",
       "coverage": {
         "positive": [
           "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
@@ -5960,7 +5961,10 @@
         "evals/corpus/manifest.json",
         "tools/src/evals/scoring.test.ts",
         "evals/results/m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z/report.json",
-        "validation/results/model-provider-inventory.json"
+        "validation/results/model-provider-inventory.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
+        "evals/rounds/m2-round3-qwen38/preregistration.json"
       ],
       "code": [
         "packages/application/src/agent-skills/installer.ts",
@@ -5968,8 +5972,8 @@
         "tools/src/evals/run.ts",
         "tools/src/evals/scoring.ts"
       ],
-      "note": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim.",
-      "blockedReason": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim."
+      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
+      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
     },
     {
       "id": "M3-01",
@@ -13035,15 +13039,18 @@
         "fixtures/reference-shop/oracle/index.js",
         "evals/preregistration.json",
         "evals/results/m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z/report.json",
-        "validation/results/model-provider-inventory.json"
+        "validation/results/model-provider-inventory.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
+        "evals/rounds/m2-round3-qwen38/preregistration.json"
       ],
       "code": [
         "tools/src/evals/scoring.ts",
         "tools/src/evals/run.ts",
         "fixtures/reference-shop/oracle/index.js"
       ],
-      "note": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim.",
-      "blockedReason": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim."
+      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
+      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
     },
     {
       "id": "VAL-004",
@@ -14591,11 +14598,14 @@
         "evals/corpus/manifest.json",
         "tools/src/evals/scoring.test.ts",
         "evals/results/m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z/report.json",
-        "validation/results/model-provider-inventory.json"
+        "validation/results/model-provider-inventory.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
+        "evals/rounds/m2-round3-qwen38/preregistration.json"
       ],
       "code": ["tools/src/evals/run.ts", "tools/src/evals/scoring.ts"],
-      "note": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim.",
-      "blockedReason": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim."
+      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
+      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
     },
     {
       "id": "VAL-039",
@@ -14616,11 +14626,14 @@
         "evals/corpus/manifest.json",
         "tools/src/evals/scoring.test.ts",
         "evals/results/m2-reference-shop-2026-10-05-2026-10-05T23-14-51-858Z/report.json",
-        "validation/results/model-provider-inventory.json"
+        "validation/results/model-provider-inventory.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
+        "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
+        "evals/rounds/m2-round3-qwen38/preregistration.json"
       ],
       "code": ["tools/src/evals/run.ts", "tools/src/evals/scoring.ts"],
-      "note": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim.",
-      "blockedReason": "Round1 measured 0/8 end-to-end detections (Wilson95% [0,0.3244156195108769]); no generated replay reached. Round2 corrected registration prepared, execution blocked because assigned deepseek-v4.1-flash absent from provider inventory. One family and no independent human adjudication: no parity/generalization claim."
+      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
+      "blockedReason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
     },
     {
       "id": "VAL-040",
@@ -15560,6 +15573,16 @@
         "n": 0,
         "decision": "blocked",
         "reason": "Maintainer license decision, independent reviews and normative rootless reference are unavailable; no public-release or parity claim."
+      },
+      {
+        "area": "model-pipeline-round3-qwen38",
+        "proposedTarget": "Eight preregistered paired deterministic replay trials with operator-selected qwen3.8-flash",
+        "approvedTarget": null,
+        "observation": 0,
+        "interval": [0, 0.3244156195108769],
+        "n": 8,
+        "decision": "blocked",
+        "reason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
       }
     ]
   }

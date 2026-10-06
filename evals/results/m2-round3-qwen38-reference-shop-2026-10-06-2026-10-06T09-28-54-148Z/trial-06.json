@@ -1,0 +1,45 @@
+{
+  "trialId": "trial-06",
+  "caseId": "shop-defect-008",
+  "split": "development",
+  "category": "idempotency",
+  "mutant": "idempotency-ignored",
+  "oracle": {
+    "healthyConfirmed": false,
+    "defectConfirmed": false
+  },
+  "pairs": [],
+  "errors": [
+    {
+      "phase": "scheduling",
+      "code": "budget_exhausted",
+      "message": "Insufficient conservative token reservation",
+      "evidence": {
+        "chargedTokens": 9088128,
+        "requiredTokens": 4544064
+      },
+      "exclusion": "budget_exhausted"
+    }
+  ],
+  "generatedProposals": 0,
+  "validProposals": 0,
+  "commands": [],
+  "decisions": [],
+  "oracleVerdicts": [],
+  "usage": null,
+  "durationMs": 0,
+  "workspace": null,
+  "score": {
+    "trialId": "trial-06",
+    "caseId": "shop-defect-008",
+    "detected": false,
+    "conditionalEligible": false,
+    "exclusions": [
+      "budget_exhausted"
+    ],
+    "sensitiveRevisionIds": [],
+    "healthyValid": 0,
+    "healthyFailed": 0,
+    "healthyUnavailable": 0
+  }
+}

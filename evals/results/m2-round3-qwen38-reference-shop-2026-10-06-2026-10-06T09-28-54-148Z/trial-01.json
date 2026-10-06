@@ -1,0 +1,2374 @@
+{
+  "trialId": "trial-01",
+  "caseId": "shop-defect-004",
+  "split": "development",
+  "category": "business-calculation",
+  "mutant": "price-rounding",
+  "oracle": {
+    "healthyConfirmed": true,
+    "defectConfirmed": true
+  },
+  "pairs": [],
+  "errors": [
+    {
+      "phase": "normalize",
+      "code": "provider_transport",
+      "message": "Provider rejected request",
+      "evidence": {
+        "args": [
+          "requirement",
+          "normalize",
+          "--source-revision",
+          "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+          "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+        ],
+        "startedAt": "2026-10-06T09:28:55.944Z",
+        "durationMs": 127666.436912,
+        "exitCode": 10,
+        "signal": null,
+        "envelope": {
+          "schemaVersion": "1.0.0",
+          "requestId": "cli_ba0d8266-b201-4525-aaf8-355ad36a6638",
+          "error": {
+            "code": "UNAVAILABLE",
+            "message": "Provider rejected request",
+            "details": {
+              "status": 500
+            },
+            "retryable": true,
+            "nextActions": []
+          }
+        },
+        "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_ba0d8266-b201-4525-aaf8-355ad36a6638\",\"error\":{\"code\":\"UNAVAILABLE\",\"message\":\"Provider rejected request\",\"details\":{\"status\":500},\"retryable\":true,\"nextActions\":[]}}\n",
+        "stderr": ""
+      },
+      "exclusion": "provider_transport"
+    },
+    {
+      "phase": "evidence",
+      "code": "no_attempts",
+      "message": "No test runs executed; runs evidence directory was not created",
+      "evidence": {
+        "dataDir": "/tmp/tm-eval-VLeGtJ/repo/.testmaster"
+      },
+      "exclusion": null
+    }
+  ],
+  "generatedProposals": 0,
+  "validProposals": 0,
+  "commands": [
+    {
+      "args": [
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "trial-01",
+        "--base-url",
+        "http://127.0.0.1:8080"
+      ],
+      "startedAt": "2026-10-06T09:28:54.164Z",
+      "durationMs": 306.54211799999996,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_c8a82675-c674-4b74-ac5f-c659e86e2fde",
+        "data": {
+          "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39",
+          "principalId": "usr_01a1108b-69a7-75d9-8e1b-dfeca3f46fe2",
+          "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+          "environmentId": "env_01a1108b-69b5-710d-ad91-0661e455a0f0",
+          "sessionOnly": false
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_c8a82675-c674-4b74-ac5f-c659e86e2fde\",\"data\":{\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\",\"principalId\":\"usr_01a1108b-69a7-75d9-8e1b-dfeca3f46fe2\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"environmentId\":\"env_01a1108b-69b5-710d-ad91-0661e455a0f0\",\"sessionOnly\":false},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans"
+      ],
+      "startedAt": "2026-10-06T09:28:54.470Z",
+      "durationMs": 278.434095,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_812ec7a3-4e58-4ae5-985e-ad5b101ebacb",
+        "data": {
+          "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+          "provider": "quantforge",
+          "consent": {
+            "dataClasses": [
+              "documents",
+              "code_summary",
+              "requirements",
+              "plans"
+            ],
+            "grantedAt": "2026-10-06T09:28:54.737Z",
+            "revokedAt": null,
+            "allowUnknownCost": true
+          }
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_812ec7a3-4e58-4ae5-985e-ad5b101ebacb\",\"data\":{\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"provider\":\"quantforge\",\"consent\":{\"dataClasses\":[\"documents\",\"code_summary\",\"requirements\",\"plans\"],\"grantedAt\":\"2026-10-06T09:28:54.737Z\",\"revokedAt\":null,\"allowUnknownCost\":true}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "budget",
+        "set",
+        "--tokens",
+        "12000000"
+      ],
+      "startedAt": "2026-10-06T09:28:54.749Z",
+      "durationMs": 269.38108,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_7e209156-5e8c-4223-990a-86aaa0c615f7",
+        "data": {
+          "calls": [],
+          "tokens": {
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "reasoningTokens": 0
+          },
+          "cost": [],
+          "measuredCosts": [],
+          "unknownCostCalls": 0,
+          "budgetRemaining": null,
+          "reservations": {
+            "reserved": 0,
+            "settled": 0,
+            "released": 0
+          },
+          "tokenBudget": {
+            "limit": 12000000,
+            "used": 0,
+            "remaining": 12000000
+          },
+          "runtimeMs": 0,
+          "storageBytes": 0,
+          "runs": []
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_7e209156-5e8c-4223-990a-86aaa0c615f7\",\"data\":{\"calls\":[],\"tokens\":{\"inputTokens\":0,\"outputTokens\":0,\"reasoningTokens\":0},\"cost\":[],\"measuredCosts\":[],\"unknownCostCalls\":0,\"budgetRemaining\":null,\"reservations\":{\"reserved\":0,\"settled\":0,\"released\":0},\"tokenBudget\":{\"limit\":12000000,\"used\":0,\"remaining\":12000000},\"runtimeMs\":0,\"storageBytes\":0,\"runs\":[]},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "source",
+        "add",
+        "PRD.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown"
+      ],
+      "startedAt": "2026-10-06T09:28:55.019Z",
+      "durationMs": 296.147327,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_37f0a832-fef5-4c5d-afbe-69fdb6bfc96a",
+        "data": {
+          "source": {
+            "activeRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+            "createdAt": "2026-10-06T09:28:55.302Z",
+            "displayName": "PRD.md",
+            "id": "src_01a1108b-6d06-7113-ab27-9bcb32eeca03",
+            "origin": "local-file",
+            "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+            "role": "prd",
+            "version": 2,
+            "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+          },
+          "chunks": [
+            {
+              "contentHash": "43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8",
+              "evidenceRef": {
+                "contentHash": "43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8",
+                "length": 37,
+                "offset": 0,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+              "kind": "heading",
+              "lineEnd": 1,
+              "lineStart": 1,
+              "requirementLike": false,
+              "text": "# Reference Shop product requirements"
+            },
+            {
+              "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+              "evidenceRef": {
+                "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+                "length": 106,
+                "offset": 39,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+              "kind": "paragraph",
+              "lineEnd": 3,
+              "lineStart": 3,
+              "requirementLike": false,
+              "text": "Synthetic local-only application; no real customer data. License: UNLICENSED, pending maintainer decision."
+            },
+            {
+              "contentHash": "df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238",
+              "evidenceRef": {
+                "contentHash": "df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238",
+                "length": 17,
+                "offset": 147,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+              "kind": "heading",
+              "lineEnd": 5,
+              "lineStart": 5,
+              "requirementLike": false,
+              "text": "## Authentication"
+            },
+            {
+              "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+              "evidenceRef": {
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+              "kind": "paragraph",
+              "lineEnd": 7,
+              "lineStart": 6,
+              "requirementLike": true,
+              "text": "SHOP-AUTH-001: Submitting an empty password shows exactly \"Password is required\" and creates no authenticated session.\nSHOP-AUTH-002: Orders require a bearer token and return HTTP 401 without it."
+            },
+            {
+              "contentHash": "cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1",
+              "evidenceRef": {
+                "contentHash": "cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1",
+                "length": 23,
+                "offset": 362,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+              "kind": "heading",
+              "lineEnd": 9,
+              "lineStart": 9,
+              "requirementLike": false,
+              "text": "## Catalog and checkout"
+            },
+            {
+              "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+              "evidenceRef": {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c",
+              "kind": "paragraph",
+              "lineEnd": 15,
+              "lineStart": 10,
+              "requirementLike": true,
+              "text": "SHOP-PRICE-001: All prices are integer cents; three Precision Widgets at 1005 cents each total 3015 cents.\nSHOP-SCHEMA-001: Products expose id, name and priceCents.\nSHOP-PAGING-001: Offset pagination enumerates every product exactly once.\nSHOP-ORDER-001: A successful checkout persists an order that remains visible after a page reload.\nSHOP-IDEMPOTENCY-001: Repeating an order Idempotency-Key returns the original order and never duplicates it.\nSHOP-EMPTY-001: **Deliberate conflict for adjudication:** empty-cart checkout returns HTTP 400. The OpenAPI declares HTTP 422. Both sources must be retained; neither is silently authoritative until reviewer approval."
+            },
+            {
+              "contentHash": "e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa",
+              "evidenceRef": {
+                "contentHash": "e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa",
+                "length": 14,
+                "offset": 1050,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867",
+              "kind": "heading",
+              "lineEnd": 17,
+              "lineStart": 17,
+              "requirementLike": false,
+              "text": "## Other flows"
+            },
+            {
+              "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+              "evidenceRef": {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb",
+              "kind": "paragraph",
+              "lineEnd": 21,
+              "lineStart": 18,
+              "requirementLike": false,
+              "text": "SHOP-HEALTH-001: GET /health returns HTTP 200 with status \"ok\".\nSHOP-HOOK-001: Checkout exposes data-testid=\"checkout-button\". Renaming the hook is nonfunctional drift, not a business regression.\nProfile files are uploaded as raw bytes and downloaded without changes. Terms open in a popup. A same-origin delivery iframe supports Standard and Express.\nCatalog readiness is explicit via data-testid=\"catalog-ready\" after asynchronous loading; navigation is SPA with browser history."
+            },
+            {
+              "contentHash": "fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5",
+              "evidenceRef": {
+                "contentHash": "fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5",
+                "length": 9,
+                "offset": 1548,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92",
+              "kind": "heading",
+              "lineEnd": 23,
+              "lineStart": 23,
+              "requirementLike": false,
+              "text": "## Review"
+            },
+            {
+              "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+              "evidenceRef": {
+                "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+                "length": 253,
+                "offset": 1558,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437",
+              "kind": "paragraph",
+              "lineEnd": 24,
+              "lineStart": 24,
+              "requirementLike": false,
+              "text": "The intentional status conflict requires two independent reviewers, source locations and a recorded adjudication before benchmark classification. Labels in the evaluation manifest are not model input. No production execution or personal data is allowed."
+            },
+            {
+              "contentHash": "858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf",
+              "evidenceRef": {
+                "contentHash": "858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf",
+                "length": 28,
+                "offset": 1813,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c",
+              "kind": "heading",
+              "lineEnd": 26,
+              "lineStart": 26,
+              "requirementLike": false,
+              "text": "## Reproduction and evidence"
+            },
+            {
+              "contentHash": "f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1",
+              "evidenceRef": {
+                "contentHash": "f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1",
+                "length": 356,
+                "offset": 1842,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b",
+              "kind": "paragraph",
+              "lineEnd": 27,
+              "lineStart": 27,
+              "requirementLike": false,
+              "text": "Run `node fixtures/reference-shop/src/server.js --port 3000` (set `REFERENCE_SHOP_MUTANT` for a negative control), or call `startShop({port: 0, mutant})`. Each instance owns its SQLite file and cleanup. Oracle checks use raw HTTP plus a separate read-only SQLite connection; browser checks additionally reload orders rather than trusting the success toast."
+            },
+            {
+              "contentHash": "ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e",
+              "evidenceRef": {
+                "contentHash": "ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e",
+                "length": 353,
+                "offset": 2200,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479",
+              "kind": "paragraph",
+              "lineEnd": 29,
+              "lineStart": 29,
+              "requirementLike": false,
+              "text": "Regenerate deterministic documents/digest with `node fixtures/reference-shop/artifacts/generate.js`, archives with `node fixtures/adversarial/generate.js`, then format the corpus with Biome. Unit controls run with `pnpm exec vitest run --project unit fixtures`; real Chromium controls use `pnpm exec vitest run --project docker fixtures/reference-shop`."
+            },
+            {
+              "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+              "evidenceRef": {
+                "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+                "length": 559,
+                "offset": 2555,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d",
+              "kind": "paragraph",
+              "lineEnd": 31,
+              "lineStart": 31,
+              "requirementLike": false,
+              "text": "The browser harness publishes only Playwright's server on host loopback, runs non-root in the pinned image, and binds the shop to the Docker gateway. Because this workstation's firewall rejects bridge-to-host ingress, the harness exposes only the gateway address via Playwright's WebSocket network tunnel; it does not modify firewall rules. This test-only connectivity does not validate the product sandbox's egress policy. Independent human labeling is explicitly pending in the corpus manifest; no release or model-quality claim follows from these controls."
+            },
+            {
+              "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+              "evidenceRef": {
+                "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+                "length": 407,
+                "offset": 3116,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              "id": "chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c",
+              "kind": "paragraph",
+              "lineEnd": 33,
+              "lineStart": 33,
+              "requirementLike": false,
+              "text": "Chromium is explicitly launched with `chromiumSandbox: true`; the remote server's default (sandbox disabled) is not used. The test reads `containers/seccomp_profile.json`, keeps `--cap-drop ALL` and `no-new-privileges`, and never falls back on sandbox failure. `run-server --unsafe` only permits the trusted loopback test client to request sandbox enablement; it does not alter application execution policy."
+            }
+          ],
+          "diagnostics": [],
+          "inventory": {},
+          "revision": {
+            "chunks": [
+              {
+                "contentHash": "43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8",
+                "length": 37,
+                "offset": 0,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465",
+                "length": 106,
+                "offset": 39,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238",
+                "length": 17,
+                "offset": 147,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "length": 195,
+                "offset": 165,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1",
+                "length": 23,
+                "offset": 362,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "length": 662,
+                "offset": 386,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa",
+                "length": 14,
+                "offset": 1050,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac",
+                "length": 481,
+                "offset": 1065,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5",
+                "length": 9,
+                "offset": 1548,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896",
+                "length": 253,
+                "offset": 1558,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf",
+                "length": 28,
+                "offset": 1813,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1",
+                "length": 356,
+                "offset": 1842,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e",
+                "length": 353,
+                "offset": 2200,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f",
+                "length": 559,
+                "offset": 2555,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              },
+              {
+                "contentHash": "acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c",
+                "length": 407,
+                "offset": 3116,
+                "relativePath": "PRD.md",
+                "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+              }
+            ],
+            "contentHash": "77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b",
+            "id": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+            "mediaType": "text/markdown",
+            "parentId": null,
+            "parserVersion": "1.0.0",
+            "sizeBytes": 3524,
+            "status": "ready",
+            "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+          },
+          "archivedAt": null
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_37f0a832-fef5-4c5d-afbe-69fdb6bfc96a\",\"data\":{\"source\":{\"activeRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\",\"createdAt\":\"2026-10-06T09:28:55.302Z\",\"displayName\":\"PRD.md\",\"id\":\"src_01a1108b-6d06-7113-ab27-9bcb32eeca03\",\"origin\":\"local-file\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"role\":\"prd\",\"version\":2,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},\"chunks\":[{\"contentHash\":\"43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8\",\"evidenceRef\":{\"contentHash\":\"43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8\",\"length\":37,\"offset\":0,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a\",\"kind\":\"heading\",\"lineEnd\":1,\"lineStart\":1,\"requirementLike\":false,\"text\":\"# Reference Shop product requirements\"},{\"contentHash\":\"ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465\",\"evidenceRef\":{\"contentHash\":\"ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465\",\"length\":106,\"offset\":39,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583\",\"kind\":\"paragraph\",\"lineEnd\":3,\"lineStart\":3,\"requirementLike\":false,\"text\":\"Synthetic local-only application; no real customer data. License: UNLICENSED, pending maintainer decision.\"},{\"contentHash\":\"df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238\",\"evidenceRef\":{\"contentHash\":\"df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238\",\"length\":17,\"offset\":147,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844\",\"kind\":\"heading\",\"lineEnd\":5,\"lineStart\":5,\"requirementLike\":false,\"text\":\"## Authentication\"},{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"evidenceRef\":{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"length\":195,\"offset\":165,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0\",\"kind\":\"paragraph\",\"lineEnd\":7,\"lineStart\":6,\"requirementLike\":true,\"text\":\"SHOP-AUTH-001: Submitting an empty password shows exactly \\\"Password is required\\\" and creates no authenticated session.\\nSHOP-AUTH-002: Orders require a bearer token and return HTTP 401 without it.\"},{\"contentHash\":\"cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1\",\"evidenceRef\":{\"contentHash\":\"cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1\",\"length\":23,\"offset\":362,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb\",\"kind\":\"heading\",\"lineEnd\":9,\"lineStart\":9,\"requirementLike\":false,\"text\":\"## Catalog and checkout\"},{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"evidenceRef\":{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"length\":662,\"offset\":386,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c\",\"kind\":\"paragraph\",\"lineEnd\":15,\"lineStart\":10,\"requirementLike\":true,\"text\":\"SHOP-PRICE-001: All prices are integer cents; three Precision Widgets at 1005 cents each total 3015 cents.\\nSHOP-SCHEMA-001: Products expose id, name and priceCents.\\nSHOP-PAGING-001: Offset pagination enumerates every product exactly once.\\nSHOP-ORDER-001: A successful checkout persists an order that remains visible after a page reload.\\nSHOP-IDEMPOTENCY-001: Repeating an order Idempotency-Key returns the original order and never duplicates it.\\nSHOP-EMPTY-001: **Deliberate conflict for adjudication:** empty-cart checkout returns HTTP 400. The OpenAPI declares HTTP 422. Both sources must be retained; neither is silently authoritative until reviewer approval.\"},{\"contentHash\":\"e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa\",\"evidenceRef\":{\"contentHash\":\"e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa\",\"length\":14,\"offset\":1050,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_10137cc347224cdad9db838731c6f381850166b4fa30a095ca7a5f62a5fa1867\",\"kind\":\"heading\",\"lineEnd\":17,\"lineStart\":17,\"requirementLike\":false,\"text\":\"## Other flows\"},{\"contentHash\":\"1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac\",\"evidenceRef\":{\"contentHash\":\"1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac\",\"length\":481,\"offset\":1065,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_51357ffc958ceae2561f68b32428cc568753798c93e6532a9ca1a44d965bfcdb\",\"kind\":\"paragraph\",\"lineEnd\":21,\"lineStart\":18,\"requirementLike\":false,\"text\":\"SHOP-HEALTH-001: GET /health returns HTTP 200 with status \\\"ok\\\".\\nSHOP-HOOK-001: Checkout exposes data-testid=\\\"checkout-button\\\". Renaming the hook is nonfunctional drift, not a business regression.\\nProfile files are uploaded as raw bytes and downloaded without changes. Terms open in a popup. A same-origin delivery iframe supports Standard and Express.\\nCatalog readiness is explicit via data-testid=\\\"catalog-ready\\\" after asynchronous loading; navigation is SPA with browser history.\"},{\"contentHash\":\"fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5\",\"evidenceRef\":{\"contentHash\":\"fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5\",\"length\":9,\"offset\":1548,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_9b31bab761729119f7a341e7f8cc714c5709584754757f05a35118e8e6943d92\",\"kind\":\"heading\",\"lineEnd\":23,\"lineStart\":23,\"requirementLike\":false,\"text\":\"## Review\"},{\"contentHash\":\"e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896\",\"evidenceRef\":{\"contentHash\":\"e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896\",\"length\":253,\"offset\":1558,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_21f4f753b439d37d57e24833f11167f526c1c3be3c10ad0889e869416a650437\",\"kind\":\"paragraph\",\"lineEnd\":24,\"lineStart\":24,\"requirementLike\":false,\"text\":\"The intentional status conflict requires two independent reviewers, source locations and a recorded adjudication before benchmark classification. Labels in the evaluation manifest are not model input. No production execution or personal data is allowed.\"},{\"contentHash\":\"858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf\",\"evidenceRef\":{\"contentHash\":\"858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf\",\"length\":28,\"offset\":1813,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_c16f4c8343a56d3d7cb31025727793399d63bb4a66223ec85cdbd919192f289c\",\"kind\":\"heading\",\"lineEnd\":26,\"lineStart\":26,\"requirementLike\":false,\"text\":\"## Reproduction and evidence\"},{\"contentHash\":\"f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1\",\"evidenceRef\":{\"contentHash\":\"f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1\",\"length\":356,\"offset\":1842,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_154ad587ede7a526fa2b1a432860c0b6b6c1d1529788bf7163e995363ccb530b\",\"kind\":\"paragraph\",\"lineEnd\":27,\"lineStart\":27,\"requirementLike\":false,\"text\":\"Run `node fixtures/reference-shop/src/server.js --port 3000` (set `REFERENCE_SHOP_MUTANT` for a negative control), or call `startShop({port: 0, mutant})`. Each instance owns its SQLite file and cleanup. Oracle checks use raw HTTP plus a separate read-only SQLite connection; browser checks additionally reload orders rather than trusting the success toast.\"},{\"contentHash\":\"ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e\",\"evidenceRef\":{\"contentHash\":\"ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e\",\"length\":353,\"offset\":2200,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_99c8fa3b9c41c19a4bc87aebb20cf199f2acd5256d92b8e3c12fa7a6c15c1479\",\"kind\":\"paragraph\",\"lineEnd\":29,\"lineStart\":29,\"requirementLike\":false,\"text\":\"Regenerate deterministic documents/digest with `node fixtures/reference-shop/artifacts/generate.js`, archives with `node fixtures/adversarial/generate.js`, then format the corpus with Biome. Unit controls run with `pnpm exec vitest run --project unit fixtures`; real Chromium controls use `pnpm exec vitest run --project docker fixtures/reference-shop`.\"},{\"contentHash\":\"ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f\",\"evidenceRef\":{\"contentHash\":\"ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f\",\"length\":559,\"offset\":2555,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_0405659b09db3d6b4972062500db9e93d1f0dcf0f45a29b23c61eedf766cc18d\",\"kind\":\"paragraph\",\"lineEnd\":31,\"lineStart\":31,\"requirementLike\":false,\"text\":\"The browser harness publishes only Playwright's server on host loopback, runs non-root in the pinned image, and binds the shop to the Docker gateway. Because this workstation's firewall rejects bridge-to-host ingress, the harness exposes only the gateway address via Playwright's WebSocket network tunnel; it does not modify firewall rules. This test-only connectivity does not validate the product sandbox's egress policy. Independent human labeling is explicitly pending in the corpus manifest; no release or model-quality claim follows from these controls.\"},{\"contentHash\":\"acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c\",\"evidenceRef\":{\"contentHash\":\"acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c\",\"length\":407,\"offset\":3116,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},\"id\":\"chunk_959ac684db89da283fcdd17d002daf470bde6cffd5244cb4a460b2e4c5305a7c\",\"kind\":\"paragraph\",\"lineEnd\":33,\"lineStart\":33,\"requirementLike\":false,\"text\":\"Chromium is explicitly launched with `chromiumSandbox: true`; the remote server's default (sandbox disabled) is not used. The test reads `containers/seccomp_profile.json`, keeps `--cap-drop ALL` and `no-new-privileges`, and never falls back on sandbox failure. `run-server --unsafe` only permits the trusted loopback test client to request sandbox enablement; it does not alter application execution policy.\"}],\"diagnostics\":[],\"inventory\":{},\"revision\":{\"chunks\":[{\"contentHash\":\"43b9b0c085af07feff548e29b0b557b18520b40feb8682830fb4e5b9a19298d8\",\"length\":37,\"offset\":0,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"ae0800c48fde8b00e4ac94185e2318b46972ed391da020fdff0c709a8eb5b465\",\"length\":106,\"offset\":39,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"df96773c8abc735dd4f21f5ff9ce623e4d544cd60d025eeba0e89dca1e0f9238\",\"length\":17,\"offset\":147,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"length\":195,\"offset\":165,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"cbfe15e78cd46861772bfbb6b7fe9c05bd38a5be502ae00dd0ab6e8879a6c3d1\",\"length\":23,\"offset\":362,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"length\":662,\"offset\":386,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"e2a72da3a35f7ad303e26210a1db503c0ea4116f00027d7d0d78c3419874d3fa\",\"length\":14,\"offset\":1050,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"1ce1a8b8f03ac019afb5f8b84296d239d22debdb35b1b14319794368c05ec4ac\",\"length\":481,\"offset\":1065,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"fb10aa9db2db8777222ffdbd43fde6590d0cbc4c05c03ccdf4ba938c7ca8c1e5\",\"length\":9,\"offset\":1548,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"e8f23d191537eac0cb66db4474b0406a6ed3b652a826013225cc44ca174c8896\",\"length\":253,\"offset\":1558,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"858d71a962dd290c489b1993f42f757015a071660c26f4625d470001a8aef9bf\",\"length\":28,\"offset\":1813,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"f6f2a7b6470b34f058357bf8e0d1eed20482adacddf6cd5da306e3e86a0f98b1\",\"length\":356,\"offset\":1842,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"ab02881018f5284932ac25817b4df19178ddcb56c172cfa74ef163d32cdb284e\",\"length\":353,\"offset\":2200,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"ecf0ff517e3eec8fefd7d6b4da0567df59bc73890282f6c22ba024c5aab0845f\",\"length\":559,\"offset\":2555,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"},{\"contentHash\":\"acdadd201e2b6b35b1f86a7f531e99ec432c936f3b652b820ac4848a15650b2c\",\"length\":407,\"offset\":3116,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"}],\"contentHash\":\"77d63f88a0a3217620285c331c0006c0f5a02d67ac4a4199dfb058962a3fbb1b\",\"id\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\",\"mediaType\":\"text/markdown\",\"parentId\":null,\"parserVersion\":\"1.0.0\",\"sizeBytes\":3524,\"status\":\"ready\",\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},\"archivedAt\":null},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "source",
+        "add",
+        "openapi.yaml",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi"
+      ],
+      "startedAt": "2026-10-06T09:28:55.316Z",
+      "durationMs": 328.89741000000004,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_34c323ab-f6ac-442a-a499-da9b8bfb0ad6",
+        "data": {
+          "source": {
+            "activeRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041",
+            "createdAt": "2026-10-06T09:28:55.631Z",
+            "displayName": "openapi.yaml",
+            "id": "src_01a1108b-6e4f-736d-9a6e-4e0a76370667",
+            "origin": "local-file",
+            "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+            "role": "api-spec",
+            "version": 2,
+            "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+          },
+          "chunks": [
+            {
+              "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+              "evidenceRef": {
+                "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "jsonPointer": "/paths/~1health/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"getHealth\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"status\":{\"const\":\"ok\"}},\"required\":[\"status\"],\"type\":\"object\"}}},\"description\":\"Healthy service\"}}}"
+            },
+            {
+              "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+              "evidenceRef": {
+                "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                "jsonPointer": "/paths/~1api~1auth~1token/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Bearer token\"}}}"
+            },
+            {
+              "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+              "evidenceRef": {
+                "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"refreshToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Fresh token with credentials\"}}}"
+            },
+            {
+              "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+              "evidenceRef": {
+                "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "jsonPointer": "/paths/~1api~1products/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_1d8eb065a47a3b6c4899d38eaaa6f8e1ae05d4c8cff69068c5c162b9eacff8b0",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"listProducts\",\"parameters\":[{\"in\":\"query\",\"name\":\"limit\",\"schema\":{\"default\":2,\"maximum\":100,\"minimum\":1,\"type\":\"integer\"}},{\"in\":\"query\",\"name\":\"offset\",\"schema\":{\"default\":0,\"minimum\":0,\"type\":\"integer\"}}],\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"items\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"},\"type\":\"array\"},\"nextOffset\":{\"type\":\"integer\"},\"total\":{\"type\":\"integer\"}},\"required\":[\"items\",\"total\",\"nextOffset\"],\"type\":\"object\"}}},\"description\":\"Paginated products\"}}}"
+            },
+            {
+              "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+              "evidenceRef": {
+                "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                "jsonPointer": "/paths/~1api~1products/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_252375ce39d565d6fb9dc7b0958a6318d65dd7ace64c06afab34147107e79399",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+              "evidenceRef": {
+                "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                "jsonPointer": "/paths/~1api~1products~1{id}/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_79f489bf0503f4e6a3cc7dc4171726d5c074d7691a2dce4d5ed82a53f014a529",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"getProduct\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+              "evidenceRef": {
+                "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                "jsonPointer": "/paths/~1api~1products~1{id}/put",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_206a98f3554919c8adcbd9a4651279b048545144c40780c5e58a987e674801f8",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"updateProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Updated product\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+              "evidenceRef": {
+                "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+                "jsonPointer": "/paths/~1api~1products~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_0199efcc555f69cfca79197888d2d435c2344ac0f72370932b85c46d4938f101",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"deleteProduct\",\"responses\":{\"200\":{\"description\":\"Deletion result\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+              "evidenceRef": {
+                "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+                "jsonPointer": "/paths/~1api~1cart/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_14c4c86d8b2d608b81c14241c435f557488ec807dc82a69e15b92285802a4606",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"getCart\",\"responses\":{\"200\":{\"description\":\"Persistent cart\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+              "evidenceRef": {
+                "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                "jsonPointer": "/paths/~1api~1cart/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_738b0759d2075fe9b50a3e3cdcbb3cc9d39363afb634c8a70d25dba89d9cdd3f",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"setCartItem\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"productId\":{\"type\":\"string\"},\"quantity\":{\"minimum\":1,\"type\":\"integer\"}},\"required\":[\"productId\",\"quantity\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Cart updated\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+              "evidenceRef": {
+                "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+                "jsonPointer": "/paths/~1api~1cart/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_18338c1c22abc29ac54ad72c6c8f5ce0d2b140ff966316c0410ce49d4365e260",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"clearCart\",\"responses\":{\"200\":{\"description\":\"Cart cleared\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+              "evidenceRef": {
+                "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "jsonPointer": "/paths/~1api~1orders/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_8351cbfde5b57736a3b1761c642e5b3a790231f72e02043a0b38fcc188e44459",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"listOrders\",\"responses\":{\"200\":{\"description\":\"Orders\"},\"401\":{\"description\":\"Authentication required\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+              "evidenceRef": {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_71d32f63cb8ce1d155900cb427ae72d55e840677a75b0a1228cb0546e49edc98",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createOrder\",\"parameters\":[{\"in\":\"header\",\"name\":\"Idempotency-Key\",\"required\":true,\"schema\":{\"minLength\":1,\"type\":\"string\"}}],\"responses\":{\"200\":{\"description\":\"Idempotent replay\"},\"201\":{\"description\":\"Persisted order\"},\"401\":{\"description\":\"Authentication required\"},\"422\":{\"description\":\"Empty cart\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+              "evidenceRef": {
+                "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                "jsonPointer": "/paths/~1api~1users/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_f101e58bead592b6001e67b1f4ca5dbf276baeb455a5bf841a13e99f63734e2b",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"createUser\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"email\":{\"format\":\"email\",\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"Cleanup-owned user\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+              "evidenceRef": {
+                "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+                "jsonPointer": "/paths/~1api~1users~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_fc1b423c25767ccafa9c87944e2310dc0be2a096735b965950b13e825474648a",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"deleteUser\",\"responses\":{\"200\":{\"description\":\"Delete owned user\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+              "evidenceRef": {
+                "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "jsonPointer": "/paths/~1api~1profile~1file/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_c762774fe5f4bb2e74a65fa35d457c2b5d0af3edd71177faf076e1c3142968a1",
+              "kind": "operation",
+              "requirementLike": true,
+              "text": "{\"operationId\":\"uploadProfile\",\"requestBody\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"File uploaded\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+              "evidenceRef": {
+                "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+                "jsonPointer": "/paths/~1api~1profile~1file/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_fa5bbff32723f458734591cc9662b09b15430be7ccf8061c7d45ff59884367cf",
+              "kind": "operation",
+              "requirementLike": false,
+              "text": "{\"operationId\":\"downloadProfile\",\"responses\":{\"200\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"description\":\"Profile bytes\"}},\"security\":[{\"bearerAuth\":[]}]}"
+            },
+            {
+              "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+              "evidenceRef": {
+                "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "jsonPointer": "/components",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_b63477abb64c8b7663c450ae3443d225c33af02798f4c97bc0da573a3315d8b1",
+              "kind": "components",
+              "requirementLike": true,
+              "text": "{\"schemas\":{\"Product\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}},\"securitySchemes\":{\"bearerAuth\":{\"scheme\":\"bearer\",\"type\":\"http\"}}}"
+            },
+            {
+              "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+              "evidenceRef": {
+                "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+                "jsonPointer": "/servers",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              "id": "chunk_e0375bd9de2ac1591c40c4ea5731c3af7c5666cdd3640b66e0bc11e580fbfee9",
+              "kind": "servers",
+              "requirementLike": false,
+              "text": "[{\"url\":\"http://127.0.0.1:3000\"}]"
+            }
+          ],
+          "diagnostics": [],
+          "inventory": {
+            "operations": [
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "getHealth",
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "properties": {
+                              "status": {
+                                "const": "ok"
+                              }
+                            },
+                            "required": [
+                              "status"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Healthy service"
+                    }
+                  }
+                },
+                "path": "/health"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createToken",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "properties": {
+                            "email": {
+                              "type": "string"
+                            },
+                            "password": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "password"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Bearer token"
+                    }
+                  }
+                },
+                "path": "/api/auth/token"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "refreshToken",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "properties": {
+                            "email": {
+                              "type": "string"
+                            },
+                            "password": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "password"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Fresh token with credentials"
+                    }
+                  }
+                },
+                "path": "/api/auth/refresh"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "listProducts",
+                  "parameters": [
+                    {
+                      "in": "query",
+                      "name": "limit",
+                      "schema": {
+                        "default": 2,
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    },
+                    {
+                      "in": "query",
+                      "name": "offset",
+                      "schema": {
+                        "default": 0,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "properties": {
+                              "items": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "priceCents": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "priceCents"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "nextOffset": {
+                                "type": "integer"
+                              },
+                              "total": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "items",
+                              "total",
+                              "nextOffset"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Paginated products"
+                    }
+                  }
+                },
+                "path": "/api/products"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createProduct",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "priceCents": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "priceCents"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "201": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "priceCents": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "priceCents"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Product"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "getProduct",
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "priceCents": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "priceCents"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Product"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products/{id}"
+              },
+              {
+                "method": "PUT",
+                "operation": {
+                  "operationId": "updateProduct",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "priceCents": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "priceCents"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "priceCents": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "priceCents"
+                            ],
+                            "type": "object"
+                          }
+                        }
+                      },
+                      "description": "Updated product"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products/{id}"
+              },
+              {
+                "method": "DELETE",
+                "operation": {
+                  "operationId": "deleteProduct",
+                  "responses": {
+                    "200": {
+                      "description": "Deletion result"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/products/{id}"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "getCart",
+                  "responses": {
+                    "200": {
+                      "description": "Persistent cart"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/cart"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "setCartItem",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "productId": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "quantity"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "200": {
+                      "description": "Cart updated"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/cart"
+              },
+              {
+                "method": "DELETE",
+                "operation": {
+                  "operationId": "clearCart",
+                  "responses": {
+                    "200": {
+                      "description": "Cart cleared"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/cart"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "listOrders",
+                  "responses": {
+                    "200": {
+                      "description": "Orders"
+                    },
+                    "401": {
+                      "description": "Authentication required"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/orders"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createOrder",
+                  "parameters": [
+                    {
+                      "in": "header",
+                      "name": "Idempotency-Key",
+                      "required": true,
+                      "schema": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Idempotent replay"
+                    },
+                    "201": {
+                      "description": "Persisted order"
+                    },
+                    "401": {
+                      "description": "Authentication required"
+                    },
+                    "422": {
+                      "description": "Empty cart"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/orders"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "createUser",
+                  "requestBody": {
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "format": "email",
+                              "type": "string"
+                            },
+                            "password": {
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "password"
+                          ],
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "201": {
+                      "description": "Cleanup-owned user"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/users"
+              },
+              {
+                "method": "DELETE",
+                "operation": {
+                  "operationId": "deleteUser",
+                  "responses": {
+                    "200": {
+                      "description": "Delete owned user"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/users/{id}"
+              },
+              {
+                "method": "POST",
+                "operation": {
+                  "operationId": "uploadProfile",
+                  "requestBody": {
+                    "content": {
+                      "application/octet-stream": {
+                        "schema": {
+                          "format": "binary",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": true
+                  },
+                  "responses": {
+                    "201": {
+                      "description": "File uploaded"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/profile/file"
+              },
+              {
+                "method": "GET",
+                "operation": {
+                  "operationId": "downloadProfile",
+                  "responses": {
+                    "200": {
+                      "content": {
+                        "application/octet-stream": {
+                          "schema": {
+                            "format": "binary",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "description": "Profile bytes"
+                    }
+                  },
+                  "security": [
+                    {
+                      "bearerAuth": []
+                    }
+                  ]
+                },
+                "path": "/api/profile/file"
+              }
+            ],
+            "specification": "OpenAPI"
+          },
+          "revision": {
+            "chunks": [
+              {
+                "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "jsonPointer": "/paths/~1health/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                "jsonPointer": "/paths/~1api~1auth~1token/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "jsonPointer": "/paths/~1api~1products/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                "jsonPointer": "/paths/~1api~1products/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                "jsonPointer": "/paths/~1api~1products~1{id}/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                "jsonPointer": "/paths/~1api~1products~1{id}/put",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d",
+                "jsonPointer": "/paths/~1api~1products~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d",
+                "jsonPointer": "/paths/~1api~1cart/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                "jsonPointer": "/paths/~1api~1cart/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b",
+                "jsonPointer": "/paths/~1api~1cart/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "jsonPointer": "/paths/~1api~1orders/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "jsonPointer": "/paths/~1api~1orders/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                "jsonPointer": "/paths/~1api~1users/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657",
+                "jsonPointer": "/paths/~1api~1users~1{id}/delete",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "jsonPointer": "/paths/~1api~1profile~1file/post",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38",
+                "jsonPointer": "/paths/~1api~1profile~1file/get",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "jsonPointer": "/components",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              },
+              {
+                "contentHash": "3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57",
+                "jsonPointer": "/servers",
+                "relativePath": "openapi.yaml",
+                "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              }
+            ],
+            "contentHash": "a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881",
+            "id": "svr_01a1108b-6e1a-7250-90af-72d6541aa041",
+            "mediaType": "application/vnd.oai.openapi",
+            "parentId": null,
+            "parserVersion": "1.0.0",
+            "sizeBytes": 14932,
+            "status": "ready",
+            "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+          },
+          "archivedAt": null
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_34c323ab-f6ac-442a-a499-da9b8bfb0ad6\",\"data\":{\"source\":{\"activeRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\",\"createdAt\":\"2026-10-06T09:28:55.631Z\",\"displayName\":\"openapi.yaml\",\"id\":\"src_01a1108b-6e4f-736d-9a6e-4e0a76370667\",\"origin\":\"local-file\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"role\":\"api-spec\",\"version\":2,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},\"chunks\":[{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"evidenceRef\":{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"jsonPointer\":\"/paths/~1health/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_8fbcfa5e28cb20d5d741f3e05c6b302cf40fe8399efe8f6f6d9e376be71ba27b\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"getHealth\\\",\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"status\\\":{\\\"const\\\":\\\"ok\\\"}},\\\"required\\\":[\\\"status\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Healthy service\\\"}}}\"},{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"evidenceRef\":{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"jsonPointer\":\"/paths/~1api~1auth~1token/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_5bb41132b577cfe79a16d6f05f8827ed33d9534f61bbb0ea0398892a84d113b6\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createToken\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"email\\\":{\\\"type\\\":\\\"string\\\"},\\\"password\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"email\\\",\\\"password\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Bearer token\\\"}}}\"},{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"evidenceRef\":{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"jsonPointer\":\"/paths/~1api~1auth~1refresh/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_b73683bc2cd1fdc434263a7a42055862479ff130cf690361f3b23648c6229f0a\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"refreshToken\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"email\\\":{\\\"type\\\":\\\"string\\\"},\\\"password\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"email\\\",\\\"password\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Fresh token with credentials\\\"}}}\"},{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"evidenceRef\":{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"jsonPointer\":\"/paths/~1api~1products/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_1d8eb065a47a3b6c4899d38eaaa6f8e1ae05d4c8cff69068c5c162b9eacff8b0\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"listProducts\\\",\\\"parameters\\\":[{\\\"in\\\":\\\"query\\\",\\\"name\\\":\\\"limit\\\",\\\"schema\\\":{\\\"default\\\":2,\\\"maximum\\\":100,\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"}},{\\\"in\\\":\\\"query\\\",\\\"name\\\":\\\"offset\\\",\\\"schema\\\":{\\\"default\\\":0,\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}}],\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"properties\\\":{\\\"items\\\":{\\\"items\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"},\\\"type\\\":\\\"array\\\"},\\\"nextOffset\\\":{\\\"type\\\":\\\"integer\\\"},\\\"total\\\":{\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"items\\\",\\\"total\\\",\\\"nextOffset\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Paginated products\\\"}}}\"},{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"evidenceRef\":{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"jsonPointer\":\"/paths/~1api~1products/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_252375ce39d565d6fb9dc7b0958a6318d65dd7ace64c06afab34147107e79399\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createProduct\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"name\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"201\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Product\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"evidenceRef\":{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_79f489bf0503f4e6a3cc7dc4171726d5c074d7691a2dce4d5ed82a53f014a529\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"getProduct\\\",\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Product\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"evidenceRef\":{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/put\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_206a98f3554919c8adcbd9a4651279b048545144c40780c5e58a987e674801f8\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"updateProduct\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"name\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"description\\\":\\\"Updated product\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d\",\"evidenceRef\":{\"contentHash\":\"8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_0199efcc555f69cfca79197888d2d435c2344ac0f72370932b85c46d4938f101\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"deleteProduct\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Deletion result\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d\",\"evidenceRef\":{\"contentHash\":\"5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d\",\"jsonPointer\":\"/paths/~1api~1cart/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_14c4c86d8b2d608b81c14241c435f557488ec807dc82a69e15b92285802a4606\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"getCart\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Persistent cart\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"evidenceRef\":{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"jsonPointer\":\"/paths/~1api~1cart/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_738b0759d2075fe9b50a3e3cdcbb3cc9d39363afb634c8a70d25dba89d9cdd3f\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"setCartItem\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"productId\\\":{\\\"type\\\":\\\"string\\\"},\\\"quantity\\\":{\\\"minimum\\\":1,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"productId\\\",\\\"quantity\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Cart updated\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b\",\"evidenceRef\":{\"contentHash\":\"7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b\",\"jsonPointer\":\"/paths/~1api~1cart/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_18338c1c22abc29ac54ad72c6c8f5ce0d2b140ff966316c0410ce49d4365e260\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"clearCart\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Cart cleared\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"evidenceRef\":{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"jsonPointer\":\"/paths/~1api~1orders/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_8351cbfde5b57736a3b1761c642e5b3a790231f72e02043a0b38fcc188e44459\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"listOrders\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Orders\\\"},\\\"401\\\":{\\\"description\\\":\\\"Authentication required\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"evidenceRef\":{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"jsonPointer\":\"/paths/~1api~1orders/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_71d32f63cb8ce1d155900cb427ae72d55e840677a75b0a1228cb0546e49edc98\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createOrder\\\",\\\"parameters\\\":[{\\\"in\\\":\\\"header\\\",\\\"name\\\":\\\"Idempotency-Key\\\",\\\"required\\\":true,\\\"schema\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}}],\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Idempotent replay\\\"},\\\"201\\\":{\\\"description\\\":\\\"Persisted order\\\"},\\\"401\\\":{\\\"description\\\":\\\"Authentication required\\\"},\\\"422\\\":{\\\"description\\\":\\\"Empty cart\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"evidenceRef\":{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"jsonPointer\":\"/paths/~1api~1users/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_f101e58bead592b6001e67b1f4ca5dbf276baeb455a5bf841a13e99f63734e2b\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"createUser\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/json\\\":{\\\"schema\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"email\\\":{\\\"format\\\":\\\"email\\\",\\\"type\\\":\\\"string\\\"},\\\"password\\\":{\\\"minLength\\\":1,\\\"type\\\":\\\"string\\\"}},\\\"required\\\":[\\\"email\\\",\\\"password\\\"],\\\"type\\\":\\\"object\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"201\\\":{\\\"description\\\":\\\"Cleanup-owned user\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657\",\"evidenceRef\":{\"contentHash\":\"14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657\",\"jsonPointer\":\"/paths/~1api~1users~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_fc1b423c25767ccafa9c87944e2310dc0be2a096735b965950b13e825474648a\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"deleteUser\\\",\\\"responses\\\":{\\\"200\\\":{\\\"description\\\":\\\"Delete owned user\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"evidenceRef\":{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"jsonPointer\":\"/paths/~1api~1profile~1file/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_c762774fe5f4bb2e74a65fa35d457c2b5d0af3edd71177faf076e1c3142968a1\",\"kind\":\"operation\",\"requirementLike\":true,\"text\":\"{\\\"operationId\\\":\\\"uploadProfile\\\",\\\"requestBody\\\":{\\\"content\\\":{\\\"application/octet-stream\\\":{\\\"schema\\\":{\\\"format\\\":\\\"binary\\\",\\\"type\\\":\\\"string\\\"}}},\\\"required\\\":true},\\\"responses\\\":{\\\"201\\\":{\\\"description\\\":\\\"File uploaded\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38\",\"evidenceRef\":{\"contentHash\":\"8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38\",\"jsonPointer\":\"/paths/~1api~1profile~1file/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_fa5bbff32723f458734591cc9662b09b15430be7ccf8061c7d45ff59884367cf\",\"kind\":\"operation\",\"requirementLike\":false,\"text\":\"{\\\"operationId\\\":\\\"downloadProfile\\\",\\\"responses\\\":{\\\"200\\\":{\\\"content\\\":{\\\"application/octet-stream\\\":{\\\"schema\\\":{\\\"format\\\":\\\"binary\\\",\\\"type\\\":\\\"string\\\"}}},\\\"description\\\":\\\"Profile bytes\\\"}},\\\"security\\\":[{\\\"bearerAuth\\\":[]}]}\"},{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"evidenceRef\":{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"jsonPointer\":\"/components\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_b63477abb64c8b7663c450ae3443d225c33af02798f4c97bc0da573a3315d8b1\",\"kind\":\"components\",\"requirementLike\":true,\"text\":\"{\\\"schemas\\\":{\\\"Product\\\":{\\\"additionalProperties\\\":false,\\\"properties\\\":{\\\"id\\\":{\\\"type\\\":\\\"string\\\"},\\\"name\\\":{\\\"type\\\":\\\"string\\\"},\\\"priceCents\\\":{\\\"minimum\\\":0,\\\"type\\\":\\\"integer\\\"}},\\\"required\\\":[\\\"id\\\",\\\"name\\\",\\\"priceCents\\\"],\\\"type\\\":\\\"object\\\"}},\\\"securitySchemes\\\":{\\\"bearerAuth\\\":{\\\"scheme\\\":\\\"bearer\\\",\\\"type\\\":\\\"http\\\"}}}\"},{\"contentHash\":\"3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57\",\"evidenceRef\":{\"contentHash\":\"3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57\",\"jsonPointer\":\"/servers\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},\"id\":\"chunk_e0375bd9de2ac1591c40c4ea5731c3af7c5666cdd3640b66e0bc11e580fbfee9\",\"kind\":\"servers\",\"requirementLike\":false,\"text\":\"[{\\\"url\\\":\\\"http://127.0.0.1:3000\\\"}]\"}],\"diagnostics\":[],\"inventory\":{\"operations\":[{\"method\":\"GET\",\"operation\":{\"operationId\":\"getHealth\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"status\":{\"const\":\"ok\"}},\"required\":[\"status\"],\"type\":\"object\"}}},\"description\":\"Healthy service\"}}},\"path\":\"/health\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Bearer token\"}}},\"path\":\"/api/auth/token\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"refreshToken\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"email\":{\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Fresh token with credentials\"}}},\"path\":\"/api/auth/refresh\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"listProducts\",\"parameters\":[{\"in\":\"query\",\"name\":\"limit\",\"schema\":{\"default\":2,\"maximum\":100,\"minimum\":1,\"type\":\"integer\"}},{\"in\":\"query\",\"name\":\"offset\",\"schema\":{\"default\":0,\"minimum\":0,\"type\":\"integer\"}}],\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"items\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"},\"type\":\"array\"},\"nextOffset\":{\"type\":\"integer\"},\"total\":{\"type\":\"integer\"}},\"required\":[\"items\",\"total\",\"nextOffset\"],\"type\":\"object\"}}},\"description\":\"Paginated products\"}}},\"path\":\"/api/products\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"getProduct\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Product\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products/{id}\"},{\"method\":\"PUT\",\"operation\":{\"operationId\":\"updateProduct\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"name\":{\"minLength\":1,\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"name\",\"priceCents\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"},\"priceCents\":{\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"id\",\"name\",\"priceCents\"],\"type\":\"object\"}}},\"description\":\"Updated product\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products/{id}\"},{\"method\":\"DELETE\",\"operation\":{\"operationId\":\"deleteProduct\",\"responses\":{\"200\":{\"description\":\"Deletion result\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/products/{id}\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"getCart\",\"responses\":{\"200\":{\"description\":\"Persistent cart\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/cart\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"setCartItem\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"productId\":{\"type\":\"string\"},\"quantity\":{\"minimum\":1,\"type\":\"integer\"}},\"required\":[\"productId\",\"quantity\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"200\":{\"description\":\"Cart updated\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/cart\"},{\"method\":\"DELETE\",\"operation\":{\"operationId\":\"clearCart\",\"responses\":{\"200\":{\"description\":\"Cart cleared\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/cart\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"listOrders\",\"responses\":{\"200\":{\"description\":\"Orders\"},\"401\":{\"description\":\"Authentication required\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/orders\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createOrder\",\"parameters\":[{\"in\":\"header\",\"name\":\"Idempotency-Key\",\"required\":true,\"schema\":{\"minLength\":1,\"type\":\"string\"}}],\"responses\":{\"200\":{\"description\":\"Idempotent replay\"},\"201\":{\"description\":\"Persisted order\"},\"401\":{\"description\":\"Authentication required\"},\"422\":{\"description\":\"Empty cart\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/orders\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"createUser\",\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"email\":{\"format\":\"email\",\"type\":\"string\"},\"password\":{\"minLength\":1,\"type\":\"string\"}},\"required\":[\"email\",\"password\"],\"type\":\"object\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"Cleanup-owned user\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/users\"},{\"method\":\"DELETE\",\"operation\":{\"operationId\":\"deleteUser\",\"responses\":{\"200\":{\"description\":\"Delete owned user\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/users/{id}\"},{\"method\":\"POST\",\"operation\":{\"operationId\":\"uploadProfile\",\"requestBody\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"required\":true},\"responses\":{\"201\":{\"description\":\"File uploaded\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/profile/file\"},{\"method\":\"GET\",\"operation\":{\"operationId\":\"downloadProfile\",\"responses\":{\"200\":{\"content\":{\"application/octet-stream\":{\"schema\":{\"format\":\"binary\",\"type\":\"string\"}}},\"description\":\"Profile bytes\"}},\"security\":[{\"bearerAuth\":[]}]},\"path\":\"/api/profile/file\"}],\"specification\":\"OpenAPI\"},\"revision\":{\"chunks\":[{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"jsonPointer\":\"/paths/~1health/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"jsonPointer\":\"/paths/~1api~1auth~1token/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"jsonPointer\":\"/paths/~1api~1auth~1refresh/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"jsonPointer\":\"/paths/~1api~1products/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"jsonPointer\":\"/paths/~1api~1products/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/put\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"8471d6d59843ccde28f30138aeb5a6634a0f50699f56cff38971b8b4b9a7673d\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"5469b1562632b2087e211cca0f831c283feb69bbf7fe7da1e56f807181f5879d\",\"jsonPointer\":\"/paths/~1api~1cart/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"jsonPointer\":\"/paths/~1api~1cart/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"7e6776698a067c3203b3c1224e9e197ef07854d1c123975835ab5a3dd8fc063b\",\"jsonPointer\":\"/paths/~1api~1cart/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"jsonPointer\":\"/paths/~1api~1orders/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"jsonPointer\":\"/paths/~1api~1orders/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"jsonPointer\":\"/paths/~1api~1users/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"14954b935d83cefefb05b09c353a55120fa8c1d2091a3745cff1dcd0aea8b657\",\"jsonPointer\":\"/paths/~1api~1users~1{id}/delete\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"jsonPointer\":\"/paths/~1api~1profile~1file/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"8c0433e90f177d9a7cdb6835161c7d0526baa666e6327c2e034738776bd07c38\",\"jsonPointer\":\"/paths/~1api~1profile~1file/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"jsonPointer\":\"/components\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"},{\"contentHash\":\"3dc70fb23099d7ef7da529d55ffb5a0cba952534f19dd04a30def559ac0e7c57\",\"jsonPointer\":\"/servers\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"contentHash\":\"a66aff9acc9699a20552324668c729f2fdb33fee9e1df23d36001baa33564881\",\"id\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\",\"mediaType\":\"application/vnd.oai.openapi\",\"parentId\":null,\"parserVersion\":\"1.0.0\",\"sizeBytes\":14932,\"status\":\"ready\",\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},\"archivedAt\":null},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "discover",
+        "--scope",
+        "codebase",
+        "--source-revision",
+        "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+        "--source-revision",
+        "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+      ],
+      "startedAt": "2026-10-06T09:28:55.645Z",
+      "durationMs": 299.2094020000002,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_b30d33df-8c24-4b2f-9e47-690ad74138c0",
+        "data": {
+          "job": {
+            "createdAt": "2026-10-06T09:28:55.921Z",
+            "id": "dsc_01a1108b-6f70-7071-a489-411f939fdc92",
+            "inputsFingerprint": "5c5659633ccdb8eead8f4f8bc25211dd6b360d060cc8a05478d80f00cde2b89a",
+            "limits": {
+              "attemptTimeoutMs": 900000,
+              "executionTimeoutMs": 7200000,
+              "maxAttempts": 2
+            },
+            "perFeatureResults": [
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                    "length": 195,
+                    "offset": 165,
+                    "relativePath": "PRD.md",
+                    "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-5383cae2845b",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                    "length": 662,
+                    "offset": 386,
+                    "relativePath": "PRD.md",
+                    "sourceRevisionId": "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-57fdec569f63",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                    "jsonPointer": "/paths/~1health/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-5a0a400f6d89",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                    "jsonPointer": "/paths/~1api~1auth~1token/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-5f1284895432",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                    "jsonPointer": "/paths/~1api~1auth~1refresh/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-61c3ee519f02",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                    "jsonPointer": "/paths/~1api~1products/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-6473a1b09fdb",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                    "jsonPointer": "/paths/~1api~1products/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-6aabbdc04be6",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                    "jsonPointer": "/paths/~1api~1products~1{id}/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-6e1fec78cf80",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                    "jsonPointer": "/paths/~1api~1products~1{id}/put",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-73b0a17b4b86",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                    "jsonPointer": "/paths/~1api~1cart/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-75007d493a4e",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                    "jsonPointer": "/paths/~1api~1orders/get",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-78081ef1a87a",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                    "jsonPointer": "/paths/~1api~1orders/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-7cb17b24bb4c",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                    "jsonPointer": "/paths/~1api~1users/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-828cf2ea295d",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                    "jsonPointer": "/paths/~1api~1profile~1file/post",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-84ca1f33bd68",
+                "status": "partial"
+              },
+              {
+                "errors": [],
+                "evidenceRefs": [
+                  {
+                    "contentHash": "8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                    "jsonPointer": "/components",
+                    "relativePath": "openapi.yaml",
+                    "sourceRevisionId": "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+                  }
+                ],
+                "featureId": "fea_01a1108b-6f6d-74cd-8467-8b9e53e314d5",
+                "status": "partial"
+              }
+            ],
+            "phase": "completed",
+            "usage": {
+              "modelCalls": 0,
+              "status": "partial"
+            },
+            "version": 2,
+            "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+          },
+          "codeSnapshot": {
+            "baseSha": null,
+            "createdAt": "2026-10-06T09:28:55.916Z",
+            "dirtyHash": null,
+            "excludes": [],
+            "headSha": null,
+            "id": "csp_01a1108b-6f6c-7256-8426-d3e0ab89c058",
+            "manifestHash": "107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e",
+            "repoRef": "/tmp/tm-eval-VLeGtJ/repo",
+            "skippedFiles": [
+              {
+                "path": ".testmaster",
+                "reason": "default_exclude"
+              },
+              {
+                "path": "openapi.yaml",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "PRD.md",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "testmaster.config.json",
+                "reason": "unsupported_or_binary"
+              }
+            ],
+            "version": 1,
+            "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+          },
+          "diff": null,
+          "featureMap": {
+            "features": [
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-5383cae2845b",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-57fdec569f63",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-5a0a400f6d89",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-5f1284895432",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-61c3ee519f02",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-6473a1b09fdb",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-6aabbdc04be6",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-6e1fec78cf80",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-73b0a17b4b86",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-75007d493a4e",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-78081ef1a87a",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-7cb17b24bb4c",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-828cf2ea295d",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-84ca1f33bd68",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              },
+              {
+                "createdAt": "2026-10-06T09:28:55.917Z",
+                "endpointRefs": [],
+                "id": "fea_01a1108b-6f6d-74cd-8467-8b9e53e314d5",
+                "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+                "requirementRefs": [],
+                "routeRefs": [],
+                "stableKey": "desired:8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b",
+                "version": 1,
+                "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+              }
+            ],
+            "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+            "sourceRevisionIds": [
+              "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+              "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+            ],
+            "status": "partial",
+            "version": 1
+          },
+          "status": "partial",
+          "summary": {
+            "authPatterns": [],
+            "coverage": "partial",
+            "detectorVersion": "1.0.0",
+            "endpoints": [],
+            "entrypoints": [],
+            "existingTests": [],
+            "externalServices": [],
+            "features": [],
+            "fileRefs": [],
+            "imports": [],
+            "manifestHash": "107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e",
+            "routes": [],
+            "scannedFiles": [],
+            "schemas": [],
+            "skippedFiles": [
+              {
+                "path": ".testmaster",
+                "reason": "default_exclude"
+              },
+              {
+                "path": "openapi.yaml",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "PRD.md",
+                "reason": "unsupported_or_binary"
+              },
+              {
+                "path": "testmaster.config.json",
+                "reason": "unsupported_or_binary"
+              }
+            ],
+            "symbols": [],
+            "techStack": [],
+            "testHooks": [],
+            "warnings": []
+          },
+          "warnings": [
+            "Static analysis is partial; no live target observations or complete code coverage are claimed."
+          ]
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_b30d33df-8c24-4b2f-9e47-690ad74138c0\",\"data\":{\"job\":{\"createdAt\":\"2026-10-06T09:28:55.921Z\",\"id\":\"dsc_01a1108b-6f70-7071-a489-411f939fdc92\",\"inputsFingerprint\":\"5c5659633ccdb8eead8f4f8bc25211dd6b360d060cc8a05478d80f00cde2b89a\",\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"perFeatureResults\":[{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"length\":195,\"offset\":165,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-5383cae2845b\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"length\":662,\"offset\":386,\"relativePath\":\"PRD.md\",\"sourceRevisionId\":\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-57fdec569f63\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"jsonPointer\":\"/paths/~1health/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-5a0a400f6d89\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"jsonPointer\":\"/paths/~1api~1auth~1token/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-5f1284895432\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"jsonPointer\":\"/paths/~1api~1auth~1refresh/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-61c3ee519f02\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"jsonPointer\":\"/paths/~1api~1products/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-6473a1b09fdb\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"jsonPointer\":\"/paths/~1api~1products/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-6aabbdc04be6\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-6e1fec78cf80\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"jsonPointer\":\"/paths/~1api~1products~1{id}/put\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-73b0a17b4b86\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"jsonPointer\":\"/paths/~1api~1cart/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-75007d493a4e\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"jsonPointer\":\"/paths/~1api~1orders/get\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-78081ef1a87a\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"jsonPointer\":\"/paths/~1api~1orders/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-7cb17b24bb4c\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"jsonPointer\":\"/paths/~1api~1users/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-828cf2ea295d\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"jsonPointer\":\"/paths/~1api~1profile~1file/post\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-84ca1f33bd68\",\"status\":\"partial\"},{\"errors\":[],\"evidenceRefs\":[{\"contentHash\":\"8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"jsonPointer\":\"/components\",\"relativePath\":\"openapi.yaml\",\"sourceRevisionId\":\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"}],\"featureId\":\"fea_01a1108b-6f6d-74cd-8467-8b9e53e314d5\",\"status\":\"partial\"}],\"phase\":\"completed\",\"usage\":{\"modelCalls\":0,\"status\":\"partial\"},\"version\":2,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},\"codeSnapshot\":{\"baseSha\":null,\"createdAt\":\"2026-10-06T09:28:55.916Z\",\"dirtyHash\":null,\"excludes\":[],\"headSha\":null,\"id\":\"csp_01a1108b-6f6c-7256-8426-d3e0ab89c058\",\"manifestHash\":\"107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e\",\"repoRef\":\"/tmp/tm-eval-VLeGtJ/repo\",\"skippedFiles\":[{\"path\":\".testmaster\",\"reason\":\"default_exclude\"},{\"path\":\"openapi.yaml\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"PRD.md\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"testmaster.config.json\",\"reason\":\"unsupported_or_binary\"}],\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},\"diff\":null,\"featureMap\":{\"features\":[{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-5383cae2845b\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:9b8b0a6cdcf3f3510524081bfa9985e7b8b81ac09d559a9adf2d988854eafb89\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-57fdec569f63\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:48121293ecdb1e10a418728cca7ea0efebf03c13edd0afc1c3889f5af26c3383\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-5a0a400f6d89\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:24c062c7875f4ac463897f02a725de371fa0b9d8fc94275fbc912a06a95dea7c\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-5f1284895432\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:d9402aefee6e47d666e473ca56f8641caa355ca6a5b109ed5d8b33c1a0ca49d1\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-61c3ee519f02\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:69676175edb71ddf1519c84f8a71383cbd2b1c3bc1c391c2f7d4acd68e08e990\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-6473a1b09fdb\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:78e5d016970500aa8f5adfac5009e9ed4e428a3534b8115a2574705f4d50b137\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-6aabbdc04be6\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:325414f04482c4736970df86aabeb7f7627516c2e2c5a0381b75eb4c5a2be35d\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-6e1fec78cf80\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:4a9fd48a4ee85c4eb4741d14fee9ca43c22e07b946e8f020a08c174bd9528704\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-73b0a17b4b86\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:7264eefbcddc2072d5f53d574df1c6f356b5852db80226280138223b31a1f6a6\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-75007d493a4e\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:fb2c3a1b7bffac165f08d6dc674bcd2a411a09fb1476d67d16704b87e061d32b\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-78081ef1a87a\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:f609fdf9caac36d39c95ad2f779cf139a772d398a5043feb7ec9a17428d6d9c9\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-7cb17b24bb4c\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:f2b833763ad97d46e934a253b55e3a0e8d0a0e63ac1be7148148189c62636f95\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-828cf2ea295d\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:688142d7aac37c2d470580cf41de7e39ce936e6daf79611e0b63da733b7ce4e1\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-84ca1f33bd68\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:69f04663325cc6a27d39b24958b358ca70b9db732dafd0ca70b2c3f125536182\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"},{\"createdAt\":\"2026-10-06T09:28:55.917Z\",\"endpointRefs\":[],\"id\":\"fea_01a1108b-6f6d-74cd-8467-8b9e53e314d5\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"requirementRefs\":[],\"routeRefs\":[],\"stableKey\":\"desired:8cf10fe65bfaafd2c49f4c3f85ac6d78ce4781ef7b3e4b0caee7b3281eb1d54b\",\"version\":1,\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"}],\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"sourceRevisionIds\":[\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\",\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"],\"status\":\"partial\",\"version\":1},\"status\":\"partial\",\"summary\":{\"authPatterns\":[],\"coverage\":\"partial\",\"detectorVersion\":\"1.0.0\",\"endpoints\":[],\"entrypoints\":[],\"existingTests\":[],\"externalServices\":[],\"features\":[],\"fileRefs\":[],\"imports\":[],\"manifestHash\":\"107ae6e700918d7a5320a59a112417e5d0143788930c3433350d9944840aa12e\",\"routes\":[],\"scannedFiles\":[],\"schemas\":[],\"skippedFiles\":[{\"path\":\".testmaster\",\"reason\":\"default_exclude\"},{\"path\":\"openapi.yaml\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"PRD.md\",\"reason\":\"unsupported_or_binary\"},{\"path\":\"testmaster.config.json\",\"reason\":\"unsupported_or_binary\"}],\"symbols\":[],\"techStack\":[],\"testHooks\":[],\"warnings\":[]},\"warnings\":[\"Static analysis is partial; no live target observations or complete code coverage are claimed.\"]},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+        "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+      ],
+      "startedAt": "2026-10-06T09:28:55.944Z",
+      "durationMs": 127666.436912,
+      "exitCode": 10,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_ba0d8266-b201-4525-aaf8-355ad36a6638",
+        "error": {
+          "code": "UNAVAILABLE",
+          "message": "Provider rejected request",
+          "details": {
+            "status": 500
+          },
+          "retryable": true,
+          "nextActions": []
+        }
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_ba0d8266-b201-4525-aaf8-355ad36a6638\",\"error\":{\"code\":\"UNAVAILABLE\",\"message\":\"Provider rejected request\",\"details\":{\"status\":500},\"retryable\":true,\"nextActions\":[]}}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "usage"
+      ],
+      "startedAt": "2026-10-06T09:31:03.611Z",
+      "durationMs": 268.74417900000117,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_ba29fd39-5db3-4b63-8f74-05f2f2a18132",
+        "data": {
+          "calls": [
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T09:31:03.589Z",
+              "finishReason": null,
+              "id": "mdl_01a1108d-6225-70f9-9aa5-cac03368a59f",
+              "inputRefs": [
+                "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+                "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+                "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+                "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+                "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+                "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c"
+              ],
+              "latency": 127256,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "94fb3df07760e7895649cc1440addb5fa198444ae9d20509a9bbd757b9af28aa",
+              "outcome": "failed",
+              "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+              "promptHash": "a322de4441537d90d2df2e7bf73b0c93b8effa56904d15f3c245d3d508d46878",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "497139a3-10fb-4fc8-8af4-194fca7b67ce",
+              "responseHash": null,
+              "sourceRevisionIds": [
+                "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+                "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": null,
+                "outputTokens": null,
+                "reasoningTokens": null
+              },
+              "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+            }
+          ],
+          "tokens": {
+            "inputTokens": null,
+            "outputTokens": null,
+            "reasoningTokens": null
+          },
+          "cost": "unknown",
+          "measuredCosts": [],
+          "unknownCostCalls": 1,
+          "budgetRemaining": null,
+          "reservations": {
+            "reserved": 0,
+            "settled": 1,
+            "released": 0
+          },
+          "tokenBudget": null,
+          "runtimeMs": 127256,
+          "storageBytes": 0,
+          "runs": [],
+          "eval:chargedTokens": 4544064
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_ba29fd39-5db3-4b63-8f74-05f2f2a18132\",\"data\":{\"calls\":[{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T09:31:03.589Z\",\"finishReason\":null,\"id\":\"mdl_01a1108d-6225-70f9-9aa5-cac03368a59f\",\"inputRefs\":[\"chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a\",\"chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583\",\"chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844\",\"chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0\",\"chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb\",\"chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c\"],\"latency\":127256,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"94fb3df07760e7895649cc1440addb5fa198444ae9d20509a9bbd757b9af28aa\",\"outcome\":\"failed\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"promptHash\":\"a322de4441537d90d2df2e7bf73b0c93b8effa56904d15f3c245d3d508d46878\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"497139a3-10fb-4fc8-8af4-194fca7b67ce\",\"responseHash\":null,\"sourceRevisionIds\":[\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\",\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":null,\"outputTokens\":null,\"reasoningTokens\":null},\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"}],\"tokens\":{\"inputTokens\":null,\"outputTokens\":null,\"reasoningTokens\":null},\"cost\":\"unknown\",\"measuredCosts\":[],\"unknownCostCalls\":1,\"budgetRemaining\":null,\"reservations\":{\"reserved\":0,\"settled\":1,\"released\":0},\"tokenBudget\":null,\"runtimeMs\":127256,\"storageBytes\":0,\"runs\":[]},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "usage"
+      ],
+      "startedAt": "2026-10-06T09:31:03.880Z",
+      "durationMs": 275.9523649999901,
+      "exitCode": 0,
+      "signal": null,
+      "envelope": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_1459c5c3-9d86-4d75-939b-ccfb5b74bb7d",
+        "data": {
+          "calls": [
+            {
+              "cacheHit": false,
+              "cost": "unknown",
+              "createdAt": "2026-10-06T09:31:03.589Z",
+              "finishReason": null,
+              "id": "mdl_01a1108d-6225-70f9-9aa5-cac03368a59f",
+              "inputRefs": [
+                "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+                "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+                "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+                "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+                "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+                "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c"
+              ],
+              "latency": 127256,
+              "model": "qwen3.8-flash",
+              "modelConfigHash": "94fb3df07760e7895649cc1440addb5fa198444ae9d20509a9bbd757b9af28aa",
+              "outcome": "failed",
+              "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+              "promptHash": "a322de4441537d90d2df2e7bf73b0c93b8effa56904d15f3c245d3d508d46878",
+              "provider": "quantforge",
+              "purpose": "normalize",
+              "repairAttempt": 0,
+              "reservationId": "497139a3-10fb-4fc8-8af4-194fca7b67ce",
+              "responseHash": null,
+              "sourceRevisionIds": [
+                "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+                "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+              ],
+              "transportAttempt": 0,
+              "usage": {
+                "inputTokens": null,
+                "outputTokens": null,
+                "reasoningTokens": null
+              },
+              "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+            }
+          ],
+          "tokens": {
+            "inputTokens": null,
+            "outputTokens": null,
+            "reasoningTokens": null
+          },
+          "cost": "unknown",
+          "measuredCosts": [],
+          "unknownCostCalls": 1,
+          "budgetRemaining": null,
+          "reservations": {
+            "reserved": 0,
+            "settled": 1,
+            "released": 0
+          },
+          "tokenBudget": null,
+          "runtimeMs": 127256,
+          "storageBytes": 0,
+          "runs": [],
+          "eval:chargedTokens": 4544064
+        },
+        "warnings": []
+      },
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_1459c5c3-9d86-4d75-939b-ccfb5b74bb7d\",\"data\":{\"calls\":[{\"cacheHit\":false,\"cost\":\"unknown\",\"createdAt\":\"2026-10-06T09:31:03.589Z\",\"finishReason\":null,\"id\":\"mdl_01a1108d-6225-70f9-9aa5-cac03368a59f\",\"inputRefs\":[\"chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a\",\"chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583\",\"chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844\",\"chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0\",\"chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb\",\"chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c\"],\"latency\":127256,\"model\":\"qwen3.8-flash\",\"modelConfigHash\":\"94fb3df07760e7895649cc1440addb5fa198444ae9d20509a9bbd757b9af28aa\",\"outcome\":\"failed\",\"projectId\":\"prj_01a1108b-69b2-7443-a05f-2acdccdedca6\",\"promptHash\":\"a322de4441537d90d2df2e7bf73b0c93b8effa56904d15f3c245d3d508d46878\",\"provider\":\"quantforge\",\"purpose\":\"normalize\",\"repairAttempt\":0,\"reservationId\":\"497139a3-10fb-4fc8-8af4-194fca7b67ce\",\"responseHash\":null,\"sourceRevisionIds\":[\"svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd\",\"svr_01a1108b-6e1a-7250-90af-72d6541aa041\"],\"transportAttempt\":0,\"usage\":{\"inputTokens\":null,\"outputTokens\":null,\"reasoningTokens\":null},\"workspaceId\":\"ws_01a1108b-69a7-75d9-8e1b-d87a81296a39\"}],\"tokens\":{\"inputTokens\":null,\"outputTokens\":null,\"reasoningTokens\":null},\"cost\":\"unknown\",\"measuredCosts\":[],\"unknownCostCalls\":1,\"budgetRemaining\":null,\"reservations\":{\"reserved\":0,\"settled\":1,\"released\":0},\"tokenBudget\":null,\"runtimeMs\":127256,\"storageBytes\":0,\"runs\":[]},\"warnings\":[]}\n",
+      "stderr": ""
+    }
+  ],
+  "decisions": [
+    {
+      "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+      "reviewer": "preregistered external rule-based evaluator",
+      "humanReview": false
+    }
+  ],
+  "oracleVerdicts": [
+    {
+      "side": "healthy",
+      "check": "exactPrice",
+      "healthy": true,
+      "defective": false,
+      "observed": {
+        "expected": 3015,
+        "responseTotal": 3015,
+        "persistedTotal": 3015
+      }
+    },
+    {
+      "side": "mutant",
+      "check": "exactPrice",
+      "healthy": false,
+      "defective": true,
+      "observed": {
+        "expected": 3015,
+        "responseTotal": 3000,
+        "persistedTotal": 3000
+      }
+    }
+  ],
+  "usage": {
+    "calls": [
+      {
+        "cacheHit": false,
+        "cost": "unknown",
+        "createdAt": "2026-10-06T09:31:03.589Z",
+        "finishReason": null,
+        "id": "mdl_01a1108d-6225-70f9-9aa5-cac03368a59f",
+        "inputRefs": [
+          "chunk_1234bd61c278ad9c4be59299924fe73f2bb186348e2f1b928c1dccf5a62fe46a",
+          "chunk_fb82b0d64c5b1b23b30bab997181ef769b4c3414e426b37a953ed1ae54a36583",
+          "chunk_d0b141b5237fe1d16494cae3d828e46a7d60bbf2bee9951a44e0be37884e2844",
+          "chunk_d8319f7e08e0b5e12cded03fbd4a3e2955cea3b83ef78808afabc1f2a50eb0a0",
+          "chunk_99e4e611d2ab3215c4cb8b800603b4ea184a6c490427f379f6a819853b5168bb",
+          "chunk_7209777a19213e27c6afbc77a4fedda9f11f7c40b3a41595fa6ad6e6b7372d6c"
+        ],
+        "latency": 127256,
+        "model": "qwen3.8-flash",
+        "modelConfigHash": "94fb3df07760e7895649cc1440addb5fa198444ae9d20509a9bbd757b9af28aa",
+        "outcome": "failed",
+        "projectId": "prj_01a1108b-69b2-7443-a05f-2acdccdedca6",
+        "promptHash": "a322de4441537d90d2df2e7bf73b0c93b8effa56904d15f3c245d3d508d46878",
+        "provider": "quantforge",
+        "purpose": "normalize",
+        "repairAttempt": 0,
+        "reservationId": "497139a3-10fb-4fc8-8af4-194fca7b67ce",
+        "responseHash": null,
+        "sourceRevisionIds": [
+          "svr_01a1108b-6cfa-762b-a7cd-c2b0f7d085fd",
+          "svr_01a1108b-6e1a-7250-90af-72d6541aa041"
+        ],
+        "transportAttempt": 0,
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "reasoningTokens": null
+        },
+        "workspaceId": "ws_01a1108b-69a7-75d9-8e1b-d87a81296a39"
+      }
+    ],
+    "tokens": {
+      "inputTokens": null,
+      "outputTokens": null,
+      "reasoningTokens": null
+    },
+    "cost": "unknown",
+    "measuredCosts": [],
+    "unknownCostCalls": 1,
+    "budgetRemaining": null,
+    "reservations": {
+      "reserved": 0,
+      "settled": 1,
+      "released": 0
+    },
+    "tokenBudget": null,
+    "runtimeMs": 127256,
+    "storageBytes": 0,
+    "runs": [],
+    "eval:chargedTokens": 4544064
+  },
+  "durationMs": 130006.527452,
+  "workspace": "/tmp/tm-eval-VLeGtJ",
+  "score": {
+    "trialId": "trial-01",
+    "caseId": "shop-defect-004",
+    "detected": false,
+    "conditionalEligible": false,
+    "exclusions": [
+      "provider_transport"
+    ],
+    "sensitiveRevisionIds": [],
+    "healthyValid": 0,
+    "healthyFailed": 0,
+    "healthyUnavailable": 0
+  }
+}

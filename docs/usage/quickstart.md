@@ -52,9 +52,9 @@ testmaster test rerun "$TEST_ID" --wait --output json
 Model providers are declared only in the user profile `~/.config/testmaster/profiles.json`, allowed by the
 operator policy `~/.config/testmaster/policy.json`, and require explicit consent per project, provider and
 data class. Without consent no byte is sent to the provider. Unpriced models additionally require an
-explicit unknown-cost grant and a cumulative project token ceiling. The historical evaluation model
-`deepseek-v4.1-flash` is currently absent from QuantForge's authenticated inventory; the example below
-does not imply current provider availability. Configure only an explicitly chosen, available model.
+explicit unknown-cost grant and a cumulative project token ceiling. The current live validation model
+is `qwen3.8-flash` on QuantForge, selected explicitly by the operator. Provider availability is checked
+at execution time; configuring a model does not authorize data transfer or establish generation quality.
 
 ```json
 {
@@ -67,7 +67,7 @@ does not imply current provider availability. Configure only an explicitly chose
           "kind": "openai-compatible",
           "baseUrl": "https://api.quantforge.com.br/v1",
           "apiKeyEnv": "QUANTFORGE_API_KEY",
-          "models": [{ "id": "deepseek-v4.1-flash", "capabilities": { "structuredJson": true, "toolCalls": true, "contextTokens": 128000, "maxOutputTokens": 8192 } }]
+          "models": [{ "id": "qwen3.8-flash", "capabilities": { "structuredJson": true, "toolCalls": true, "contextTokens": 128000, "maxOutputTokens": 8192 } }]
         }
       ]
     }
