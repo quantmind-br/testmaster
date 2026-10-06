@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "cli-003-readonly-home",
+  "journey": "runtime-batch-selection",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:26.067Z",
+  "observedAt": "2026-10-06T01:38:30.212Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,29 +19,35 @@
         "--mode",
         "local",
         "--name",
-        "Read-only home",
+        "runtime-batch-selection",
         "--base-url",
-        "http://127.0.0.1:43210",
+        "http://127.0.0.1:45685",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_e38b5b5a-e571-45f9-be41-f2de34d26b44",
-      "warnings": [
-        "User profile cannot be persisted; session-only setup"
-      ],
+      "requestId": "cli_16bef373-454c-4ee5-a6ce-50facb9e56a4",
+      "warnings": [],
       "stderr": ""
     }
   ],
-  "runIds": [],
+  "runIds": [
+    "run_01a10edc-b927-73a1-a54a-445301c9ad84",
+    "run_01a10edc-b928-700e-b5f6-368c3e489b1a"
+  ],
   "oracleVerdicts": [
     {
-      "check": "readonlyHomeSessionNotice",
+      "check": "admittedSuiteSelection",
       "healthy": true,
-      "sessionOnly": true,
-      "notice": "User profile cannot be persisted; session-only setup"
+      "batchId": "bat_01a10edc-b927-73a1-a54a-43ae55aabca6",
+      "admittedTests": [
+        "tst_01a10edc-b851-7223-9ce0-05b804256a49",
+        "tst_01a10edc-b853-747a-a95b-9f547b2ad78f"
+      ],
+      "excludedLater": "tst_01a10edc-b853-747a-a95b-9f547b2ad78f",
+      "addedLater": "tst_01a10edc-bb97-72d4-830b-1595240233e1"
     }
   ],
   "limitations": [

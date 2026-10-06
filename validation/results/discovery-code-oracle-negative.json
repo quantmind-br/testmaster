@@ -1,0 +1,285 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "discovery-code-oracle-negative",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "observedAt": "2026-10-06T00:02:03.915Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "discovery-code-oracle-negative",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_05cdcf54-f60b-4516-9c1f-976edae432f6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_295c6517-8496-416e-98d8-a4cc046ff2c5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d4dcec31-ef19-4b1f-a58f-b5f4a9fa7c48",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "desired.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_efff643e-4bb4-4275-bd19-f162f5cd1218",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "implementation.md",
+        "--role",
+        "code-summary",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c2fe2529-6d58-4413-a42b-a0e4d3a018a4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a10e84-0155-72e5-acb3-72b96d22a724",
+        "svr_01a10e84-02b0-7614-af90-e9293a3ba1cc",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2dbee857-7821-46ea-bc43-afc7a6911a76",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "approve",
+        "req_01a10e84-7057-72d1-9930-7db261a9769d",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_680e896b-2f25-487c-902e-f7bb9d94c221",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Adjudicate requirement conflicts before approval",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5d772b1f-46e8-4ab7-abc9-bf928a3cd62a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "name": "wrong-oracle",
+      "normalized": {
+        "requirements": [
+          {
+            "id": "req_01a10e84-704c-7357-ae95-1ec18b1610dc",
+            "workspaceId": "ws_01a10e83-fd3e-739d-8a59-cac02f422a5d",
+            "createdAt": "2026-10-06T00:02:02.956Z",
+            "version": 1,
+            "text": "GET /health MUST report healthy=true.",
+            "acceptanceCriteria": [
+              "healthy equals true; false is a defect."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "bea2f1fc6613f979328517304e9293980c62832c9e910763df31e6d238011a3f",
+                "length": 89,
+                "offset": 9,
+                "relativePath": "desired.md",
+                "sourceRevisionId": "svr_01a10e84-0155-72e5-acb3-72b96d22a724"
+              }
+            ],
+            "originKind": "explicit",
+            "confidence": 1,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e83-fd4d-7769-8d31-3acb29ac3306",
+              "testmaster:key": "batch-1-health-desired-true",
+              "testmaster:reason": "Explicit desired requirement from desired.md."
+            }
+          },
+          {
+            "id": "req_01a10e84-7057-72d1-9930-7db261a9769d",
+            "workspaceId": "ws_01a10e83-fd3e-739d-8a59-cac02f422a5d",
+            "createdAt": "2026-10-06T00:02:02.967Z",
+            "version": 1,
+            "text": "GET /health implementation returns healthy=false.",
+            "acceptanceCriteria": [
+              "Response JSON from GET /health has healthy=false."
+            ],
+            "sourceRefs": [
+              {
+                "contentHash": "9a0b705b2f49822961f119b1410f8b294f0036cf922499267aa5b92765d34b90",
+                "length": 69,
+                "offset": 42,
+                "relativePath": "implementation.md",
+                "sourceRevisionId": "svr_01a10e84-02b0-7614-af90-e9293a3ba1cc"
+              }
+            ],
+            "originKind": "inferred",
+            "confidence": 0.9,
+            "approval": null,
+            "extensions": {
+              "testmaster:projectId": "prj_01a10e83-fd4d-7769-8d31-3acb29ac3306",
+              "testmaster:key": "batch-1-health-observed-false",
+              "testmaster:reason": "Code chunk shows GET /health returns healthy=false."
+            }
+          }
+        ],
+        "conflicts": [
+          {
+            "id": "conflict-1",
+            "requirementIds": [
+              "req_01a10e84-704c-7357-ae95-1ec18b1610dc",
+              "req_01a10e84-7057-72d1-9930-7db261a9769d"
+            ],
+            "reason": "The desired requirement accepts GET /health only when healthy=true, while the implementation requirement states GET /health returns healthy=false. These acceptance criteria are mutually exclusive for the same endpoint condition.",
+            "sourceRefs": [
+              {
+                "contentHash": "bea2f1fc6613f979328517304e9293980c62832c9e910763df31e6d238011a3f",
+                "length": 89,
+                "offset": 9,
+                "relativePath": "desired.md",
+                "sourceRevisionId": "svr_01a10e84-0155-72e5-acb3-72b96d22a724"
+              },
+              {
+                "contentHash": "9a0b705b2f49822961f119b1410f8b294f0036cf922499267aa5b92765d34b90",
+                "length": 69,
+                "offset": 42,
+                "relativePath": "implementation.md",
+                "sourceRevisionId": "svr_01a10e84-02b0-7614-af90-e9293a3ba1cc"
+              }
+            ],
+            "resolution": null
+          }
+        ],
+        "openQuestions": [
+          "Should implementation return healthy=true to satisfy desired.md?"
+        ],
+        "version": 1,
+        "fingerprint": "00b08fe91d1433bb0e8042e8cf07defe1e2cea2629ef596ac11b41bad9cee1f6"
+      },
+      "denied": {
+        "schemaVersion": "1.0.0",
+        "requestId": "cli_680e896b-2f25-487c-902e-f7bb9d94c221",
+        "error": {
+          "code": "PRECONDITION_FAILED",
+          "message": "Adjudicate requirement conflicts before approval",
+          "details": {},
+          "retryable": false,
+          "nextActions": []
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Live model generation and authoring only; no execution or passing-test claim."
+  ]
+}

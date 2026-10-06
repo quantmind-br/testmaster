@@ -1,0 +1,172 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "model-normalization-reference-shop-3",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "observedAt": "2026-10-06T00:38:35.433Z",
+  "passed": false,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "error": "AssertionError: requirement normalize --source-revision svr_01a10ea5-e1b9-771f-b116-e651fa6397b1 svr_01a10ea5-e2d9-707f-8f19-930e60c5048c stderr= stdout={\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_0bdb7e77-57b7-4756-8a0e-fc3024317600\",\"error\":{\"code\":\"CAPABILITY_UNAVAILABLE\",\"message\":\"Declared model is absent from provider inventory\",\"details\":{\"capability\":\"deepseek-v4.1-flash\",\"milestone\":\"M2\"},\"retryable\":false,\"nextActions\":[]}}\n: expected 8 to be +0 // Object.is equality",
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "model-normalization-reference-shop-3",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_70bff6ec-ea69-40a5-8a5b-6130637651f5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_741677cf-69c7-449c-8500-a3e31544c65d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9a18ba66-d97c-4ef1-8862-562d2f18f4bf",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "2000000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9029445d-c78c-4b00-ab71-a8458b999ed8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "PRD.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_62d4344a-8815-41ed-9f60-557279141286",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "openapi.yaml",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cdf49665-6ecc-4641-b679-6430cb4c5364",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a10ea5-e1b9-771f-b116-e651fa6397b1",
+        "svr_01a10ea5-e2d9-707f-8f19-930e60c5048c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 8,
+      "signal": null,
+      "requestId": "cli_0bdb7e77-57b7-4756-8a0e-fc3024317600",
+      "error": {
+        "code": "CAPABILITY_UNAVAILABLE",
+        "message": "Declared model is absent from provider inventory",
+        "details": {
+          "capability": "deepseek-v4.1-flash",
+          "milestone": "M2"
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [],
+  "failureDiagnostics": {
+    "runs": [],
+    "artifacts": []
+  },
+  "limitations": [
+    "Three live normalization trials of one reference-shop family; no generated-test quality or unseen-family claim."
+  ]
+}

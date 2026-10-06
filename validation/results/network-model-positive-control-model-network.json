@@ -1,0 +1,141 @@
+{
+  "method": "Linux strace process-tree connection addresses plus Node fetch/undici/net/tls/dns diagnostics",
+  "trace": "365642 sendto(26, ..., 20, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 20\n365642 connect(26, {sa_family=AF_UNIX, sun_path=\"/run/systemd/resolve/io.systemd.Resolve\"}, 42) = -1 ENOENT (Arquivo ou diretório inexistente)\n365642 connect(26, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr(\"100.100.100.100\")}, 16) = 0\n365642 sendmmsg(26, [...], 2, MSG_NOSIGNAL) = 2\n365178 connect(26, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr(\"163.176.107.13\")}, 16) = -1 EINPROGRESS (Operação agora em progresso)\n365643 sendto(27, ..., 20, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 20\n365643 connect(27, {sa_family=AF_UNIX, sun_path=\"/run/systemd/resolve/io.systemd.Resolve\"}, 42) = -1 ENOENT (Arquivo ou diretório inexistente)\n365643 connect(27, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr(\"100.100.100.100\")}, 16) = 0\n365643 sendmmsg(27, [...], 2, MSG_NOSIGNAL) = 2\n365178 connect(27, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr(\"163.176.107.13\")}, 16) = -1 EINPROGRESS (Operação agora em progresso)\n368609 sendto(26, ..., 20, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 20\n368609 connect(26, {sa_family=AF_UNIX, sun_path=\"/run/systemd/resolve/io.systemd.Resolve\"}, 42) = -1 ENOENT (Arquivo ou diretório inexistente)\n368609 connect(26, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr(\"100.100.100.100\")}, 16) = 0\n368609 sendmmsg(26, [...], 2, MSG_NOSIGNAL) = 2\n368559 connect(26, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr(\"163.176.107.13\")}, 16) = -1 EINPROGRESS (Operação agora em progresso)\n368610 sendto(27, ..., 20, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 20\n368610 connect(27, {sa_family=AF_UNIX, sun_path=\"/run/systemd/resolve/io.systemd.Resolve\"}, 42) = -1 ENOENT (Arquivo ou diretório inexistente)\n368610 connect(27, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr(\"100.100.100.100\")}, 16) = 0\n368610 sendmmsg(27, [...], 2, MSG_NOSIGNAL) = 2\n368559 connect(27, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr(\"163.176.107.13\")}, 16) = -1 EINPROGRESS (Operação agora em progresso)\n",
+  "events": [
+    {
+      "pid": 363181,
+      "kind": "loaded",
+      "target": "363181"
+    },
+    {
+      "pid": 363588,
+      "kind": "loaded",
+      "target": "363588"
+    },
+    {
+      "pid": 364276,
+      "kind": "loaded",
+      "target": "364276"
+    },
+    {
+      "pid": 364566,
+      "kind": "loaded",
+      "target": "364566"
+    },
+    {
+      "pid": 365178,
+      "kind": "loaded",
+      "target": "365178"
+    },
+    {
+      "pid": 365178,
+      "kind": "undici",
+      "target": "https://api.quantforge.com.br/v1/models"
+    },
+    {
+      "pid": 365178,
+      "kind": "tls",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 365178,
+      "kind": "net",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 365178,
+      "kind": "dns",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 365178,
+      "kind": "undici",
+      "target": "https://api.quantforge.com.br/v1/chat/completions"
+    },
+    {
+      "pid": 365178,
+      "kind": "tls",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 365178,
+      "kind": "net",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 365178,
+      "kind": "dns",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 368448,
+      "kind": "loaded",
+      "target": "368448"
+    },
+    {
+      "pid": 368559,
+      "kind": "loaded",
+      "target": "368559"
+    },
+    {
+      "pid": 368559,
+      "kind": "undici",
+      "target": "https://api.quantforge.com.br/v1/models"
+    },
+    {
+      "pid": 368559,
+      "kind": "tls",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 368559,
+      "kind": "net",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 368559,
+      "kind": "dns",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 368559,
+      "kind": "undici",
+      "target": "https://api.quantforge.com.br/v1/chat/completions"
+    },
+    {
+      "pid": 368559,
+      "kind": "tls",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 368559,
+      "kind": "net",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 368559,
+      "kind": "dns",
+      "target": "api.quantforge.com.br"
+    },
+    {
+      "pid": 374231,
+      "kind": "loaded",
+      "target": "374231"
+    },
+    {
+      "pid": 374377,
+      "kind": "loaded",
+      "target": "374377"
+    },
+    {
+      "pid": 374680,
+      "kind": "loaded",
+      "target": "374680"
+    },
+    {
+      "pid": 374718,
+      "kind": "loaded",
+      "target": "374718"
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "cli-003-readonly-home",
+  "journey": "runtime-browser-crash-1",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:26.067Z",
+  "observedAt": "2026-10-06T01:40:37.739Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,29 +19,34 @@
         "--mode",
         "local",
         "--name",
-        "Read-only home",
+        "runtime-browser-crash-1",
         "--base-url",
-        "http://127.0.0.1:43210",
+        "http://127.0.0.1:44465",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_e38b5b5a-e571-45f9-be41-f2de34d26b44",
-      "warnings": [
-        "User profile cannot be persisted; session-only setup"
-      ],
+      "requestId": "cli_ed1b7b25-aaa2-4469-bfeb-db0477ec5e81",
+      "warnings": [],
       "stderr": ""
     }
   ],
-  "runIds": [],
+  "runIds": [
+    "run_01a10ede-aac2-749a-9d4f-d5633f5343fb"
+  ],
   "oracleVerdicts": [
     {
-      "check": "readonlyHomeSessionNotice",
+      "check": "preActionCrashRetryEvidence",
       "healthy": true,
-      "sessionOnly": true,
-      "notice": "User profile cannot be persisted; session-only setup"
+      "crashes": 1,
+      "attempts": [
+        "att_01a10ede-aaf5-76d2-a3f1-428041b543f2",
+        "att_01a10ede-adc0-754d-b3fc-5c77e1f3155e"
+      ],
+      "outcome": "passed",
+      "targetHits": 1
     }
   ],
   "limitations": [

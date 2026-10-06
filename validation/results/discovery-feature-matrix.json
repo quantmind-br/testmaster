@@ -1,0 +1,367 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "discovery-feature-matrix",
+  "class": "live-model-e2e",
+  "runner": "real-cli-and-model",
+  "externalDependency": "https://api.quantforge.com.br/v1",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "observedAt": "2026-10-06T00:01:33.125Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "discovery-feature-matrix",
+        "--base-url",
+        "http://127.0.0.1:8080",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_eff7c048-67aa-4071-a96c-055ac29b8126",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "quantforge",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "code_summary",
+        "requirements",
+        "plans",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4f8e4a53-db5c-4cff-a915-1cc5c4304408",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "consent",
+        "status",
+        "--provider",
+        "quantforge",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0784515f-735a-4f3f-8197-d442442a5612",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "name": "feature-matrix",
+      "original": {
+        "id": "dsc_01a10e83-9bc4-7029-9124-4f2912e166a0",
+        "workspaceId": "ws_01a10e83-930b-7439-a933-15ffd9be1872",
+        "createdAt": "2026-10-06T00:01:08.548Z",
+        "version": 2,
+        "inputsFingerprint": "03cd8aa914a7b1af721081ec63c681f9854fa92c94fd575cbb4da90355c21134",
+        "phase": "completed",
+        "perFeatureResults": [
+          {
+            "featureId": "fea_01a10e83-9941-7141-bcd1-4832227f5f43",
+            "status": "ready",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a10e83-9bd7-75f1-96c2-02e8c03b046b",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": []
+          },
+          {
+            "featureId": "fea_01a10e83-9949-7091-8e09-ec94dab52986",
+            "status": "partial",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a10e83-b691-7049-85c9-c8008392faa5",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": []
+          },
+          {
+            "featureId": "fea_01a10e83-9949-7091-8e09-f2e9db738ab8",
+            "status": "unreachable",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a10e83-c6d8-742f-bdbc-2cf7987cc1e7",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": [
+              "login_required"
+            ]
+          },
+          {
+            "featureId": "fea_01a10e83-994a-722b-87cd-4b7ef0f06fce",
+            "status": "unreachable",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a10e83-d70d-76d4-bc78-1d3aa3cdeaf7",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": [
+              "login_required"
+            ]
+          }
+        ],
+        "limits": {
+          "attemptTimeoutMs": 240000
+        },
+        "usage": {
+          "attempts": [
+            {
+              "jobId": "dsc_01a10e83-9bd6-7502-bc11-8cd37c3aceba",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a10e83-b105-76f6-9c62-c034ad7e8913",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 300,
+                      "outputTokens": 65,
+                      "reasoningTokens": 59
+                    }
+                  }
+                ],
+                "runtimeMs": 6830.300988000001
+              }
+            },
+            {
+              "jobId": "dsc_01a10e83-b691-7049-85c9-bada952057f7",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a10e83-c401-766b-b951-2247a9c585ab",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 283,
+                      "outputTokens": 26,
+                      "reasoningTokens": 20
+                    }
+                  }
+                ],
+                "runtimeMs": 4165.299276000002
+              }
+            },
+            {
+              "jobId": "dsc_01a10e83-c6d8-742f-bdbc-1f98fd69bc5f",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a10e83-d3d8-7554-aeed-82aaa1058ef4",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 295,
+                      "outputTokens": 31,
+                      "reasoningTokens": 25
+                    }
+                  }
+                ],
+                "runtimeMs": 4146.859070999999
+              }
+            },
+            {
+              "jobId": "dsc_01a10e83-d70c-72d2-b2ac-2dd6fa64b308",
+              "usage": {
+                "modelCalls": 1,
+                "observedRoutes": 1,
+                "calls": [
+                  {
+                    "id": "mdl_01a10e83-e3fb-72b9-a1f6-67589c8d8527",
+                    "cost": "unknown",
+                    "usage": {
+                      "inputTokens": 295,
+                      "outputTokens": 22,
+                      "reasoningTokens": 16
+                    }
+                  }
+                ],
+                "runtimeMs": 4001.7749470000017
+              }
+            }
+          ],
+          "modelCalls": 4
+        },
+        "extensions": {
+          "testmaster:projectId": "prj_01a10e83-931f-7692-a16f-a8f0661fafc4",
+          "testmaster:environmentRevisionId": "evr_01a10e83-98ff-757d-b721-d28fb98539bf",
+          "testmaster:retryOf": null,
+          "testmaster:children": [
+            "dsc_01a10e83-9bd6-7502-bc11-8cd37c3aceba",
+            "dsc_01a10e83-b691-7049-85c9-bada952057f7",
+            "dsc_01a10e83-c6d8-742f-bdbc-1f98fd69bc5f",
+            "dsc_01a10e83-d70c-72d2-b2ac-2dd6fa64b308"
+          ],
+          "testmaster:partial": true
+        }
+      },
+      "retry": {
+        "id": "dsc_01a10e83-e6b2-70fb-bbbb-13542a4d077b",
+        "workspaceId": "ws_01a10e83-930b-7439-a933-15ffd9be1872",
+        "createdAt": "2026-10-06T00:01:27.730Z",
+        "version": 2,
+        "inputsFingerprint": "2a4cde1eab6f07ad788736c8709e50e9f321eebadd2f956c5bef44b4425e102e",
+        "phase": "completed",
+        "perFeatureResults": [
+          {
+            "errors": [],
+            "evidenceRefs": [
+              {
+                "relativePath": "browser/steps/explore-0-observation.json",
+                "snapshotId": "snp_01a10e83-9bd7-75f1-96c2-02e8c03b046b"
+              }
+            ],
+            "featureId": "fea_01a10e83-9941-7141-bcd1-4832227f5f43",
+            "status": "ready"
+          },
+          {
+            "errors": [],
+            "evidenceRefs": [
+              {
+                "relativePath": "browser/steps/explore-0-observation.json",
+                "snapshotId": "snp_01a10e83-b691-7049-85c9-c8008392faa5"
+              }
+            ],
+            "featureId": "fea_01a10e83-9949-7091-8e09-ec94dab52986",
+            "status": "partial"
+          },
+          {
+            "errors": [
+              "login_required"
+            ],
+            "evidenceRefs": [
+              {
+                "relativePath": "browser/steps/explore-0-observation.json",
+                "snapshotId": "snp_01a10e83-d70d-76d4-bc78-1d3aa3cdeaf7"
+              }
+            ],
+            "featureId": "fea_01a10e83-994a-722b-87cd-4b7ef0f06fce",
+            "status": "unreachable"
+          },
+          {
+            "featureId": "fea_01a10e83-9949-7091-8e09-f2e9db738ab8",
+            "status": "unreachable",
+            "evidenceRefs": [
+              {
+                "snapshotId": "snp_01a10e83-e6b2-70fb-bbbb-20f2fb23d1da",
+                "relativePath": "browser/steps/explore-0-observation.json"
+              }
+            ],
+            "errors": [
+              "login_required"
+            ]
+          }
+        ],
+        "limits": {
+          "attemptTimeoutMs": 60000
+        },
+        "usage": {
+          "modelCalls": 1,
+          "observedRoutes": 1,
+          "calls": [
+            {
+              "id": "mdl_01a10e83-f87b-749f-bbef-cabcc9c2e9cb",
+              "cost": "unknown",
+              "usage": {
+                "inputTokens": 295,
+                "outputTokens": 41,
+                "reasoningTokens": 35
+              }
+            }
+          ],
+          "runtimeMs": 5390.467832000002
+        },
+        "extensions": {
+          "testmaster:projectId": "prj_01a10e83-931f-7692-a16f-a8f0661fafc4",
+          "testmaster:environmentRevisionId": "evr_01a10e83-98ff-757d-b721-d28fb98539bf",
+          "testmaster:retryOf": "dsc_01a10e83-9bc4-7029-9124-4f2912e166a0",
+          "testmaster:featureMap": {
+            "projectId": "prj_01a10e83-931f-7692-a16f-a8f0661fafc4",
+            "version": 1,
+            "features": [
+              {
+                "createdAt": "2026-10-06T00:01:07.913Z",
+                "endpointRefs": [],
+                "extensions": {},
+                "id": "fea_01a10e83-9949-7091-8e09-f2e9db738ab8",
+                "projectId": "prj_01a10e83-931f-7692-a16f-a8f0661fafc4",
+                "requirementRefs": [],
+                "routeRefs": [
+                  "/orders"
+                ],
+                "stableKey": "/orders",
+                "version": 1,
+                "workspaceId": "ws_01a10e83-930b-7439-a933-15ffd9be1872"
+              }
+            ],
+            "sourceRevisionIds": [],
+            "status": "partial"
+          },
+          "testmaster:evidenceBundle": {
+            "bundleDir": "/tmp/tm-m1-FrBwav/repo/.testmaster/runs/ws_01a10e83-930b-7439-a933-15ffd9be1872/run_01a10e83-e6b2-70fb-bbbb-17b9f3b97085/att_01a10e83-e6b2-70fb-bbbb-1abb7e80ae10",
+            "manifestSha256": "28b9b55796147ae070da166a171a5dee7f4ee5c320da48826a670f0f9a0138df"
+          },
+          "testmaster:partial": true,
+          "testmaster:reasonCode": "assertions_satisfied",
+          "testmaster:resolutionFailures": [],
+          "testmaster:featureStates": [
+            {
+              "featureId": "fea_01a10e83-9949-7091-8e09-f2e9db738ab8",
+              "state": "unreachable",
+              "reason": "login_required"
+            }
+          ],
+          "testmaster:diagnostics": [
+            {
+              "path": "logs/protocol.json",
+              "text": ""
+            }
+          ]
+        }
+      },
+      "deltaModelCalls": 1,
+      "videoBytes": 33835
+    }
+  ],
+  "limitations": [
+    "Full state is bounded to the operator-declared completion text; feature map is not complete code or business coverage."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "method": "automatic",
+  "reviewer": "ModelAccounting delegated coding agent",
+  "provider": "quantforge",
+  "model": "deepseek-v4.1-flash",
+  "defectDiagnosis": "Retained frozen eval data contains 23 unique ModelCalls, 22 finishReason=length with outputTokens=8192. The previous gateway misclassified truncation as schema-invalid and repeated two repairs.",
+  "diagnosisEvidence": "validation/results/model-normalization-diagnosis.json",
+  "fix": "Honor declared maxOutputTokens, extract bounded 6-chunk/6000-byte batches, exact merge/dedupe with grounded refs, reconcile cross-source conflicts separately using normalized statements and original chunks; classify length as failed/output_truncated and stop without blind repair.",
+  "observedRuns": [
+    {"stage": "bounded extraction with normalized-only reconciliation", "normalizationCommandsCompleted": 3, "conflictOraclePassed": 2, "trials": 3, "note": "One semantic conflict omission remained, not truncated output."},
+    {"stage": "final original-source-grounded reconciliation", "normalizationCommandsCompleted": 1, "conflictOraclePassed": 1, "requirements": 36, "conflicts": 1, "modelCalls": 7, "finishReasons": "all stop", "repairs": 0, "nextTrialError": "HTTP502 Provider rejected request"},
+    {"stage": "final independent three-trial gate", "passCount": 0, "trials": 3, "error": "CAPABILITY_UNAVAILABLE: Declared model is absent from provider inventory", "beforeCompletion": true}
+  ],
+  "inventoryEvidence": "validation/results/model-provider-inventory.json",
+  "finalTrialEvidence": ["validation/results/model-normalization-reference-shop-1.json", "validation/results/model-normalization-reference-shop-2.json", "validation/results/model-normalization-reference-shop-3.json"],
+  "disposition": "implemented; 3/3 final live success cannot be claimed while the explicitly assigned model is absent. No substitute model or relaxed conflict assertion used.",
+  "limitations": ["Frozen eval results unchanged.", "Earlier successful trial summaries were superseded by the final fixed-name journey result files; counts above are observed tool/test output, not retained equivalent full transcripts.", "Single reference-shop family; no benchmark quality or unseen-family claim."]
+}

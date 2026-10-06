@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "cli-003-readonly-home",
+  "journey": "browser-lease-expiry",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:26.067Z",
+  "observedAt": "2026-10-06T01:37:43.741Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,29 +19,27 @@
         "--mode",
         "local",
         "--name",
-        "Read-only home",
+        "browser-lease-expiry",
         "--base-url",
-        "http://127.0.0.1:43210",
+        "http://127.0.0.1:43573",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_e38b5b5a-e571-45f9-be41-f2de34d26b44",
-      "warnings": [
-        "User profile cannot be persisted; session-only setup"
-      ],
+      "requestId": "cli_abbc29e3-3180-4a90-a633-e5b3a9f8f30c",
+      "warnings": [],
       "stderr": ""
     }
   ],
-  "runIds": [],
+  "runIds": [
+    "run_01a10edc-05b4-75ec-8f8a-c87d57141650"
+  ],
   "oracleVerdicts": [
     {
-      "check": "readonlyHomeSessionNotice",
-      "healthy": true,
-      "sessionOnly": true,
-      "notice": "User profile cannot be persisted; session-only setup"
+      "check": "lease loss reaps Chromium and fences next assertion",
+      "passed": true
     }
   ],
   "limitations": [

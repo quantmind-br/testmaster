@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "mcp-001-004",
+  "journey": "ops-005-authoring-admission-crash",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:41:19.950Z",
+  "observedAt": "2026-10-06T01:39:39.637Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,16 +19,46 @@
         "--mode",
         "local",
         "--name",
-        "mcp-001-004",
+        "ops-005-authoring-admission-crash",
         "--base-url",
-        "http://127.0.0.1:34777",
+        "http://127.0.0.1:34795",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_51f41e75-6077-46cc-bd55-839d0c00f3f2",
+      "requestId": "cli_1780b022-2782-45a0-9f81-03a35c5f834d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4254f53b-0153-4305-9641-b8aefc970e1f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5d58e455-e5c8-4d6a-82d2-6c52401baa71",
       "warnings": [],
       "stderr": ""
     },
@@ -38,45 +68,56 @@
         "test",
         "create",
         "--plan",
-        "/tmp/tm-m1-CP6RIf/repo/plan.json",
+        "/tmp/tm-m1-P6N2WM/repo/plan.json",
         "--output",
         "json",
         "--no-color"
       ],
-      "exitCode": 0,
-      "signal": null,
-      "requestId": "cli_e0d9db11-0ace-40ba-a65f-363d29ea9c88",
-      "warnings": [],
+      "exitCode": null,
+      "signal": "SIGKILL",
       "stderr": ""
     },
     {
       "argv": [
         "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
-        "worker",
-        "status",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-P6N2WM/repo/plan.json",
         "--output",
         "json",
         "--no-color"
       ],
-      "exitCode": 0,
-      "signal": null,
-      "requestId": "cli_6e2ad190-23b4-4f7e-b120-24169ca44bd7",
-      "warnings": [],
+      "exitCode": null,
+      "signal": "SIGKILL",
       "stderr": ""
     },
     {
       "argv": [
         "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
-        "worker",
-        "status",
+        "test",
+        "run",
+        "tst_01a10edd-c41b-73b0-8a43-765f3a73f6e9",
         "--output",
         "json",
         "--no-color"
       ],
-      "exitCode": 0,
-      "signal": null,
-      "requestId": "cli_1fe10f67-8067-4983-8f28-eca1327a1727",
-      "warnings": [],
+      "exitCode": null,
+      "signal": "SIGKILL",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a10edd-c41b-73b0-8a43-765f3a73f6e9",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": null,
+      "signal": "SIGKILL",
       "stderr": ""
     },
     {
@@ -90,7 +131,7 @@
       ],
       "exitCode": 143,
       "signal": null,
-      "requestId": "cli_cb344ff6-00dc-4545-b37f-0de3506c19c9",
+      "requestId": "cli_d2c9fc01-3d16-4a1a-9269-fbd1675050f2",
       "error": {
         "code": "UNAVAILABLE",
         "message": "Command interrupted",
@@ -104,17 +145,13 @@
       "stderr": ""
     }
   ],
-  "runIds": [
-    "run_01a10edf-4f36-7767-8654-f3f486f500ed"
-  ],
+  "runIds": [],
   "oracleVerdicts": [
     {
-      "check": "mcpDurableResumeAndVerifiedEvidence",
-      "jobId": "bat_01a10edf-4f2f-7254-825a-928bd217dc0b",
-      "runId": "run_01a10edf-4f36-7767-8654-f3f486f500ed",
-      "pages": 2,
-      "artifactCount": 4,
-      "progress": 4
+      "check": "revisionAdmissionAllOrNoneCommitKill",
+      "healthy": true,
+      "revisions": 1,
+      "runs": 1
     }
   ],
   "limitations": [

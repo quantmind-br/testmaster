@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "1.0.0",
+  "method": "automatic",
+  "reviewer": "orchestrator-clean-checkout",
+  "observedAt": "2026-10-06T01:46:17.904Z",
+  "passed": true,
+  "commit": "5c23e1ca627a94effe1a3c9aa497c478d4a4bf55",
+  "noModelKey": true,
+  "install": "frozen offline",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "clone",
+        "--no-local",
+        "/home/diogo/dev/testmaster",
+        "/tmp/tm-clean-checkout-0sfuXa/checkout"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 150.40000799999999,
+      "stdout": "",
+      "stderr": "Clonando em '/tmp/tm-clean-checkout-0sfuXa/checkout'...\n"
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 1.3840270000000032,
+      "stdout": "5c23e1ca627a94effe1a3c9aa497c478d4a4bf55\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile",
+        "--offline",
+        "--store-dir",
+        "/home/diogo/dev/.pnpm-store/v11",
+        "--config.cache-dir=/home/diogo/.cache/pnpm"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 204.17982800000001,
+      "stdout": "Scope: all 17 workspace projects\n✓ Lockfile passes supply-chain policies (verified 3h ago)\nLockfile is up to date, resolution step is skipped\nPackages are copied from the content-addressable store to the virtual store.\n  Content-addressable store is at: /home/diogo/dev/.pnpm-store/v11\n  Virtual store is at:             node_modules/.pnpm\nPackages: +303\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nProgress: resolved 303, reused 303, downloaded 0, added 303, done\n\ndevDependencies:\n+ @biomejs/biome 2.5.15\n+ @types/node 24.10.1\n+ fast-check 4.10.2\n+ typescript 7.0.2\n+ vitest 5.0.3\n\nDone in 173ms using pnpm v12.9.1\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 882.8772170000001,
+      "stdout": "",
+      "stderr": "$ tsc -b && chmod +x apps/cli/dist/main.js\n"
+    },
+    {
+      "argv": [
+        "pnpm",
+        "test"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 24137.1544,
+      "stdout": "\n RUN  v5.0.3 /tmp/tm-clean-checkout-0sfuXa/checkout\n\n\n Test Files  82 passed (82)\n      Tests  516 passed (516)\n   Start at  22:45:52\n   Duration  23.93s (tests 73%, import 14%, transform 13%)\n\n",
+      "stderr": "$ vitest run --project unit\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/client.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-0sfuXa/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js\" points to missing source files\n"
+    },
+    {
+      "argv": [
+        "/usr/bin/node",
+        "/tmp/tm-clean-checkout-0sfuXa/checkout/apps/cli/dist/main.js",
+        "--output",
+        "json",
+        "capabilities"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 322.05134800000087,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_b8fb0c6f-a334-4d43-92a3-70eb2550176e\",\"data\":{\"schemaVersion\":\"1.0.0\",\"features\":[{\"id\":\"contracts\",\"enabled\":true,\"milestone\":\"M0\",\"disabledReason\":null},{\"id\":\"state-reducer\",\"enabled\":true,\"milestone\":\"M0\",\"disabledReason\":null},{\"id\":\"traceability\",\"enabled\":true,\"milestone\":\"M0\",\"disabledReason\":null},{\"id\":\"local-execution\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"playwright\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"http\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"python\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"docker\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"unsafe-local\",\"enabled\":false,\"milestone\":\"M1\",\"disabledReason\":\"Policy or sandbox unavailable\"},{\"id\":\"worker\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"evidence\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-json\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-markdown\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-html\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-junit\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-allure\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"backup-sqlite\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"source-markdown\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"source-text\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"source-pdf\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"source-openapi\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"source-postman\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"source-graphql\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"code-summary\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"code-diff\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"normalize\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"plan\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\",\"experimental\":true},{\"id\":\"resolve_action\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"generate_code\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\",\"experimental\":true},{\"id\":\"agent-mode\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\",\"experimental\":true},{\"id\":\"code-import\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"code-export\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"mcp\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"agent-skills\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"resources-cleanup\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"model-accounting\",\"enabled\":false,\"milestone\":\"M2\",\"disabledReason\":\"M2 application surface is not yet enabled\"},{\"id\":\"analysis\",\"enabled\":false,\"milestone\":\"M3\",\"disabledReason\":\"Available in M3\"},{\"id\":\"healing\",\"enabled\":false,\"milestone\":\"M3\",\"disabledReason\":\"Available in M3\"},{\"id\":\"run-comparison\",\"enabled\":false,\"milestone\":\"M3\",\"disabledReason\":\"Available in M3\"},{\"id\":\"batch-comparison\",\"enabled\":false,\"milestone\":\"M3\",\"disabledReason\":\"Available in M3\"},{\"id\":\"flake-study\",\"enabled\":false,\"milestone\":\"M3\",\"disabledReason\":\"Available in M3\"},{\"id\":\"ci\",\"enabled\":false,\"milestone\":\"M3\",\"disabledReason\":\"Available in M3\"},{\"id\":\"server\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"postgres\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"multi-user\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"suites\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"schedules\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"auth-dynamic\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"identity\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"workers-registration\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"integrations\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"deliveries\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"secrets-rotation\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"audit-api\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"distributed\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"tunnels\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"matrix-advanced\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"visualMatches\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"accessibilityViolations\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"memory\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"visual-baselines\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"sso\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"},{\"id\":\"scim\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"},{\"id\":\"portability\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"},{\"id\":\"break-glass\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"}],\"runners\":[\"playwright\",\"http\",\"python\"],\"sandbox\":{\"available\":true,\"mode\":\"rootful\",\"seccomp\":true,\"cgroupVersion\":\"2\",\"diagnostics\":[]},\"limits\":{\"executor\":\"docker\",\"mode\":\"replay\",\"concurrency\":2,\"executionTimeoutMs\":1800000,\"attemptTimeoutMs\":300000,\"stepTimeoutMs\":30000,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":2,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/node",
+        "/tmp/tm-clean-checkout-0sfuXa/checkout/apps/cli/dist/main.js",
+        "--output",
+        "json",
+        "test",
+        "scaffold",
+        "--type",
+        "backend"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 484.8528929999993,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_59555b67-4b0d-48db-a760-eaac189daaff\",\"data\":{\"schemaVersion\":\"1.0.0\",\"kind\":\"executable\",\"name\":\"Read service health\",\"type\":\"backend\",\"runner\":\"http\",\"requirementRefs\":[],\"steps\":[{\"id\":\"get-health\",\"kind\":\"action\",\"operation\":\"request\",\"description\":\"Read the controlled health endpoint\",\"required\":true,\"input\":{\"method\":\"GET\",\"pathSegments\":[{\"literal\":\"health\"}],\"query\":[],\"headers\":{}},\"timeoutMs\":30000},{\"id\":\"check-status\",\"kind\":\"assertion\",\"operation\":\"assert\",\"description\":\"Require HTTP 200\",\"required\":true,\"input\":{\"responseStepId\":\"get-health\"},\"expectation\":{\"predicate\":\"statusIn\",\"values\":[200]},\"timeoutMs\":30000},{\"id\":\"check-health\",\"kind\":\"assertion\",\"operation\":\"assert\",\"description\":\"Require a healthy service state\",\"required\":true,\"input\":{\"responseStepId\":\"get-health\",\"jsonPointer\":\"/status\"},\"expectation\":{\"predicate\":\"jsonEquals\",\"value\":{\"literal\":\"ok\"}},\"timeoutMs\":30000}],\"dependsOn\":[],\"cleanup\":[],\"tags\":[],\"priority\":\"normal\"},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/node",
+        "/tmp/tm-clean-checkout-0sfuXa/checkout/apps/cli/dist/main.js",
+        "--output",
+        "json",
+        "init",
+        "--name",
+        "reproduction",
+        "--base-url",
+        "http://127.0.0.1:7339"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 280.36909899999955,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_96568db5-7e06-4632-b2cb-afcf20207ac8\",\"data\":{\"workspaceId\":\"ws_01a10ee3-e191-7183-94d6-aa614044aa11\",\"principalId\":\"usr_01a10ee3-e192-7684-8d7d-6af02ebb7a59\",\"projectId\":\"prj_01a10ee3-e19c-7549-bf55-9d922c4fd17c\",\"environmentId\":\"env_01a10ee3-e19f-7502-a06a-84dcc4cc66c6\",\"sessionOnly\":false},\"warnings\":[]}\n",
+      "stderr": ""
+    }
+  ],
+  "images": {
+    "testmaster-runner": {
+      "imageId": "sha256:e0010105190a41a8a4c735990004d2e4f96ddc764e3bc5e677bf8c06e06f373e",
+      "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+      "buildInputsHash": "3e88aa887c4417f1739cb660b369df752a152fbdcec15d03515a87606a707c48",
+      "seccomp": {
+        "engineVersion": "29.8.1",
+        "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+        "profileModuleVersion": "v0.2.3",
+        "inputs": {
+          "engineDefault": {
+            "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+            "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+          },
+          "originalDefault": {
+            "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+            "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+          },
+          "playwright": {
+            "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+            "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+          }
+        },
+        "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+      }
+    },
+    "testmaster-runner-python": {
+      "imageId": "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b",
+      "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+      "buildInputsHash": "50aaa3e54a7ffc8db507da14e8d0a616de42a6aae557b38c9a8740f504dc2886",
+      "seccomp": {
+        "engineVersion": "29.8.1",
+        "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+        "profileModuleVersion": "v0.2.3",
+        "inputs": {
+          "engineDefault": {
+            "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+            "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+          },
+          "originalDefault": {
+            "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+            "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+          },
+          "playwright": {
+            "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+            "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+          }
+        },
+        "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+      }
+    }
+  },
+  "limitations": [
+    "Local populated pnpm cache required. Does not certify license/publication, other operating systems or Docker acceptance."
+  ]
+}

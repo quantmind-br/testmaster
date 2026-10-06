@@ -1,0 +1,14 @@
+{
+  "slice": "ModelAccounting",
+  "method": "automatic",
+  "reviewer": "ModelAccounting delegated coding agent",
+  "checks": [
+    {"command": "pnpm exec tsc -b packages/contracts packages/persistence packages/model-gateway packages/application apps/cli apps/server", "result": "passed"},
+    {"command": "pnpm exec biome check --write <accounting files>; pnpm exec biome check <accounting files>", "result": "passed"},
+    {"command": "pnpm exec vitest run --project unit packages/persistence/src/persistence.test.ts packages/model-gateway/src/gateway.test.ts packages/application/src/ai/core.test.ts apps/server/src/model-budget.test.ts", "result": "passed", "tests": 62},
+    {"command": "pnpm exec vitest run --project unit packages/persistence/src/persistence.test.ts", "result": "passed", "tests": 39, "note": "Includes subsequently added max-two-concurrent-model-compute-slot regression."},
+    {"command": "pnpm exec vitest run --project docker packages/persistence/src/conformance.docker.test.ts validation/journeys/model-accounting.docker.test.ts", "result": "passed", "tests": 2}
+  ],
+  "budgetJourney": "validation/results/val009-model-budget-isolation.json",
+  "limitations": ["Accounting model is a local OpenAI-compatible HTTP double; deterministic execution uses real CLI, Docker, and reference shop.", "PostgreSQL acceptance validates migration constraints, not an M4 PostgreSQL runtime."]
+}

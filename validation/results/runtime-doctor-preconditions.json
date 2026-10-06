@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "j01-docker-unavailable",
+  "journey": "runtime-doctor-preconditions",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:35.007Z",
+  "observedAt": "2026-10-06T01:38:22.644Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,16 +19,16 @@
         "--mode",
         "local",
         "--name",
-        "j01-docker-unavailable",
+        "runtime-doctor-preconditions",
         "--base-url",
-        "http://127.0.0.1:43947",
+        "http://127.0.0.1:38545",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_7a81ec4a-642b-409b-9569-1c6c67b6e11e",
+      "requestId": "cli_8de66cd3-cbdd-464a-a827-7933f7396602",
       "warnings": [],
       "stderr": ""
     },
@@ -38,14 +38,46 @@
         "test",
         "create",
         "--plan",
-        "/tmp/tm-m1-9uvtyj/repo/plan.json",
+        "/tmp/tm-m1-ws9OFo/repo/plan.json",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_8486755d-7594-47fe-b1b1-02f34eae657d",
+      "requestId": "cli_b035f6fa-dfa3-438c-ae6e-6725e62a099a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "doctor",
+        "--target",
+        "http://127.0.0.1:38545",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e96b985c-dcd3-4e22-b6b6-67e1c2908746",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "doctor",
+        "--target",
+        "http://127.0.0.1:38545",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_11451994-82dc-4a67-a5a2-22695a27d3a0",
       "warnings": [],
       "stderr": ""
     },
@@ -54,33 +86,15 @@
         "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
         "test",
         "run",
-        "tst_01a10edd-b684-7679-a244-393e1c99e8ff",
+        "tst_01a10edc-9887-77d6-8b8b-a3344795c23d",
         "--wait",
-        "--timeout",
-        "30",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 9,
       "signal": null,
-      "requestId": "cli_082f4dcb-45cf-4bf4-8c67-8fe8f53a1c8c",
-      "warnings": [],
-      "stderr": ""
-    },
-    {
-      "argv": [
-        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
-        "run",
-        "get",
-        "run_01a10edd-b996-7046-9e70-927222898d1f",
-        "--output",
-        "json",
-        "--no-color"
-      ],
-      "exitCode": 0,
-      "signal": null,
-      "requestId": "cli_ac58658a-6cb4-4c28-bd70-9c9177e98cc7",
+      "requestId": "cli_efbc186e-44c8-42f9-a829-7a7594bc110b",
       "warnings": [],
       "stderr": ""
     },
@@ -89,27 +103,39 @@
         "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
         "run",
         "events",
-        "run_01a10edd-b996-7046-9e70-927222898d1f",
+        "run_01a10edc-a003-7482-8a4c-398ef288eda5",
+        "--format",
+        "ndjson",
         "--output",
-        "json",
+        "text",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_cd09a190-960f-4ea4-ac4e-7225a47efa48",
-      "warnings": [],
       "stderr": ""
     }
   ],
   "runIds": [
-    "run_01a10edd-b996-7046-9e70-927222898d1f"
+    "run_01a10edc-a003-7482-8a4c-398ef288eda5"
   ],
   "oracleVerdicts": [
     {
-      "check": "deadDockerNoProcessFallback",
+      "check": "doctorTargetModelAndMissingSandbox",
       "healthy": true,
-      "exitCode": 9,
-      "targetRequests": 0
+      "targetDown": {
+        "status": "FAIL",
+        "diagnostics": [
+          "target_unreachable"
+        ]
+      },
+      "modelAbsent": {
+        "status": "ABSENT",
+        "diagnostics": [
+          "model_not_configured"
+        ],
+        "requiredForReplay": false
+      },
+      "blockedRun": "run_01a10edc-a003-7482-8a4c-398ef288eda5"
     }
   ],
   "limitations": [

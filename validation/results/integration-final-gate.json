@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "passed": true,
+  "observedAt": "2026-10-06T01:44:42.477Z",
+  "scope": "M0-M2 local Linux rootful-hardened profile",
+  "build": {
+    "command": "pnpm build",
+    "exitCode": 0
+  },
+  "lint": {
+    "command": "pnpm lint",
+    "exitCode": 0,
+    "warnings": 63
+  },
+  "unit": {
+    "command": "pnpm test",
+    "files": 82,
+    "passed": 516,
+    "failed": 0
+  },
+  "docker": {
+    "command": "pnpm test:docker",
+    "files": 40,
+    "passed": 101,
+    "failed": 0,
+    "durationMs": 481840
+  },
+  "traceability": {
+    "command": "node tools/dist/traceability/cli.js check",
+    "normativeIds": 446,
+    "exitCode": 0
+  },
+  "live": {
+    "status": "blocked",
+    "model": "deepseek-v4.1-flash",
+    "evidence": "validation/results/model-provider-inventory.json",
+    "reason": "Designated model absent from authenticated provider inventory; no substitute"
+  },
+  "review": {
+    "status": "unavailable",
+    "reason": "Reviewer model authentication unavailable; no independent review claimed"
+  },
+  "limitations": [
+    "No public-release sign-off",
+    "No rootless certification",
+    "No multi-user/PostgreSQL runtime or M3-M6 capability delivery"
+  ]
+}

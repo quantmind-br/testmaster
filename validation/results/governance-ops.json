@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "method": "automatic",
+  "reviewer": "GovernanceOps automated acceptance",
+  "observedAt": "2026-10-05",
+  "passed": true,
+  "checks": [
+    { "command": "pnpm exec tsc -b packages/application apps/server apps/cli tools packages/reporting", "exitCode": 0 },
+    { "command": "pnpm exec vitest run --project unit tools/src/traceability tools/src/evals/freeze.test.ts packages/reporting/src/reporting.test.ts validation/journeys/harness-metadata.test.ts packages/application/src/config.test.ts packages/application/src/observability.test.ts packages/application/src/governance-runtime.test.ts packages/application/src/audit.test.ts packages/application/src/secrets.test.ts packages/application/src/artifact-streaming.test.ts apps/server/src/security.test.ts apps/cli/src/audit.test.ts packages/persistence/src/migration-startup.test.ts", "exitCode": 0, "files": 16, "tests": 59 },
+    { "command": "pnpm exec vitest run --project unit tools/src/traceability/release.test.ts", "exitCode": 0, "tests": 5, "note": "After language-independent critical waiver guard hardening." },
+    { "command": "pnpm exec vitest run --project docker validation/journeys/governance-ops.docker.test.ts", "exitCode": 0, "files": 1, "tests": 2 },
+    { "command": "pnpm exec biome check <30 scoped governance files>", "exitCode": 0, "files": 30, "fixes": 0 },
+    { "command": "node --check validation/journeys/reproduce-clean-checkout.mjs", "exitCode": 0 }
+  ],
+  "limitations": [
+    "Scoped acceptance, not the orchestrator full gate or human release/security sign-off.",
+    "Earlier failing checks drove fixes; the existing server SSE fixed-count fixture remains delegated to its runtime owner and is excluded from the successful final scoped command.",
+    "Existing registry M2 gate intentionally fails 299 observed missing coverage/capability/release fields; exact list is in local://governance-registry-issues.json and local://gap-GovernanceOps.json.",
+    "Fresh committed-checkout no-key execution awaits orchestrator; script syntax alone is not reproduction proof.",
+    "Rootless, multi-user, compose/reverse proxy, distributed upgrade and all later journeys are not certified."
+  ]
+}

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "j01-docker-unavailable",
+  "journey": "ops-004-infinite-http",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:35.007Z",
+  "observedAt": "2026-10-06T01:41:15.753Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,16 +19,16 @@
         "--mode",
         "local",
         "--name",
-        "j01-docker-unavailable",
+        "ops-004-infinite-http",
         "--base-url",
-        "http://127.0.0.1:43947",
+        "http://127.0.0.1:46223",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_7a81ec4a-642b-409b-9569-1c6c67b6e11e",
+      "requestId": "cli_772d4e69-2615-4195-a100-37ae8a9c8140",
       "warnings": [],
       "stderr": ""
     },
@@ -38,14 +38,14 @@
         "test",
         "create",
         "--plan",
-        "/tmp/tm-m1-9uvtyj/repo/plan.json",
+        "/tmp/tm-m1-ecyJcv/repo/plan.json",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_8486755d-7594-47fe-b1b1-02f34eae657d",
+      "requestId": "cli_eda9702c-071f-4db8-939c-44a5f8b96980",
       "warnings": [],
       "stderr": ""
     },
@@ -54,62 +54,31 @@
         "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
         "test",
         "run",
-        "tst_01a10edd-b684-7679-a244-393e1c99e8ff",
+        "tst_01a10edf-3ed7-718a-ad6c-791dfc5eb35e",
         "--wait",
         "--timeout",
-        "30",
+        "120",
         "--output",
         "json",
         "--no-color"
       ],
-      "exitCode": 9,
+      "exitCode": 1,
       "signal": null,
-      "requestId": "cli_082f4dcb-45cf-4bf4-8c67-8fe8f53a1c8c",
-      "warnings": [],
-      "stderr": ""
-    },
-    {
-      "argv": [
-        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
-        "run",
-        "get",
-        "run_01a10edd-b996-7046-9e70-927222898d1f",
-        "--output",
-        "json",
-        "--no-color"
-      ],
-      "exitCode": 0,
-      "signal": null,
-      "requestId": "cli_ac58658a-6cb4-4c28-bd70-9c9177e98cc7",
-      "warnings": [],
-      "stderr": ""
-    },
-    {
-      "argv": [
-        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
-        "run",
-        "events",
-        "run_01a10edd-b996-7046-9e70-927222898d1f",
-        "--output",
-        "json",
-        "--no-color"
-      ],
-      "exitCode": 0,
-      "signal": null,
-      "requestId": "cli_cd09a190-960f-4ea4-ac4e-7225a47efa48",
+      "requestId": "cli_c133a243-5569-45fa-9c12-e50b4d4aba06",
       "warnings": [],
       "stderr": ""
     }
   ],
   "runIds": [
-    "run_01a10edd-b996-7046-9e70-927222898d1f"
+    "run_01a10edf-41f1-76bc-ba2b-8620060d243d"
   ],
   "oracleVerdicts": [
     {
-      "check": "deadDockerNoProcessFallback",
+      "check": "infiniteStreamDisconnected",
       "healthy": true,
-      "exitCode": 9,
-      "targetRequests": 0
+      "bytesProduced": 14483456,
+      "closed": true,
+      "exitCode": 1
     }
   ],
   "limitations": [

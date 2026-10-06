@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "cli-003-readonly-home",
+  "journey": "discovery-descendant-invalidation",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:26.067Z",
+  "observedAt": "2026-10-06T01:41:36.124Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,29 +19,29 @@
         "--mode",
         "local",
         "--name",
-        "Read-only home",
+        "discovery-descendant-invalidation",
         "--base-url",
-        "http://127.0.0.1:43210",
+        "http://127.0.0.1:34429",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_e38b5b5a-e571-45f9-be41-f2de34d26b44",
-      "warnings": [
-        "User profile cannot be persisted; session-only setup"
-      ],
+      "requestId": "cli_1e096237-8364-45f1-a22d-587ffa4ee7fa",
+      "warnings": [],
       "stderr": ""
     }
   ],
   "runIds": [],
   "oracleVerdicts": [
     {
-      "check": "readonlyHomeSessionNotice",
-      "healthy": true,
-      "sessionOnly": true,
-      "notice": "User profile cannot be persisted; session-only setup"
+      "name": "pinned-run-survives-invalidation",
+      "admittedRunId": "run_01a10edf-8ecc-7061-99ba-94d21774d519",
+      "replayRunId": "run_01a10edf-9214-70d6-99e1-e23bc77574df",
+      "staleBatchId": "pbt_01a10edf-8ed5-7339-b715-0f9dea51d475",
+      "beforeFingerprint": "7a72ca94b698f28989f223357b013fe6b55c7728a1988d5c0cf90128461472a2",
+      "afterFingerprint": "009a826a4bb6d437654d4d1dd30c94ca7607508b3ce2d8ae566c0bcead1fe49d"
     }
   ],
   "limitations": [

@@ -1,0 +1,39 @@
+{
+  "slice": "SandboxAdversarial",
+  "method": "automated real Docker, real Chromium/HTTPS/Python, controlled loopback packet capture and descriptor-confined filesystem",
+  "reviewer": "SandboxAdversarial coding agent; no independent human sign-off claimed",
+  "profile": "rootful-hardened single-user local",
+  "commands": [
+    {"command": "pnpm exec tsc -b packages/domain packages/evidence packages/runner packages/sandbox", "result": "passed"},
+    {"command": "pnpm exec vitest run --project unit packages/evidence/src/adversarial.test.ts packages/evidence/src/evidence.test.ts packages/sandbox/src/attempt/protocol.test.ts packages/domain/src/redaction.test.ts packages/runner/src/browser.test.ts packages/runner/src/http.test.ts", "result": "41 passed"},
+    {"command": "pnpm exec vitest run --project docker packages/sandbox/src/attempt/adversarial.docker.test.ts packages/sandbox/src/docker/adversarial.docker.test.ts packages/sandbox/src/docker/isolation.docker.test.ts packages/sandbox/src/attempt/python.docker.test.ts packages/sandbox/src/attempt/attempt.docker.test.ts", "result": "27 passed; network test had stale expected DNS count after adding eight reconnects, corrected from 4 to 12"},
+    {"command": "pnpm exec vitest run --project docker packages/sandbox/src/docker/adversarial.docker.test.ts", "result": "1 passed after count correction"},
+    {"command": "pnpm exec vitest run --project unit packages/evidence/src/adversarial.test.ts", "result": "4 passed after adding ZIP nested-content acceptance"}
+  ],
+  "observations": {
+    "network": "Four HTTP connections and eight WebSocket reconnects independently resolve current DNS; restricted answers denied; controlled packet capture contains approved target and no forbidden listener traffic; service-worker, JS/meta redirect, iframe token, CDP and broker requests cannot reach forbidden target.",
+    "browser": "Production runner blocks service workers; default Docker seccomp forces Chromium sandbox launch failure and blocked/security_precondition_failed before steps with one container create and no unsafe retry; self-signed HTTPS receives zero HTTP/login requests.",
+    "protocol": "Docker runner foreign runId, oversized line, arbitrary file URI and duplicate sequence rejected as inconclusive; valid prior log preserved; text corpus/malformed JSON withheld; raw artifact chunks no longer reach public observations.",
+    "filesystem": "Libuv pool barrier queues actual open after successful ancestor pinning; synchronous concurrent symlink swap cannot read or write outside the pinned root; corrupted ZIP CRC, truncated archives, extension/magic nested content and mid-extraction ZIP/tar cancellation leave no incomplete destination/staging.",
+    "python": "Real subprocess attempts for pip/ensurepip/uv/npm cannot install; exact pytest9.1.1, pytest-asyncio1.4.0, requests2.34.2, playwright1.63.0 and pinned image ID are asserted from runtime execution artifact."
+  },
+  "productFixes": [
+    "Common sensitive patterns were not redacted by Runtime or controller; added shared scrubEvidenceText and controller withholding/sanitization.",
+    "Raw artifact.chunk base64 was included in public events even when artifact withheld; chunks now remain private staging transport.",
+    "Malformed JSON/NDJSON was accepted by evidence scanner; parse failure now withholds as redaction_failed.",
+    "ZIP parser did not verify content CRC; streaming CRC validation now rejects corrupt content.",
+    "Archive extraction had no cancellation input; optional AbortSignal now cancels stream and removes staging.",
+    "Python image retained build-time pip/uv installers; removed after frozen sync and rebuilt pinned image.",
+    "Chromium sandbox launch failure used unsupported_capability; now security_precondition_failed."
+  ],
+  "pythonImage": "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b",
+  "limitations": [
+    "Rootless profile unvalidated; no hostile multi-tenant guarantee.",
+    "WebSockets unsupported and fail closed; no successful WebSocket feature claim.",
+    "Proxy has no DNS cache, so cache expiry cannot preserve stale authorization; fresh sockets always re-resolve.",
+    "Packet capture requires tcpdump plus sudo -n permission; never grants additional container privileges.",
+    "SEC-013 M4 CSRF, session/reverse-proxy TLS and signed-webhook acceptance remains unavailable.",
+    "Redaction covers known values and tested common patterns, not unknown/encoded PII anonymity.",
+    "Fixture formatting was concurrently changed by BrowserMatrix; that owner was notified to format its new browser-session route."
+  ]
+}

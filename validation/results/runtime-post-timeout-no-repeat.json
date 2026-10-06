@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0.0",
-  "journey": "cli-003-readonly-home",
+  "journey": "runtime-post-timeout-no-repeat",
   "class": "deterministic-e2e",
   "runner": "real-docker",
   "externalDependency": "local-reference-shop",
-  "observedAt": "2026-10-06T01:39:26.067Z",
+  "observedAt": "2026-10-06T01:40:41.703Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -19,29 +19,30 @@
         "--mode",
         "local",
         "--name",
-        "Read-only home",
+        "runtime-post-timeout-no-repeat",
         "--base-url",
-        "http://127.0.0.1:43210",
+        "http://127.0.0.1:34425",
         "--output",
         "json",
         "--no-color"
       ],
       "exitCode": 0,
       "signal": null,
-      "requestId": "cli_e38b5b5a-e571-45f9-be41-f2de34d26b44",
-      "warnings": [
-        "User profile cannot be persisted; session-only setup"
-      ],
+      "requestId": "cli_b438ea66-bfc9-41c0-a0a2-6dbf872613ab",
+      "warnings": [],
       "stderr": ""
     }
   ],
-  "runIds": [],
+  "runIds": [
+    "run_01a10ede-b983-701b-8b4f-65a3a96553e5"
+  ],
   "oracleVerdicts": [
     {
-      "check": "readonlyHomeSessionNotice",
+      "check": "committedPostNotRepeated",
       "healthy": true,
-      "sessionOnly": true,
-      "notice": "User profile cannot be persisted; session-only setup"
+      "posts": 1,
+      "runId": "run_01a10ede-b983-701b-8b4f-65a3a96553e5",
+      "persistedUsers": 1
     }
   ],
   "limitations": [

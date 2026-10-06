@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "ops002-daemon-readiness",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-health",
+  "externalDependency": "local-docker-no-target",
+  "observedAt": "2026-10-06T01:41:42.957Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9b420138-0045-4316-a242-5a7c80fd7ff8",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "migrated-storage-and-real-hardened-runner-health",
+      "passed": true,
+      "projectId": "prj_01a10edf-a9c3-74cc-ba6d-4fc374a917ce",
+      "readiness": {
+        "status": "ready",
+        "components": {
+          "persistence": "ready",
+          "admission": "ready"
+        },
+        "worker": {
+          "status": "ready",
+          "runners": {
+            "http": {
+              "status": "ready"
+            },
+            "playwright": {
+              "status": "ready"
+            },
+            "python": {
+              "status": "ready"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Approved single-user hardened rootful Docker only; no compose/reverse-proxy/rootless certification."
+  ]
+}
