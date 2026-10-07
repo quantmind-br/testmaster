@@ -31,6 +31,7 @@ import {
 import { DockerExecutor, dockerCommand, verifyImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
+import { type RepositoryProvenance, resolveRepositoryProvenance } from "../provenance.js";
 import { invalidateAiDescendants } from "./invalidation.js";
 import { promptVersions } from "./model.js";
 import { readAiState, replayAiReceipt, type SourcesService, saveAiState } from "./sources.js";
@@ -70,6 +71,7 @@ export interface DiscoveryDetail {
   featureMap: DiscoveryFeatureMap;
   status: "partial" | "needs_input" | "unreachable";
   warnings: string[];
+  repository?: RepositoryProvenance;
 }
 interface DiscoveryState {
   projectId: string;
@@ -374,6 +376,12 @@ export class DiscoveryService {
           summary,
         });
     }
+    const repository = resolveRepositoryProvenance(root);
+    if (diff && !input.workingTree) {
+      repository.commitSha = diff.headSha;
+      repository.checkoutSha = diff.headSha;
+      repository.dirtyHash = null;
+    }
     const provider = this.config.modelProviders.find((value) =>
       input.provider
         ? value.id === input.provider
@@ -393,6 +401,7 @@ export class DiscoveryService {
           parserVersion: value.revision.parserVersion,
         })),
         codeSnapshot: { repoRef: root, manifestHash: summary.manifestHash, diff },
+        repository,
         parserVersion: SOURCE_PARSER_VERSION,
         detectorVersion: CODE_DETECTOR_VERSION,
         runtime: { node: process.versions.node, platform: process.platform, arch: process.arch },
@@ -498,7 +507,7 @@ export class DiscoveryService {
       repoRef: root,
       baseSha: diff?.baseSha ?? null,
       headSha: diff?.headSha ?? null,
-      dirtyHash: diff?.dirtyHash ?? null,
+      dirtyHash: repository.dirtyHash,
       manifestHash: summary.manifestHash,
       excludes: input.excludes ?? [],
       skippedFiles: [...summary.skippedFiles, ...(diff?.impact.excludedFiles ?? [])],
@@ -595,7 +604,7 @@ export class DiscoveryService {
     const state: DiscoveryState = {
       projectId: input.projectId,
       request: { ...input, root, sourceRevisionIds },
-      detail: { codeSnapshot, summary, diff, featureMap, status, warnings },
+      detail: { codeSnapshot, summary, diff, featureMap, status, warnings, repository },
       featureEvidence,
     };
     const admission = new IdempotencyRepository(this.ctx.database).execute(
@@ -687,7 +696,12 @@ export class DiscoveryService {
       const summary = await summarizeCode(temporary, options);
       summary.skippedFiles.push(...skipped);
       summary.manifestHash = sha256(
-        canonicalJson({ manifestHash: summary.manifestHash, pinnedHead: sha, skipped }),
+        canonicalJson({
+          detectorVersion: summary.detectorVersion,
+          files: summary.fileRefs,
+          excludes: options?.excludes ?? [],
+          skipped: summary.skippedFiles,
+        }),
       );
       return summary;
     } finally {

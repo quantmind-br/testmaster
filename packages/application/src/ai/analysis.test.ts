@@ -14,6 +14,7 @@ import {
 import { type ArtifactsService, EvidenceUnavailableError } from "../artifacts.js";
 import type { ServiceContext } from "../context.js";
 import { AnalysisService, resolveAnalysisEvidence } from "./analysis.js";
+import type { DiscoveryDetail } from "./discovery.js";
 import type { ModelService } from "./model.js";
 
 const databases: PersistenceDatabase[] = [];
@@ -21,7 +22,16 @@ afterEach(() => {
   for (const db of databases.splice(0)) db.close();
 });
 async function fixture(
-  options: { passed?: boolean; queued?: boolean; requestOnly?: boolean; schema?: boolean } = {},
+  options: {
+    passed?: boolean;
+    queued?: boolean;
+    requestOnly?: boolean;
+    schema?: boolean;
+    status?: boolean;
+    missing?: boolean;
+    source?: boolean;
+    unbound?: boolean;
+  } = {},
 ) {
   const db = PersistenceDatabase.memory();
   databases.push(db);
@@ -75,7 +85,9 @@ async function fixture(
               sourceRevisionId: "svr_00000000-0000-4000-8000-000000000001",
               pointer: "",
             }
-          : { predicate: "jsonEquals", value: { literal: 10 } },
+          : options.status
+            ? { predicate: "statusIn", values: [200] }
+            : { predicate: "jsonEquals", value: { literal: 10 } },
       },
     ],
   };
@@ -92,6 +104,20 @@ async function fixture(
     gate: options.queued ? "pending" : options.passed ? "passed" : "failed",
     analysisStatus: "not_requested",
   } as unknown as Run;
+  const repository = {
+    binding: "verified",
+    repositoryId: "local:fixture",
+    commitSha: "a".repeat(40),
+    checkoutSha: "a".repeat(40),
+    dirtyHash: null,
+  };
+  if (options.source && !options.unbound) {
+    const admission = { repository };
+    run.matrixCell = {
+      admissionSnapshot: admission,
+      admissionSnapshotHash: semanticHash(admission),
+    };
+  }
   Object.assign(runFixture.row, {
     phase: run.phase,
     status: run.status,
@@ -140,26 +166,88 @@ async function fixture(
     status: options.passed ? "passed" : "failed",
     ...(options.passed ? {} : { reasonCode: "assertion_mismatch" }),
     expected: options.requestOnly ? 200 : 10,
-    observed: options.requestOnly ? 500 : options.passed ? 10 : 11,
+    observed: options.missing
+      ? null
+      : options.requestOnly || options.status
+        ? 500
+        : options.passed
+          ? 10
+          : 11,
     error: null,
     durationMs: 1,
     evidenceRefs: [],
   };
   ctx.entities.insert("StepResult", { ...step, workspaceId: ws });
-  const complete = vi.fn(async () => {
+  const complete = vi.fn(async (_input: unknown) => {
     throw new ContractError("QUOTA_EXCEEDED", "No budget");
   });
   const model = {
     complete,
-    config: { modelProviders: [], effectiveConfig: { policyHash: "a".repeat(64) } },
+    consent: vi.fn(async () => ({
+      dataClasses: ["execution_evidence", "code_summary"],
+      revokedAt: null,
+    })),
+    config: {
+      modelProviders: [{ id: "fake" }],
+      profilePolicy: { allowedModelProviders: ["fake"] },
+      effectiveConfig: { policyHash: "a".repeat(64) },
+    },
   } as unknown as ModelService;
   const artifacts = {
     get: vi.fn(async () => {
       throw new EvidenceUnavailableError("missing", run.id);
     }),
   } as unknown as ArtifactsService;
-  const service = new AnalysisService(ctx, model, artifacts);
-  return { db, ctx, run, step, service, complete, artifacts };
+  const snapshot = get("CodeSnapshot");
+  const files = [{ path: "src/price.ts", contentHash: "b".repeat(64), line: 1 }];
+  const manifestHash = semanticHash({
+    detectorVersion: "test-1",
+    files,
+    excludes: [],
+    skipped: [],
+  });
+  Object.assign(snapshot.dto, { workspaceId: ws, excludes: [], dirtyHash: null, manifestHash });
+  Object.assign(snapshot.row, {
+    manifest_hash: manifestHash,
+    data_json: canonicalJson(snapshot.dto),
+  });
+  if (options.source) {
+    const insert = fixtureInsert(snapshot);
+    db.run(insert.sql, ...insert.values);
+  }
+  const call = get("ModelCall");
+  const callInsert = fixtureInsert(call);
+  db.run(callInsert.sql, ...callInsert.values);
+  const detail = {
+    job: { id: "dsc_00000000-0000-4000-8000-000000000090", workspaceId: ws },
+    codeSnapshot: ctx.entities.get("CodeSnapshot", ws, String(snapshot.dto.id)) ?? {
+      ...snapshot.dto,
+      workspaceId: ws,
+    },
+    summary: {
+      detectorVersion: "test-1",
+      manifestHash,
+      fileRefs: files,
+      symbols: [{ name: "price", kind: "function", ref: files[0] }],
+      skippedFiles: [],
+    },
+    featureMap: { projectId: String(get("Project").dto.id) },
+    repository,
+  } as unknown as DiscoveryDetail;
+  const discovery = { get: vi.fn(() => detail) };
+  const service = new AnalysisService(ctx, model, artifacts, discovery);
+  return {
+    db,
+    ctx,
+    run,
+    step,
+    service,
+    complete,
+    artifacts,
+    detail,
+    discovery,
+    modelCallId: String(call.dto.id),
+  };
 }
 
 it("passed execution abstains without inventing a failure hypothesis", async () => {
@@ -179,6 +267,56 @@ it("HTTP 500 request response is not locator drift or a certain product cause", 
     failureKind: "unknown",
     hypotheses: [],
   });
+});
+it("required HTTP status mismatch records the observation without proving product causality", async () => {
+  const f = await fixture({ status: true });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("unknown");
+  expect(
+    analysis.facts.some((fact) => fact.evidenceRefs.some((ref) => ref.stepId === f.step.id)),
+  ).toBe(true);
+});
+it("missing JSON value does not establish an approved schema violation", async () => {
+  const f = await fixture({ missing: true });
+  expect((await f.service.analyze(f.run.id)).failureKind).toBe("unknown");
+});
+it("structured catalog retains frozen assertion semantics and verified reference hashes", async () => {
+  const f = await fixture();
+  await f.service.analyze(f.run.id, { model: true });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+  const request = f.complete.mock.calls[0]![0] as unknown as { data: { measurements: unknown[] } };
+  expect(request.data.measurements).toContainEqual(
+    expect.objectContaining({
+      kind: "step",
+      operation: "assert",
+      required: true,
+      predicate: "jsonEquals",
+      responseStepId: "request",
+      expected: 10,
+      observed: 11,
+      ref: expect.objectContaining({ runId: f.run.id }),
+      verifiedHash: expect.any(String),
+    }),
+  );
+});
+it("collection failure after a required mismatch preserves the mismatch and collection limitation", async () => {
+  const f = await fixture();
+  const value = { reasonCode: "storage_unavailable" };
+  f.db.run(
+    "INSERT INTO outbox(workspace_id,id,created_at,aggregate_id,seq,type,payload_ref,data_json) VALUES(?,?,?,?,?,?,?,?)",
+    f.ctx.workspaceId,
+    "evt_00000000-0000-4000-8000-000000000045",
+    new Date().toISOString(),
+    f.run.id,
+    5,
+    "run.execution_error",
+    "inline",
+    canonicalJson(value),
+  );
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(analysis.facts.some((fact) => fact.text.includes("storage_unavailable"))).toBe(true);
+  expect(analysis.limitations.some((limitation) => limitation.includes("collection"))).toBe(true);
 });
 it("required frozen business mismatch cites the scoped persisted step and canonical hash", async () => {
   const f = await fixture();
@@ -358,4 +496,135 @@ it("persisted supervisor security refusal precedes business mismatch and resolve
     contentHash: semanticHash(value),
   });
   expect(await resolveAnalysisEvidence(f.ctx, f.artifacts, f.run.id, ref)).toEqual(value);
+});
+
+it("authorized frozen source handle persists exact snapshot path and content binding", async () => {
+  const f = await fixture({ source: true });
+  f.complete.mockImplementationOnce(async (input) => {
+    const request = input as { data: { measurements: { kind: string; evidenceId: string }[] } };
+    const data = request.data;
+    return {
+      modelCallId: f.modelCallId,
+      output: {
+        failureKind: "product_bug",
+        hypotheses: [
+          {
+            text: "Inspect price implementation",
+            supports: ["E2"],
+            contradicts: [],
+            confidence: 0.5,
+          },
+        ],
+        recommendedAction: "fix_product",
+        fixTargetHandle: data.measurements.find((item) => item.kind === "source")!.evidenceId,
+        limitations: [],
+      },
+    };
+  });
+  const result = await f.service.analyze(f.run.id, { model: true, discoveryId: f.detail.job.id });
+  expect(result.limitations).toEqual(
+    expect.not.arrayContaining([expect.stringContaining("Model enrichment abstained")]),
+  );
+  expect(result.fixTarget).toEqual({
+    codeSnapshotId: f.detail.codeSnapshot.id,
+    relativePath: "src/price.ts",
+    contentHash: "b".repeat(64),
+  });
+  expect(result.hypotheses[0]!.calibrated).toBe(false);
+});
+it("wrong-project discovery and altered summary fail before model dispatch", async () => {
+  const f = await fixture({ source: true });
+  f.detail.featureMap.projectId = "prj_00000000-0000-4000-8000-000000000090";
+  await expect(
+    f.service.analyze(f.run.id, { model: true, discoveryId: f.detail.job.id }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  f.detail.featureMap.projectId = String(
+    f.ctx.entities.get("TestCase", f.ctx.workspaceId, f.run.testId)!.projectId,
+  );
+  f.detail.summary.fileRefs[0]!.contentHash = "c".repeat(64);
+  await expect(
+    f.service.analyze(f.run.id, { model: true, discoveryId: f.detail.job.id }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  expect(f.complete).not.toHaveBeenCalled();
+});
+it("execution handles cannot be promoted to source fix targets", async () => {
+  const f = await fixture();
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: "mdl_00000000-0000-4000-8000-000000000009",
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.5 },
+      ],
+      recommendedAction: "fix_product",
+      fixTargetHandle: "E2",
+      limitations: [],
+    },
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.fixTarget).toBeUndefined();
+  expect(
+    result.limitations.some((value) =>
+      value.includes("Fix target is not authorized source evidence"),
+    ),
+  ).toBe(true);
+});
+
+it("oversized evidence abstains before dispatch instead of silently dropping its binding", async () => {
+  const f = await fixture();
+  const stored = JSON.parse(
+    String(f.db.get("SELECT data_json FROM steps WHERE id=?", f.step.id)!.data_json),
+  );
+  stored.observed = "x".repeat(513);
+  f.db.run("UPDATE steps SET data_json=? WHERE id=?", canonicalJson(stored), f.step.id);
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(result.limitations.some((value) => value.includes("oversized structures"))).toBe(true);
+});
+it("unknown model handles reject the entire enrichment and preserve the factual predecessor", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Unknown support", supports: ["E999"], contradicts: [], confidence: 0.5 },
+      ],
+      recommendedAction: "fix_product",
+      fixTargetHandle: null,
+      limitations: [],
+    },
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.parentId).toBe(factual.id);
+  expect(result.modelCallId).toBeNull();
+  expect(result.limitations.some((value) => value.includes("unknown execution evidence"))).toBe(
+    true,
+  );
+});
+it("stale source identity is refused before dispatch and unbound Runs disclose missing targets", async () => {
+  const bound = await fixture({ source: true });
+  bound.detail.repository!.commitSha = "c".repeat(40);
+  await expect(
+    bound.service.analyze(bound.run.id, { model: true, discoveryId: bound.detail.job.id }),
+  ).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  expect(bound.complete).not.toHaveBeenCalled();
+  const unbound = await fixture({ source: true, unbound: true });
+  unbound.complete.mockImplementationOnce(async () => ({
+    modelCallId: unbound.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+    },
+  }));
+  const result = await unbound.service.analyze(unbound.run.id, {
+    model: true,
+    discoveryId: unbound.detail.job.id,
+  });
+  expect(result.fixTarget).toBeUndefined();
+  expect(result.limitations).toContain("Frozen Run is unbound; no source targets supplied.");
 });

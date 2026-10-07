@@ -16,7 +16,7 @@ export const promptVersions = {
   generate_code: "generate-code-1",
   summarize: "summarize-1",
   classify: "classify-1",
-  analyze: "analyze-2-execution-handles",
+  analyze: "analyze-3-bounded-source-catalog",
   heal: "heal-1",
 } as const;
 export interface ModelInput {

@@ -216,7 +216,10 @@ export class Application {
     this.backups = new BackupsService(this.context, config, this.secrets);
     this.agentSkills = new AgentSkillsService(this.context, config.cwd);
     this.model = new ModelService(this.context, config);
-    this.analysis = new AnalysisService(this.context, this.model, this.artifacts);
+    this.uploads = new UploadsService(this.context, config);
+    this.sources = new SourcesService(this.context, config, this.uploads);
+    this.discovery = new DiscoveryService(this.context, config, this.sources);
+    this.analysis = new AnalysisService(this.context, this.model, this.artifacts, this.discovery);
     this.healing = new HealingService(
       this.context,
       this.model,
@@ -240,9 +243,6 @@ export class Application {
       this.artifacts,
     );
     this.delivery = new DeliveryService(this.context);
-    this.uploads = new UploadsService(this.context, config);
-    this.sources = new SourcesService(this.context, config, this.uploads);
-    this.discovery = new DiscoveryService(this.context, config, this.sources);
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
     this.proposals = new ProposalsService(this.context, this.model, this.requirements);
     this.usage = new UsageService(this.context);

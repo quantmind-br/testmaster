@@ -80,10 +80,12 @@ export function runCommands(program: Command, runtime: Runtime): void {
     group
       .command("analyze <id>")
       .option("--model", "Enrich factual diagnosis using the authorized model")
+      .option("--discovery <id>", "Bind source targets to an authorized frozen discovery")
       .option("--deadline-ms <milliseconds>", "Model deadline", integer),
     async (rt, args, options) => ({
       data: await (await rt.app()).analysis.analyze(String(args[0]), {
         model: options.model === true,
+        ...(typeof options.discovery === "string" ? { discoveryId: options.discovery } : {}),
         ...(typeof options.deadlineMs === "number"
           ? { budget: { deadlineMs: options.deadlineMs } }
           : {}),
