@@ -128,10 +128,11 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
           },
           trusted,
           {
-            // The trusted distribution is runner tooling, not application source; untracked it
-            // would make every assessed tree dirty and unbound.
-            name: "Exclude trusted distribution from the assessed tree",
-            run: `set -euo pipefail\nexclude=$(git rev-parse --git-path info/exclude)\nmkdir -p "$(dirname "$exclude")"\nprintf '/.testmaster-trusted/\\n' >> "$exclude"`,
+            // The trusted distribution and the project config written by `init` in the setup
+            // script are runner state, not application source; untracked they would make every
+            // assessed tree dirty and unbound. Exclusion never hides changes to tracked files.
+            name: "Exclude runner state from the assessed tree",
+            run: `set -euo pipefail\nexclude=$(git rev-parse --git-path info/exclude)\nmkdir -p "$(dirname "$exclude")"\nprintf '/.testmaster-trusted/\\n/testmaster.config.json\\n' >> "$exclude"`,
           },
           node,
           store,

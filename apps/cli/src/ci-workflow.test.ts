@@ -84,7 +84,7 @@ describe("operational public GitHub onboarding", () => {
     const depth = source.with["fetch-depth"];
     expect(depth === 0 || depth >= 2).toBe(true);
   });
-  it("keeps the assessed tree clean after the trusted distribution checkout", async () => {
+  it("keeps the assessed tree clean of runner state but not of source edits", async () => {
     const workflow = JSON.parse(githubWorkflow(options));
     const steps = workflow.jobs.execute.steps as Record<string, any>[];
     const trusted = steps.findIndex((step) => step.with?.path === ".testmaster-trusted");
@@ -99,6 +99,8 @@ describe("operational public GitHub onboarding", () => {
       // The trusted checkout is a nested repository inside the workspace.
       execFileSync("git", ["init", "--quiet", join(root, ".testmaster-trusted")]);
       await writeFile(join(root, ".testmaster-trusted", "install.js"), "tool\n");
+      // The declared setup script runs `init`, which writes the project config in the workspace.
+      await writeFile(join(root, "testmaster.config.json"), "{}\n");
       expect(resolveRepositoryProvenance(root).dirtyHash).not.toBeNull();
       for (const step of steps
         .slice(trusted + 1)
@@ -109,6 +111,8 @@ describe("operational public GitHub onboarding", () => {
         binding: "verified",
         dirtyHash: null,
       });
+      await writeFile(join(root, "app.js"), "edited\n");
+      expect(resolveRepositoryProvenance(root).dirtyHash).not.toBeNull();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

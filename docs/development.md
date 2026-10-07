@@ -113,8 +113,9 @@ discovery labels only. `testmaster ci init github --action-ref OWNER/REPO@SHA --
 --target-url URL [--workflow-file PATH] [--overwrite]` (default `.github/workflows/testmaster.yml`;
 `--output` is the global format option) generates the complete workflow: a fork guard before any
 download, a `contents: read` execute job (credentials not persisted, depth-2 checkout so a pull
-request's assessed head stays reachable from the synthetic merge, the trusted distribution
-checkout excluded from the assessed tree through `info/exclude`, containerd image store,
+request's assessed head stays reachable from the synthetic merge, the untracked trusted
+distribution checkout and setup-written `testmaster.config.json` excluded from the assessed tree
+through `info/exclude` (tracked files stay bound), containerd image store,
 anonymous hash-verified downloads, runtime install, the repository's declared setup script,
 strict CI, upload of only the sanitized envelope bound to run/job/SHA) and a separate
 `checks: write` publisher that runs trusted pinned code in clean state and never executes PR code
