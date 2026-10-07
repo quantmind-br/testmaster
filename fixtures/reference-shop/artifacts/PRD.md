@@ -1,6 +1,6 @@
 # Reference Shop product requirements
 
-Synthetic local-only application; no real customer data. License: UNLICENSED, pending maintainer decision.
+Synthetic local-only application; no real customer data. License: Apache-2.0 (original synthetic fixture).
 
 ## Authentication
 SHOP-AUTH-001: Submitting an empty password shows exactly "Password is required" and creates no authenticated session.

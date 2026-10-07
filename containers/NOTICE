@@ -23,11 +23,14 @@ The Docker suite checks both this EPERM denial and Chromium startup with chromiu
 This avoids the historical profile's runc 1.5.2/libpathrs 0.2.6 initialization crash without disabling seccomp.
 Profile and input hashes are recorded in seccomp/provenance.json and each images.lock.json entry.
 
-M0 runner image tooling
-Until the M1 protocol harness is available, build.mjs stages forwarder/tooling.js as dist/harness.js.
-This entrypoint starts the TCP-to-unix forwarder and runs the supplied verification command.
-It is test harness tooling, not an execution harness: no command returns CAPABILITY_UNAVAILABLE (M1).
-The Python layout likewise refuses execution until its M1 protocol adapter replaces harness.py.
-Images install no runtime dependencies and attempts must never invoke npm, pip or uv installers.
-Build contexts are staged under the OS temporary directory and deleted even on build failure.
-Build input hashes cover every staged file (including dependency contents and Dockerfile), with sorted relative paths and length-delimited framing.
+Runner image redistribution
+Original TestMaster code is Apache-2.0. Ubuntu, browsers, Node, Python and embedded libraries
+retain their upstream licenses. The locked images include mixed permissive and copyleft work.
+Run tools/dist/distribution/licenses.js against the staged release to retain a versioned SBOM,
+exact dpkg source/version identities, Python metadata and browser revision directories.
+Preserve /usr/share/doc/*/copyright, /usr/share/common-licenses and browser third-party notices.
+GPL-covered objects require matching corresponding source and applicable build materials;
+LGPL-covered libraries additionally require relinking/reverse-engineering rights as applicable;
+MPL-covered files require covered source and notices. Generic upstream links are not source bundles.
+Image binary publication is blocked until matching source/build bundles and notice completeness
+are established for the actual locked versions. This NOTICE is attribution, not legal certification.
