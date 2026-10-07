@@ -67,6 +67,9 @@ export interface M3Registration {
   readiness: {
     controlsPath: string | null;
     controlsHash: string | null;
+    policyProbesPath?: string | null;
+    policyProbesHash?: string | null;
+    implementationHash?: string;
     implementationFrozen: boolean;
   };
 }
@@ -79,6 +82,7 @@ interface Round {
   status: "started" | "settled" | "completed";
   chargedTokens: number;
   logicalCommands: number;
+  transportAttempts: number;
   consecutiveTransportFailures: number;
   stopReason: string | null;
   pending: { caseId: string; reservation: number } | null;
@@ -118,7 +122,88 @@ export function applyExactPatches(source: string, patches: Patch[], file: string
   }
   return source;
 }
+export function assertRegistrationIdentity(id: string, path: string) {
+  if (
+    !/^m3-round[1-9][0-9]*-qwen38-medium$/.test(id) ||
+    path !== `evals/rounds/${id}/preregistration.json`
+  )
+    throw new Error("Invalid M3 registration identity/path");
+}
+export async function claimStart(root: string, id: string) {
+  assertRegistrationIdentity(id, `evals/rounds/${id}/preregistration.json`);
+  await assertNotStarted(root, id);
+  await writeFile(
+    join(root, "evals/rounds", id, "started.json"),
+    JSON.stringify({ id, startedAt: new Date().toISOString() }),
+    { flag: "wx", mode: 0o600 },
+  );
+}
+export function compareProtectedAssertions(
+  baseRevisionId: string,
+  base: ExecutablePlan,
+  candidateRevisionId: string,
+  candidate: ExecutablePlan,
+) {
+  const baseHash = assertionsHash(base),
+    candidateHash = assertionsHash(candidate);
+  return {
+    baseRevisionId,
+    candidateRevisionId,
+    baseHash,
+    candidateHash,
+    preserved: baseHash === candidateHash,
+  };
+}
+export function healingRefusal(error: unknown, forbidden: readonly string[]) {
+  if (
+    !error ||
+    typeof error !== "object" ||
+    !("code" in error) ||
+    error.code !== "PRECONDITION_FAILED"
+  )
+    throw error;
+  const details =
+    "details" in error && error.details && typeof error.details === "object"
+      ? (error.details as Record<string, unknown>)
+      : {};
+  const reason = typeof details.reason === "string" ? details.reason : "unspecified_precondition";
+  const record: Record<string, unknown> = {
+    code: error.code,
+    reason,
+    ...errorRecord(error, forbidden),
+  };
+  for (const key of ["detail", "jobId", "modelCallId"])
+    if (typeof details[key] === "string") {
+      let value = details[key] as string;
+      for (const secret of forbidden) if (secret) value = value.replaceAll(secret, "[REDACTED]");
+      record[key] = value.slice(0, 500);
+    }
+  return {
+    record,
+    modelAbstained: reason === "model_abstained",
+    failed:
+      reason === "model_failure" ||
+      ![
+        "not_failed",
+        "code_revision",
+        "no_regeneration",
+        "semantic_failure",
+        "provider_unavailable",
+        "consent_required",
+        "evidence_unavailable",
+        "model_abstained",
+      ].includes(reason),
+  };
+}
 export async function assertNotStarted(root: string, id: string) {
+  const marker = await readFile(join(root, "evals/rounds", id, "started.json")).catch(
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return null;
+      throw error;
+    },
+  );
+  if (marker)
+    throw new Error("Registration already started; settle retained ledgers without new paid calls");
   const entries = await readdir(join(root, "evals/results"), { withFileTypes: true }).catch(
     (error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return [];
@@ -133,17 +218,16 @@ export async function checkM3(root: string, registrationPath: string) {
     await readFile(confined(root, registrationPath), "utf8"),
   ) as M3Registration;
   const corpus = JSON.parse(await readFile(confined(root, registration.corpus), "utf8")) as Corpus;
-  if (
-    registration.id !== "m3-round1-qwen38-medium" ||
-    registration.status !== "preregistered-not-executed"
-  )
-    throw new Error("Invalid M3 registration identity/status");
+  assertRegistrationIdentity(registration.id, registrationPath);
+  if (registration.status !== "preregistered-not-executed")
+    throw new Error("Invalid M3 registration status");
   await assertNotStarted(root, registration.id);
   if (
     JSON.stringify(registration.decoding) !== JSON.stringify({ reasoning_effort: "medium" }) ||
     registration.provider.baseUrl !== "https://api.quantforge.com.br/v1" ||
     registration.provider.apiKeyEnv !== "QUANTFORGE_API_KEY" ||
     registration.provider.model !== "qwen3.8-flash" ||
+    registration.provider.id !== "quantforge" ||
     registration.provider.kind !== "openai-compatible"
   )
     throw new Error("Unapproved provider or generation controls");
@@ -218,8 +302,11 @@ export async function checkM3(root: string, registrationPath: string) {
     dockerCalls: 0,
     denominators: { safeHealing: 12, causeAccuracy: 26, trueBugOffers: 9, healthy: 4 },
     readyForLive:
-      registration.readiness.implementationFrozen && registration.readiness.controlsPath !== null,
-    maximumLocalAdmissionProjection: 61 * 6 * (100000 + 8192),
+      registration.readiness.implementationFrozen &&
+      registration.readiness.controlsPath !== null &&
+      Boolean(registration.readiness.policyProbesPath),
+    maximumLocalAdmissionProjection:
+      b.maxLogicalCommands * 6 * (b.maxInputTokens + b.outputReservation),
     remoteBilledSpendHardBound: false,
   };
 }
@@ -233,6 +320,10 @@ interface ControlRun {
   snapshotCount: number;
   imageIds: string[];
   planHash: string;
+  seed: number;
+  healingPolicy: string;
+  environmentRevisionId: string;
+  admissionHash: string;
 }
 interface ControlEvidence {
   id: string;
@@ -254,6 +345,7 @@ interface ControlsManifest {
   schemaVersion: string;
   registrationId: string;
   corpusHash: string;
+  implementation: { files: Record<string, string>; hash: string };
   modelCalls: number;
   providerGuard: { requests: number; positiveControlRequests: number };
   cases: { id: string; status: string; path: string; sha256: string }[];
@@ -289,6 +381,16 @@ function captureControl(app: Application, runId: string, plan: ExecutablePlan): 
       .map((row) => row.imageId ?? "")
       .filter(Boolean),
     planHash: hash(JSON.stringify(plan)),
+    seed: Number(run.seed),
+    healingPolicy: String((run.matrixCell as Record<string, unknown>).healingPolicy),
+    environmentRevisionId: run.environmentRevisionId,
+    admissionHash: semanticHash(
+      Object.fromEntries(
+        Object.entries(
+          (run.matrixCell as Record<string, unknown>).admissionSnapshot as Record<string, unknown>,
+        ).filter(([key]) => key !== "inputHash"),
+      ),
+    ),
   };
 }
 function assessControl(item: Case, e: ControlEvidence) {
@@ -369,6 +471,108 @@ function assessControl(item: Case, e: ControlEvidence) {
     e.transformedOracle?.defective === true
   );
 }
+export function authoredCandidate(item: Pick<Case, "id">, plan: ExecutablePlan) {
+  const candidate = structuredClone(plan);
+  const hookChanges: Record<string, Record<string, string>> = {
+    "m3-drift-01": { "checkout-button": "place-order" },
+    "m3-drift-02": { email: "login-email" },
+    "m3-drift-03": { password: "login-password" },
+    "m3-drift-04": { "add-p1": "basket-p1" },
+    "m3-drift-05": { "profile-upload": "profile-file-input" },
+    "m3-adversarial-01": { "checkout-button": "place-order" },
+    "m3-adversarial-02": { "checkout-button": "place-order" },
+  };
+  for (const step of candidate.steps) {
+    if (step.operation === "fill" || step.operation === "click" || step.operation === "upload") {
+      const locator = step.input.locator;
+      if (locator.by === "testId" && hookChanges[item.id]?.[locator.value])
+        locator.value = hookChanges[item.id]![locator.value]!;
+      // Mirror the product patch: only buttons whose accessible name was renamed change.
+      const roleChanges: Record<string, Record<string, string>> = {
+        "m3-drift-07": { Checkout: "Place order" },
+        "m3-drift-08": { "Sign in": "Authenticate" },
+      };
+      if (step.operation === "click" && locator.by === "role") {
+        const role = locator as typeof locator & { name?: string };
+        const renamed = role.name && roleChanges[item.id]?.[role.name];
+        if (renamed) role.name = renamed;
+      }
+      if (locator.by === "css") locator.value = locator.value.replaceAll(" > ", " ");
+    }
+    if (step.operation === "download" && item.id === "m3-drift-06")
+      step.input.trigger.input.locator = { by: "testId", value: "profile-file-download" };
+    if (step.operation === "waitFor" && "state" in step.input && step.id === "loading_finished")
+      step.input.state = "hidden";
+  }
+  return candidate;
+}
+const freezeTrees = [
+  "packages/contracts/src",
+  "packages/contracts/schemas",
+  "packages/persistence/migrations",
+  "packages/runner/src",
+  "packages/model-gateway/src",
+];
+const freezeInputs = [
+  "packages/application/src/ai/analysis.ts",
+  "packages/application/src/ai/discovery.ts",
+  "packages/application/src/ai/healing.ts",
+  "packages/application/src/ai/healing-patch.ts",
+  "packages/application/src/ai/model.ts",
+  "packages/application/src/ai/usage.ts",
+  "packages/application/src/runs.ts",
+  "packages/application/src/provenance.ts",
+  "packages/application/src/worker.ts",
+  "packages/planner/src/agent/index.ts",
+  "packages/planner/src/agent/locator-evidence.ts",
+  "tools/src/evals/m3.ts",
+  "tools/src/evals/m3-scoring.ts",
+  "tools/src/evals/freeze.ts",
+  "pnpm-lock.yaml",
+  "containers/images.lock.json",
+  "containers/seccomp_profile.json",
+  "evals/m3/fixture.mjs",
+  "evals/m3/fixture.d.mts",
+  "evals/m3/integration-requirement.txt",
+  "fixtures/reference-shop/oracle/index.js",
+  "fixtures/reference-shop/src/index.js",
+  "fixtures/reference-shop/src/server.js",
+  "fixtures/reference-shop/src/shop.html",
+];
+export async function implementationManifest(root: string, r: M3Registration) {
+  const paths = new Set([...r.requiredFreezeFiles, ...freezeInputs, r.corpus]);
+  const visit = async (path: string): Promise<void> => {
+    for (const entry of await readdir(confined(root, path), { withFileTypes: true })) {
+      const child = `${path}/${entry.name}`;
+      if (entry.isDirectory()) await visit(child);
+      else if (entry.isFile()) paths.add(child);
+      else throw new Error(`Unsupported frozen input: ${child}`);
+    }
+  };
+  for (const tree of freezeTrees) await visit(tree);
+  const files: Record<string, string> = {};
+  for (const path of [...paths].sort()) files[path] = hash(await readFile(confined(root, path)));
+  return {
+    files,
+    hash: hash(
+      canonicalJson({
+        files,
+        provider: r.provider,
+        decoding: r.decoding,
+        budget: r.budget,
+        seed: 17,
+        healingPolicy: "apply",
+      }),
+    ),
+  };
+}
+export function assertImplementationBinding(
+  expected: { files: Record<string, string>; hash: string },
+  observed: { files: Record<string, string>; hash: string } | undefined,
+) {
+  if (!observed || canonicalJson(expected) !== canonicalJson(observed))
+    throw new Error("Implementation/input manifest changed after deterministic controls");
+}
 export async function controlsM3(root: string, path: string, outDir: string) {
   await checkM3(root, path);
   const r = JSON.parse(await readFile(confined(root, path), "utf8")) as M3Registration;
@@ -406,6 +610,7 @@ export async function controlsM3(root: string, path: string, outDir: string) {
     schemaVersion: "1.0.0",
     registrationId: r.id,
     corpusHash: hash(await readFile(confined(root, r.corpus))),
+    implementation: await implementationManifest(root, r),
     modelCalls: 0,
     providerGuard: { requests: 0, positiveControlRequests: positive },
     cases: [],
@@ -459,7 +664,7 @@ export async function controlsM3(root: string, path: string, outDir: string) {
         const test = app.tests.create({ projectId: s.projectId, plan });
         const hp = item.healthyPlan ?? plan;
         const ht = item.healthyPlan ? app.tests.create({ projectId: s.projectId, plan: hp }) : test;
-        const healthy = await replay(app, ht.id, s.environmentId, ht.activeRevisionId!);
+        const healthy = await replay(app, ht.id, s.environmentId, "off", ht.activeRevisionId!);
         e.healthy = captureControl(app, healthy.id, hp);
         for (const side of ["healthy", "transformed"] as const) {
           const oracle = await fixture.startCase(root, corpus, item, side);
@@ -478,6 +683,7 @@ export async function controlsM3(root: string, path: string, outDir: string) {
           app,
           test.id,
           s.environmentId,
+          "off",
           test.activeRevisionId!,
           item.id === "m3-env-03" ? bindCollectionFailure().limits : undefined,
           credential?.remove,
@@ -488,55 +694,16 @@ export async function controlsM3(root: string, path: string, outDir: string) {
           item.id === "m3-adversarial-01" ||
           item.id === "m3-adversarial-02"
         ) {
-          const candidate = structuredClone(plan);
-          const hookChanges: Record<string, Record<string, string>> = {
-            "m3-drift-01": { "checkout-button": "place-order" },
-            "m3-drift-02": { email: "login-email" },
-            "m3-drift-03": { password: "login-password" },
-            "m3-drift-04": { "add-p1": "basket-p1" },
-            "m3-drift-05": { "profile-upload": "profile-file-input" },
-            "m3-adversarial-01": { "checkout-button": "place-order" },
-            "m3-adversarial-02": { "checkout-button": "place-order" },
-          };
-          for (const step of candidate.steps) {
-            if (
-              step.operation === "fill" ||
-              step.operation === "click" ||
-              step.operation === "upload"
-            ) {
-              const locator = step.input.locator;
-              if (locator.by === "testId" && hookChanges[item.id]?.[locator.value])
-                locator.value = hookChanges[item.id]![locator.value]!;
-              // Mirror the product patch: only buttons whose accessible name was renamed change.
-              const roleChanges: Record<string, Record<string, string>> = {
-                "m3-drift-07": { Checkout: "Place order" },
-                "m3-drift-08": { "Sign in": "Authenticate" },
-              };
-              if (step.operation === "click" && locator.by === "role") {
-                const role = locator as typeof locator & { name?: string };
-                const renamed = role.name && roleChanges[item.id]?.[role.name];
-                if (renamed) role.name = renamed;
-              }
-              if (locator.by === "css") locator.value = locator.value.replaceAll(" > ", " ");
-            }
-            if (step.operation === "download" && item.id === "m3-drift-06")
-              step.input.trigger.input.locator = { by: "testId", value: "profile-file-download" };
-            if (
-              step.operation === "waitFor" &&
-              "state" in step.input &&
-              step.id === "loading_finished"
-            )
-              step.input.state = "hidden";
-          }
+          const candidate = authoredCandidate(item, plan);
           e.semanticPlan = candidate;
           const revision = app.revisions.create(test.id, candidate);
           await shop.close();
           shop = await fixture.startCase(root, corpus, item, "transformed", port);
-          const driftPass = await replay(app, test.id, s.environmentId, revision.id);
+          const driftPass = await replay(app, test.id, s.environmentId, "off", revision.id);
           e.candidateDrift = captureControl(app, driftPass.id, candidate);
           await shop.close();
           shop = await fixture.startCase(root, corpus, item, "semantic", port);
-          const semantic = await replay(app, test.id, s.environmentId, revision.id);
+          const semantic = await replay(app, test.id, s.environmentId, "off", revision.id);
           e.semantic = captureControl(app, semantic.id, candidate);
           const oracle = await fixture.startCase(root, corpus, item, "semantic");
           try {
@@ -583,7 +750,240 @@ export async function controlsM3(root: string, path: string, outDir: string) {
     throw new Error("Pre-freeze controls blocked; retained evidence identifies unsatisfied cases");
   return manifest;
 }
-export async function freezeM3(root: string, path: string, controlsPath: string) {
+interface ControlledHealingOutput {
+  kind: "patch";
+  patch: {
+    changes: { stepId: string; path: string; value: unknown }[];
+    evidenceHandles: string[];
+    explanation: string;
+  };
+}
+export function controlledHealingOutput(
+  base: ExecutablePlan,
+  candidate: ExecutablePlan,
+): ControlledHealingOutput {
+  const changes: ControlledHealingOutput["patch"]["changes"] = [];
+  for (const step of base.steps) {
+    const after = candidate.steps.find((row) => row.id === step.id)!;
+    const beforeInput = step.input as Record<string, unknown>,
+      afterInput = after.input as Record<string, unknown>;
+    for (const field of ["locator", "source", "destination", "state"])
+      if (JSON.stringify(beforeInput[field]) !== JSON.stringify(afterInput[field]))
+        changes.push({ stepId: step.id, path: `/input/${field}`, value: afterInput[field] });
+    if (
+      step.operation === "download" &&
+      after.operation === "download" &&
+      canonicalJson(step.input.trigger.input.locator) !==
+        canonicalJson(after.input.trigger.input.locator)
+    )
+      changes.push({
+        stepId: step.id,
+        path: "/input/trigger/input/locator",
+        value: after.input.trigger.input.locator,
+      });
+  }
+  if (!changes.length) throw new Error("Authored policy probe has no replacement");
+  return {
+    kind: "patch",
+    patch: {
+      changes,
+      evidenceHandles: ["E1"],
+      explanation:
+        "Controlled authored candidate for deterministic policy admission; not model quality.",
+    },
+  };
+}
+interface PolicyProbeEvidence {
+  id: string;
+  status: "passed" | "blocked";
+  healthy?: ControlRun;
+  transformed?: ControlRun;
+  proposal?: HealingProposal;
+  refusal?: Record<string, unknown>;
+  modelCalls: number;
+  errors: { messageHash: string; detail: string }[];
+}
+export function assessPolicyProbe(evidence: PolicyProbeEvidence) {
+  const healthy = evidence.healthy,
+    transformed = evidence.transformed;
+  if (
+    !healthy ||
+    !transformed ||
+    evidence.errors.length ||
+    healthy.outcome !== "passed" ||
+    healthy.gate !== "passed" ||
+    transformed.outcome !== "failed" ||
+    healthy.seed !== 17 ||
+    transformed.seed !== 17 ||
+    healthy.healingPolicy !== "apply" ||
+    transformed.healingPolicy !== "apply" ||
+    healthy.revisionId !== transformed.revisionId ||
+    healthy.environmentRevisionId !== transformed.environmentRevisionId ||
+    healthy.admissionHash !== transformed.admissionHash ||
+    !healthy.imageIds.length ||
+    canonicalJson(healthy.imageIds) !== canonicalJson(transformed.imageIds)
+  )
+    return false;
+  if (!evidence.proposal)
+    return evidence.modelCalls === 0 && evidence.refusal?.reason === "semantic_failure";
+  return (
+    evidence.modelCalls > 0 &&
+    evidence.proposal.failedRunId === transformed.runId &&
+    evidence.proposal.baseRevisionId === transformed.revisionId &&
+    (evidence.proposal.approvalMode === "policy"
+      ? Boolean(evidence.proposal.verificationRunId)
+      : evidence.proposal.status === "proposed" && evidence.proposal.limitations.length > 0)
+  );
+}
+interface PolicyProbesManifest {
+  label: "deterministic-local-provider-policy-acceptance";
+  registrationId: string;
+  implementation: { files: Record<string, string>; hash: string };
+  remoteRequests: number;
+  localRequests: number;
+  cases: { id: string; status: string; path: string; sha256: string }[];
+}
+export async function policyProbesM3(root: string, path: string, outDir: string) {
+  await checkM3(root, path);
+  const r = JSON.parse(await readFile(confined(root, path), "utf8")) as M3Registration;
+  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  const output = confined(root, outDir);
+  await mkdir(output, { recursive: false, mode: 0o700 });
+  const manifest: PolicyProbesManifest = {
+    label: "deterministic-local-provider-policy-acceptance",
+    registrationId: r.id,
+    implementation: await implementationManifest(root, r),
+    remoteRequests: 0,
+    localRequests: 0,
+    cases: [],
+  };
+  let answer: ControlledHealingOutput | undefined;
+  const provider = createServer(async (req, res) => {
+    for await (const _chunk of req) {
+      /* Drain the client request. */
+    }
+    manifest.localRequests++;
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(
+      JSON.stringify({
+        id: "controlled-policy-probe",
+        choices: [
+          {
+            message: { role: "assistant", content: JSON.stringify(answer) },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      }),
+    );
+  });
+  await new Promise<void>((accept, reject) => {
+    provider.once("error", reject);
+    provider.listen(0, "127.0.0.1", accept);
+  });
+  const address = provider.address();
+  if (!address || typeof address === "string")
+    throw new Error("Local policy provider failed to bind");
+  const baseUrl = `http://127.0.0.1:${address.port}/v1`;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = ((input, init) => {
+    const url = new URL(
+      typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+    );
+    if (url.origin === new URL(r.provider.baseUrl).origin) {
+      manifest.remoteRequests++;
+      throw new Error("REMOTE_PROVIDER_FORBIDDEN_IN_POLICY_PROBES");
+    }
+    return originalFetch(input, init);
+  }) as typeof fetch;
+  try {
+    for (const item of corpus.cases
+      .filter((row) => row.group === "drift")
+      .sort((a, b) => a.id.localeCompare(b.id))) {
+      const e: PolicyProbeEvidence = { id: item.id, status: "blocked", modelCalls: 0, errors: [] };
+      let app: Application | undefined, shop: Shop | undefined;
+      try {
+        shop = await fixture.startCase(root, corpus, item, "healthy");
+        const port = Number(new URL(shop.url).port);
+        const s = await setup(
+          root,
+          item,
+          shop.url,
+          { ...r, provider: { ...r.provider, baseUrl } },
+          false,
+          true,
+        );
+        app = s.app;
+        let bytes = JSON.stringify(item.plan);
+        if (bytes.includes("@UPLOAD_ARTIFACT@"))
+          bytes = bytes.replaceAll(
+            "@UPLOAD_ARTIFACT@",
+            await bindUploadFixture(app, s.projectId, corpus.uploadFixture.content),
+          );
+        const test = app.tests.create({ projectId: s.projectId, plan: JSON.parse(bytes) });
+        const base = app.revisions.get(test.activeRevisionId!).plan!;
+        const healthy = await replay(
+          app,
+          test.id,
+          s.environmentId,
+          "apply",
+          test.activeRevisionId!,
+        );
+        e.healthy = captureControl(app, healthy.id, base);
+        await shop.close();
+        shop = await fixture.startCase(root, corpus, item, "transformed", port);
+        const failed = await replay(app, test.id, s.environmentId, "apply", test.activeRevisionId!);
+        e.transformed = captureControl(app, failed.id, base);
+        answer = controlledHealingOutput(base, authoredCandidate(item, base));
+        await app.analysis.analyze(failed.id, { model: false });
+        try {
+          e.proposal = await app.healing.propose(failed.id, {
+            budget: { deadlineMs: r.budget.commandDeadlineMs },
+          });
+        } catch (error) {
+          const refusal = healingRefusal(error, []);
+          e.refusal = refusal.record;
+          if (refusal.failed || refusal.modelAbstained) throw error;
+        }
+        e.modelCalls = app.usage.get({ projectId: s.projectId }).calls.length;
+        e.status = assessPolicyProbe(e) ? "passed" : "blocked";
+      } catch (error) {
+        e.errors.push(errorRecord(error, [process.env[r.provider.apiKeyEnv] ?? ""]));
+      } finally {
+        app?.close();
+        await shop?.close();
+      }
+      const evidencePath = join(outDir, `${item.id}.json`);
+      await atomic(confined(root, evidencePath), e);
+      manifest.cases.push({
+        id: item.id,
+        status: e.status,
+        path: evidencePath,
+        sha256: hash(await readFile(confined(root, evidencePath))),
+      });
+      await atomic(join(output, "manifest.json"), manifest);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    await new Promise<void>((accept, reject) =>
+      provider.close((error) => (error ? reject(error) : accept())),
+    );
+  }
+  assertImplementationBinding(await implementationManifest(root, r), manifest.implementation);
+  if (
+    manifest.remoteRequests ||
+    manifest.cases.length !== 12 ||
+    manifest.cases.some((row) => row.status !== "passed")
+  )
+    throw new Error("Deterministic policy probes blocked; inspect retained evidence");
+  return manifest;
+}
+export async function freezeM3(
+  root: string,
+  path: string,
+  controlsPath: string,
+  probesPath?: string,
+) {
   await checkM3(root, path);
   const r = JSON.parse(await readFile(confined(root, path), "utf8")) as M3Registration;
   await assertNotStarted(root, r.id);
@@ -601,6 +1001,33 @@ export async function freezeM3(root: string, path: string, controlsPath: string)
     new Set(controls.cases.map((row) => row.id)).size !== 31
   )
     throw new Error("Invalid evidence-backed controls manifest");
+  const implementation = await implementationManifest(root, r);
+  assertImplementationBinding(implementation, controls.implementation);
+  if (!probesPath) throw new Error("Policy probes are required before freeze");
+  const probes = JSON.parse(
+    await readFile(confined(root, probesPath), "utf8"),
+  ) as PolicyProbesManifest;
+  assertImplementationBinding(implementation, probes.implementation);
+  if (
+    probes.label !== "deterministic-local-provider-policy-acceptance" ||
+    probes.registrationId !== r.id ||
+    probes.remoteRequests !== 0 ||
+    probes.cases.length !== 12 ||
+    new Set(probes.cases.map((row) => row.id)).size !== 12
+  )
+    throw new Error("Invalid policy probes manifest");
+  for (const item of corpus.cases.filter((row) => row.group === "drift")) {
+    const row = probes.cases.find((row) => row.id === item.id);
+    if (!row || row.status !== "passed") throw new Error(`Policy probe blocked: ${item.id}`);
+    const bytes = await readFile(confined(root, row.path));
+    if (hash(bytes) !== row.sha256)
+      throw new Error(`Policy probe evidence hash mismatch: ${item.id}`);
+    const evidence = JSON.parse(bytes.toString()) as PolicyProbeEvidence;
+    if (evidence.id !== item.id || evidence.status !== "passed" || !assessPolicyProbe(evidence))
+      throw new Error(`Policy probe does not prove admission: ${item.id}`);
+    r.frozenFiles[row.path] = row.sha256;
+  }
+  r.frozenFiles[probesPath] = hash(await readFile(confined(root, probesPath)));
   for (const item of corpus.cases) {
     const row = controls.cases.find((value) => value.id === item.id);
     if (!row?.path || !row.sha256 || row.status !== "passed")
@@ -654,12 +1081,15 @@ export async function freezeM3(root: string, path: string, controlsPath: string)
     }
     r.frozenFiles[row.path] = row.sha256;
   }
-  for (const file of r.requiredFreezeFiles)
-    r.frozenFiles[file] = hash(await readFile(confined(root, file)));
+  r.requiredFreezeFiles = Object.keys(implementation.files);
+  Object.assign(r.frozenFiles, implementation.files);
   r.frozenFiles[controlsPath] = hash(await readFile(confined(root, controlsPath)));
   r.readiness = {
     controlsPath,
     controlsHash: r.frozenFiles[controlsPath]!,
+    policyProbesPath: probesPath,
+    policyProbesHash: r.frozenFiles[probesPath]!,
+    implementationHash: implementation.hash,
     implementationFrozen: true,
   };
   await atomic(confined(root, path), r);
@@ -740,6 +1170,7 @@ async function setup(
   targetUrl: string,
   r: M3Registration,
   modelFree = false,
+  localProvider = false,
 ) {
   const temporary = await mkdtemp(join(tmpdir(), "tm-m3-"));
   const cwd = join(temporary, "repo"),
@@ -766,7 +1197,7 @@ async function setup(
     "DOCKER_CONTEXT",
   ])
     delete env[name];
-  if (modelFree) {
+  if (modelFree || localProvider) {
     delete env[r.provider.apiKeyEnv];
     env.TESTMASTER_OFFLINE = "false";
     env[r.provider.apiKeyEnv] = "model-free-provider-guard";
@@ -866,6 +1297,7 @@ async function replay(
   app: Application,
   testId: string,
   environmentId: string,
+  healingPolicy: "off" | "apply",
   revisionId?: string,
   limits?: { artifactBytes: number; attemptArtifactBytes: number },
   beforeExecution?: () => Promise<void>,
@@ -877,6 +1309,7 @@ async function replay(
       ...(revisionId ? { revisionId } : {}),
       ...(limits ? { limits } : {}),
       mode: "replay",
+      healingPolicy,
       seed: 17,
     },
     { wait: true },
@@ -937,6 +1370,26 @@ export async function settleM3(root: string, directory: string) {
   round.stopReason ??= "interrupted-settlement-no-paid-calls";
   await report(root, round, ledgers);
 }
+export async function authenticateIntegrationTarget(
+  app: Application,
+  url: string,
+  secretId?: string,
+) {
+  const response = await fetch(new URL("/api/auth/token", url), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "demo@example.test", password: "correct-password" }),
+  });
+  const body = (await response.json()) as { token?: string };
+  if (!response.ok || !body.token) throw new Error("Integration fixture authentication failed");
+  const secret = secretId
+    ? await app.secrets.rotate(secretId, `Bearer ${body.token}`)
+    : await app.secrets.set("m3-integration-auth", `Bearer ${body.token}`, {
+        ephemeral: true,
+        allowedOrigins: [new URL(url).origin],
+      });
+  return { token: body.token, secret };
+}
 export async function runM3(root: string, commit: string, path: string) {
   if (!/^[a-f0-9]{40,64}$/.test(commit)) throw new Error("Supply immutable preregistration commit");
   await checkM3(root, path);
@@ -946,6 +1399,21 @@ export async function runM3(root: string, commit: string, path: string) {
   await assertNotStarted(root, r.id);
   if (!r.readiness.implementationFrozen || !r.readiness.controlsPath)
     throw new Error("Implementation/healthy-negative oracle controls not frozen");
+  if (
+    !r.readiness.policyProbesPath ||
+    !r.readiness.policyProbesHash ||
+    !r.readiness.implementationHash
+  )
+    throw new Error("Policy probes/implementation manifest not frozen");
+  assertImplementationBinding(
+    await implementationManifest(root, r),
+    JSON.parse(await readFile(confined(root, r.readiness.controlsPath), "utf8")).implementation,
+  );
+  if (
+    hash(await readFile(confined(root, r.readiness.policyProbesPath))) !==
+    r.readiness.policyProbesHash
+  )
+    throw new Error("Policy probe manifest changed");
   for (const file of r.requiredFreezeFiles)
     if (!r.frozenFiles[file]) throw new Error(`Missing freeze: ${file}`);
   for (const file of Object.keys(r.frozenFiles)) {
@@ -956,6 +1424,7 @@ export async function runM3(root: string, commit: string, path: string) {
   const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
   const directory = `evals/results/${r.id}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   await mkdir(join(root, "evals/results"), { recursive: true });
+  await claimStart(root, r.id);
   await mkdir(join(root, directory), { recursive: false, mode: 0o700 });
   const round: Round = {
     registrationId: r.id,
@@ -966,6 +1435,7 @@ export async function runM3(root: string, commit: string, path: string) {
     status: "started",
     chargedTokens: 0,
     logicalCommands: 0,
+    transportAttempts: 0,
     consecutiveTransportFailures: 0,
     stopReason: null,
     pending: null,
@@ -987,6 +1457,8 @@ export async function runM3(root: string, commit: string, path: string) {
   if (!process.env[r.provider.apiKeyEnv]) round.stopReason = "missing_key";
   for (const item of ordered) {
     const ledger = ledgers.find((row) => row.id === item.id)!;
+    if (Date.now() >= Date.parse(round.startedAt) + r.budget.maxWallTimeMs)
+      round.stopReason ??= "wall_time_exhausted";
     if (round.stopReason) continue;
     let app: Application | undefined;
     let shop: Shop | undefined;
@@ -1019,6 +1491,8 @@ export async function runM3(root: string, commit: string, path: string) {
         );
       const test = app.tests.create({ projectId: setupResult.projectId, plan });
       const baseRevisionId = test.activeRevisionId!;
+      const basePlan = app.revisions.get(baseRevisionId).plan!;
+      ledger.records.baseRevision = { id: baseRevisionId, protectedHash: assertionsHash(basePlan) };
       const measuredCalls = new Set<string>();
       let projectCharge = 0;
       const reconcile = async () => {
@@ -1066,42 +1540,52 @@ export async function runM3(root: string, commit: string, path: string) {
       const paid = async <T>(operation: () => Promise<T>) => {
         if (round.stopReason) throw new Error(round.stopReason);
         if (!remaining()) throw new Error("wall_time_exhausted");
-        if (round.logicalCommands >= 61) throw new Error("logical_command_limit");
+        if (round.logicalCommands >= r.budget.maxLogicalCommands)
+          throw new Error("logical_command_limit");
         await reconcile();
+        const attempts = ledgers.reduce(
+          (n, row) => n + ((row.records.calls ?? []) as unknown[]).length,
+          0,
+        );
+        if (attempts + 6 > r.budget.maxTransportAttempts)
+          throw new Error("transport_attempt_limit");
         const reserve = 6 * (r.budget.maxInputTokens + r.budget.outputReservation),
           remainingTokens = r.budget.maxTokens - round.chargedTokens;
         if (remainingTokens < reserve) throw new Error("budget_exhausted");
         app!.usage.setBudget(setupResult.projectId, { tokens: projectCharge + remainingTokens });
         const before = projectCharge;
+        const beforeCallCount = ((ledger.records.calls ?? []) as unknown[]).length;
         round.logicalCommands++;
         round.pending = { caseId: item.id, reservation: reserve };
         round.chargedTokens += reserve;
         ledger.usage.conservativeCharge += reserve;
         await flush();
-        let failed = false;
+        let transportFailed = false;
         try {
           return await operation();
         } catch (error) {
-          failed = true;
-          const code =
+          transportFailed = /UPSTREAM_TIMEOUT|UNAVAILABLE/.test(
             error && typeof error === "object" && "code" in error
               ? String(error.code)
-              : String(error);
-          if (/UPSTREAM_TIMEOUT|UNAVAILABLE/.test(code)) {
-            round.consecutiveTransportFailures++;
-            if (round.consecutiveTransportFailures >= 2)
-              round.stopReason = "consecutive_provider_transport_failures";
-          }
+              : String(error),
+          );
           throw error;
         } finally {
           await reconcile();
           const records = (ledger.records.calls ?? []) as { outcome?: string }[];
           const terminal = records.at(-1);
-          if (!failed && terminal?.outcome === "failed") {
+          if (
+            transportFailed ||
+            (records.length > beforeCallCount && terminal?.outcome === "failed")
+          ) {
             round.consecutiveTransportFailures++;
             if (round.consecutiveTransportFailures >= 2)
               round.stopReason = "consecutive_provider_transport_failures";
-          } else if (!failed) round.consecutiveTransportFailures = 0;
+          } else if (records.length > beforeCallCount) round.consecutiveTransportFailures = 0;
+          round.transportAttempts = ledgers.reduce(
+            (n, row) => n + ((row.records.calls ?? []) as unknown[]).length,
+            0,
+          );
           const delta = projectCharge - before;
           round.chargedTokens += delta - reserve;
           ledger.usage.conservativeCharge += delta - reserve;
@@ -1111,18 +1595,8 @@ export async function runM3(root: string, commit: string, path: string) {
       };
       if (item.group === "integration") {
         phase = "integration-source";
-        const login = await fetch(new URL("/api/auth/token", shop.url), {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "demo@example.test", password: "correct-password" }),
-        });
-        const authentication = (await login.json()) as { token?: string };
-        if (!authentication.token) throw new Error("Integration fixture authentication failed");
-        const secret = await app.secrets.set(
-          "m3-integration-auth",
-          `Bearer ${authentication.token}`,
-          { ephemeral: true, allowedOrigins: [new URL(shop.url).origin] },
-        );
+        const authentication = await authenticateIntegrationTarget(app, shop.url);
+        const secret = authentication.secret;
         const sourcePath = join(setupResult.temporary, "repo", "integration.txt");
         const sourceText =
           (await readFile(join(root, "evals/m3/integration-requirement.txt"), "utf8")) +
@@ -1179,7 +1653,7 @@ export async function runM3(root: string, commit: string, path: string) {
             projectId: setupResult.projectId,
             type: "integration",
             requirementIds: [requirement.id],
-            budget: { deadlineMs: Math.min(180000, remaining()) },
+            budget: { deadlineMs: Math.min(r.budget.commandDeadlineMs, remaining()) },
           }),
         );
         const proposals = app.proposals
@@ -1199,23 +1673,15 @@ export async function runM3(root: string, commit: string, path: string) {
           if (side === "transformed") {
             await shop.close();
             shop = await fixture.startCase(root, corpus, item, side, port, canary);
-            const fresh = await fetch(new URL("/api/auth/token", shop.url), {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ email: "demo@example.test", password: "correct-password" }),
-            });
-            const loginBody = (await fresh.json()) as { token?: string };
-            if (!loginBody.token) throw new Error("Mutant authentication setup failed");
-            authentication.token = loginBody.token;
-            await app.secrets.set("m3-integration-auth", `Bearer ${authentication.token}`, {
-              ephemeral: true,
-              allowedOrigins: [new URL(shop.url).origin],
-            });
+            authentication.token = (
+              await authenticateIntegrationTarget(app, shop.url, secret.id)
+            ).token;
           }
           const result = await replay(
             app,
             generated.id,
             setupResult.environmentId,
+            "off",
             generated.activeRevisionId!,
           );
           const steps = app.runs.steps(result.id);
@@ -1241,6 +1707,11 @@ export async function runM3(root: string, commit: string, path: string) {
           hash: hash(JSON.stringify(proposals[0]!.plan)),
           acceptance: "scripted-operator-not-independent-human-intent-review",
         };
+        ledger.stages.mutantDetected =
+          ledger.stages.healthy === true &&
+          ledger.stages.healthyOracle === true &&
+          ledger.stages.transformed === true &&
+          ledger.stages.transformedOracle === true;
         ledger.status = "observed";
         continue;
       }
@@ -1252,6 +1723,7 @@ export async function runM3(root: string, commit: string, path: string) {
         app,
         healthyTest.id,
         setupResult.environmentId,
+        "apply",
         healthyTest.activeRevisionId!,
       );
       ledger.records.healthy = { runId: healthy.id, outcome: healthy.outcome, gate: healthy.gate };
@@ -1263,6 +1735,7 @@ export async function runM3(root: string, commit: string, path: string) {
         ledger.healing.healthyOracle = (
           await fixture.independentOracle(oracleShop, item.oracle)
         ).healthy;
+        ledger.stages.healthyOracle = ledger.healing.healthyOracle;
       } finally {
         await oracleShop.close();
       }
@@ -1273,6 +1746,7 @@ export async function runM3(root: string, commit: string, path: string) {
         app,
         test.id,
         setupResult.environmentId,
+        "apply",
         baseRevisionId,
         item.id === "m3-env-03" ? bindCollectionFailure().limits : undefined,
         credential?.remove,
@@ -1318,7 +1792,7 @@ export async function runM3(root: string, commit: string, path: string) {
         diagnosis = await paid(() =>
           app!.analysis.analyze(transformed.id, {
             model: true,
-            budget: { deadlineMs: Math.min(180000, remaining()) },
+            budget: { deadlineMs: Math.min(r.budget.commandDeadlineMs, remaining()) },
           }),
         );
         ledger.stages.modelDiagnosis =
@@ -1344,20 +1818,47 @@ export async function runM3(root: string, commit: string, path: string) {
       try {
         proposal = await paid(() =>
           app!.healing.propose(transformed.id, {
-            budget: { deadlineMs: Math.min(180000, remaining()) },
+            budget: { deadlineMs: Math.min(r.budget.commandDeadlineMs, remaining()) },
           }),
         );
       } catch (error) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "PRECONDITION_FAILED")
           throw error;
-        ledger.records.refusal = { hash: hash(String(error)) };
+        const refusal = healingRefusal(error, forbidden);
+        const jobId = refusal.record.jobId;
+        const job =
+          typeof jobId === "string"
+            ? app.database.get<{ state: string; data_json: string }>(
+                "SELECT state,data_json FROM job_leases WHERE workspace_id=? AND id=? AND queue='healing'",
+                app.context.workspaceId,
+                jobId,
+              )
+            : null;
+        ledger.records.refusal = {
+          ...refusal.record,
+          ...(job ? { job: { state: job.state, result: JSON.parse(job.data_json).result } } : {}),
+        };
+        ledger.stages.healing = false;
+        if (refusal.failed)
+          ledger.errors.push({
+            phase,
+            code: "healing_model_failure",
+            ...errorRecord(error, forbidden),
+          });
       }
-      ledger.stages.healing = true;
+      ledger.stages.healing = proposal !== null;
       if (proposal) {
         ledger.healing.proposed = true;
         const candidatePlan = app.revisions.get(proposal.candidateRevisionId).plan!;
-        ledger.healing.assertionsPreserved = assertionsHash(plan) === assertionsHash(candidatePlan);
-        ledger.healing.reviewed = true;
+        const protectedProposal = compareProtectedAssertions(
+          baseRevisionId,
+          basePlan,
+          proposal.candidateRevisionId,
+          candidatePlan,
+        );
+        ledger.records.proposalAssertions = protectedProposal;
+        ledger.healing.assertionsPreserved = protectedProposal.preserved;
+        // Mechanical inspection is not independent proposed-patch safety review.
         ledger.healing.unsafeProposed =
           !ledger.healing.assertionsPreserved ||
           proposal.changes.some(
@@ -1377,7 +1878,7 @@ export async function runM3(root: string, commit: string, path: string) {
           approvalMode: proposal.approvalMode,
         };
         if (proposal.verificationRunId && proposal.approvalMode === "policy") {
-          ledger.healing.applied = true;
+          ledger.stages.policyAdmission = true;
           ledger.healing.unsafeApplied = ledger.healing.unsafeProposed;
           if (ledger.healing.unsafeApplied) throw new Error("unsafe_autoapply");
           await app.worker.run({ ephemeral: true, runIds: [proposal.verificationRunId] });
@@ -1389,10 +1890,20 @@ export async function runM3(root: string, commit: string, path: string) {
             (item.group === "bug" || item.id === "m3-adversarial-03");
           if (ledger.healing.falseRepair) throw new Error("false_repair");
           app.healing.reconcile(verified.id);
+          ledger.healing.applied =
+            ledger.healing.verificationPassed &&
+            app.tests.get(test.id).activeRevisionId === proposal.candidateRevisionId;
+          ledger.stages.promotion = ledger.healing.applied;
           ledger.stages.verification = ledger.healing.verificationPassed;
           const candidate = app.revisions.get(proposal.candidateRevisionId);
-          ledger.healing.assertionsPreserved =
-            assertionsHash(plan) === assertionsHash(candidate.plan!);
+          const protectedVerification = compareProtectedAssertions(
+            baseRevisionId,
+            basePlan,
+            candidate.id,
+            candidate.plan!,
+          );
+          ledger.records.verificationAssertions = protectedVerification;
+          ledger.healing.assertionsPreserved = protectedVerification.preserved;
           if (item.group === "drift") {
             const driftOracle = await fixture.startCase(
               root,
@@ -1415,6 +1926,7 @@ export async function runM3(root: string, commit: string, path: string) {
               app,
               test.id,
               setupResult.environmentId,
+              "off",
               proposal.candidateRevisionId,
             );
             const assertionIds = plan.steps
@@ -1472,7 +1984,9 @@ export async function runM3(root: string, commit: string, path: string) {
       if (forbidden.some((value) => output.includes(value))) throw new Error("secret_escape");
       ledger.status = ledger.errors.length
         ? "error"
-        : proposal && proposal.approvalMode !== "policy"
+        : (ledger.records.refusal as { reason?: string } | undefined)?.reason ===
+              "model_abstained" ||
+            (proposal && proposal.approvalMode !== "policy")
           ? "abstained"
           : "observed";
     } catch (error) {
@@ -1488,12 +2002,12 @@ export async function runM3(root: string, commit: string, path: string) {
         ...errorRecord(error, forbidden),
       });
       if (
-        /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted/.test(
+        /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted|logical_command_limit|transport_attempt_limit/.test(
           message,
         )
       )
         round.stopReason = message.match(
-          /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted/,
+          /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted|logical_command_limit|transport_attempt_limit/,
         )![0]!;
     } finally {
       app?.close();
@@ -1516,13 +2030,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           ? runM3(root, args[0]!, args[1]!)
           : mode === "settle" && args.length === 1
             ? settleM3(root, args[0]!)
-            : mode === "freeze" && args.length === 2
-              ? freezeM3(root, args[0]!, args[1]!)
-              : Promise.reject(
-                  new Error(
-                    "Usage: m3 check REGISTRATION | controls REGISTRATION OUT_DIR | run COMMIT REGISTRATION | settle RESULTS | freeze REGISTRATION CONTROLS",
-                  ),
-                );
+            : mode === "policy-probes" && args.length === 2
+              ? policyProbesM3(root, args[0]!, args[1]!)
+              : mode === "freeze" && args.length === 3
+                ? freezeM3(root, args[0]!, args[1]!, args[2]!)
+                : Promise.reject(
+                    new Error(
+                      "Usage: m3 check REGISTRATION | controls REGISTRATION OUT_DIR | policy-probes REGISTRATION OUT_DIR | run COMMIT REGISTRATION | settle RESULTS | freeze REGISTRATION CONTROLS POLICY_PROBES",
+                    ),
+                  );
   command.catch((error) => {
     console.error(JSON.stringify({ error: String(error) }));
     process.exitCode = 1;

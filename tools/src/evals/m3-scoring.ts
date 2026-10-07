@@ -150,7 +150,8 @@ export function scoreM3(ledgers: M3Ledger[]) {
   const bugPredictions = cause.filter(predictsBug);
   const reviewed = main.filter((row) => row.healing.reviewed);
   const applied = main.filter((row) => row.healing.applied);
-  const stages = [...new Set(ledgers.flatMap((row) => Object.keys(row.stages)))].sort();
+  const stages = [...new Set(main.flatMap((row) => Object.keys(row.stages)))].sort();
+  const integration = ledgers.filter((row) => row.group === "integration");
   const costs = new Map<string, { currency: string; scale: number; amount: string }>();
   for (const row of ledgers)
     for (const cost of row.usage.costs) {
@@ -224,6 +225,26 @@ export function scoreM3(ledgers: M3Ledger[]) {
     stages: Object.fromEntries(
       stages.map((stage) => [stage, wilson(main.filter((row) => row.stages[stage]).length, 30)]),
     ),
+    stageObservations: Object.fromEntries(
+      stages.map((stage) => [
+        stage,
+        {
+          passed: main.filter((row) => row.stages[stage] === true).length,
+          failed: main.filter((row) => row.stages[stage] === false).length,
+          missing: main.filter(
+            (row) => row.status !== "unstarted" && row.stages[stage] === undefined,
+          ).length,
+          unstarted: main.filter(
+            (row) => row.status === "unstarted" && row.stages[stage] === undefined,
+          ).length,
+        },
+      ]),
+    ),
+    supplementalIntegration: integration.map((row) => ({
+      id: row.id,
+      status: row.status,
+      stages: row.stages,
+    })),
     offers: {
       healing: main.filter((row) => row.healing.offered).length,
       proposals: main.filter((row) => row.healing.proposed).length,

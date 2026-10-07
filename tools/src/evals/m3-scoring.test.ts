@@ -75,4 +75,47 @@ describe("M3 fixed denominators", () => {
     rows[0]!.expectedFailureKind = "environment";
     expect(() => scoreM3(rows)).toThrow();
   });
+  it("keeps enrichment errors as primary misses even when factual fallback matches", () => {
+    const rows = plannedCases().map(emptyLedger);
+    const row = rows.find((row) => row.id === "m3-bug-01")!;
+    row.status = "error";
+    row.diagnosis = { failureKind: "product_bug", grounded: true, abstained: false };
+    row.errors.push({
+      phase: "model-diagnosis",
+      code: "model_enrichment_abstained",
+      messageHash: "hash",
+    });
+    const score = scoreM3(rows);
+    expect(score.diagnosisCauseAccuracy).toMatchObject({ successes: 0, n: 26 });
+    expect(score.defectRecall).toMatchObject({ successes: 0, n: 9 });
+    expect(score.proposedUnsafePatches.status).toBe("insufficientData");
+  });
+  it("separates supplemental stages and preserves false, missing and unstarted observations", () => {
+    const rows = plannedCases().map(emptyLedger);
+    rows[0]!.status = "observed";
+    rows[0]!.stages.healthyOracle = true;
+    rows[1]!.status = "error";
+    rows[1]!.stages.healthyOracle = false;
+    rows[2]!.status = "observed";
+    const integration = emptyLedger({
+      id: "m3-integration-01",
+      group: "integration",
+      expectedFailureKind: "product_bug",
+    });
+    integration.status = "observed";
+    integration.stages.healthyOracle = true;
+    integration.stages.integrationOnly = true;
+    const score = scoreM3([...rows, integration]);
+    expect(score.stages.healthyOracle).toMatchObject({ successes: 1, n: 30 });
+    expect(score.stages.integrationOnly).toBeUndefined();
+    expect(score.stageObservations.healthyOracle).toEqual({
+      passed: 1,
+      failed: 1,
+      missing: 1,
+      unstarted: 27,
+    });
+    expect(score.supplementalIntegration).toEqual([
+      { id: integration.id, status: "observed", stages: integration.stages },
+    ]);
+  });
 });
