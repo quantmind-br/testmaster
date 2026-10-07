@@ -1,0 +1,153 @@
+{
+  "id": "m3-bug-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a11775-8164-7067-befb-04ce2b3e6bef",
+    "revisionId": "rev_01a11775-812a-7347-8ec7-d91ca49967ca",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "1faeb2e3c11d25f77beaa6f79d24b87f0438ab083df16031f47ec04f90e76ce0",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a11775-8115-7730-bbe9-0e96747f5ccc",
+    "admissionHash": "65e465a9378eb6485b2a7324bcd40569ada83f764d9ee0fcb5ef5454e14a537c"
+  },
+  "transformed": {
+    "runId": "run_01a11775-8495-7158-80ca-f6e8c6999390",
+    "revisionId": "rev_01a11775-812a-7347-8ec7-d91ca49967ca",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "invalid",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "1faeb2e3c11d25f77beaa6f79d24b87f0438ab083df16031f47ec04f90e76ce0",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a11775-8115-7730-bbe9-0e96747f5ccc",
+    "admissionHash": "65e465a9378eb6485b2a7324bcd40569ada83f764d9ee0fcb5ef5454e14a537c"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "passwordValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 401,
+      "sessionsCreated": 0
+    }
+  },
+  "transformedOracle": {
+    "check": "passwordValidation",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "status": 200,
+      "sessionsCreated": 1
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

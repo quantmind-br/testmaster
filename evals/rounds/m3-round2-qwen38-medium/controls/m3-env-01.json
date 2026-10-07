@@ -1,0 +1,151 @@
+{
+  "id": "m3-env-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1177f-db29-7034-9732-16cb9c4ee3ed",
+    "revisionId": "rev_01a1177f-dad1-73f5-8382-6ef4154acc87",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "health",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "24556760090a5e4c8a08984eb66c8d693253a7bfafc769eb7aab49153468e679",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1177f-daba-736f-a2ef-4b08955b8439",
+    "admissionHash": "007d2e92e400e82932bcadd800094fedcaf8b71e821b24772480c7138176dd00"
+  },
+  "transformed": {
+    "runId": "run_01a1177f-def6-74e3-a9d5-fe338e7d6da5",
+    "revisionId": "rev_01a1177f-dacf-737b-81e6-558b4ac2dc62",
+    "outcome": "blocked",
+    "gate": "failed",
+    "steps": [],
+    "reasonCodes": [
+      "credential_revoked"
+    ],
+    "snapshotCount": 0,
+    "imageIds": [
+      "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "1a36fa1816ddfdff4f059e3ff3b0f14a87c4a3b5b37120139cf4b4ffd1882594",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1177f-daba-736f-a2ef-4b08955b8439",
+    "admissionHash": "0bfd20c9738ea8c374bb836233eabd8bba6e2ab52c2789cf96a4ae319da670d2"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Wed, 07 Oct 2026 17:53:38 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Wed, 07 Oct 2026 17:53:38 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-env-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "missing",
+        "kind": "action",
+        "operation": "request",
+        "description": "missing",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "secretRef": "sec_01a1177f-dace-705d-b228-9d2a9c6c8540"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "missing"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

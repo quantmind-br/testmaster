@@ -1,0 +1,212 @@
+{
+  "id": "m3-drift-06",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a11782-c640-73bb-94cf-178002993342",
+    "revisionId": "rev_01a11782-c606-7440-b6a5-cbc8d7f9aa33",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "password",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "catalog_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "profile",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "upload",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "uploaded",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "download",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "5b07980ab17351e90c2f11251cf832f99660ac3b147fc3247431442079ac7b37",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a11782-c5ea-76e4-8690-52bcaff23e74",
+    "admissionHash": "38dfb02faedfbeb844b171198e3fffc134fa44392cfb0401fe26d7687321bd24"
+  },
+  "transformed": {
+    "runId": "run_01a11782-cc2b-71cd-82c9-9e568e811ed6",
+    "revisionId": "rev_01a11782-c606-7440-b6a5-cbc8d7f9aa33",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "password",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "catalog_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "profile",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "upload",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "uploaded",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "download",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "5b07980ab17351e90c2f11251cf832f99660ac3b147fc3247431442079ac7b37",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a11782-c5ea-76e4-8690-52bcaff23e74",
+    "admissionHash": "38dfb02faedfbeb844b171198e3fffc134fa44392cfb0401fe26d7687321bd24"
+  },
+  "proposal": {
+    "analysisId": "ana_01a11783-4805-7648-b63a-6ea079d13abf",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a11782-c606-7440-b6a5-cbc8d7f9aa33",
+    "candidateRevisionId": "rev_01a11783-4a1b-7251-b46a-585d4448d2dc",
+    "changes": [
+      {
+        "path": "/input/trigger/input/locator",
+        "stepId": "download",
+        "value": {
+          "by": "testId",
+          "value": "profile-file-download"
+        }
+      }
+    ],
+    "createdAt": "2026-10-07T17:57:22.588Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "d5e5ec21eeaa31df62e8af9d4bebc1cd8dfe5733f7af58e2a35bf4ab36419253",
+        "runId": "run_01a11782-cc2b-71cd-82c9-9e568e811ed6"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a11782-c5db-770d-b0a9-bfd454876ce4"
+    },
+    "failedRunId": "run_01a11782-cc2b-71cd-82c9-9e568e811ed6",
+    "id": "hea_01a11783-4a19-70b8-a857-d6daa9829bca",
+    "limitations": [],
+    "modelCallId": "mdl_01a11783-49a8-70f8-b063-58fa90218eda",
+    "policyHash": "1e730171ec6b4da71a15e80f165dc249a0c506ee2ac63c0d74da7caae83ad38a",
+    "preservedAssertionsHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a11782-c603-717d-a2d6-c87a22380c36",
+    "verificationRunId": "run_01a11783-4a5f-7114-a04f-818e4d5f9ba8",
+    "version": 3,
+    "workspaceId": "ws_01a11782-c5db-770d-b0a9-b905d6e07392"
+  }
+}
