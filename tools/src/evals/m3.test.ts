@@ -1,23 +1,22 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { createServer } from "node:http";
 import { Application, resolveConfig, scaffoldPlan } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { afterEach, expect, it } from "vitest";
-import { emptyLedger, plannedCases } from "./m3-scoring.js";
 import type { M3Registration } from "./m3.js";
 import {
   applyExactPatches,
+  assertImplementationBinding,
   assertNotStarted,
   assertRegistrationIdentity,
-  assertImplementationBinding,
   assessPolicyProbe,
   authenticateIntegrationTarget,
-  claimStart,
   checkM3,
+  claimStart,
   compareProtectedAssertions,
   controlledHealingOutput,
   freezeM3,
@@ -26,6 +25,7 @@ import {
   settleM3,
   writeEvalProfile,
 } from "./m3.js";
+import { emptyLedger, plannedCases } from "./m3-scoring.js";
 
 const temporary: string[] = [];
 afterEach(async () => {
