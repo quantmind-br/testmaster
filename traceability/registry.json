@@ -18032,6 +18032,16 @@
         "n": 8,
         "decision": "blocked",
         "reason": "Round 6 (typed generation): 0/8 primary; conditional 0/1; proposal validity 12/12; 11 inconclusive healthy replays of backend plans forced on UI requirements and 1 healthy false failure; provider HTTP 500/deadlines ended most trials and one repair exceeded admitted input (fixed afterwards); 5154987 conservative tokens, 92 unknown-cost calls, unknown money. No graduation or public release."
+      },
+      {
+        "area": "model-loop-m3-round1-qwen38-medium",
+        "proposedTarget": "Safe healing (12 drift) and diagnosis cause accuracy (26 nonhealthy) Wilson lower >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair; coverage pilot of one correlated family, independent label review, family holdout and safety sign-off before any graduation",
+        "approvedTarget": null,
+        "observation": 0,
+        "interval": [0, 0.2425007574992425],
+        "n": 12,
+        "decision": "failed",
+        "reason": "M3 round 1 (frozen b173a64, evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 1/9, precision 1/2; healthy correct abstention 4/4; 1 proposal, 0 applied, 0 unsafe applied, 0/9 false repairs; completion 7/30. Post-hoc audit validation/results/m3-round1-posthoc-audit.json: 9 healing requests exceeded admitted input before transport and 21 schema-valid diagnoses were rejected locally with an unrecorded rule (both fixed afterwards, not live-verified); reported proposed-unsafe 1/1 is an evaluator normalization artefact (stored assertions identical). 40 calls, 292988 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
       }
     ]
   }
