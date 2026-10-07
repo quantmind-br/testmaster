@@ -1,0 +1,302 @@
+{
+  "id": "m3-drift-10",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "<button type=\"submit\">Sign in</button>",
+      "after": "<section><button type=\"submit\">Sign in</button></section>"
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "45b248a01dd19a5964602344bf5c5c6813889c43a7fa5bb3df692a7c4d571bf2"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "no-password-validation",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-10",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid_open",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "invalid_open",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "invalid_email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "invalid_password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": ""
+          }
+        }
+      },
+      {
+        "id": "invalid_submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "invalid_submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#view > form > button"
+          }
+        }
+      },
+      {
+        "id": "invalid_login_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "invalid_login_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password-error"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Password is required"
+          }
+        }
+      },
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#view > form > button"
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "45b248a01dd19a5964602344bf5c5c6813889c43a7fa5bb3df692a7c4d571bf2"
+  },
+  "transformationSourceDigest": "b9089e4ea4ebab19a1f00ba2df9c7a5ea478be3734ad8b470e5ac23622c9f484",
+  "expectedFailingStepIds": [
+    "invalid_submit"
+  ],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 31482,
+    "outputTokens": 4098,
+    "reasoningTokens": 3108,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 35580,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "healing",
+      "code": "pipeline_error",
+      "messageHash": "ff96dbdb8afb348a4ced2e33476584c19177956688ad1ba30059345eb63b779e",
+      "detail": "POLICY_DENIED: Healing patch path is not authorized"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-FBg7BN",
+    "healthy": {
+      "runId": "run_01a1148d-640b-7083-9a9c-dbd23ebb4d20",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a1148d-6af4-7704-bdf4-06d577e7208d",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a1148d-e6b6-76c9-b262-5ae00a28d884",
+      "hash": "ea65569c57b4b479c17a4a84251ed525538463c2fcb7d367fc4339d84f1b076f",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a1148e-5dec-7090-aff5-7d142ff3c1ef",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "834865709849f823431a01da29dd1d4b8ae2652c3015d18c3bdbf168563a88f1",
+        "responseHash": "b53aa3feecadb5502ecdb47053dc191dc8eb6fd396d880238756400eab2f65d4",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 1024,
+          "inputTokens": 2773,
+          "outputTokens": 1300,
+          "reasoningTokens": 661
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a1148f-287e-7053-8a0d-71443b1b9b90",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "d176b331f7a9c7105b97983fa1b8945dbe35ba9b6b59a9503bdeb30e5dffbd1d",
+        "responseHash": "6f9e2b67667a603f27fe079c93f939569bd44275bb149a895619b4da99a325ce",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 28709,
+          "outputTokens": 2798,
+          "reasoningTokens": 2447
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a1148e-5ded-764b-b11a-d705823cf321",
+      "hash": "9a123dfdd6dd2c31dc4c1c2358cdf9176a6eaf29b1cc8a5bee186f8121eefdaa"
+    }
+  }
+}

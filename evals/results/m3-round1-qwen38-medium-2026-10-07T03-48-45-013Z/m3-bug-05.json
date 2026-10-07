@@ -1,0 +1,176 @@
+{
+  "id": "m3-bug-05",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "orders-auth-bypass",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"orders-auth-bypass\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "5cda5c29f84bc1f47bb1279b451ca1c32a90b7cbf9936463a6ada7252b45d7d4",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "ordersAuthorization",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-05",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "unauthorized",
+        "kind": "action",
+        "operation": "request",
+        "description": "unauthorized",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "unauthorized"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "5cda5c29f84bc1f47bb1279b451ca1c32a90b7cbf9936463a6ada7252b45d7d4",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "aea46d254d996bbb578a1573a0c315b9bc19b7c9a2ba5d3581c9726eb0766490",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": true
+  },
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 1005,
+    "outputTokens": 1679,
+    "reasoningTokens": 1073,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 2684,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "b86db9c89b870a68e10e6d7069773edf4e958418e8188fa72e65387244903912"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-vcCLa7",
+    "healthy": {
+      "runId": "run_01a1147f-e195-7329-8950-7bd0a499f904",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a1147f-e52b-727f-ac92-d39260efc7e1",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a1147f-e81b-73f8-8735-b56dcf137279",
+      "hash": "941c9105ade5025b13cf940c4d495283d1dbbccbd402f90b9d28ce52fe497a77",
+      "failureKind": "product_bug"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a11480-5e26-7445-9424-212a61a477a6",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "97cdbab5863d761765226e0ecfbf8896061568ec7fe182f5a031244850a2f05a",
+        "responseHash": "bc9ff1be7517ebd83800117697d868b29842d747a3c18d95eee227c907e7b124",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 1005,
+          "outputTokens": 1679,
+          "reasoningTokens": 1073
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a11480-5e27-7454-8cec-e06a0a5bff19",
+      "hash": "e000259bf4e26fc91ca448a180a4389071561d2a603e441e371ec2bb1e7a0782"
+    },
+    "refusal": {
+      "hash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197"
+    }
+  }
+}
