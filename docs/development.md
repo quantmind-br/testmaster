@@ -110,17 +110,21 @@ module closure, licenses, hashed `source-commit` provenance; no development `nod
 Workflows pin the full distribution commit SHA and the runtime manifest SHA-256; tags are
 discovery labels only. `testmaster ci init github --action-ref OWNER/REPO@SHA --setup-script PATH
 --runtime-repo OWNER/REPO --runtime-tag TAG --runtime-assets JSON --runtime-manifest-sha256 HEX
-[--workflow-file PATH] [--overwrite]` (default `.github/workflows/testmaster.yml`; `--output` is the
-global format option) generates the complete workflow: a fork guard before any download, a
-`contents: read` execute job (credentials not persisted, depth-2 checkout so a pull request's
-assessed head stays reachable from the synthetic merge, containerd image store, anonymous
-hash-verified downloads, runtime install, the repository's declared setup script, strict CI,
-upload of only the sanitized envelope bound to run/job/SHA) and a separate `checks: write`
-publisher that runs trusted pinned code in clean state and never executes PR code or loads
-execution state. Runner-temp paths are exported by each job's first step because job-level `env`
-cannot read the `runner` context. It reports the informational `TestMaster / result` and the
-required `TestMaster / required-gate` checks; only passed, provenance-bound, complete evidence
-approves. `examples/github/` is the maintained example.
+--target-url URL [--workflow-file PATH] [--overwrite]` (default `.github/workflows/testmaster.yml`;
+`--output` is the global format option) generates the complete workflow: a fork guard before any
+download, a `contents: read` execute job (credentials not persisted, depth-2 checkout so a pull
+request's assessed head stays reachable from the synthetic merge, the trusted distribution
+checkout excluded from the assessed tree through `info/exclude`, containerd image store,
+anonymous hash-verified downloads, runtime install, the repository's declared setup script,
+strict CI, upload of only the sanitized envelope bound to run/job/SHA) and a separate
+`checks: write` publisher that runs trusted pinned code in clean state and never executes PR code
+or loads execution state. `--target-url` must be the credential-free loopback origin the setup
+script serves from the checkout and registers as the `ci` environment base URL with network
+profile `local-loopback`; any other target leaves the source unbound, so it is refused.
+Runner-temp paths are exported by each job's first step because job-level `env` cannot read the
+`runner` context. It reports the informational `TestMaster / result` and the required
+`TestMaster / required-gate` checks; only passed, provenance-bound, complete evidence approves.
+`examples/github/` is the maintained example.
 
 
 ## Conventions
