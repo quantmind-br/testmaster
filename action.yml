@@ -1,0 +1,60 @@
+name: TestMaster strict CI
+description: Run the verified TestMaster runtime without model traffic and export strict evidence
+# Publish with tools/dist/distribution/action-dist.js from a clean committed source tree.
+# The downloaded distribution includes every builtin-only entrypoint dependency and license asset.
+inputs:
+  runtime-manifest:
+    description: Trusted runtime manifest PATH#SHA256
+    required: true
+  test-ids:
+    description: JSON array of test IDs
+    default: '[]'
+  all:
+    description: Select every active test
+    default: 'false'
+  environment:
+    description: Initialized environment ID or name
+    required: true
+  target-url:
+    description: Claim matching the frozen environment URL
+  commit-sha:
+    description: Assessed immutable commit SHA
+  checkout-sha:
+    description: Checked-out immutable commit SHA
+  allow-empty:
+    description: Explicitly authorize absent coverage
+    default: 'false'
+  empty-reason:
+    description: Required explanation for authorized empty selection
+  quarantine-policy:
+    description: exclude or strict
+    default: exclude
+  publish-check:
+    description: Publish frozen result with an explicit Checks token
+    default: 'false'
+  github-token:
+    description: Minimal Checks token, never passed to execution
+outputs:
+  gate:
+    description: Canonical strict gate
+  exit-code:
+    description: Canonical execution exit
+  batch-id:
+    description: Immutable batch ID
+  assessed-sha:
+    description: Assessed SHA
+  checkout-sha:
+    description: Checkout SHA
+  report-path:
+    description: CI report envelope
+  junit-path:
+    description: JUnit report
+  summary-path:
+    description: Markdown summary
+  bundle-index-path:
+    description: Sanitized bundle index
+  report-hash:
+    description: Canonical report snapshot hash the trusted publisher must match
+runs:
+  using: node24
+  main: tools/dist/github-action/main.js

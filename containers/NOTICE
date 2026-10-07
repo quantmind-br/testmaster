@@ -1,0 +1,36 @@
+Security profiles: Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Copyright Microsoft Corporation (Playwright); Copyright Docker/Moby contributors (Docker default).
+
+Pinned upstream sources (vendored byte-identically):
+Playwright v1.63.0:
+https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json
+SHA-256 cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849
+Original Docker baseline d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3:
+https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json
+SHA-256 50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274
+Current engine-matched moby/profiles seccomp/v0.2.3:
+https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json
+SHA-256 536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74
+Module pin evidence: https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod
+
+Run node containers/generate-seccomp.mjs to reproduce seccomp_profile.json.
+The generator proves the entire Playwright profile equals the original Docker baseline plus exactly
+an unconditional SCMP_ACT_ALLOW for clone, setns, unshare (empty args/includes/excludes).
+It applies that proven delta plus an explicit SEC-014 chroot allow; all other default rules are preserved.
+Allowing chroot grants no capability: the kernel still requires CAP_SYS_CHROOT in the caller's user namespace.
+The cap-dropped non-root container process gets EPERM; Chromium can shrink its own namespace filesystem.
+The Docker suite checks both this EPERM denial and Chromium startup with chromiumSandbox:true.
+This avoids the historical profile's runc 1.5.2/libpathrs 0.2.6 initialization crash without disabling seccomp.
+Profile and input hashes are recorded in seccomp/provenance.json and each images.lock.json entry.
+
+Runner image redistribution
+Original TestMaster code is Apache-2.0. Ubuntu, browsers, Node, Python and embedded libraries
+retain their upstream licenses. The locked images include mixed permissive and copyleft work.
+Run tools/dist/distribution/licenses.js against the staged release to retain a versioned SBOM,
+exact dpkg source/version identities, Python metadata and browser revision directories.
+Preserve /usr/share/doc/*/copyright, /usr/share/common-licenses and browser third-party notices.
+GPL-covered objects require matching corresponding source and applicable build materials;
+LGPL-covered libraries additionally require relinking/reverse-engineering rights as applicable;
+MPL-covered files require covered source and notices. Generic upstream links are not source bundles.
+Image binary publication is blocked until matching source/build bundles and notice completeness
+are established for the actual locked versions. This NOTICE is attribution, not legal certification.
