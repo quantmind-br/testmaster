@@ -106,6 +106,8 @@ export function parseCiEnvelope(value: unknown): CiEnvelope {
             "reproduction",
             "freshness",
             "analysis",
+            "privacy",
+            "externalEffects",
           ].includes(key),
       )
     )

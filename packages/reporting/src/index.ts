@@ -28,6 +28,23 @@ interface ReportRunCommon {
   durationMs: number | null;
   timings?: RuntimeTiming;
   analysis?: Analysis;
+  privacy?: {
+    restrictedRawArtifacts: readonly string[];
+    knownResidues: readonly string[];
+    limitations: readonly string[];
+  };
+  externalEffects?: {
+    uncertain: boolean;
+    resources: readonly {
+      resourceId: string;
+      resourceType: string;
+      state: string;
+      creatorAttemptId: string;
+      stepId: string | null;
+      handleRef: string | null;
+    }[];
+    limitations: readonly string[];
+  };
   reproduction?: {
     degree: "evidence-replay";
     executionDegree: "strict-execution-replay" | "fresh-llm-regeneration";
@@ -233,6 +250,26 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
           ]
         : []),
       ...missing(item).map((reason) => `- Evidence: ${markdown(reason)}`),
+      ...(item.privacy
+        ? [
+            `Restricted raw artifacts: ${markdown(item.privacy.restrictedRawArtifacts.join(", "))}`,
+            ...item.privacy.knownResidues.map((residue) => `- Known residue: ${markdown(residue)}`),
+            ...item.privacy.limitations.map(
+              (limitation) => `- Privacy limitation: ${markdown(limitation)}`,
+            ),
+          ]
+        : []),
+      ...(item.externalEffects
+        ? [
+            `External effect uncertainty: ${item.externalEffects.uncertain}`,
+            ...item.externalEffects.resources.map(
+              (resource) => `- Possibly affected resource: ${markdown(JSON.stringify(resource))}`,
+            ),
+            ...item.externalEffects.limitations.map(
+              (limitation) => `- External effect limitation: ${markdown(limitation)}`,
+            ),
+          ]
+        : []),
     );
   for (const cell of snapshot.selection.notDispatched)
     lines.push(`- Not dispatched: ${markdown(cell.memberKey)} (${markdown(cell.reasonCode)})`);
@@ -251,7 +288,7 @@ export function exportHtml(snapshot: ReportSnapshot): string {
           .map((reason) => `<li>Evidence: ${xml(reason)}</li>`)
           .join(
             "",
-          )}${item.reproduction ? `<li>Reproduction: ${xml(item.reproduction.degree)}; execution: ${xml(item.reproduction.executionDegree)} (${xml(item.reproduction.limitations.join(", "))})</li>` : ""}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul></section>`,
+          )}${item.privacy ? `<li>Known residues: ${xml(item.privacy.knownResidues.join(" "))}; ${xml(item.privacy.limitations.join(" "))}</li>` : ""}${item.externalEffects ? `<li>External effect uncertainty: ${item.externalEffects.uncertain}; possibly affected resources: ${xml(JSON.stringify(item.externalEffects.resources))}; ${xml(item.externalEffects.limitations.join(" "))}</li>` : ""}${item.reproduction ? `<li>Reproduction: ${xml(item.reproduction.degree)}; execution: ${xml(item.reproduction.executionDegree)} (${xml(item.reproduction.limitations.join(", "))})</li>` : ""}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul></section>`,
     )
     .join("");
   const metricsHtml = `<section><h2>Separate coverage metrics</h2><ul>${Object.entries(

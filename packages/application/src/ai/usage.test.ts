@@ -72,6 +72,8 @@ it("filtered usage reconciles immutable ledger rows, unknown costs and disclosed
     model: "b",
     createdAt: "2026-01-02T00:00:00.000Z",
     cost: { currency: "USD", scale: 6, amount: "12" },
+    costBasis: "estimated",
+    priceTableVersion: "fixture-v1",
     rawPrompt: "private text",
   });
   const selected = app.usage.get({
@@ -83,12 +85,12 @@ it("filtered usage reconciles immutable ledger rows, unknown costs and disclosed
   });
   expect(selected.calls).toHaveLength(1);
   expect(selected.tokens).toEqual({ inputTokens: 10, outputTokens: 20, reasoningTokens: 5 });
-  expect(selected.measuredCosts).toEqual([{ currency: "USD", scale: 6, amount: "12" }]);
+  expect(selected.estimatedCosts).toEqual([{ currency: "USD", scale: 6, amount: "12" }]);
   expect(selected.calls[0]).not.toHaveProperty("rawPrompt");
   const all = app.usage.get({ projectId: init.projectId });
   expect(all.unknownCostCalls).toBe(1);
   expect(all.cost).toBe("unknown");
-  expect(all.measuredCosts).toEqual([{ currency: "USD", scale: 6, amount: "12" }]);
+  expect(all.estimatedCosts).toEqual([{ currency: "USD", scale: 6, amount: "12" }]);
   expect(all.tokens.inputTokens! + all.tokens.outputTokens!).toBe(60);
   expect(all.lifetimeBudget.scope).toBe("project_lifetime");
   const uncertain = aggregateUsage([

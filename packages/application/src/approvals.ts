@@ -330,6 +330,7 @@ export class ApprovalsService {
   /** Run admission must call this inside its transaction, fixing the exact revision/environment. */
   verify(
     run: Pick<Run, "testId" | "revisionId" | "environmentRevisionId" | "gatePolicy"> & {
+      id?: string;
       actorId?: string;
       origin?: Run["origin"];
       matrixCell?: Run["matrixCell"];
@@ -551,7 +552,7 @@ export class ApprovalsService {
         throw new ContractError("PRECONDITION_FAILED", "Approval execution binding changed", {
           reasonCode: "binding_mismatch",
         });
-      this.audit("approval.verified", approval.id, null, revision.contentHash);
+      this.audit("approval.verified", approval.id, null, revision.contentHash, run.id);
       const consumed = {
         ...approval,
         revokedAt: new Date().toISOString(),
@@ -564,7 +565,13 @@ export class ApprovalsService {
         approval.version ?? 1,
         consumed,
       );
-      this.audit("approval.consumed", approval.id, semanticHash(approval), semanticHash(consumed));
+      this.audit(
+        "approval.consumed",
+        approval.id,
+        semanticHash(approval),
+        semanticHash(consumed),
+        run.id,
+      );
       return approval;
     });
   }
@@ -573,12 +580,13 @@ export class ApprovalsService {
     resourceId: string,
     beforeHash: string | null,
     afterHash: string,
+    requestId = resourceId,
   ): void {
     const event = entity(this.ctx, "aud", {
       actor: this.ctx.principalId,
       action,
       resourceId,
-      requestId: resourceId,
+      requestId,
       beforeHash,
       afterHash,
       timestamp: new Date().toISOString(),

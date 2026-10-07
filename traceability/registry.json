@@ -491,7 +491,7 @@
         "validation/results/m2-capabilities-qwen38.json"
       ],
       "code": ["packages/application/src/application.ts", "apps/server/src/server.ts"],
-      "note": "Runtime reports implemented M2 surfaces; missing images disable sandbox-dependent M1/M2 operations while model-free services remain available. M3-M6 remain unavailable; provider consent and model configuration checked at invocation, not an availability-network probe.",
+      "note": "Runtime exposes implemented M0-M3 local surfaces; missing images disable sandbox-dependent operations while model-free services remain available. M4-M6 remain unavailable; provider consent and model configuration are invocation prerequisites, not availability-network probes. M3 deterministic versus external/model residuals are mapped separately.",
       "coverage": {
         "positive": [
           "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
@@ -1581,11 +1581,43 @@
       "sourceFile": "specs/03-data-and-state.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/authoring.test.ts::preserves history on archive and denies new authored work",
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+      ],
+      "oracle": [
+        "Archive retains revisions and rejects new work; real attachment gateway denies old Range URL after tombstone and restore retains expiration."
+      ],
+      "evidence": [
+        "packages/application/src/authoring.test.ts",
+        "validation/journeys/m3-ci.docker.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
+      ],
+      "code": [
+        "packages/application/src/authoring.ts",
+        "packages/application/src/retention.ts",
+        "packages/application/src/backups.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/authoring.test.ts::preserves history on archive and denies new authored work",
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/authoring.test.ts",
+            "assertion": "expect(new RevisionsService(ctx).list(test.id)).toHaveLength(1);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(revoked.status).toBeGreaterThanOrEqual(400);"
+          }
+        ]
+      }
     },
     {
       "id": "DISC-001",
@@ -1641,7 +1673,7 @@
           },
           {
             "path": "validation/journeys/discovery-gaps.live.test.ts",
-            "assertion": "expect(app.usage.get(projectId).calls.length - beforeCalls).toBe(1);"
+            "assertion": "expect(app.usage.get({ projectId }).calls.length - beforeCalls).toBe(1);"
           },
           {
             "path": "validation/journeys/discovery-gaps.live.test.ts",
@@ -1760,7 +1792,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/discovery-gaps.live.test.ts",
-            "assertion": "expect(retry.id).not.toBe(original.id);\n        expect(app.explore.get(original.id)).toEqual(original);\n        expect(app.usage.get(projectId).calls.length - beforeCalls).toBe(1);"
+            "assertion": "expect(retry.id).not.toBe(original.id);\n        expect(app.explore.get(original.id)).toEqual(original);\n        expect(app.usage.get({ projectId }).calls.length - beforeCalls).toBe(1);"
           },
           {
             "path": "packages/application/src/ai/core.test.ts",
@@ -1995,11 +2027,52 @@
       "sourceFile": "specs/06-ai-and-execution.md",
       "milestone": "M3",
       "ownerRole": "AI",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+        "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
+      ],
+      "oracle": [
+        "Real Chromium selector drift repaired through separate verification; independent target state remains unwritten under the semantic mutant and the unchanged saved assertion fails. Forbidden assertion/status/timeout patch paths are rejected."
+      ],
+      "evidence": [
+        "validation/journeys/m3-healing.docker.test.ts",
+        "packages/application/src/ai/healing.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json"
+      ],
+      "code": [
+        "packages/application/src/ai/healing.ts",
+        "packages/application/src/ai/healing-patch.ts"
+      ],
+      "note": "Deterministic controlled-provider safety proof, not stochastic healer quality or a paid pilot result.",
+      "blockedReason": "Internal: deterministic selector journey kills an independent persistence mutant, but no retained price/permission semantic-defect offers exercise healing admission/verification; generic persistence safety and patch rejection cannot verify the named price/permission acceptance.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+        ],
+        "negative": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(verification.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(negative.outcome).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(await (await fetch(`${url}/state`)).json()).toEqual({ writes: 0 });"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(() => applyHealingPatch(base, patch(\"response_wait\", path, 201))).toThrow(ContractError);"
+          }
+        ]
+      }
     },
     {
       "id": "HEAL-002",
@@ -2007,11 +2080,38 @@
       "sourceFile": "specs/06-ai-and-execution.md",
       "milestone": "M3",
       "ownerRole": "AI",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/healing.test.ts::bound passing verification atomically promotes candidate and is restart-idempotent",
+        "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict"
+      ],
+      "oracle": [
+        "Passing verification promotes exactly its bound candidate; a concurrent active revision wins CAS and remains active while the proposal remains reviewable."
+      ],
+      "evidence": ["packages/application/src/ai/healing.test.ts"],
+      "code": ["packages/application/src/ai/healing.ts", "packages/application/src/authoring.ts"],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/healing.test.ts::bound passing verification atomically promotes candidate and is restart-idempotent"
+        ],
+        "negative": [
+          "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.candidate.id);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(() => f.app.healing.reconcile(f.verification.id)).toThrow(ContractError);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(concurrent.id);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-001",
@@ -2081,8 +2181,8 @@
         "validation/results/quickstart-m1.md"
       ],
       "code": ["apps/cli/src/runtime.ts", "apps/cli/src/runs.ts", "apps/cli/src/reports.ts"],
-      "note": "Local CLI exercised; GitHub Action propagation belongs to M3 and is not implemented/verified here.",
-      "blockedReason": "Local CLI exercised; GitHub Action propagation belongs to M3 and is not implemented/verified here."
+      "note": "Local CLI and M3 generic strict CI now exercise canonical JSON/JUnit/exits, cancellation and empty/nonpass controls. Typed Action adapter is implemented with local input/environment tests; private hosted propagation remains unverified.",
+      "blockedReason": "External: private GitHub-hosted pinned Action run propagating actual CLI canonical exits and frozen result without reinterpretation has not run; local generic CI/input tests do not replace this residual."
     },
     {
       "id": "INT-006",
@@ -2090,11 +2190,50 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "packages/application/src/selection.test.ts::keeps a source Run revision and enforces strict replay while target claims cannot override the environment",
+        "packages/application/src/ci.test.ts::rejects explicit agent, healing and retry policies rather than silently coercing them"
+      ],
+      "oracle": [
+        "Built CLI healthy/semantic-defect CI preserves strict replay and records zero model calls; original source revision is retained and explicit agent/heal/retry refused."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "packages/application/src/selection.test.ts",
+        "packages/application/src/ci.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-toast-without-persist.json"
+      ],
+      "code": ["packages/application/src/ci.ts", "packages/application/src/selection.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+          "packages/application/src/selection.test.ts::keeps a source Run revision and enforces strict replay while target claims cannot override the environment"
+        ],
+        "negative": [
+          "packages/application/src/ci.test.ts::rejects explicit agent, healing and retry policies rather than silently coercing them"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(calls).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(admitted.mode).toBe(\"replay\");"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(admitted.matrixCell).toMatchObject({\n        limits: { maxAttempts: 1 },\n        healingPolicy: \"off\",\n      });"
+          },
+          {
+            "path": "packages/application/src/ci.test.ts",
+            "assertion": "expect(() => assertStrictCi(input)).toThrow(/Strict CI/);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-007",
@@ -2102,11 +2241,36 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment"
+      ],
+      "oracle": [
+        "Typed Action inputs reject shell IDs/credential URLs/SHA mismatch/free commands/unpinned manifest; CLI child environment strips write and provider tokens."
+      ],
+      "evidence": ["tools/src/github-action/inputs.test.ts"],
+      "code": ["tools/src/github-action/inputs.ts", "tools/src/github-action/index.ts"],
+      "coverage": {
+        "positive": [
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
+        ],
+        "negative": [
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(Object.values(env)).not.toContain(\"github-secret\");"
+          }
+        ]
+      },
+      "blockedReason": "External: private GitHub-hosted pinned Action acceptance, fork token isolation and minimum real repository/check permissions have not been exercised; local input/environment controls do not prove hosted enforcement."
     },
     {
       "id": "INT-008",
@@ -2114,11 +2278,52 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "validation/journeys/m3-ci.docker.test.ts::exports a real queued Run blocked by a revoked credential without sending the target request"
+      ],
+      "oracle": [
+        "Real generic built CLI writes validated JSON/JUnit and canonical pass/fail; inconclusive, blocked and failed cleanup remain non-approving independent of GitHub."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-blocked-credential.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+      ],
+      "code": [
+        "packages/application/src/ci.ts",
+        "apps/cli/src/ci.ts",
+        "packages/reporting/src/index.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+          "validation/journeys/m3-ci.docker.test.ts::exports a real queued Run blocked by a revoked credential without sending the target request"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(command.exitCode).toBe(mutant === \"healthy\" ? 0 : 1);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(envelope.result.counts?.inconclusive).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(exported.content).toContain(\"<error\");"
+          }
+        ]
+      }
     },
     {
       "id": "INT-009",
@@ -2126,11 +2331,39 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+        "packages/application/src/selection.test.ts::rejects mixed modes and empty execution without an explicit coverage reason"
+      ],
+      "oracle": [
+        "Missing selection rejects with failed gate/exit 5; explicit empty requires allowEmpty and nonblank reason, produces not_applicable not coverage passed."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "packages/application/src/selection.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json"
+      ],
+      "code": ["packages/application/src/ci.ts", "packages/application/src/selection.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+          "packages/application/src/selection.test.ts::rejects mixed modes and empty execution without an explicit coverage reason"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(empty).toMatchObject({ kind: \"empty\", gate: \"not_applicable\", exitCode: 0 });"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(receipt.gate).toBe(\"not_applicable\");"
+          }
+        ]
+      }
     },
     {
       "id": "INT-010",
@@ -2346,7 +2579,7 @@
         "validation/results/governance-ops.json"
       ],
       "code": ["packages/reporting/src/index.ts"],
-      "note": "Local excludes/retry/empty summary acceptance; quarantine M3 unavailable, not claimed.",
+      "note": "Local excludes/retry/empty summaries remain exercised. M3 quarantine is implemented and real strict-history journey preserves failed history; dashboard rendering and advanced matrix remain outside local proof.",
       "coverage": {
         "positive": [
           "packages/reporting/src/reporting.test.ts::summarizes nonempty excludes and reasons without adding excluded members to test totals"
@@ -3453,11 +3686,53 @@
       "sourceFile": "SPEC.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+        "packages/application/src/ai/healing.test.ts::healing seals nested assertions, response status predicates and enclosing frame identity",
+        "packages/application/src/ai/healing.test.ts::failed verification returns to reviewable without another candidate and leaves historical failure immutable"
+      ],
+      "oracle": [
+        "Original Run/Attempt JSON and sealed manifest remain equal after verified healing; semantic-mutant business assertion fails. Recursive frame assertion removal/relocation and changed response status are refused; failed verification never promotes."
+      ],
+      "evidence": [
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
+        "validation/journeys/m3-healing.docker.test.ts",
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "code": ["packages/application/src/ai/healing.ts", "packages/planner/src/agent/index.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+        ],
+        "negative": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::healing seals nested assertions, response status predicates and enclosing frame identity",
+          "packages/application/src/ai/healing.test.ts::failed verification returns to reviewable without another candidate and leaves historical failure immutable"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect((await app.artifacts.get(failed.id)).manifest).toEqual(originalManifest.manifest);"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(negative.outcome).toBe(\"failed\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(() => preserveAssertions(base, removed)).toThrow(ContractError);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(() => preserveAssertions(base, response)).toThrow(ContractError);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(semanticHash(f.app.runs.get(f.failed.id))).toBe(before);"
+          }
+        ]
+      }
     },
     {
       "id": "INV-006",
@@ -3919,11 +4194,40 @@
       "sourceFile": "SPEC.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+      ],
+      "oracle": [
+        "Local frozen-SHA publisher refuses newer SHA and cannot approve unbound/empty/nonpass snapshots."
+      ],
+      "evidence": ["packages/application/src/delivery.test.ts"],
+      "code": ["packages/application/src/delivery.ts", "packages/application/src/provenance.ts"],
+      "coverage": {
+        "positive": [
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green"
+        ],
+        "negative": [
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"success\");"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"failure\");"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(() => validatePublication(resultFixture(), \"owner/repo\", \"c\".repeat(40))).toThrow(\n    /frozen assessed SHA/,\n  );"
+          }
+        ]
+      },
+      "blockedReason": "External: real private GitHub A-result/newer-B check publication and deployment binding have not run; installed App/preview deployment handling is M4, not proven by local Checks transport."
     },
     {
       "id": "INV-015",
@@ -4257,11 +4561,43 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events",
+        "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
+      ],
+      "oracle": [
+        "Real SSE socket resumes persisted cursor without gaps or duplicate terminal events; real waiting-client timeout/signal detaches without implicit cancellation."
+      ],
+      "evidence": [
+        "apps/server/src/server.test.ts",
+        "validation/journeys/m1-recovery.docker.test.ts",
+        "validation/results/cli-001-interruption.json"
+      ],
+      "code": [
+        "apps/server/src/server.ts",
+        "packages/application/src/runs.ts",
+        "packages/domain/src/execution.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events"
+        ],
+        "negative": [
+          "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/server/src/server.test.ts",
+            "assertion": "expect(originalEvents.filter((event) => event.type === \"run.completed\")).toHaveLength(1);"
+          },
+          {
+            "path": "validation/journeys/m1-recovery.docker.test.ts",
+            "assertion": "expect((await session.current(runId)).outcome).toBeNull();"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained end-to-end live-progress disconnect with injected duplicate/out-of-order event delivery during step/collection cancel race; finite terminal SSE and waiting-client detachment controls are narrower. External M4: UI reconnect rendering is not exercised."
     },
     {
       "id": "J06",
@@ -4284,7 +4620,7 @@
         "validation/journeys/m1-evidence-history.docker.test.ts"
       ],
       "code": ["packages/runner/src/browser.ts", "packages/application/src/artifacts.ts"],
-      "note": "Acceptance exercised by the cited real-Docker scenarios; pass evidence is the orchestrator-reported final 41-test Docker gate. Validated rootful-hardened Linux profile only. Deterministic factual failure reporting only; M3 diagnosis/healing is not claimed.",
+      "note": "Original real-Docker factual failure evidence remains historical. M3 rules diagnosis now maps scoped persisted facts/hypotheses and preserves verdict under model failure (REQ-023/M3-01); controlled-provider healing has separate J07/INV-005 proof, not live model-quality graduation.",
       "coverage": {
         "positive": [
           "validation/journeys/m1-functional.docker.test.ts::J01/J06 healthy browser and HTTP pass; real mutants fail their intended assertion with independent state oracles"
@@ -4499,11 +4835,52 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+        "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
+        "packages/application/src/ai/healing.test.ts::business input replacements require manual review and retain all protected plan content"
+      ],
+      "oracle": [
+        "Controlled provider repairs one real Chromium selector drift; distinct verification passes, independent persistence mutant fails saved assertion, original failure remains sealed; forbidden patches reject and business input changes remain manual-only."
+      ],
+      "evidence": [
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
+        "validation/journeys/m3-healing.docker.test.ts",
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "code": [
+        "packages/application/src/ai/healing.ts",
+        "packages/application/src/ai/healing-patch.ts"
+      ],
+      "blockedReason": "External: paid preregistered closed-loop diagnosis/healing pilot and independent quality/safety review have not run. Internal: deterministic journey exercises manual selector approval, not authorized policy-safe automatic selector/wait application or wrong-button semantic-equivalence rejection.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+        ],
+        "negative": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(proposal.status).toBe(\"proposed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(verification.gate).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(negative.outcome).toBe(\"failed\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(applied.manualOnly).toBe(true);"
+          }
+        ]
+      }
     },
     {
       "id": "J08",
@@ -4511,11 +4888,62 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+        "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof"
+      ],
+      "oracle": [
+        "Ten real distinct serial samples yield 5 pass/5 fail with interval and independent alternating status recorder; configuration/runtime differences split identity and quarantine preserves history."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/flake.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": [
+        "packages/application/src/flake.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/application/src/quarantine.ts",
+        "packages/domain/src/foundations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
+        ],
+        "negative": [
+          "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+          "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.failureRate).toBe(0.5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.classification).not.toBe(\"confirmed_flaky\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(await session.current(failedId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(left)).toEqual(flakeIdentity(right));"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(environment).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(right).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          }
+        ]
+      },
+      "blockedReason": "Internal: local target cohort is source-unbound and reports partially_comparable; no real verified-source-bound cohort combining intermittent and deterministic-defect controls across changed SHA/revision/environment. External M5: Chromium/Firefox/WebKit matrix cohort is not exercised; advanced matrix is outside M3 gate."
     },
     {
       "id": "J09",
@@ -4547,11 +4975,59 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+        "validation/journeys/m3-ci.docker.test.ts::exports a real queued Run blocked by a revoked credential without sending the target request",
+        "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
+      ],
+      "oracle": [
+        "Real built CLI nonpass outcomes and XML preserve cleanup/business distinction; partial reporters keep actual failure and unavailable evidence visible."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "packages/reporting/src/reporting.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-blocked-credential.json"
+      ],
+      "code": ["packages/application/src/ci.ts", "packages/reporting/src/index.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+          "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+          "validation/journeys/m3-ci.docker.test.ts::exports a real queued Run blocked by a revoked credential without sending the target request",
+          "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(calls).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(cancelled.exitCode).toBe(143);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(envelope.result.counts?.inconclusive).toBe(1);"
+          },
+          {
+            "path": "packages/reporting/src/reporting.test.ts",
+            "assertion": "expect(exportJunit(input)).toContain('name=\"snapshot\" value=\"unavailable\"');"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained generic-CI end-to-end assertion-fail then diagnostic retry-pass plus safe pre-action infra recovery and timeout-during-collecting output controls; strict CI correctly forbids retries, while reporter/reducer unit controls alone do not exercise these J11 paths."
     },
     {
       "id": "J12",
@@ -4559,11 +5035,58 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+        "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+        "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+      ],
+      "oracle": [
+        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict."
+      ],
+      "evidence": [
+        "packages/application/src/delivery.test.ts",
+        "validation/journeys/m3-ci.docker.test.ts",
+        "tools/src/github-action/inputs.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+      ],
+      "code": [
+        "packages/application/src/delivery.ts",
+        "tools/src/github-action/inputs.ts",
+        "packages/application/src/ci.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+          "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(methods.some((method) => method.startsWith(\"POST\"))).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(JSON.stringify(result)).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"failure\");"
+          }
+        ]
+      },
+      "blockedReason": "External: private GitHub-hosted Action/check acceptance including old-A/new-B, fork permissions and required branch protection not run. Installed GitHub App/preview deployment, signed/tampered/duplicate webhook handling and tunnel scope remain unexercised M4/M5 prerequisites; local transport is not installed-provider proof."
     },
     {
       "id": "J13",
@@ -5597,7 +6120,7 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(usage.tokenBudget)).toMatchObject({ used: 30, remaining: 0 });"
+            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
@@ -5875,7 +6398,7 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(2);"
+            "assertion": "expect(\n          Number(object(object(usage.lifetimeBudget).reservations).settled),\n        ).toBeGreaterThanOrEqual(2);"
           },
           {
             "path": "packages/application/src/ai/core.test.ts",
@@ -6031,11 +6554,43 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
+        "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
+        "packages/application/src/ai/analysis.test.ts::missing bundle preserves null snapshot with a disclosed evidence limitation",
+        "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests"
+      ],
+      "oracle": [
+        "Persisted step reference resolves exact canonical hash; rules abstain on HTTP 500 and disclose missing bundle; model failure preserves immutable factual predecessor and terminal Run."
+      ],
+      "evidence": ["packages/application/src/ai/analysis.test.ts"],
+      "code": ["packages/application/src/ai/analysis.ts"],
+      "blockedReason": "External: paid preregistered diagnosis pilot and independent label review not executed; deterministic rules/provider-failure tests do not establish model cause accuracy or grounded model fix-target quality.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash"
+        ],
+        "negative": [
+          "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
+          "packages/application/src/ai/analysis.test.ts::missing bundle preserves null snapshot with a disclosed evidence limitation",
+          "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(analysis.failureKind).toBe(\"product_bug\");"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(analysis.snapshotId).toBeNull();"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(f.db.get(\"SELECT data_json FROM analyses WHERE id=?\", factual.id)?.data_json).toBe(before);"
+          }
+        ]
+      }
     },
     {
       "id": "M3-02",
@@ -6043,11 +6598,50 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "AI",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+        "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict",
+        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+      ],
+      "oracle": [
+        "Separate bound verification promotes through CAS; original failed rows/manifest survive and semantic mutant fails. Concurrent edits and ordinary promotion bypass are refused."
+      ],
+      "evidence": [
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
+        "validation/journeys/m3-healing.docker.test.ts",
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "code": [
+        "packages/application/src/ai/healing.ts",
+        "packages/application/src/ai/healing-patch.ts",
+        "packages/planner/src/agent/index.ts"
+      ],
+      "blockedReason": "External: paid preregistered healing pilot and independent quality/safety review not executed. Internal: no retained real policy-safe automatic apply/wait-equivalence journey; deterministic controlled-provider selector journey uses human approval and a persistence mutant, not the full price/auth drift cohort.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+        ],
+        "negative": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict",
+          "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(approved.verificationRunId).not.toBe(failed.id);"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(app.healing.reconcile(verificationId).status).toBe(\"verified\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(concurrent.id);"
+          }
+        ]
+      }
     },
     {
       "id": "M3-03",
@@ -6055,11 +6649,74 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+        "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits"
+      ],
+      "oracle": [
+        "Distinct strict samples, immutable comparison/cursor identity, quarantine and exact small-n bounds are covered locally; changed runtime/environment separates cohorts."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/flake.test.ts",
+        "packages/domain/src/flake-statistics.test.ts",
+        "packages/application/src/comparisons.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": [
+        "packages/application/src/flake.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/application/src/quarantine.ts",
+        "packages/domain/src/foundations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
+        ],
+        "negative": [
+          "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+          "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.failureRate).toBe(0.5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.classification).not.toBe(\"confirmed_flaky\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(await session.current(failedId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(left)).toEqual(flakeIdentity(right));"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(environment).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(right).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.zeroFailureUpper95).toBe(n ? 1 - 0.05 ** (1 / n) : null);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.classification).toBe(n < 2 ? \"insufficient_data\" : \"passing_observed\");"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained real source-bound cohort with changed assessed SHA plus retry-failure-pass controls fed through FlakeService accumulation; local Docker cohort is deliberately partially comparable, not verified source-bound statistical proof."
     },
     {
       "id": "M3-04",
@@ -6067,11 +6724,55 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+        "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff",
+        "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
+        "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
+      ],
+      "oracle": [
+        "Preview preserves execution/outbox/approvals counts and target request recorder; real producer executes before consumer; explicit valid reuse skips producer, expired/revoked/failed/foreign reuse refuses before new effects; unmapped diff conservatively selects all."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/selection.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-selection-preview-reuse.json"
+      ],
+      "code": [
+        "packages/application/src/selection.ts",
+        "packages/application/src/dependency-reuse.ts"
+      ],
+      "blockedReason": "Internal: real successful dependency closure and expired/revoked reuse refusals are exercised, but no retained selective-run failed-producer execution asserts required consumer blocked with zero consumer steps/requests; failed historical reuse admission refusal is narrower than producer-failure propagation.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+          "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff"
+        ],
+        "negative": [
+          "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+          "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
+          "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(counts()).toEqual(before);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(hits).toEqual([\"producer\", \"consumer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(hits).toEqual(beforeRefusal);"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(app.database.all(\"SELECT * FROM batches\")).toHaveLength(0);"
+          }
+        ]
+      }
     },
     {
       "id": "M3-05",
@@ -6079,11 +6780,65 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+        "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+      ],
+      "oracle": [
+        "Real generic strict CI healthy/semantic-defect, blocked/cancelled/inconclusive/cleanup/empty JSON+JUnit controls preserve canonical verdict; typed Action inputs reject injection and local delivery refuses new SHA."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "tools/src/github-action/inputs.test.ts",
+        "packages/application/src/delivery.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-toast-without-persist.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+      ],
+      "code": [
+        "packages/application/src/ci.ts",
+        "apps/cli/src/ci.ts",
+        "tools/src/github-action/index.ts",
+        "packages/application/src/delivery.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+          "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(calls).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(cancelled.exitCode).toBe(143);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(envelope.result.counts?.inconclusive).toBe(1);"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
+          }
+        ]
+      },
+      "blockedReason": "External: private GitHub-hosted pinned Action installation/execution and SHA-bound checks/required-gate/old-A-new-B propagation have not run. Local real CI and input/transport proofs do not establish hosted Action acceptance or public immutable distribution."
     },
     {
       "id": "M3-06",
@@ -6091,11 +6846,43 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
+        "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
+        "tools/src/evals/m3.test.ts::refuses hand-populated control booleans without retained run/step/oracle evidence",
+        "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing"
+      ],
+      "oracle": [
+        "Offline preregistration fixes 30 main cases/one integration trial and budgets with zero model/Docker calls; errors/unstarted retain denominators and unsafe patch excludes success. Hand-populated freeze controls refuse."
+      ],
+      "evidence": ["tools/src/evals/m3.test.ts", "tools/src/evals/m3-scoring.test.ts"],
+      "code": ["tools/src/evals/m3.ts", "tools/src/evals/m3-scoring.ts"],
+      "coverage": {
+        "positive": [
+          "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
+          "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations"
+        ],
+        "negative": [
+          "tools/src/evals/m3.test.ts::refuses hand-populated control booleans without retained run/step/oracle evidence",
+          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "await expect(freezeM3(root, path, control)).rejects.toThrow(\"evidence-backed controls\");"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(scoreM3(rows).safeHealingSuccessRate.successes).toBe(0);"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.safeHealingSuccessRate).toMatchObject({ successes: 0, n: 12, estimate: 0 });"
+          }
+        ]
+      },
+      "blockedReason": "External: paid frozen closed-loop round, independent label/family holdout/safety review and measured diagnosis/healing thresholds are not executed. Internal: real 30-case pre-freeze healthy/negative/oracle controls and critical mutation execution ledger are not retained; offline harness checks are not observed model quality."
     },
     {
       "id": "M4-01",
@@ -6408,7 +7195,7 @@
       "status": "verified",
       "scenario": [
         "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services",
-        "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and refuses M3"
+        "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison"
       ],
       "oracle": [
         "Read-only execution/bootstrap denied; malicious external/symlink roots and empty client roots denied before effects; free password arg invalid."
@@ -6418,7 +7205,7 @@
       "note": "SDK boundary tests exercise actual application services with no admitted malicious Run.",
       "coverage": {
         "positive": [
-          "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and refuses M3"
+          "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison"
         ],
         "negative": [
           "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services"
@@ -6446,7 +7233,7 @@
           },
           {
             "path": "apps/mcp/src/mcp.test.ts",
-            "assertion": "expect(JSON.parse(String((denied.content as { text: string }[])[0]?.text))).toMatchObject({\n        error: { code: \"CAPABILITY_UNAVAILABLE\", details: { milestone: \"M3\" } },\n      });"
+            "assertion": "expect(JSON.parse(String((missing.content as { text: string }[])[0]?.text))).toMatchObject({\n        error: { code: \"NOT_FOUND\" },\n      });"
           },
           {
             "path": "apps/mcp/src/mcp.test.ts",
@@ -7027,7 +7814,7 @@
           },
           {
             "path": "apps/cli/src/cli.test.ts",
-            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"healing\", milestone: \"M3\" },\n    });"
+            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"schedules\", milestone: \"M4\" },\n    });"
           }
         ]
       }
@@ -7619,8 +8406,8 @@
         "packages/runner/src/runtime.ts",
         "packages/contracts/src/registries.ts"
       ],
-      "note": "Global deadline and explicit attempt.deadline origin/deadline/finalAction implemented and exercised. Residual: model-analysis timeout preserving deterministic passed + analysis incomplete is unavailable in M0-M2: analysis is disabled M3 capability; no fake analysis surface added.",
-      "blockedReason": "Global deadline and explicit attempt.deadline origin/deadline/finalAction implemented and exercised. Residual: model-analysis timeout preserving deterministic passed + analysis incomplete is unavailable in M0-M2: analysis is disabled M3 capability; no fake analysis surface added."
+      "note": "Global/attempt deadline controls remain exercised. M3 analysis implements immutable factual predecessor plus model failure/unknown-usage settlement; missing model no longer means unavailable capability.",
+      "blockedReason": "Internal: explicit analysis-deadline timeout on a real deterministic passed Run with projected incomplete analysis, unchanged terminal outcome and retained accounting/evidence has not been exercised; generic model-failure and lost-paid-lease unit controls are narrower."
     },
     {
       "id": "OPS-015",
@@ -7786,11 +8573,55 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M3",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+        "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+      ],
+      "oracle": [
+        "Real artifact gateway revokes Range immediately, duplicate delete returns same durable operation and isolated restore reapplies expiration; legal holds remain visible pending until released then idempotent GC completes."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "packages/application/src/retention.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
+      ],
+      "code": [
+        "packages/application/src/retention.ts",
+        "packages/application/src/backups.ts",
+        "packages/application/src/artifacts.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(app.retention.requestDeletion(artifact.artifactId).id).toBe(operation.id);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(revoked.status).toBeGreaterThanOrEqual(400);"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(f.service.deletionStatus(operation.id).physicalState).toBe(\"pending\");"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(f.service.deletionStatus(operation.id).physicalState).toBe(\"completed\");"
+          }
+        ]
+      },
+      "blockedReason": "External M4: S3 version/lifecycle removal and server multi-organization export isolation are not exercised. Internal: no retained explicit requested-deletion restart/in-flight upload publication test or complete deadline/status and revoked-secret restore pairing for this full lifecycle scope."
     },
     {
       "id": "OPS-023",
@@ -8027,7 +8858,7 @@
         "apps/cli/src/usage.ts",
         "apps/server/src/server.ts"
       ],
-      "note": "Verified M2 local scope. AI accounting HTTP double intentionally validates budgets, not model quality. M3 analysis/healing remains unavailable; compute slots are bounded per-project model requests, not M5 distributed pools.",
+      "note": "Verified M2 accounting remains historical; M3 analysis/healing now use the same admitted accounting path and immutable failure handling. Controlled-provider budgets are not model-quality proof; M5 distributed compute pools remain outside local scope.",
       "coverage": {
         "positive": [
           "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
@@ -8050,7 +8881,7 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(usage.tokenBudget)).toMatchObject({ used: 30, remaining: 0 });"
+            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
@@ -8069,11 +8900,38 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M3",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/ai/usage.test.ts::filtered usage reconciles immutable ledger rows, unknown costs and disclosed token components"
+      ],
+      "oracle": [
+        "Period/project/run/model filters reconcile immutable calls with independently expected token and known/unknown money totals; reasoning separate, lifetime quota separately labeled, raw prompt omitted and reversed period refused."
+      ],
+      "evidence": ["packages/application/src/ai/usage.test.ts"],
+      "code": ["packages/application/src/ai/usage.ts"],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/usage.test.ts::filtered usage reconciles immutable ledger rows, unknown costs and disclosed token components"
+        ],
+        "negative": [
+          "packages/application/src/ai/usage.test.ts::filtered usage reconciles immutable ledger rows, unknown costs and disclosed token components"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/usage.test.ts",
+            "assertion": "expect(selected.calls[0]).not.toHaveProperty(\"rawPrompt\");"
+          },
+          {
+            "path": "packages/application/src/ai/usage.test.ts",
+            "assertion": "expect(all.tokens.inputTokens! + all.tokens.outputTokens!).toBe(60);"
+          },
+          {
+            "path": "packages/application/src/ai/usage.test.ts",
+            "assertion": "expect(uncertain.tokens.inputTokens).toBeNull();"
+          }
+        ]
+      },
+      "blockedReason": "Internal: filtered ledger fixture covers known/unknown calls but not aborted/repaired/cache-hit calls, historical price-table adjustment immutability or public CLI redacted file export; these are required for full OPS-031 acceptance."
     },
     {
       "id": "OPS-032",
@@ -8185,11 +9043,44 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M3",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+        "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
+        "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors"
+      ],
+      "oracle": [
+        "Local export works without GitHub; HTTP 401 delivery dead-letters and retries do not rerun/change local result; missing bundle becomes partial without fake evidence."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "packages/application/src/delivery.test.ts",
+        "packages/application/src/retention.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json"
+      ],
+      "code": ["packages/application/src/delivery.ts", "packages/application/src/artifacts.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+          "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
+          "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(JSON.stringify(result)).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(app.database.all(\"SELECT id FROM runs\")).toHaveLength(0);"
+          }
+        ]
+      },
+      "blockedReason": "External: real GitHub unavailable/revoked integration acceptance and hosted check isolation not run; webhook notification and exclusively S3 server degraded/no-fallback/revoked-config restore scopes are M4/M5 and unexercised."
     },
     {
       "id": "OPS-038",
@@ -9513,11 +10404,47 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
+        "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
+        "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
+        "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings"
+      ],
+      "oracle": [
+        "Factual rules use scoped persisted evidence/hash and preserve Run JSON; unsupported cause abstains. Model failure leaves factual predecessor immutable; wrong hashes/cross-Run refs cannot ground diagnosis."
+      ],
+      "evidence": ["packages/application/src/ai/analysis.test.ts"],
+      "code": ["packages/application/src/ai/analysis.ts"],
+      "note": "Verified deterministic diagnosis contract; optional model cause accuracy remains the separately blocked M3-01/M3-06 pilot, not implied by this status.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash"
+        ],
+        "negative": [
+          "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
+          "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
+          "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(await resolveAnalysisEvidence(f.ctx, f.artifacts, f.run.id, ref)).toMatchObject(f.step);"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(f.db.get(\"SELECT data_json FROM runs WHERE id=?\", f.run.id)?.data_json).toBe(original);"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(f.db.get(\"SELECT data_json FROM analyses WHERE id=?\", factual.id)?.data_json).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(await f.service.analyze(f.run.id, {})).toMatchObject({\n    failureKind: \"unknown\",\n    hypotheses: [],\n  });"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-024",
@@ -9651,11 +10578,51 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+      ],
+      "oracle": [
+        "Proposal defaults proposed with null approvalMode, authorized approval creates distinct verification Run, unchanged protected assertion catches independent semantic mutant, original sealed failure remains."
+      ],
+      "evidence": [
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
+        "validation/journeys/m3-healing.docker.test.ts",
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "code": [
+        "packages/application/src/ai/healing.ts",
+        "packages/application/src/ai/healing-patch.ts"
+      ],
+      "note": "Deterministic controlled-provider/manual-review healing contract only; model-quality and automatic policy equivalence are not inferred.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+        ],
+        "negative": [
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(proposal.approvalMode).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(approved.verificationRunId).not.toBe(failed.id);"
+          },
+          {
+            "path": "validation/journeys/m3-healing.docker.test.ts",
+            "assertion": "expect(negative.outcome).toBe(\"failed\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "await expect(denied.approve(f.proposal.id, 1)).rejects.toMatchObject({ code: \"FORBIDDEN\" });"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-026",
@@ -9663,11 +10630,62 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/history.test.ts::retains distinct repetition identities and quarantines with expiry, writer authority and CAS",
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+      ],
+      "oracle": [
+        "Real fixed-revision/environment strict series contains ten distinct first attempts, rates and interval; invalid sample sizes and insufficient-data claims are refused/disclosed."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/history.test.ts",
+        "packages/domain/src/flake-statistics.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": [
+        "packages/application/src/flake.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/application/src/quarantine.ts",
+        "packages/domain/src/foundations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
+        ],
+        "negative": [
+          "packages/application/src/history.test.ts::retains distinct repetition identities and quarantines with expiry, writer authority and CAS",
+          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.failureRate).toBe(0.5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.classification).not.toBe(\"confirmed_flaky\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(await session.current(failedId)).toEqual(before);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.zeroFailureUpper95).toBe(n ? 1 - 0.05 ** (1 / n) : null);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.classification).toBe(n < 2 ? \"insufficient_data\" : \"passing_observed\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(new Set(members.map((member) => member.runId)).size).toBe(10);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-027",
@@ -9720,11 +10738,48 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
+        "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
+        "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions"
+      ],
+      "oracle": [
+        "Immutable run comparisons distinguish outcome from logical identity/revision provenance; pagination binds both inputs; batch logical keys exclude correlation noise and preserve repetition."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/comparisons.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": ["packages/application/src/comparisons.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+          "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes"
+        ],
+        "negative": [
+          "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
+          "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
+          "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/comparisons.test.ts",
+            "assertion": "expect(runComparability(left, right).comparability).toBe(\"comparable\");"
+          },
+          {
+            "path": "packages/application/src/comparisons.test.ts",
+            "assertion": "expect(runComparability(left, right).comparability).toBe(\"incomparable\");"
+          },
+          {
+            "path": "packages/application/src/comparisons.test.ts",
+            "assertion": "expect(logicalRunKey(left)).not.toBe(logicalRunKey(right));"
+          }
+        ]
+      },
+      "blockedReason": "Internal: current tests cover real Run diff and pure identity/pagination/logical-key controls, not complete persisted BatchRun matching/added-removed/ambiguous keys or model-generation and baseline differences required by history/diff scope."
     },
     {
       "id": "REQ-029",
@@ -9778,7 +10833,7 @@
       "scenario": [
         "validation/journeys/j-mcp.docker.test.ts::MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP token/Origin guards",
         "apps/mcp/src/cancellation.test.ts::disconnect detaches waits, explicit negotiated cancellation requests durable cancellation",
-        "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and refuses M3",
+        "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison",
         "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services"
       ],
       "oracle": [
@@ -9794,7 +10849,7 @@
       "note": "Local M2 MCP transports; disabled later tools fail CAPABILITY_UNAVAILABLE.",
       "coverage": {
         "positive": [
-          "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and refuses M3"
+          "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison"
         ],
         "negative": [
           "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services"
@@ -9964,11 +11019,65 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+        "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+      ],
+      "oracle": [
+        "Real generic strict CI healthy/semantic-defect, blocked/cancelled/inconclusive/cleanup/empty JSON+JUnit controls preserve canonical verdict; typed Action inputs reject injection and local delivery refuses new SHA."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "tools/src/github-action/inputs.test.ts",
+        "packages/application/src/delivery.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-toast-without-persist.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+      ],
+      "code": [
+        "packages/application/src/ci.ts",
+        "apps/cli/src/ci.ts",
+        "tools/src/github-action/index.ts",
+        "packages/application/src/delivery.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+          "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(calls).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(cancelled.exitCode).toBe(143);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(envelope.result.counts?.inconclusive).toBe(1);"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
+          }
+        ]
+      },
+      "blockedReason": "External: private GitHub-hosted pinned Action installation/execution and SHA-bound checks/required-gate/old-A-new-B propagation have not run. Local real CI and input/transport proofs do not establish hosted Action acceptance or public immutable distribution."
     },
     {
       "id": "REQ-033",
@@ -10117,7 +11226,7 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(usage.tokenBudget)).toMatchObject({ used: 30, remaining: 0 });"
+            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
           },
           {
             "path": "apps/server/src/model-budget.test.ts",
@@ -10125,7 +11234,7 @@
           },
           {
             "path": "apps/server/src/model-budget.test.ts",
-            "assertion": "expect(read.json().data.tokenBudget).toEqual({ limit: 234, used: 0, remaining: 234 });"
+            "assertion": "expect(read.json().data.lifetimeBudget.tokenBudget).toEqual({\n      limit: 234,\n      used: 0,\n      remaining: 234,\n    });"
           }
         ]
       }
@@ -10292,11 +11401,55 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+        "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff",
+        "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
+        "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
+      ],
+      "oracle": [
+        "Preview preserves execution/outbox/approvals counts and target request recorder; real producer executes before consumer; explicit valid reuse skips producer, expired/revoked/failed/foreign reuse refuses before new effects; unmapped diff conservatively selects all."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/selection.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-selection-preview-reuse.json"
+      ],
+      "code": [
+        "packages/application/src/selection.ts",
+        "packages/application/src/dependency-reuse.ts"
+      ],
+      "blockedReason": "Internal: selective test/chain/diff previews and real producer/reuse paths are exercised, but no test-list selection acceptance or failed-producer-to-blocked-consumer target recorder control is retained; failed historical reuse refusal alone cannot verify the complete named selective scope.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+          "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff"
+        ],
+        "negative": [
+          "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+          "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
+          "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(counts()).toEqual(before);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(hits).toEqual([\"producer\", \"consumer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(hits).toEqual(beforeRefusal);"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(app.database.all(\"SELECT * FROM batches\")).toHaveLength(0);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-056",
@@ -10567,7 +11720,7 @@
         "packages/application/src/ai/agent-mode.ts",
         "packages/planner/src/proposals/index.ts"
       ],
-      "note": "M2 proposal/candidate scope verified. M3 healing/autopatch is disabled rather than claiming assertion/domain patch acceptance.",
+      "note": "M2 proposal/candidate evidence remains historical. M3 healing patch allowlist/recursive assertion sealing and controlled-provider manual verification are now covered by HEAL-001/INV-005/REQ-025; policy-autoapply equivalence and stochastic quality remain blocked at M3-02/J07.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-agent.live.test.ts::explores within budget and resolves an accepted draft into a replay-verified candidate"
@@ -11980,11 +13133,34 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
+      ],
+      "oracle": [
+        "Sanitized export omits restricted raw bytes and labels omission with source seal rather than falsely marking raw trace redacted."
+      ],
+      "evidence": ["packages/application/src/retention.test.ts"],
+      "code": ["packages/runner/src/browser.ts", "packages/application/src/artifacts.ts"],
+      "coverage": {
+        "positive": [
+          "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
+        ],
+        "negative": [
+          "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(manifest.entries[0]).toMatchObject({\n    state: \"omitted\",\n    redactionStatus: \"restrictedRaw\",\n    omissionReason: \"restricted_raw_export_policy\",\n  });"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "await expect(fs.access(join(out, \"evidence/result.txt\"))).rejects.toBeDefined();"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained actual Playwright trace fixture with token in source/network/snapshot channels and report enumerating known residues. Raw labeling/export omission is proved, not certified complete trace redaction or all-channel canary coverage."
     },
     {
       "id": "SEC-035",
@@ -11992,11 +13168,41 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+      ],
+      "oracle": [
+        "Real HTML/SVG downloads use sanitized attachment name, nosniff/private no-store/sandbox CSP; subsequent Range denied after tombstone; restore never exposes deleted artifacts."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
+      ],
+      "code": ["apps/server/src/server.ts", "packages/application/src/artifacts.ts"],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(response.headers.get(\"x-content-type-options\")).toBe(\"nosniff\");"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(response.headers.get(\"content-security-policy\")).toContain(\"sandbox\");"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(revoked.status).toBeGreaterThanOrEqual(400);"
+          }
+        ]
+      },
+      "note": "Verified supported local attachment gateway; no segregated-origin viewer, S3 signed URL or server profile is advertised by this proof."
     },
     {
       "id": "SEC-036",
@@ -12022,11 +13228,55 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+        "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+      ],
+      "oracle": [
+        "Real artifact gateway revokes Range immediately, duplicate delete returns same durable operation and isolated restore reapplies expiration; legal holds remain visible pending until released then idempotent GC completes."
+      ],
+      "evidence": [
+        "validation/journeys/m3-ci.docker.test.ts",
+        "packages/application/src/retention.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
+      ],
+      "code": [
+        "packages/application/src/retention.ts",
+        "packages/application/src/backups.ts",
+        "packages/application/src/artifacts.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold"
+        ],
+        "negative": [
+          "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(app.retention.requestDeletion(artifact.artifactId).id).toBe(operation.id);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(revoked.status).toBeGreaterThanOrEqual(400);"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(f.service.deletionStatus(operation.id).physicalState).toBe(\"pending\");"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(f.service.deletionStatus(operation.id).physicalState).toBe(\"completed\");"
+          }
+        ]
+      },
+      "blockedReason": "External M4: S3 version/lifecycle removal and server multi-organization export isolation are not exercised. Internal: no retained explicit requested-deletion restart/in-flight upload publication test or complete deadline/status and revoked-secret restore pairing for this full lifecycle scope."
     },
     {
       "id": "SEC-038",
@@ -12078,11 +13328,44 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
+        "packages/application/src/approvals.test.ts::rejects changes to policy, actor, revision and environment",
+        "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
+        "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer"
+      ],
+      "oracle": [
+        "Unit admission binds actor/policy/revision/body/environment/origins/limits and credential version, consumes once; changed claims/service reviewer/expiry refuse."
+      ],
+      "evidence": ["packages/application/src/approvals.test.ts"],
+      "code": ["packages/application/src/approvals.ts"],
+      "coverage": {
+        "positive": [
+          "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once"
+        ],
+        "negative": [
+          "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
+          "packages/application/src/approvals.test.ts::rejects changes to policy, actor, revision and environment",
+          "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
+          "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "expect(approvals.verify(run, test, env)?.id).toBe(approval.id);"
+          },
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "code(() => approvals.verify(run, test, env), \"POLICY_DENIED\");"
+          },
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "expect(approvals.get(approval.id).revokedAt).toBeNull();"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained real target request journey tying allowed destructive effect/audit to exact approval and proving changed-body/environment/credential/reused-approval refusal before target effects; unit-only authorization fixture is narrower. M4 dual-approver separation-of-functions scope also unexercised."
     },
     {
       "id": "SEC-040",
@@ -12090,11 +13373,55 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/resource-cleanup.docker.test.ts::manually compensates an orphan through the sandbox and preserves the owning run verdict",
+        "validation/journeys/runtime-retry.docker.test.ts::OPS-009 timeout after an acknowledged target POST effect never repeats the mutation",
+        "packages/application/src/resources.test.ts::denies missing approval and mismatched ownership before any compensation"
+      ],
+      "oracle": [
+        "Real lost POST response commits one target row, never repeats and stays nonpass; separately authorized cleanup removes exact owned orphan without changing original failure, missing grant/foreign ownership refuses."
+      ],
+      "evidence": [
+        "validation/journeys/resource-cleanup.docker.test.ts",
+        "validation/journeys/runtime-retry.docker.test.ts",
+        "packages/application/src/resources.test.ts",
+        "validation/results/runtime-post-timeout-no-repeat.json",
+        "validation/results/W4-A-resource-cleanup.json"
+      ],
+      "code": [
+        "packages/application/src/resources.ts",
+        "packages/application/src/worker.ts",
+        "packages/runner/src/http.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/resource-cleanup.docker.test.ts::manually compensates an orphan through the sandbox and preserves the owning run verdict"
+        ],
+        "negative": [
+          "validation/journeys/runtime-retry.docker.test.ts::OPS-009 timeout after an acknowledged target POST effect never repeats the mutation",
+          "packages/application/src/resources.test.ts::denies missing approval and mismatched ownership before any compensation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/resource-cleanup.docker.test.ts",
+            "assertion": "expect(cleanup.state).toBe(\"cleaned\");"
+          },
+          {
+            "path": "validation/journeys/resource-cleanup.docker.test.ts",
+            "assertion": "expect(current.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/runtime-retry.docker.test.ts",
+            "assertion": "expect(posts).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/resources.test.ts",
+            "assertion": "expect(app.resources.get(resource.id).state).toBe(\"orphaned\");"
+          }
+        ]
+      },
+      "blockedReason": "Internal: lost-effect journey proves one POST/no repeat and retained bundle, but does not assert explicit uncertainty/possibly affected resource in report; denied cleanup grant is unit-only rather than real target request recorder proof."
     },
     {
       "id": "SEC-041",
@@ -13343,11 +14670,36 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
+        "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass"
+      ],
+      "oracle": [
+        "Local report metrics separate first/terminal/retry/conditional counts and keep exclusions visible without denominator improvement."
+      ],
+      "evidence": ["packages/reporting/src/metrics.test.ts"],
+      "code": ["packages/reporting/src/metrics.ts"],
+      "coverage": {
+        "positive": [
+          "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator"
+        ],
+        "negative": [
+          "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
+          "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.rates.strictPassRate).toMatchObject({ numerator: 0, denominator: 2 });"
+          },
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.rates.terminalPassRate).toMatchObject({ numerator: 1, denominator: 2 });"
+          }
+        ]
+      },
+      "blockedReason": "External M4: dashboard rendering of first-attempt/terminal/conditional/end-to-end metrics and visible quarantine exclusions is not implemented/exercised. Internal: local metric fixtures are not a dashboard acceptance proof."
     },
     {
       "id": "VAL-008",
@@ -13443,7 +14795,7 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(usage.tokenBudget)).toMatchObject({ used: 30, remaining: 0 });"
+            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
           }
         ]
       }
@@ -13454,11 +14806,71 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+      ],
+      "oracle": [
+        "Strict report publishes planned/valid counts, interval and limitations; missing source/runtime remains incomparable and n=1 insufficient."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/flake.test.ts",
+        "packages/domain/src/flake-statistics.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": [
+        "packages/application/src/flake.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/application/src/quarantine.ts",
+        "packages/domain/src/foundations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
+        ],
+        "negative": [
+          "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.failureRate).toBe(0.5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.classification).not.toBe(\"confirmed_flaky\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(await session.current(failedId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(left)).toEqual(flakeIdentity(right));"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(environment).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          },
+          {
+            "path": "packages/application/src/flake.test.ts",
+            "assertion": "expect(flakeIdentity(right).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.zeroFailureUpper95).toBe(n ? 1 - 0.05 ** (1 / n) : null);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.classification).toBe(n < 2 ? \"insufficient_data\" : \"passing_observed\");"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained FlakeService test directly changes assessed SHA between persisted studies and asserts report window/cohort split; pure identity tests cover environment/runtime/fixture changes, not that complete acceptance path."
     },
     {
       "id": "VAL-011",
@@ -13466,11 +14878,46 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/selection.test.ts::keeps a source Run revision and enforces strict replay while target claims cannot override the environment",
+        "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator"
+      ],
+      "oracle": [
+        "Strict series admits one replay attempt with healing off; diagnostic retry outcomes do not improve strict first-attempt denominator."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/application/src/selection.test.ts",
+        "packages/reporting/src/metrics.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": [
+        "packages/application/src/flake.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/application/src/quarantine.ts",
+        "packages/domain/src/foundations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+          "packages/application/src/selection.test.ts::keeps a source Run revision and enforces strict replay while target claims cannot override the environment"
+        ],
+        "negative": [
+          "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(admitted.matrixCell).toMatchObject({\n        limits: { maxAttempts: 1 },\n        healingPolicy: \"off\",\n      });"
+          },
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.rates.strictPassRate).toMatchObject({ numerator: 0, denominator: 2 });"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-012",
@@ -13478,11 +14925,35 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+        "packages/domain/src/flake-statistics.test.ts::rejects invalid counts rather than manufacturing a statistical interval"
+      ],
+      "oracle": [
+        "Exact zero-failure unilateral bounds for n=0/1/30/100/299/300 and Wilson remain distinct; insufficient counts cannot become <1% claim. Offline numeric controls are not 300 live observations."
+      ],
+      "evidence": ["packages/domain/src/flake-statistics.test.ts"],
+      "code": ["packages/domain/src/foundations.ts"],
+      "coverage": {
+        "positive": [
+          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+        ],
+        "negative": [
+          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+          "packages/domain/src/flake-statistics.test.ts::rejects invalid counts rather than manufacturing a statistical interval"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.zeroFailureUpper95).toBe(n ? 1 - 0.05 ** (1 / n) : null);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.classification).toBe(n < 2 ? \"insufficient_data\" : \"passing_observed\");"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-013",
@@ -13490,11 +14961,58 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/domain/src/flake-statistics.test.ts::keeps excluded observations out of the conditional denominator and never auto-confirms mixed outcomes",
+        "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+        "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause"
+      ],
+      "oracle": [
+        "Mixed/deterministic samples and configuration changes remain distinguishable; HTTP 500 abstains from certain product/locator cause."
+      ],
+      "evidence": [
+        "validation/journeys/m3-history-selection.docker.test.ts",
+        "packages/domain/src/flake-statistics.test.ts",
+        "packages/application/src/flake.test.ts",
+        "packages/application/src/ai/analysis.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+      ],
+      "code": [
+        "packages/application/src/flake.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/application/src/quarantine.ts",
+        "packages/domain/src/foundations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+          "packages/domain/src/flake-statistics.test.ts::keeps excluded observations out of the conditional denominator and never auto-confirms mixed outcomes"
+        ],
+        "negative": [
+          "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+          "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.failureRate).toBe(0.5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(report.classification).not.toBe(\"confirmed_flaky\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-selection.docker.test.ts",
+            "assertion": "expect(await session.current(failedId)).toEqual(before);"
+          },
+          {
+            "path": "packages/domain/src/flake-statistics.test.ts",
+            "assertion": "expect(result.classification).toBe(\"suspected_flaky\");"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no retained FlakeService-level network fault-injection cohort proving unstable infrastructure classification and separately recorded independent intermittent-cause confirmation; isolated diagnosis and count tests are narrower."
     },
     {
       "id": "VAL-014",
@@ -13793,7 +15311,7 @@
         "packages/domain/src/redaction.ts",
         "packages/planner/src/agent/index.ts"
       ],
-      "note": "Verified M0–M2 critical mutation subset. Gate SHA is M3 unavailable, explicitly not claimed.",
+      "note": "Verified historical M0-M2 critical mutation subset retained. M3 local frozen-SHA refusal and required-gate mapping are now implemented/tested in delivery tests; executed M3 critical mutation inventory and hosted SHA propagation remain unverified, not inferred from unit controls.",
       "coverage": {
         "positive": [
           "tools/src/traceability/critical-invariants.test.ts::revision immutability refuses published content rewrite while ordinary writes work"
@@ -13804,7 +15322,7 @@
         "criticalAssertions": [
           {
             "path": "tools/src/traceability/mutations.test.ts",
-            "assertion": "expect(healthy.output).toContain(\"3 passed\");"
+            "assertion": "expect(healthy.output).toContain(\"4 passed\");"
           },
           {
             "path": "tools/src/traceability/mutations.test.ts",
@@ -13916,11 +15434,32 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
+        "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations"
+      ],
+      "oracle": [
+        "Score refuses semantic-mutant credit without reaching unchanged business assertion and independent oracle; no reviewed patches remains insufficientData."
+      ],
+      "evidence": ["tools/src/evals/m3-scoring.test.ts"],
+      "code": ["tools/src/evals/m3-scoring.ts"],
+      "coverage": {
+        "positive": [
+          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing"
+        ],
+        "negative": [
+          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
+          "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(scoreM3(rows).safeHealingSuccessRate.successes).toBe(0);"
+          }
+        ]
+      },
+      "blockedReason": "Internal: no executed M3 critical mutation inventory listing killed/survived/invalid/equivalent mutants and rationales; scoring safety guards are not mutation score. External: full pilot semantic-mutant observations and safety sign-off remain unexecuted."
     },
     {
       "id": "VAL-023",
@@ -13989,7 +15528,7 @@
           },
           {
             "path": "packages/persistence/src/contract-catalog.test.ts",
-            "assertion": "expect(\n        await readFile(\n          new URL(`../migrations/${engine}/0004_contract_constraints.sql`, import.meta.url),\n          \"utf8\",\n        ),\n      ).toBe(bytes);"
+            "assertion": "expect(\n          await readFile(\n            new URL(`../migrations/${engine}/${migration}.sql`, import.meta.url),\n            \"utf8\",\n          ),\n          `${engine}/${migration}`,\n        ).toBe(bytes);"
           },
           {
             "path": "packages/persistence/src/contract-catalog.test.ts",
@@ -14150,7 +15689,7 @@
         "validation/journeys/m2-proposals.live.test.ts"
       ],
       "code": ["packages/application/src/ai/proposals.ts", "packages/application/src/worker.ts"],
-      "note": "Verified M2 authoring/concurrency and M1 revision pinning. Healing assertion auto-apply is M3 and unavailable, not a tested enabled healing path.",
+      "note": "Verified historical M2 authoring/concurrency and M1 revision pinning retained. M3 manual-review healing seals recursive assertions and uses verification promotion CAS (HEAL-002/INV-005); safe policy-autoapply equivalence remains explicitly blocked at M3-02/J07.",
       "coverage": {
         "positive": [
           "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff"
@@ -14553,11 +16092,58 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "scenario": [
+        "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+        "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+        "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+      ],
+      "oracle": [
+        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict."
+      ],
+      "evidence": [
+        "packages/application/src/delivery.test.ts",
+        "validation/journeys/m3-ci.docker.test.ts",
+        "tools/src/github-action/inputs.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+      ],
+      "code": [
+        "packages/application/src/delivery.ts",
+        "tools/src/github-action/inputs.ts",
+        "packages/application/src/ci.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+          "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+        ],
+        "negative": [
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(methods.some((method) => method.startsWith(\"POST\"))).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(JSON.stringify(result)).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"failure\");"
+          }
+        ]
+      },
+      "blockedReason": "External: private GitHub-hosted Action/check acceptance including old-A/new-B, fork permissions and required branch protection not run. Installed GitHub App/preview deployment, signed/tampered/duplicate webhook handling and tunnel scope remain unexercised M4/M5 prerequisites; local transport is not installed-provider proof."
     },
     {
       "id": "VAL-034",
@@ -15531,37 +17117,61 @@
       "id": "analysis",
       "milestone": "M3",
       "requirements": ["REQ-023", "API-008"],
-      "gate": "M3 normative acceptance; capability unavailable until milestone"
+      "gate": "M3 local deterministic diagnosis contract; positive/negative evidence and protected assertions. Model-quality pilot remains separately blocked by M3-01/M3-06."
     },
     {
       "id": "healing",
       "milestone": "M3",
       "requirements": ["REQ-025", "API-008"],
-      "gate": "M3 normative acceptance; capability unavailable until milestone"
+      "gate": "M3 controlled-provider manual healing contract; positive/negative evidence and protected assertions. Policy-autoapply and live quality remain separately blocked by M3-02/J07/M3-06."
     },
     {
       "id": "run-comparison",
       "milestone": "M3",
       "requirements": ["REQ-028", "API-008"],
-      "gate": "M3 normative acceptance; capability unavailable until milestone"
+      "gate": "M3 implemented local comparison; complete history/model/baseline acceptance remains blocked by REQ-028; scenarios and oracles derive from linked requirement rows."
     },
     {
       "id": "batch-comparison",
       "milestone": "M3",
       "requirements": ["REQ-028", "API-008"],
-      "gate": "M3 normative acceptance; capability unavailable until milestone"
+      "gate": "M3 implemented batch comparison; persisted matching/ambiguity acceptance remains blocked by REQ-028; scenarios and oracles derive from linked requirement rows."
     },
     {
       "id": "flake-study",
       "milestone": "M3",
       "requirements": ["REQ-026", "API-008"],
-      "gate": "M3 normative acceptance; capability unavailable until milestone"
+      "gate": "M3 local strict flake study; positive/negative evidence and protected assertions; source-bound complete cohort acceptance remains separately blocked by M3-03/VAL-010."
     },
     {
       "id": "ci",
       "milestone": "M3",
       "requirements": ["REQ-032", "API-008"],
-      "gate": "M3 normative acceptance; capability unavailable until milestone"
+      "gate": "M3 implemented generic strict CI; local positive/negative evidence and protected assertions. Private hosted pinned Action and SHA-check propagation remain blocked by REQ-032/M3-05."
+    },
+    {
+      "id": "quarantine",
+      "milestone": "M3",
+      "requirements": ["M3-03", "VAL-007", "REQ-026"],
+      "gate": "M3 implemented local quarantine with reason/owner/expiry/CAS and immutable history; source-bound complete cohort and dashboard residuals remain explicit in linked items."
+    },
+    {
+      "id": "selective-run",
+      "milestone": "M3",
+      "requirements": ["REQ-055", "M3-04"],
+      "gate": "M3 implemented local selective execution; real dependency/reuse/preview positive/negative evidence retained. Full list selection and failed-producer propagation acceptance remain blocked by REQ-055/M3-04."
+    },
+    {
+      "id": "integration-planning",
+      "milestone": "M3",
+      "requirements": ["M3-06", "AI-002"],
+      "gate": "M3 integration generation contract implemented with controlled-provider admission tests; real supplemental preregistered generated healthy/mutant trial remains blocked by M3-06."
+    },
+    {
+      "id": "artifact-deletion",
+      "milestone": "M3",
+      "requirements": ["OPS-022", "SEC-037", "SEC-035"],
+      "gate": "M3 local durable deletion/tombstone/attachment gateway implemented and partially exercised; complete restart/publication/server-storage lifecycle residuals remain explicit in OPS-022/SEC-037."
     },
     {
       "id": "server",

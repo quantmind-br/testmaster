@@ -243,7 +243,7 @@ export function scoreM3(ledgers: M3Ledger[]) {
       conservativeCharge: ledgers.reduce((n, row) => n + row.usage.conservativeCharge, 0),
       unknownCalls: ledgers.reduce((n, row) => n + row.usage.unknownCalls, 0),
       unknownCostCalls: ledgers.reduce((n, row) => n + row.usage.unknownCostCalls, 0),
-      measuredCosts: [...costs.values()],
+      estimatedCosts: [...costs.values()],
     },
     targets: {
       diagnosisCauseAccuracy: 0.8,

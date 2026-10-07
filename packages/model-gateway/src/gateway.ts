@@ -543,6 +543,12 @@ export class ModelGateway {
       purpose: input.purpose,
       provider: input.provider,
       model: input.model,
+      priceTableVersion: this.providers[input.provider]?.prices?.[input.model]?.version ?? null,
+      costBasis: result.cacheHit
+        ? "not_billed"
+        : result.cost === "unknown"
+          ? "unknown"
+          : "estimated",
       promptHash,
       modelConfigHash: input.modelConfigHash,
       sourceRevisionIds: [...input.sourceRevisionIds],
@@ -571,6 +577,8 @@ export class ModelGateway {
 function parseUsage(raw: Record<string, unknown>): TokenUsage {
   const usage = raw.usage as Record<string, unknown> | undefined;
   const details = usage?.completion_tokens_details as Record<string, unknown> | undefined;
+  const promptDetails = usage?.prompt_tokens_details as Record<string, unknown> | undefined;
+  const cached = promptDetails?.cached_tokens;
   const counts = [
     usage?.prompt_tokens,
     usage?.completion_tokens,
@@ -583,6 +591,9 @@ function parseUsage(raw: Record<string, unknown>): TokenUsage {
     inputTokens: tokens[0] ?? null,
     outputTokens: tokens[1] ?? null,
     reasoningTokens: tokens[2] ?? null,
+    ...(typeof cached === "number" && Number.isSafeInteger(cached) && cached >= 0
+      ? { cachedInputTokens: cached }
+      : {}),
   };
 }
 

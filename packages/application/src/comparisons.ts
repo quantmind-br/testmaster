@@ -160,6 +160,25 @@ export class ComparisonsService {
     const metadata = (run: Run) => {
       const cell = runMatrixCell(run);
       const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
+      const baselines: { stepId: string; framePath: string[]; baselineId: string }[] = [];
+      const visit = (steps: Record<string, unknown>[], framePath: string[] = []) => {
+        for (const step of steps) {
+          const expectation = step.expectation as
+            | { predicate?: string; baselineId?: string }
+            | undefined;
+          if (expectation?.predicate === "visualMatches" && expectation.baselineId)
+            baselines.push({
+              stepId: String(step.id),
+              framePath,
+              baselineId: expectation.baselineId,
+            });
+          const input = step.input as { childSteps?: Record<string, unknown>[] } | undefined;
+          if (step.operation === "frame" && Array.isArray(input?.childSteps))
+            visit(input.childSteps, [...framePath, String(step.id)]);
+        }
+      };
+      const plan = revision.plan as { steps?: Record<string, unknown>[] } | null;
+      visit(plan?.steps ?? []);
       const attempts = allEntities(this.ctx, "Attempt").filter((a) => a.runId === run.id);
       const artifacts = allEntities(this.ctx, "Artifact")
         .filter((a) => a.runId === run.id)
@@ -183,6 +202,11 @@ export class ComparisonsService {
         testId: run.testId,
         revisionId: run.revisionId,
         runner: revision.runnerKind,
+        revisionOrigin: revision.origin,
+        generationModelCallId:
+          (cell.admissionSnapshot as Record<string, unknown> | undefined)?.generationModelCallId ??
+          null,
+        baselines,
         environmentRevisionId: run.environmentRevisionId,
         admission: cell.admissionSnapshot ?? null,
         outcome: run.outcome,

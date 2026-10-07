@@ -3,14 +3,18 @@ import { EventEmitter } from "node:events";
 import { Readable } from "node:stream";
 import { type PlanStep, type RunnerEvent, validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
-import type { Browser } from "playwright-core";
+import type * as Playwright from "playwright-core";
+import { type Browser, errors } from "playwright-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runBrowser } from "./browser.js";
 import { ProtocolClient } from "./protocol.js";
 import { type RunnerInput, Runtime } from "./runtime.js";
 
 const launch = vi.hoisted(() => vi.fn());
-vi.mock("playwright-core", () => ({ chromium: { launch } }));
+vi.mock("playwright-core", async (importOriginal) => {
+  const actual = await importOriginal<typeof Playwright>();
+  return { chromium: { launch }, errors: actual.errors };
+});
 
 class LocatorStub {
   countValue = 1;
@@ -440,4 +444,70 @@ it("allows detached waits to target absent elements but rejects ambiguous hidden
     outcome: "failed",
     reasonCode: "assertion_mismatch",
   });
+});
+
+it("distinguishes a live state-wait timeout from a crashed page without treating either as passed", async () => {
+  const wait: PlanStep = {
+    id: "wait",
+    kind: "action",
+    operation: "waitFor",
+    description: "Wait",
+    input: { locator: { by: "testId", value: "message" }, state: "detached", deadlineMs: 20 },
+  };
+  context.page
+    .locator("message")
+    .waitFor.mockRejectedValue(new errors.TimeoutError("State deadline"));
+  expect(await runBrowser(runtime([wait, assertion]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_timeout",
+  });
+  expect(
+    events.find((event) => event.type === "step.finished" && event.payload.stepId === "wait")
+      ?.payload,
+  ).toMatchObject({ status: "failed", reasonCode: "assertion_timeout" });
+  context.page.closed = true;
+  context.page.locator("message").waitFor.mockRejectedValue(new Error("Page crashed"));
+  expect(await runBrowser(runtime([wait, assertion]))).toMatchObject({
+    outcome: "inconclusive",
+    reasonCode: "insufficient_evidence",
+  });
+});
+
+it("retains business assertion values for diagnosis but omits secret-derived and oversized comparisons", async () => {
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({ outcome: "passed" });
+  expect(
+    events.find((event) => event.type === "step.finished" && event.payload.stepId === "assert")
+      ?.payload,
+  ).toMatchObject({ observed: "saved", expected: "saved" });
+  events = [];
+  context.page.locator("message").text = "wrong-price";
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(events.find((event) => event.type === "step.finished")?.payload).toMatchObject({
+    observed: "wrong-price",
+    expected: "saved",
+  });
+  for (const value of ["private-business-value", "x".repeat(8193)]) {
+    events = [];
+    context.page.locator("message").text = value;
+    const attempt = runtime([assertion]);
+    attempt.secrets.add("private-business-value");
+    expect(await runBrowser(attempt)).toMatchObject({ outcome: "failed" });
+    const payload = events.find((event) => event.type === "step.finished")!.payload;
+    expect(payload).not.toHaveProperty("observed");
+    expect(payload).not.toHaveProperty("expected");
+    expect(JSON.stringify(events)).not.toContain("private-business-value");
+  }
+  events = [];
+  const reused = runtime([assertion]);
+  context.page.locator("message").text = "saved";
+  expect(await runBrowser(reused)).toMatchObject({ outcome: "passed" });
+  context.page.locator("message").text = "private-business-value";
+  reused.secrets.add("private-business-value");
+  expect(await runBrowser(reused)).toMatchObject({ outcome: "failed" });
+  const last = events.filter((event) => event.type === "step.finished").at(-1)!.payload;
+  expect(last).not.toHaveProperty("observed");
+  expect(last).not.toHaveProperty("expected");
 });

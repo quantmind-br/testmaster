@@ -7,6 +7,9 @@
     "requestedBy",
     "revokedAt",
     "physicalState",
+    "physicalDeletionDeadlineAt",
+    "backupExpiryDeadlineAt",
+    "deadlineReason",
     "backupHolds",
     "errors"
   ],
@@ -65,6 +68,34 @@
           "type": "string"
         }
       ]
+    },
+    "physicalDeletionDeadlineAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "backupExpiryDeadlineAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deadlineReason": {
+      "maxLength": 8000,
+      "type": "string"
     },
     "backupHolds": {
       "type": "array",

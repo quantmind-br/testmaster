@@ -18,6 +18,8 @@ export function aggregateUsage(calls: readonly ModelCallRecord[]) {
   const unknownTokenCalls = { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 };
   const costs: Record<string, Money> = {};
   let unknownCostCalls = 0;
+  const estimatedCosts: Record<string, Money> = {};
+  const unclassifiedCosts: Record<string, Money> = {};
   for (const call of calls) {
     for (const key of ["inputTokens", "outputTokens", "reasoningTokens"] as const) {
       const count = call.usage[key];
@@ -36,6 +38,14 @@ export function aggregateUsage(calls: readonly ModelCallRecord[]) {
         ...call.cost,
         amount: (BigInt(costs[key]?.amount ?? "0") + BigInt(call.cost.amount)).toString(),
       };
+      const classified =
+        call.costBasis === "estimated" || call.costBasis === "not_billed"
+          ? estimatedCosts
+          : unclassifiedCosts;
+      classified[key] = {
+        ...call.cost,
+        amount: (BigInt(classified[key]?.amount ?? "0") + BigInt(call.cost.amount)).toString(),
+      };
     }
   }
   return {
@@ -44,9 +54,18 @@ export function aggregateUsage(calls: readonly ModelCallRecord[]) {
     unknownTokenCalls,
     estimatedTokens: null,
     cost: unknownCostCalls ? ("unknown" as const) : Object.values(costs),
-    measuredCosts: Object.values(costs),
+    estimatedCosts: Object.values(estimatedCosts),
+    billedCosts: [] as Money[],
+    unclassifiedCosts: Object.values(unclassifiedCosts),
+    billingReconciliation: {
+      status: "not_requested" as const,
+      divergence: null,
+      explanation:
+        "Price-table costs are estimates, not provider invoices. Provider billing has not been read or reconciled; divergence is unknown.",
+    },
     unknownCostCalls,
     cacheHitCalls: calls.filter((call) => call.cacheHit).length,
+    cachedInputTokens: calls.reduce((sum, call) => sum + (call.usage.cachedInputTokens ?? 0), 0),
     runtimeMs: calls.reduce((sum, call) => sum + call.latency, 0),
     componentAccounting:
       "Reasoning is a disclosed output component; cache hits are disclosed separately. Neither is added to input plus output.",
@@ -103,7 +122,11 @@ export class UsageService {
       .filter((call) => (!runId || call.runId === runId) && (!model || call.model === model))
       .map((call) => {
         const { rawPrompt: _rawPrompt, ...redacted } = call;
-        return redacted;
+        return {
+          ...redacted,
+          priceTableVersion: call.priceTableVersion ?? null,
+          costBasis: call.costBasis ?? ("unknown" as const),
+        };
       });
     const reservations = this.ctx.database
       .all<{ project_id: string; state: string; estimate_json: string; cost_json: string | null }>(

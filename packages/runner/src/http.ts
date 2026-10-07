@@ -162,24 +162,28 @@ export async function assertResponse(
   pointer?: string,
 ): Promise<void> {
   let matches = false;
+  let observed: unknown;
+  let expected: unknown;
   switch (expectation.predicate) {
     case "statusIn":
+      observed = response.status;
+      expected = expectation.values;
       matches = expectation.values.includes(response.status);
       break;
     case "headerEquals":
-      matches = isDeepStrictEqual(
-        response.headers[expectation.header.toLowerCase()],
-        await runtime.resolve(expectation.value),
-      );
+      observed = response.headers[expectation.header.toLowerCase()] ?? null;
+      expected = await runtime.resolve(expectation.value);
+      matches = isDeepStrictEqual(observed, expected);
       break;
     case "jsonEquals":
-      matches = isDeepStrictEqual(
-        jsonPointerValue(responseJson(response), pointer ?? ""),
-        await runtime.resolve(expectation.value),
-      );
+      observed = jsonPointerValue(responseJson(response), pointer ?? "");
+      expected = await runtime.resolve(expectation.value);
+      matches = isDeepStrictEqual(observed, expected);
       break;
     case "countEquals": {
       const value = jsonPointerValue(responseJson(response), pointer ?? "");
+      observed = Array.isArray(value) ? value.length : value;
+      expected = expectation.value;
       matches = Array.isArray(value) && value.length === expectation.value;
       break;
     }
@@ -197,6 +201,8 @@ export async function assertResponse(
         );
       if (!schema || typeof schema !== "object" || Array.isArray(schema))
         deny("Invalid source schema");
+      observed = jsonPointerValue(responseJson(response), pointer ?? "");
+      expected = schema;
       try {
         validateAgainstSchema(
           schema as Record<string, unknown>,
@@ -205,6 +211,7 @@ export async function assertResponse(
         matches = true;
       } catch (error) {
         if (error instanceof RuntimeError) throw error;
+        runtime.recordComparison(observed, expected);
         throw new RuntimeError(
           "assertion_mismatch",
           "Response does not match source schema",
@@ -219,6 +226,7 @@ export async function assertResponse(
         `HTTP predicate ${expectation.predicate} is unsupported`,
       );
   }
+  runtime.recordComparison(observed, expected);
   if (!matches && response.status === 401 && response.authenticated)
     throw new RuntimeError(
       "manual_auth_required",

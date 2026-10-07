@@ -57,6 +57,12 @@ Admission warns at 80 % disk use and suspends new admission at 90 %; only the pr
 recovers automatically. Worker maintenance expires eligible evidence through mark → tombstone → delete.
 Expired evidence makes a bundle `partial` with an explicit reason; the Run's outcome, snapshot hashes and
 audit history never change. Legal holds are described in `docs/development.md`.
+Requested deletion status exposes a 24-hour active-data deadline separately from the latest
+recorded backup expiry. Holds defer physical collection and appear explicitly with a reason;
+worker restart resumes pending operations. Backups record 24-hour protection at creation,
+including incomplete copies. Operators control separately retained backup files: expiration of
+the protection does not promise erasure of those files. Restore merges current artifact tombstones
+and secret revocations before admission can resume; it cannot resurrect access to deleted data.
 
 ### Full disk or upload storage outage
 
@@ -283,3 +289,22 @@ alert without marking the upload complete. Stop new uploads, preserve leased sta
 restore space, and let expired leases be reconciled; never bypass the backlog ceiling or fabricate an
 upload hash. A nonsparse control-plane reserve supports recording the storage failure, not continued
 target execution.
+
+## M3 strict history and cause observations
+
+Flake studies freeze source checkout/assessed SHA, revision, environment, runtime image/identity and
+seed, and execute serial first attempts with healing off. Accumulation rejects changed identities in
+`incompatible`, separately from the accepted cohort's classification and observation window. A
+passing diagnostic rerun or infrastructure retry is not another strict-study sample.
+
+`failureCauses` binds each observed cause to its persisted first Attempt and step (or Attempt-level
+reason) with a content hash. A recorded HTTP transport failure is environment evidence, not a
+business-assertion failure; infrastructure-only cause observations report `unstable_infrastructure`.
+Assertion mismatches report `product_or_contract`, not a certain source-level defect. Unknown causes
+stay unknown. Repetition counts never certify independent samples or confirm intermittent causes;
+independent target/network fault confirmation remains separate evidence.
+
+Run and batch comparisons discriminate revision origin, generation ModelCall ID and visual baseline
+references, including frame-local assertions. Baseline-reference comparison does not enable M5
+visual matching. Batch members match logical test/environment/matrix identity, not array order;
+duplicate logical keys are explicitly incomparable rather than arbitrarily paired.

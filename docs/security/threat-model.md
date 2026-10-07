@@ -54,7 +54,11 @@ Unsafe process execution requires `execution.executor: "process"`, `--unsafe-loc
 
 Redaction is best effort for unknown PII, canvas/media and transformed/encoded secrets. Raw traces/videos are disabled by default; no unsupported trace transformation is labeled redacted. Minimize collection and restrict authorized raw access. Encryption at rest does not hide secrets from an authorized host administrator. Provider data retention requires verified provider terms, not an invented guarantee.
 
+M3 report snapshots project restricted raw artifact paths and known Playwright trace residues (DOM snapshots, network requests/responses, embedded page source and screenshots). JSON, Markdown and HTML exports carry these warnings; sanitized bundle export omits restricted bytes rather than certifying trace redaction. Unknown or encoded PII still requires minimization and manual review.
+
 Cancel/retry cannot roll back a payment, deletion or uncertain external mutation. Only target-supported idempotency and explicit reconciliation reduce this risk; resource uncertainty and cleanup failure remain visible and non-green when required. A malicious approved target can consume credentials legitimately sent to it. Deterministic schemas, signatures and hashes do not prove business correctness: independent oracles and healthy/defective controls do.
+
+Reports also project persisted resource identities, owning Attempts/steps and uncertain/orphaned states without revealing protected handles. Execution approval audit records use the admitted Run ID as correlation for verification/consumption, linking the permitted effect to the exact single-use approval. Denied compensation never dispatches a cleanup request.
 
 M3–M6 capabilities, including multi-user tenancy, remote tunnels, SSO and plugins, must return `CAPABILITY_UNAVAILABLE` with milestone until enabled by their gates. Documentation of their boundary is not implementation.
 

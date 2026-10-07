@@ -26,6 +26,7 @@ export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;
   reasoningTokens: number | null;
+  cachedInputTokens?: number | null;
 }
 export interface BudgetLedger {
   reserve(request: BudgetReserveRequest): Promise<BudgetReserveResult>;
@@ -61,6 +62,8 @@ export interface ModelCallRecord {
   inputRefs: string[];
   usage: TokenUsage;
   cost: Money | "unknown";
+  priceTableVersion?: string | null;
+  costBasis?: "estimated" | "unknown" | "not_billed";
   latency: number;
   outcome: "success" | "invalid" | "failed" | "cancelled";
   cacheHit: boolean;

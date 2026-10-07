@@ -817,7 +817,7 @@ export async function runEvaluation(
     }
   }
   await flush();
-  const measuredCosts: Record<string, { amount: string; currency: string; scale: number }> = {};
+  const estimatedCosts: Record<string, { amount: string; currency: string; scale: number }> = {};
   let unknownCostCalls = 0;
   const tokens: Record<string, number | null> = {
     inputTokens: 0,
@@ -832,11 +832,11 @@ export async function runEvaluation(
       tokens[field] =
         tokens[field] === null || typeof value !== "number" ? null : Number(tokens[field]) + value;
     }
-    for (const cost of rows(trial.usage.measuredCosts)) {
+    for (const cost of rows(trial.usage.estimatedCosts)) {
       const key = `${cost.currency}:${cost.scale}`;
-      measuredCosts[key] = {
+      estimatedCosts[key] = {
         amount: (
-          BigInt(measuredCosts[key]?.amount ?? "0") + BigInt(String(cost.amount))
+          BigInt(estimatedCosts[key]?.amount ?? "0") + BigInt(String(cost.amount))
         ).toString(),
         currency: String(cost.currency),
         scale: Number(cost.scale),
@@ -855,12 +855,12 @@ export async function runEvaluation(
     reasoningEffort: reasoningEffort ?? null,
     chargedTokens,
     tokens,
-    measuredCosts: Object.values(measuredCosts),
+    estimatedCosts: Object.values(estimatedCosts),
     unknownCostCalls,
     cost:
       unknownCostCalls || trials.some((trial) => !trial.usage)
         ? "unknown"
-        : Object.values(measuredCosts),
+        : Object.values(estimatedCosts),
     durationMs: performance.now() - started,
     stopReason: stopReason?.code ?? "planned_trials_recorded",
     limitations: [

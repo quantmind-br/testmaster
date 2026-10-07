@@ -5,6 +5,7 @@ import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
 import * as P from "./primitives.js";
 import * as Protocol from "./protocol.js";
+import { reasonCodes } from "./registries.js";
 import { ErrorEnvelope, mcpTools, SuccessEnvelope } from "./surfaces.js";
 
 const names = Type.Array(P.Name);
@@ -202,8 +203,19 @@ const supplemental = {
       "deterministic_failure",
       "suspected_flaky",
       "confirmed_flaky",
+      "unstable_infrastructure",
     ]),
     runIds: Type.Array(P.id("run")),
+    failureCauses: Type.Array(
+      P.Obj({
+        runId: P.id("run"),
+        attemptId: P.id("att"),
+        stepId: Type.Union([P.Name, Type.Null()]),
+        category: P.Enum(["environment", "product_or_contract", "unknown"]),
+        reasonCode: P.Enum(reasonCodes),
+        contentHash: P.ContentDigest,
+      }),
+    ),
     limitations: Type.Array(P.Description),
     incompatible: Type.Array(P.Obj({ batchId: P.id("bat"), reasons: names })),
   }),

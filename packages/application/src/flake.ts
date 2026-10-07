@@ -1,4 +1,10 @@
-import { type BatchReceipt, ContractError, type Run, validate } from "@testmaster/contracts";
+import {
+  type BatchReceipt,
+  ContractError,
+  type Run,
+  reasonRegistry,
+  validate,
+} from "@testmaster/contracts";
 import { flakeStatistics, semanticHash } from "@testmaster/domain";
 import { runMatrixCell } from "./comparisons.js";
 import { requireEntity, type ServiceContext } from "./context.js";
@@ -39,8 +45,17 @@ export interface FlakeStudyReport {
     | "passing_observed"
     | "deterministic_failure"
     | "suspected_flaky"
-    | "confirmed_flaky";
+    | "confirmed_flaky"
+    | "unstable_infrastructure";
   runIds: string[];
+  failureCauses: {
+    runId: string;
+    attemptId: string;
+    stepId: string | null;
+    category: "environment" | "product_or_contract" | "unknown";
+    reasonCode: string;
+    contentHash: string;
+  }[];
   limitations: string[];
   incompatible: { batchId: string; reasons: string[] }[];
 }
@@ -215,6 +230,68 @@ export class FlakeService {
       else if (run.outcome === "inconclusive") counts.nInconclusive++;
     }
     const stats = flakeStatistics(counts);
+    const failureCauses: FlakeStudyReport["failureCauses"] = [];
+    const environmentReasons: Record<string, true> = {
+      missing_secret: true,
+      credential_revoked: true,
+      manual_auth_required: true,
+      auth_checkpoint_expired: true,
+      worker_lost: true,
+      worker_lease_expired: true,
+      tunnel_lost: true,
+      storage_unavailable: true,
+    };
+    for (const run of runs) {
+      const attempt = this.ctx.database.get(
+        "SELECT id,data_json FROM attempts WHERE workspace_id=? AND run_id=? ORDER BY number LIMIT 1",
+        this.ctx.workspaceId,
+        run.id,
+      );
+      if (!attempt) continue;
+      const value = JSON.parse(String(attempt.data_json)) as { reasonCode?: string };
+      const steps = this.runs.steps(run.id, String(attempt.id));
+      for (const step of steps.filter(
+        (step) => step.status !== "passed" && step.status !== "skipped",
+      )) {
+        const reasonCode = String(step.reasonCode);
+        if (!Object.hasOwn(reasonRegistry, reasonCode)) continue;
+        const error = step.error as { code?: string; message?: string } | null;
+        const transport =
+          reasonCode === "insufficient_evidence" &&
+          error?.message === "HTTP transport did not produce a complete usable response";
+        failureCauses.push({
+          runId: run.id,
+          attemptId: String(attempt.id),
+          stepId: String(step.planStepId),
+          category:
+            environmentReasons[reasonCode] || transport
+              ? "environment"
+              : reasonCode === "assertion_mismatch"
+                ? "product_or_contract"
+                : "unknown",
+          reasonCode,
+          contentHash: semanticHash(step),
+        });
+      }
+      if (
+        !steps.some((step) => step.status !== "passed" && step.status !== "skipped") &&
+        value.reasonCode &&
+        Object.hasOwn(reasonRegistry, value.reasonCode) &&
+        value.reasonCode !== "assertions_satisfied"
+      ) {
+        failureCauses.push({
+          runId: run.id,
+          attemptId: String(attempt.id),
+          stepId: null,
+          category: environmentReasons[value.reasonCode] ? "environment" : "unknown",
+          reasonCode: value.reasonCode,
+          contentHash: semanticHash(value),
+        });
+      }
+    }
+    const infrastructure =
+      failureCauses.some((cause) => cause.category === "environment") &&
+      failureCauses.every((cause) => cause.category === "environment");
     const dates = runs
       .flatMap((run) => (typeof run.createdAt === "string" ? [run.createdAt] : []))
       .sort();
@@ -227,7 +304,12 @@ export class FlakeService {
       identityHash: identity.identityHash,
       window: { from: dates[0] ?? null, to: dates.at(-1) ?? null },
       ...stats,
-      classification: identity.limitations.length ? "insufficient_data" : stats.classification,
+      classification: identity.limitations.length
+        ? "insufficient_data"
+        : infrastructure
+          ? "unstable_infrastructure"
+          : stats.classification,
+      failureCauses,
       runIds: runs.map((run) => run.id),
       limitations: [
         ...identity.limitations,

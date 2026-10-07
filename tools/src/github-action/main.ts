@@ -125,6 +125,7 @@ export async function runAction(env: NodeJS.ProcessEnv = process.env): Promise<n
       "junit-path": result.outputs.junit ?? "",
       "summary-path": result.outputs.summary ?? "",
       "bundle-index-path": result.outputs.bundleIndex ?? "",
+      "report-hash": result.reportHash ?? "",
     };
     for (const [key, value] of Object.entries(outputs)) {
       if (/[\r\n\0]/.test(value)) throw new ContractError("POLICY_DENIED", "Unsafe Action output");

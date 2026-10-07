@@ -695,3 +695,56 @@ it("requires explicit restricted body optin before any request and emits full bo
     "complete-response",
   );
 });
+
+it("emits real HTTP business comparisons and redacts a secret-derived expected value", async () => {
+  let price = "12.50";
+  const base = await serve((_request, response) => {
+    response.setHeader("content-type", "application/json");
+    response.end(JSON.stringify({ price }));
+  });
+  const current = fixture(base);
+  const check: PlanStep = {
+    id: "price",
+    kind: "assertion",
+    operation: "assert",
+    description: "Exact price",
+    input: { responseStepId: "quote", jsonPointer: "/price" },
+    expectation: { predicate: "jsonEquals", value: { literal: "12.50" } },
+  };
+  const steps = [requestStep("quote", []), check];
+  expect(
+    await current.runtime.runSteps(steps, (step) => current.engine.perform(step)),
+  ).toMatchObject({ outcome: "passed" });
+  expect(
+    current.events.find(
+      (event) => event.type === "step.finished" && event.payload.stepId === "price",
+    )?.payload,
+  ).toMatchObject({ observed: "12.50", expected: "12.50" });
+  price = "1.25";
+  const broken = fixture(base);
+  expect(await broken.runtime.runSteps(steps, (step) => broken.engine.perform(step))).toMatchObject(
+    { outcome: "failed", reasonCode: "assertion_mismatch" },
+  );
+  expect(
+    broken.events.find(
+      (event) => event.type === "step.finished" && event.payload.stepId === "price",
+    )?.payload,
+  ).toMatchObject({ observed: "1.25", expected: "12.50" });
+  const secret = fixture(base);
+  const privateCheck: PlanStep = {
+    ...check,
+    expectation: { predicate: "jsonEquals", value: { literal: "canary-secret" } },
+  };
+  secret.runtime.secrets.add("canary-secret");
+  expect(
+    await secret.runtime.runSteps([requestStep("quote", []), privateCheck], (step) =>
+      secret.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "failed" });
+  const payload = secret.events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "price",
+  )!.payload;
+  expect(payload).not.toHaveProperty("observed");
+  expect(payload).not.toHaveProperty("expected");
+  expect(JSON.stringify(secret.events)).not.toContain("canary-secret");
+});

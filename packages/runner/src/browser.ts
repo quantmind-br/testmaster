@@ -349,6 +349,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
           `Predicate ${expectation.predicate} requires an HTTP response`,
         );
     }
+    runtime.recordComparison(observed, expected);
     if (observed !== expected)
       throw new RuntimeError(
         "assertion_mismatch",
@@ -616,7 +617,26 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
             state !== "visible"
           )
             throw new RuntimeError("security_precondition_failed", "Unsupported wait state");
-          await locator.waitFor({ state, timeout: waitTimeout });
+          try {
+            await locator.waitFor({ state, timeout: waitTimeout });
+          } catch (error) {
+            if (
+              error instanceof errors.TimeoutError &&
+              !runtime.signal.aborted &&
+              !locator.page().isClosed()
+            ) {
+              // Re-querying the bound locator fails on a crashed page or detached frame;
+              // only a live, unambiguous observation is a reliable state timeout.
+              if ((await locator.count()) > 1)
+                throw new RuntimeError("assertion_mismatch", "Wait locator is ambiguous", "failed");
+              throw new RuntimeError(
+                "assertion_timeout",
+                "Locator did not reach the required state before the step deadline",
+                "failed",
+              );
+            }
+            throw error;
+          }
         } else {
           const expected = authorizeUrl(
             runtime,
@@ -1148,6 +1168,9 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     });
   }
   try {
+    // Collection can precede the action that first uses a credential.
+    for (const reference of runtime.input.secrets)
+      await runtime.resolve({ secretRef: reference.secretRef });
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
     tempDirectory = await mkdtemp(join(tmpdir(), "testmaster-browser-"));

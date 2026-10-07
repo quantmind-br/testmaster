@@ -56,6 +56,7 @@ export class Runtime {
   readonly variables: Map<string, { value: unknown; sensitive: boolean }>;
   private index = 0;
   private readonly evidence = new Map<string, string[]>();
+  private readonly comparisons = new Map<string, { observed: unknown; expected: unknown }>();
   private activeStep: string | undefined;
   constructor(
     readonly input: RunnerInput,
@@ -86,6 +87,23 @@ export class Runtime {
   }
   scrubSecrets(text: string): string {
     return scrubText(text, [...this.secrets]).text;
+  }
+  recordComparison(observed: unknown, expected: unknown): void {
+    if (!this.activeStep) return;
+    const values = [observed, expected].map((value) => JSON.stringify(value));
+    // Omit oversized or secret-derived comparisons rather than storing a truncated value
+    // that could support a false diagnosis or expose a sensitive assertion input.
+    if (
+      values.some(
+        (value) =>
+          value === undefined || Buffer.byteLength(value) > 8192 || this.scrub(value) !== value,
+      )
+    )
+      return;
+    this.comparisons.set(this.activeStep, {
+      observed: JSON.parse(values[0]!),
+      expected: JSON.parse(values[1]!),
+    });
   }
   async resolve(value: unknown): Promise<unknown> {
     if (!value || typeof value !== "object")
@@ -136,6 +154,7 @@ export class Runtime {
       await this.emit("step.started", { stepId: step.id, index });
       const previousStep = this.activeStep;
       this.activeStep = step.id;
+      this.comparisons.delete(step.id);
       const started = performance.now();
       try {
         await perform(step);
@@ -145,6 +164,7 @@ export class Runtime {
           status: "passed",
           durationMs: Math.round(performance.now() - started),
           evidencePaths: this.evidence.get(step.id) ?? [],
+          ...this.comparisons.get(step.id),
         });
       } catch (error) {
         const reason = this.signal.aborted
@@ -170,11 +190,12 @@ export class Runtime {
             code: error instanceof Error ? error.name : "Error",
             message: this.scrub(error instanceof Error ? error.message : String(error)).slice(
               0,
-              8192,
+              8000,
             ),
           },
           durationMs: Math.round(performance.now() - started),
           evidencePaths: this.evidence.get(step.id) ?? [],
+          ...this.comparisons.get(step.id),
         });
         if (step.required !== false) result = { outcome, reasonCode: reason };
       } finally {

@@ -326,6 +326,16 @@ the proposal manual. `test run --heal propose --wait` proposes only after observ
 `CI=true` denies healing and retries. Controlled-provider journey results test these invariants,
 not live-model repair quality.
 
+An unambiguous locator state wait that exceeds its approved deadline on a live page is
+`failed/assertion_timeout`; a crashed page or detached frame remains an evidence failure.
+Browser and HTTP assertions retain bounded observed/expected comparisons for rules-first
+diagnosis only when neither value is secret-derived or altered by redaction; oversized pairs
+are omitted, not truncated into misleading evidence. The paired Docker controls in
+`validation/journeys/m3-healing-acceptance.docker.test.ts` cover price/permission defects,
+policy-safe selector application versus a wrong button, and observed wait-state equivalence
+within the unchanged ceiling. They are deterministic controlled-provider safety acceptance,
+not live-model quality evidence.
+
 `server start --port 7331` owns the foreground worker and publishes `/v1` plus `/mcp` only on
 `127.0.0.1`. The startup receipt reports the private token file, not its contents; `--print-token`
 is an explicit opt-in. Token hashes, workspace binding, scopes, expiry and revocation live in

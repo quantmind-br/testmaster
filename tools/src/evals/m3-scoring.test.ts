@@ -65,7 +65,7 @@ describe("M3 fixed denominators", () => {
       conservativeCharge: 100,
       unknownCalls: 1,
       unknownCostCalls: 1,
-      measuredCosts: [{ currency: "USD", scale: 6, amount: "20" }],
+      estimatedCosts: [{ currency: "USD", scale: 6, amount: "20" }],
     });
   });
   it("rejects omissions, duplicates and changed eligibility", () => {

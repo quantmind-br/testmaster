@@ -506,9 +506,65 @@ export class ReportsService {
         });
       const timings = sumTimings(recordedTimings);
       const analysis = this.analysis?.get(runId);
+      const restrictedRaw =
+        evidence?.manifest.entries
+          .filter((entry) => entry.redactionStatus === "restrictedRaw")
+          .map((entry) => entry.relativePath)
+          .sort() ?? [];
+      const traceCollected =
+        evidence?.manifest.entries.some((entry) => entry.kind === "restrictedRaw.trace") ?? false;
+      const resources = this.ctx.database
+        .all(
+          "SELECT r.data_json FROM resources r JOIN attempts a ON a.workspace_id=r.workspace_id AND a.id=r.creator_attempt_id WHERE r.workspace_id=? AND a.run_id=? ORDER BY r.id",
+          this.ctx.workspaceId,
+          runId,
+        )
+        .map((row) => {
+          const resource = JSON.parse(String(row.data_json)) as Record<string, unknown>;
+          const cleanup = resource.cleanupPlan as { stepId?: string };
+          return {
+            resourceId: String(resource.id),
+            resourceType: String(resource.resourceType),
+            state: String(resource.state),
+            creatorAttemptId: String(resource.creatorAttemptId),
+            stepId: cleanup.stepId ?? null,
+            handleRef: typeof resource.handleRef === "string" ? resource.handleRef : null,
+          };
+        });
       entries.push({
         run,
         result,
+        ...(restrictedRaw.length
+          ? {
+              privacy: {
+                restrictedRawArtifacts: restrictedRaw,
+                knownResidues: traceCollected
+                  ? [
+                      "Playwright trace DOM snapshots may contain secrets and personal data.",
+                      "Playwright trace network requests, responses and embedded page source may contain secrets and personal data.",
+                      "Playwright trace screenshots may contain unknown personal data in images and canvas.",
+                    ]
+                  : [],
+                limitations: [
+                  "Restricted raw evidence has no certified complete redaction and is omitted from sanitized exports.",
+                  "Encoded values and unknown personal data in images, canvas or audio may escape redaction; minimize collection and use manual review.",
+                ],
+              },
+            }
+          : {}),
+        ...(resources.length
+          ? {
+              externalEffects: {
+                uncertain: resources.some((resource) =>
+                  ["planned", "uncertain", "orphaned"].includes(resource.state),
+                ),
+                resources,
+                limitations: [
+                  "Cancellation and retry do not imply rollback; exactly-once effects require target idempotency support.",
+                ],
+              },
+            }
+          : {}),
         title: String(test.name),
         projectId: String(test.projectId),
         environment: String((run.matrixCell as Record<string, unknown>).environmentName),

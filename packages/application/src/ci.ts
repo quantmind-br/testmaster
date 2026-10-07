@@ -240,6 +240,17 @@ export class CiService {
               : new ContractError("UNAVAILABLE", "CI interrupted");
         }
         snapshot = await this.reports.snapshot(receipt.batchId);
+        if (failure) {
+          snapshot.completeness = {
+            state: "partial",
+            reasons: [
+              ...snapshot.completeness.reasons,
+              failure.details.waitTimeout === true
+                ? "ci-wait-deadline-exceeded"
+                : "ci-wait-interrupted",
+            ],
+          };
+        }
         snapshot.selection = {
           ...snapshot.selection,
           excluded: receipt.excluded.map((item) => ({

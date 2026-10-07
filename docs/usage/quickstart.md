@@ -83,6 +83,9 @@ Latest diagnosis is enrichment, never a replacement verdict. Applications export
 formats should capture `reports.snapshot(id)` once and pass it to `reports.exportCaptured`.
 CI exports use `artifacts.exportSanitized(runId, outDir)`: restricted raw entries are omitted
 with source snapshot/hash provenance, not relabelled as redacted. Original bundles are immutable.
+If the CI wait deadline expires during collection, the exported report stays partial with
+`ci-wait-deadline-exceeded` even when bounded cancellation subsequently commits the retained
+evidence. JSON and JUnit remain non-approving; collection completion does not erase the timeout.
 HTTP artifact downloads are attachment-only, private/no-store, nosniff and sandboxed.
 
 ```bash
@@ -96,9 +99,20 @@ collection stays pending under active execution, legal, shared-reference or back
 maintenance resumes it. Restore reapplies tombstones and deletion operations before admission
 can be reviewed. Old backup bytes are not promised immediate erasure. Deletion needs the named
 `artifacts:delete` authority, not ordinary read/raw permission.
+Status separates `physicalDeletionDeadlineAt` (request + 24 hours with healthy storage and no
+hold; null while a listed hold blocks removal) from `backupExpiryDeadlineAt` (latest recorded
+backup hold expiry). `deadlineReason` explains deferral; neither field promises immediate backup
+erasure. Local Run artifacts are addressable only after publication; distributed in-flight worker
+uploads and S3 version removal remain M4 scope.
 Usage filters apply to immutable model-call totals; lifetime project reservations/budgets remain
 separately labelled `lifetimeBudget`. Unknown tokens/costs stay unknown; money is grouped by
 currency and scale. Reasoning/cache are disclosed components, not extra input/output charges.
+`estimatedCosts` uses each call's frozen `priceTableVersion`; changing current prices never
+revalues historical rows. `billedCosts` is empty and `billingReconciliation.status` is
+`not_requested` until optional external reconciliation exists; divergence is unknown, not zero.
+Older calls without recorded cost provenance appear in `unclassifiedCosts`, not billed totals.
+Aborted/repair/cache-hit calls remain visible. Provider cached input and reasoning tokens are
+components of input/output totals, not extra charges. File export excludes prompts and API keys.
 Production approvals additionally freeze current credential metadata/privilege and effective
 execution limits; rotation, changed limits/body/target or replay of a consumed approval refuses
 execution rather than silently broadening authorization.

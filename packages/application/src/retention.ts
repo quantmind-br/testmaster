@@ -72,6 +72,10 @@ export class RetentionService {
           requestedBy: this.ctx.principalId,
           revokedAt: now,
           physicalState: "pending",
+          physicalDeletionDeadlineAt: new Date(Date.parse(now) + 86400000).toISOString(),
+          backupExpiryDeadlineAt: null,
+          deadlineReason:
+            "Active data deletion is due within 24 hours while storage is healthy and no hold blocks collection.",
           backupHolds: [],
           errors: [],
         });
@@ -119,6 +123,10 @@ export class RetentionService {
         requestedBy: this.ctx.principalId,
         revokedAt: now,
         physicalState: "pending",
+        physicalDeletionDeadlineAt: new Date(Date.parse(now) + 86400000).toISOString(),
+        backupExpiryDeadlineAt: null,
+        deadlineReason:
+          "Active data deletion is due within 24 hours while storage is healthy and no hold blocks collection.",
         backupHolds: [],
         errors: [],
       });
@@ -206,7 +214,24 @@ export class RetentionService {
         )
           holds.push("shared_blob_reference");
       }
-    return { ...operation, backupHolds: holds } as unknown as DeletionOperation;
+    const backupExpiries = holds
+      .flatMap((hold) => {
+        const timestamp = hold.startsWith("backup:") ? hold.split(":until:")[1] : undefined;
+        return timestamp && Number.isFinite(Date.parse(timestamp)) ? [timestamp] : [];
+      })
+      .sort();
+    const held = holds.length > 0;
+    return {
+      ...operation,
+      backupHolds: holds,
+      physicalDeletionDeadlineAt: held
+        ? null
+        : new Date(Date.parse(String(operation.revokedAt)) + 86400000).toISOString(),
+      backupExpiryDeadlineAt: backupExpiries.at(-1) ?? null,
+      deadlineReason: held
+        ? "Physical removal is deferred by the listed holds; backup expiry is separate and restore must reapply tombstones."
+        : "Active data deletion is due within 24 hours while storage is healthy; backup copies are not promised immediate erasure.",
+    } as unknown as DeletionOperation;
   }
   private fixtureDeletionHolds(fixture: FixtureInput): string[] {
     const holds: string[] = [];
