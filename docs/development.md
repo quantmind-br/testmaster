@@ -69,6 +69,12 @@ The destination must not exist and is created with mode `0700`; installation rej
 tar paths, escaping symlinks, hardlinks/devices, archive/hash mismatches and mismatched Docker
 image IDs. It executes no package lifecycle scripts. Node 24 and hardened Docker remain host
 prerequisites. The installer verifies all image archives before loading either image.
+Locked image IDs are the IDs reported by Docker's containerd image store (`docker info`
+driver type `io.containerd.snapshotter.v1`, the default for new Docker 29 installations); the
+classic store assigns other IDs to the same archive, so installation fails with `No such image`.
+GitHub's `ubuntu-24.04` runner (Docker 28.0.4) uses the classic store: the acceptance workflow
+enables `features.containerd-snapshotter` in `/etc/docker/daemon.json` and restarts Docker
+before installing.
 
 The runtime preserves monorepo-relative lookups for contract schemas/OpenAPI, both SQL migration
 trees, image lock/seccomp profile, managed agent skill content and the runner harness. Source,

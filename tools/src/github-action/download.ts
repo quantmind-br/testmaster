@@ -58,34 +58,39 @@ export async function downloadEnvelope(input: DownloadEnvelopeInput): Promise<st
     { headers, redirect: "error" },
   );
   if (!runResponse.ok) throw new ActionInputError("UNAVAILABLE", "Workflow identity lookup failed");
-  const run = (await runResponse.json()) as Record<string, unknown>;
+  const run = (await runResponse.json()) as {
+    head_sha?: unknown;
+    event?: unknown;
+    repository?: { id?: unknown; full_name?: unknown };
+    head_repository?: { full_name?: unknown } | null;
+    pull_requests?: unknown;
+  };
   // A pull_request run executes the synthetic merge checkout while GitHub records the PR head as
   // the run's head_sha; the published check targets that assessed head, never the merge commit.
   if (
     run.head_sha !== input.assessedSha ||
-    !["workflow_dispatch", "pull_request"].includes(String(run.event))
+    !["workflow_dispatch", "pull_request"].includes(String(run.event)) ||
+    run.repository?.full_name !== input.repository
   )
     throw new ActionInputError(
       "POLICY_DENIED",
       "Workflow SHA/event differs from publication context",
     );
   if (run.event === "pull_request") {
+    // The workflow-run API identifies PR head repositories only by id/url/name (no full_name);
+    // head_repository is the fork for fork PRs, whose pull_requests list is also empty.
+    const repositoryId = run.repository.id;
+    const sameRepository = (pr: unknown): boolean => {
+      if (!pr || typeof pr !== "object" || !("head" in pr)) return false;
+      const head = pr.head as { sha?: unknown; repo?: { id?: unknown } | null } | null;
+      return head?.sha === input.assessedSha && head.repo?.id === repositoryId;
+    };
     if (
+      typeof repositoryId !== "number" ||
+      run.head_repository?.full_name !== input.repository ||
       !Array.isArray(run.pull_requests) ||
       !run.pull_requests.length ||
-      run.pull_requests.some(
-        (pr: unknown) =>
-          !pr ||
-          typeof pr !== "object" ||
-          !("head" in pr) ||
-          !pr.head ||
-          typeof pr.head !== "object" ||
-          !("repo" in pr.head) ||
-          !pr.head.repo ||
-          typeof pr.head.repo !== "object" ||
-          !("full_name" in pr.head.repo) ||
-          pr.head.repo.full_name !== input.repository,
-      )
+      !run.pull_requests.every(sameRepository)
     )
       throw new ActionInputError(
         "POLICY_DENIED",
