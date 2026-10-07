@@ -112,7 +112,8 @@ export function ciCommands(program: Command, runtime: Runtime): void {
       .requiredOption("--runtime-tag <tag>")
       .requiredOption("--runtime-assets <json-array>")
       .requiredOption("--runtime-manifest-sha256 <hash>")
-      .option("--output <path>")
+      // `--output` is the global format option; a subcommand `--output` would be shadowed.
+      .option("--workflow-file <path>")
       .option("--overwrite"),
     async (rt, _args, options) => {
       const reference = required(options, "actionRef");
@@ -132,7 +133,7 @@ export function ciCommands(program: Command, runtime: Runtime): void {
         runtimeAssets: assets as string[],
         manifestSha256: required(options, "runtimeManifestSha256"),
       });
-      const path = rt.path(string(options, "output") ?? ".github/workflows/testmaster.yml");
+      const path = rt.path(string(options, "workflowFile") ?? ".github/workflows/testmaster.yml");
       await mkdir(dirname(path), { recursive: true, mode: 0o700 });
       await writeFile(path, content, {
         mode: 0o600,

@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
@@ -95,6 +95,41 @@ describe("CLI machine output and offline authoring", () => {
       unresolvedPreconditions: [],
     });
     expect(await readdir(root)).toEqual(["plan.json"]);
+  });
+  it("writes the GitHub workflow to an explicit file without colliding with the output format", async () => {
+    const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
+    roots.push(root);
+    const result = await invoke([
+      "--json",
+      "--cwd",
+      root,
+      "ci",
+      "init",
+      "github",
+      "--action-ref",
+      `quantmind-br/testmaster@${"a".repeat(40)}`,
+      "--setup-script",
+      "ci/setup.sh",
+      "--runtime-repo",
+      "quantmind-br/testmaster",
+      "--runtime-tag",
+      "runtime-test",
+      "--runtime-assets",
+      JSON.stringify([
+        "manifest.json",
+        "runtime.tar.gz",
+        "testmaster-runner.tar.gz.part-0000",
+        "testmaster-runner-python.tar.gz.part-0000",
+      ]),
+      "--runtime-manifest-sha256",
+      "b".repeat(64),
+      "--workflow-file",
+      "workflows/custom.yml",
+    ]);
+    expect(result.exit).toBe(0);
+    expect(result.document.data).toMatchObject({ path: join(root, "workflows/custom.yml") });
+    const workflow = JSON.parse(await readFile(join(root, "workflows/custom.yml"), "utf8"));
+    expect(Object.keys(workflow.jobs)).toEqual(["execute", "publish"]);
   });
   it("does not turn future capabilities into success even in dry-run", async () => {
     const result = await invoke(["--json", "schedule", "create", "--dry-run"]);
