@@ -59,6 +59,15 @@ describe("operational public GitHub onboarding", () => {
     expect(publisher.env.TESTMASTER_WORKFLOW_RUN_ID).toBe("${{ github.run_id }}");
     expect(publisher.env.TESTMASTER_EXECUTION_JOB_ID).toBe("${{ needs.execute.outputs.job-id }}");
   });
+  it("uses only contexts GitHub allows at job level", () => {
+    // Job env/if/outputs are evaluated before a runner exists; `runner.*` there makes the
+    // whole workflow file invalid.
+    const workflow = JSON.parse(githubWorkflow(options));
+    for (const job of Object.values(workflow.jobs) as Record<string, unknown>[]) {
+      const jobLevel = JSON.stringify({ env: job.env, if: job.if, outputs: job.outputs });
+      expect(jobLevel).not.toMatch(/\$\{\{[^}]*\brunner\./u);
+    }
+  });
   it.each([
     "../setup.sh",
     "/setup.sh",

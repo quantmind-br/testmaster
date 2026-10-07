@@ -42,14 +42,16 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
     "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)";
   const assessed = expression("github.event.pull_request.head.sha || github.sha");
   const checkout = expression("github.sha");
+  // Job-level `env` cannot read the `runner` context, so runner-temp paths are exported by
+  // the first step of each job instead.
   const env = {
     TESTMASTER_OFFLINE: "true",
-    TESTMASTER_DATA_DIR: expression("runner.temp") + "/testmaster-execution-data",
-    TESTMASTER_RUNTIME_DIR: expression("runner.temp") + "/testmaster-runtime",
-    TESTMASTER_CLI: expression("runner.temp") + "/testmaster-runtime/apps/cli/dist/main.js",
-    TESTMASTER_RELEASE_DIR: expression("runner.temp") + "/testmaster-release",
     TESTMASTER_MANIFEST_SHA256: manifestSha256,
   };
+  const paths = (data: string) => ({
+    name: "Configure TestMaster paths",
+    run: `set -euo pipefail\n{\n  printf 'TESTMASTER_DATA_DIR=%s\\n' "$RUNNER_TEMP/${data}"\n  printf 'TESTMASTER_RUNTIME_DIR=%s\\n' "$RUNNER_TEMP/testmaster-runtime"\n  printf 'TESTMASTER_CLI=%s\\n' "$RUNNER_TEMP/testmaster-runtime/apps/cli/dist/main.js"\n  printf 'TESTMASTER_RELEASE_DIR=%s\\n' "$RUNNER_TEMP/testmaster-release"\n} >> "$GITHUB_ENV"`,
+  });
   const node = {
     uses: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
     with: { "node-version": "24" },
@@ -94,6 +96,7 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
           "checkout-sha": checkout,
         },
         steps: [
+          paths("testmaster-execution-data"),
           {
             uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
             with: { "persist-credentials": false },
@@ -154,11 +157,9 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
         "runs-on": "ubuntu-24.04",
         "timeout-minutes": 30,
         permissions: { contents: "read", actions: "read", checks: "write" },
-        env: {
-          ...env,
-          TESTMASTER_DATA_DIR: expression("runner.temp") + "/testmaster-publisher-data",
-        },
+        env,
         steps: [
+          paths("testmaster-publisher-data"),
           trusted,
           node,
           store,
