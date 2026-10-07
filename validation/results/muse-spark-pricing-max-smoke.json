@@ -1,0 +1,155 @@
+{
+ "schemaVersion": "1.0.0",
+ "observedAt": "2026-10-07T19:43:56.064Z",
+ "scenario": "operator profile ~/.config/testmaster (quantforge muse-spark-1.3, profile reasoningEffort xhigh, price table from models.dev meta/muse-spark-1.3) with no project budget set and consent without unknown-cost grant; two built Application.model.complete calls (profile effort, then override max) through an inspecting forwarder to real QuantForge",
+ "priceSource": {
+  "tool": "~/dev/skills/models-dev (models.dev api.json)",
+  "provider": "meta",
+  "model": "muse-spark-1.3",
+  "perMillionUSD": {
+   "input": 1.25,
+   "output": 4.25,
+   "cacheRead": 0.15
+  },
+  "limits": {
+   "context": 1048576,
+   "output": 131072
+  },
+  "reasoningEfforts": [
+   "minimal",
+   "low",
+   "medium",
+   "high",
+   "xhigh",
+   "max"
+  ]
+ },
+ "requests": [
+  {
+   "keys": [
+    "messages",
+    "model",
+    "reasoning_effort",
+    "response_format"
+   ],
+   "model": "muse-spark-1.3",
+   "reasoningEffort": "xhigh",
+   "status": 200,
+   "durationMs": 5908,
+   "usage": {
+    "completion_tokens": 644,
+    "total_tokens": 854,
+    "prompt_tokens": 210,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 593
+    }
+   },
+   "reasoningObserved": true
+  },
+  {
+   "keys": [
+    "messages",
+    "model",
+    "reasoning_effort",
+    "response_format"
+   ],
+   "model": "muse-spark-1.3",
+   "reasoningEffort": "max",
+   "status": 200,
+   "durationMs": 6732,
+   "usage": {
+    "completion_tokens": 553,
+    "total_tokens": 763,
+    "prompt_tokens": 210,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 504
+    }
+   },
+   "reasoningObserved": true
+  }
+ ],
+ "results": [
+  {
+   "requested": "profile",
+   "output": {
+    "amount": 1234,
+    "currency": "USD",
+    "scale": 2
+   },
+   "cost": {
+    "amount": "3000",
+    "currency": "USD",
+    "scale": 6
+   }
+  },
+  {
+   "requested": "max",
+   "output": {
+    "amount": 1234,
+    "currency": "USD",
+    "scale": 2
+   },
+   "cost": {
+    "amount": "2613",
+    "currency": "USD",
+    "scale": 6
+   }
+  }
+ ],
+ "usage": {
+  "tokenBudget": {
+   "limit": null,
+   "used": 1617,
+   "remaining": null
+  },
+  "remaining": null,
+  "calls": [
+   {
+    "outcome": "success",
+    "cost": {
+     "amount": "3000",
+     "currency": "USD",
+     "scale": 6
+    },
+    "costBasis": "estimated",
+    "priceTableVersion": "models.dev meta/muse-spark-1.3 2026-10-07",
+    "usage": {
+     "cachedInputTokens": 0,
+     "inputTokens": 210,
+     "outputTokens": 644,
+     "reasoningTokens": 593
+    }
+   },
+   {
+    "outcome": "success",
+    "cost": {
+     "amount": "2613",
+     "currency": "USD",
+     "scale": 6
+    },
+    "costBasis": "estimated",
+    "priceTableVersion": "models.dev meta/muse-spark-1.3 2026-10-07",
+    "usage": {
+     "cachedInputTokens": 0,
+     "inputTokens": 210,
+     "outputTokens": 553,
+     "reasoningTokens": 504
+    }
+   }
+  ]
+ },
+ "checks": [
+  "Cost 3000 micro-USD = ceil(210 x 1.25 + 644 x 4.25); 2613 = ceil(210 x 1.25 + 553 x 4.25).",
+  "tokenBudget.limit is null and both calls were admitted without budget set; before this change the same profile without budget failed with QUOTA_EXCEEDED (default 100000-token ceiling)."
+ ],
+ "limitations": [
+  "models.dev lists Meta's price, not a QuantForge invoice; costs are local estimates.",
+  "Smoke only; not model-quality evidence."
+ ]
+}

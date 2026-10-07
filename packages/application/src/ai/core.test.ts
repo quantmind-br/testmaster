@@ -149,8 +149,8 @@ it("uses profile reasoning effort unless an application call overrides it", asyn
     data: "Return Money JSON",
   };
   await f.app.model.complete(input);
-  await f.app.model.complete({ ...input, reasoningEffort: "high" });
-  expect(f.payloads.map((payload) => payload.reasoning_effort)).toEqual(["xhigh", "high"]);
+  await f.app.model.complete({ ...input, reasoningEffort: "max" });
+  expect(f.payloads.map((payload) => payload.reasoning_effort)).toEqual(["xhigh", "max"]);
   const records = f.app.usage.get({ projectId: f.projectId }).calls;
   expect(records[0]?.modelConfigHash).not.toBe(records[1]?.modelConfigHash);
 });

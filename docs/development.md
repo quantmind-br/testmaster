@@ -307,10 +307,13 @@ operator policy's `allowedModelProviders`, then explicitly `consent grant --prov
 --data-class documents requirements --allow-unknown-cost` for an unpriced provider before
 normalization/planning. Unknown-cost consent defaults to false, is stored with data-class
 consent, audited by its digest, and revoked with the grant. Repo content cannot configure
-providers or tools. Prices remain `unknown`, never zero; monetary ceilings refuse unknown
-reservations. `budget set --tokens N` (or authenticated `POST /v1/projects/{id}/budget`
-with `{ "tokens": N }` and an Idempotency-Key) sets the independent cumulative project
-input+output quota. The initial ceiling is 100,000 tokens; reservations atomically charge
+providers or tools. Prices remain `unknown`, never zero, unless the profile declares a price
+table (`prices.<model>`: `currency`, `scale`, integer `inputPerMillion`/`outputPerMillion`,
+optional `cacheReadPerMillion` applied only to provider-reported cached input, and `version`
+naming its source); monetary ceilings refuse unknown reservations. No token or monetary
+ceiling exists by default. `budget set --tokens N` (or authenticated `POST /v1/projects/{id}/budget`
+with `{ "tokens": N }` and an Idempotency-Key) opts into an independent cumulative project
+input+output quota; until then `tokenBudget.limit` is null. Reservations atomically charge
 conservative prompt bytes plus maximum output, then reconcile measured tokens. Two concurrent
 model compute slots per project bound even unpriced/local requests; settlement/release frees
 a slot. Lost usage retains its conservative token charge. `usage` reports tokenBudget, model wall runtimeMs, and
@@ -579,7 +582,7 @@ them; an operator must inspect preserved data before attempting a corrected upgr
 ### Provider-controlled generation
 
 Model requests contain model/messages and, when needed, response_format/tools and
-reasoning_effort. Configure reasoningEffort (low, medium, high or xhigh) on a model entry in the
+reasoning_effort. Configure reasoningEffort (low, medium, high, xhigh or max) on a model entry in the
 user profile; an explicit ModelService.complete call overrides the model setting. Omission
 uses the provider default. Invalid values are rejected before network access. The effective
 effort participates in the model configuration hash, prompt hash and gateway cache key and

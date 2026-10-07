@@ -579,7 +579,7 @@ export const TraceabilityRecord = Obj({
   evidence: names,
 });
 /** Reasoning efforts an operator may send as `reasoning_effort`; absent means provider default. */
-export const reasoningEfforts = ["low", "medium", "high", "xhigh"] as const;
+export const reasoningEfforts = ["low", "medium", "high", "xhigh", "max"] as const;
 export type ReasoningEffort = (typeof reasoningEfforts)[number];
 export const ModelRequest = Obj({
   purpose: Name,

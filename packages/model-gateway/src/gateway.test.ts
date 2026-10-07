@@ -474,6 +474,51 @@ describe("policy-controlled model requests", () => {
     expect(f.counts().completions).toBe(1);
   });
 
+  it("prices provider-reported cached input at the cache-read rate", async () => {
+    const f = await fixture((_req, res) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          usage: {
+            prompt_tokens: 20,
+            completion_tokens: 10,
+            prompt_tokens_details: { cached_tokens: 15 },
+          },
+        }),
+      ),
+    );
+    const configured = f.options.providers[0];
+    if (!configured) throw new Error("Fixture provider missing");
+    const price = {
+      currency: "USD",
+      scale: 6,
+      inputPerMillion: "1000000",
+      outputPerMillion: "2000000",
+      version: "price-1",
+    };
+    const withCacheRate = new ModelGateway({
+      ...f.options,
+      providers: [
+        { ...configured, prices: { model: { ...price, cacheReadPerMillion: "100000" } } },
+      ],
+    });
+    // 5 uncached x 1 + 15 cached x 0.1 + 10 output x 2 = 26.5 micro-USD, rounded up.
+    expect((await withCacheRate.complete(testRequest)).cost).toEqual({
+      amount: "27",
+      currency: "USD",
+      scale: 6,
+    });
+    const withoutCacheRate = new ModelGateway({
+      ...f.options,
+      providers: [{ ...configured, prices: { model: price } }],
+    });
+    expect((await withoutCacheRate.complete({ ...testRequest, cache: false })).cost).toEqual({
+      amount: "40",
+      currency: "USD",
+      scale: 6,
+    });
+  });
+
   it("does not follow a provider redirect or retry HTTP rejection", async () => {
     const f = await fixture((_req, res) => {
       res.statusCode = 302;

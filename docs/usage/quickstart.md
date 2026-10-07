@@ -122,7 +122,7 @@ execution rather than silently broadening authorization.
 Model providers are declared only in the user profile `~/.config/testmaster/profiles.json`, allowed by the
 operator policy `~/.config/testmaster/policy.json`, and require explicit consent per project, provider and
 data class. Without consent no byte is sent to the provider. Unpriced models additionally require an
-explicit unknown-cost grant and a cumulative project token ceiling. The current live validation model
+explicit unknown-cost grant. No token or monetary ceiling applies unless you set one. The current live validation model
 is `qwen3.8-flash` on QuantForge, selected explicitly by the operator. Provider availability is checked
 at execution time; configuring a model does not authorize data transfer or establish generation quality.
 
@@ -137,7 +137,10 @@ at execution time; configuring a model does not authorize data transfer or estab
           "kind": "openai-compatible",
           "baseUrl": "https://api.quantforge.com.br/v1",
           "apiKeyEnv": "QUANTFORGE_API_KEY",
-          "models": [{ "id": "qwen3.8-flash", "capabilities": { "structuredJson": true, "toolCalls": true, "contextTokens": 128000, "maxOutputTokens": 8192 } }]
+          "models": [{ "id": "qwen3.8-flash", "capabilities": { "structuredJson": true, "toolCalls": true, "contextTokens": 128000, "maxOutputTokens": 8192 } }],
+          "prices": {
+            "qwen3.8-flash": { "currency": "USD", "scale": 6, "inputPerMillion": "150000", "outputPerMillion": "470000", "cacheReadPerMillion": "16000", "version": "models.dev alibaba/qwen3.8-flash 2026-10-07" }
+          }
         }
       ]
     }
@@ -145,15 +148,19 @@ at execution time; configuring a model does not authorize data transfer or estab
 }
 ```
 
+Prices are per million tokens in integer minor units of `scale` decimal places (here USD with 6
+places: `150000` is $0.15). They produce local estimates, not provider invoices; `cacheReadPerMillion`
+applies only to cached input the provider reports. With a price table no unknown-cost grant is needed.
+
 To control reasoning effort, add `"reasoningEffort": "medium"` to the model entry
-(alongside `id` and `capabilities`). Supported values: `low`, `medium`, `high`, `xhigh`.
+(alongside `id` and `capabilities`). Supported values: `low`, `medium`, `high`, `xhigh`, `max`.
 When omitted, the provider default applies. TestMaster sends `reasoning_effort` only
 when configured; it still omits token ceilings, sampling parameters and `enable_thinking`.
 
 ```bash
 echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.json
-testmaster consent grant --provider quantforge --data-class documents code_summary requirements plans --allow-unknown-cost
-testmaster budget set --tokens 12000000
+testmaster consent grant --provider quantforge --data-class documents code_summary requirements plans
+testmaster budget set --tokens 12000000                    # optional cumulative project token quota
 testmaster source add PRD.md --role prd --format markdown
 testmaster source add openapi.yaml --role api --format openapi
 testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>

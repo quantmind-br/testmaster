@@ -83,6 +83,8 @@ export interface ModelPrice {
   inputPerMillion: string;
   outputPerMillion: string;
   version: string;
+  /** Optional rate for provider-reported cached input tokens; absent prices them as input. */
+  cacheReadPerMillion?: string;
 }
 export interface ProviderConfig {
   id: string;

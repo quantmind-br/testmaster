@@ -493,6 +493,28 @@ describe("SQLite persistence", () => {
     expect(ledger.tokenBudget(ws, project)).toEqual({ limit: 100, used: 90, remaining: 10 });
     expect((await ledger.reserve({ ...request, idempotencyKey: "D" })).ok).toBe(false);
   });
+  it("applies no token quota until the operator sets one", async () => {
+    const { db, ws, project } = await createSeeded();
+    const ledger = new SqliteBudgetLedger(db);
+    const request = {
+      workspaceId: ws,
+      projectId: project,
+      purpose: "plan",
+      provider: "p",
+      model: "m",
+      estimate: "unknown" as const,
+      reservedTokens: 5_000_000,
+    };
+    const first = await ledger.reserve({ ...request, idempotencyKey: "A" });
+    if (!first.ok) throw new Error("Expected an unlimited reservation");
+    expect(ledger.tokenBudget(ws, project)).toEqual({
+      limit: null,
+      used: 5_000_000,
+      remaining: null,
+    });
+    ledger.setTokenLimit(ws, project, 6_000_000);
+    expect((await ledger.reserve({ ...request, idempotencyKey: "B" })).ok).toBe(false);
+  });
   it("stores consent with audit and complete model usage without converting null to zero", async () => {
     const { db, ws, project } = await createSeeded();
     const store = new SqliteConsentStore(db);

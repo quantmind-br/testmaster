@@ -132,20 +132,21 @@ export class SqliteBudgetLedger implements BudgetLedger {
       tokens,
     );
   }
+  /** Cumulative project token quota; `limit: null` means the operator configured none. */
   tokenBudget(workspaceId: string, projectId: string) {
     const limit =
       this.database.get<{ tokens: number }>(
         "SELECT tokens FROM token_budget_limits WHERE workspace_id=? AND project_id=?",
         workspaceId,
         projectId,
-      )?.tokens ?? 100000;
+      )?.tokens ?? null;
     const used =
       this.database.get<{ tokens: number }>(
         "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,CASE WHEN json_type(usage_json,'$.inputTokens')='integer' AND json_type(usage_json,'$.outputTokens')='integer' THEN json_extract(usage_json,'$.inputTokens')+json_extract(usage_json,'$.outputTokens') ELSE CASE WHEN reserved_tokens=0 THEN 100000 ELSE reserved_tokens END END) END),0) AS tokens FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
         workspaceId,
         projectId,
       )?.tokens ?? 0;
-    return { limit, used, remaining: Math.max(0, limit - used) };
+    return { limit, used, remaining: limit === null ? null : Math.max(0, limit - used) };
   }
   async reserve(request: BudgetReserveRequest): Promise<BudgetReserveResult> {
     if (request.estimate !== "unknown") integerMoney(request.estimate);
@@ -177,7 +178,8 @@ export class SqliteBudgetLedger implements BudgetLedger {
           request.projectId,
         )?.count ?? 0;
       if (active >= 2) return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
-      if (tokens > this.tokenBudget(request.workspaceId, request.projectId).remaining)
+      const tokenRemaining = this.tokenBudget(request.workspaceId, request.projectId).remaining;
+      if (tokenRemaining !== null && tokens > tokenRemaining)
         return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
       const limit = this.database.get<{ amount: string; currency: string; scale: number }>(
         "SELECT amount,currency,scale FROM budget_limits WHERE workspace_id=? AND project_id=?",

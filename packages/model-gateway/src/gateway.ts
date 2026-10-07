@@ -106,7 +106,8 @@ export class ModelGateway {
         !Number.isSafeInteger(price.scale) ||
         price.scale < 0 ||
         !/^\d+$/u.test(price.inputPerMillion) ||
-        !/^\d+$/u.test(price.outputPerMillion))
+        !/^\d+$/u.test(price.outputPerMillion) ||
+        (price.cacheReadPerMillion !== undefined && !/^\d+$/u.test(price.cacheReadPerMillion)))
     ) {
       throw new ContractError("INVALID_ARGUMENT", "Invalid model price table");
     }
@@ -316,7 +317,7 @@ export class ModelGateway {
         const usage = parseUsage(raw);
         const cost =
           price && usage.inputTokens !== null && usage.outputTokens !== null
-            ? pricedCost(price, usage.inputTokens, usage.outputTokens)
+            ? pricedCost(price, usage.inputTokens, usage.outputTokens, usage.cachedInputTokens)
             : "unknown";
         await this.options.budgetLedger.settle(reservation.reservationId, usage, cost);
         const result: ModelResult<T> = {
@@ -604,10 +605,24 @@ function parseUsage(raw: Record<string, unknown>): TokenUsage {
   };
 }
 
-function pricedCost(price: ModelPrice, inputTokens: number, outputTokens: number): Cost {
+function pricedCost(
+  price: ModelPrice,
+  inputTokens: number,
+  outputTokens: number,
+  cachedInputTokens?: number | null,
+): Cost {
+  // Only provider-reported cached tokens within the input count use the cache-read rate;
+  // estimates and unreported usage stay at the full input rate.
+  const cached =
+    price.cacheReadPerMillion !== undefined &&
+    typeof cachedInputTokens === "number" &&
+    cachedInputTokens <= inputTokens
+      ? cachedInputTokens
+      : 0;
   // Integer minor units rounded up: reservations cannot understate fractional charges.
   const numerator =
-    BigInt(inputTokens) * BigInt(price.inputPerMillion) +
+    BigInt(inputTokens - cached) * BigInt(price.inputPerMillion) +
+    BigInt(cached) * BigInt(price.cacheReadPerMillion ?? "0") +
     BigInt(outputTokens) * BigInt(price.outputPerMillion);
   return {
     amount: ((numerator + 999_999n) / 1_000_000n).toString(),
