@@ -431,6 +431,32 @@ it("waits for an eventually consistent value within the step deadline but fails 
       ?.payload,
   ).toMatchObject({ observed: "", expected: "saved" });
 });
+it("keeps a stale observation as the mismatch when the final sample read times out", async () => {
+  const message = context.page.locator("message");
+  // The last poll gets only the remaining milliseconds of the deadline; Playwright can time
+  // out that read even though the element is attached and was already observed.
+  let reads = 0;
+  vi.spyOn(message, "innerText").mockImplementation(async () => {
+    if (++reads < 3) return "1.25";
+    throw new errors.TimeoutError("locator.innerText: Timeout 1ms exceeded.");
+  });
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(
+    events.findLast((event) => event.type === "step.finished" && event.payload.stepId === "assert")
+      ?.payload,
+  ).toMatchObject({ observed: "1.25", expected: "saved" });
+  // Without any observation, the read timeout stays a timeout.
+  vi.spyOn(message, "innerText").mockImplementation(async () => {
+    throw new errors.TimeoutError("locator.innerText: Timeout exceeded.");
+  });
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_timeout",
+  });
+});
 it("blocks unauthorized uploads before touching filesystem or target inputs", async () => {
   const upload: PlanStep = {
     id: "upload",

@@ -326,58 +326,68 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     // Eventual consistency (spec 06): poll the predicate until it holds or the step deadline
     // expires, instead of judging a single sample; the last observation is retained.
     const deadline = performance.now() + timeout;
+    let last: { observed: unknown; expected: unknown } | undefined;
     for (let checks = 1; ; checks++) {
       const remaining = Math.max(1, Math.floor(deadline - performance.now()));
       let observed: unknown;
       let expected: unknown;
       let holds: boolean;
-      switch (expectation.predicate) {
-        case "enabled":
-          observed = await locator.isEnabled({ timeout: remaining });
-          expected = true;
-          holds = observed === true;
-          break;
-        case "textEquals":
-          observed = await locator.innerText({ timeout: remaining });
-          expected = await stringValue(expectation.value);
-          holds = observed === expected;
-          break;
-        case "textContains": {
-          const text = await locator.innerText({ timeout: remaining });
-          const part = await stringValue(expectation.value);
-          observed = text;
-          expected = part;
-          holds = text.includes(part);
-          if (holds) return;
-          break;
+      try {
+        switch (expectation.predicate) {
+          case "enabled":
+            observed = await locator.isEnabled({ timeout: remaining });
+            expected = true;
+            holds = observed === true;
+            break;
+          case "textEquals":
+            observed = await locator.innerText({ timeout: remaining });
+            expected = await stringValue(expectation.value);
+            holds = observed === expected;
+            break;
+          case "textContains": {
+            const text = await locator.innerText({ timeout: remaining });
+            const part = await stringValue(expectation.value);
+            observed = text;
+            expected = part;
+            holds = text.includes(part);
+            if (holds) return;
+            break;
+          }
+          case "valueEquals":
+            observed = await locator.inputValue({ timeout: remaining });
+            expected = await stringValue(expectation.value);
+            holds = observed === expected;
+            break;
+          default:
+            throw new RuntimeError(
+              "unsupported_capability",
+              `Predicate ${expectation.predicate} requires an HTTP response`,
+            );
         }
-        case "valueEquals":
-          observed = await locator.inputValue({ timeout: remaining });
-          expected = await stringValue(expectation.value);
-          holds = observed === expected;
-          break;
-        default:
-          throw new RuntimeError(
-            "unsupported_capability",
-            `Predicate ${expectation.predicate} requires an HTTP response`,
-          );
+      } catch (error) {
+        // The final sample can receive only the last milliseconds of the deadline; a read that
+        // times out after an earlier observation leaves that observation as the verdict.
+        if (!(error instanceof errors.TimeoutError) || runtime.signal.aborted || !last) throw error;
+        throw mismatch(last.observed, last.expected, checks - 1);
       }
       if (holds) {
         runtime.recordComparison(observed, expected);
         return;
       }
-      if (performance.now() >= deadline) {
-        runtime.recordComparison(observed, expected);
-        throw new RuntimeError(
-          "assertion_mismatch",
-          runtime.scrub(
-            `Expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)} after ${checks} checks`,
-          ),
-          "failed",
-        );
-      }
+      last = { observed, expected };
+      if (performance.now() >= deadline) throw mismatch(observed, expected, checks);
       await delay(Math.min(100, Math.max(1, deadline - performance.now())));
     }
+  }
+  function mismatch(observed: unknown, expected: unknown, checks: number): RuntimeError {
+    runtime.recordComparison(observed, expected);
+    return new RuntimeError(
+      "assertion_mismatch",
+      runtime.scrub(
+        `Expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)} after ${checks} checks`,
+      ),
+      "failed",
+    );
   }
   async function saveDownload(download: Download, outputName: string): Promise<void> {
     if (
