@@ -1,6 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { afterEach, expect, it, vi } from "vitest";
 import { sha256 } from "./archive.js";
 import { downloadSource, parseDsc, type SourcesIndex, verifySourcesIndex } from "./sources.js";
@@ -55,6 +57,34 @@ it("refuses mismatched source bytes and reuses only checksum-verified cache entr
     ).rejects.toMatchObject({ code: "SOURCE_HASH_MISMATCH" });
     await expect(readFile(join(root, "pkg/other.tar.xz"))).rejects.toThrow();
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("checks compressed source bytes rather than fetch-decoded Content-Encoding payload", async () => {
+  const root = await mkdtemp(join(tmpdir(), "testmaster-source-encoding-test-"));
+  const archive = gzipSync(Buffer.from("checksummed source patch"));
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { "content-encoding": "gzip" });
+    response.end(archive);
+  });
+  const listening = Promise.withResolvers<void>();
+  server.listen(0, "127.0.0.1", listening.resolve);
+  await listening.promise;
+  try {
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Missing source fixture port");
+    const result = await downloadSource(
+      root,
+      "patch.diff.gz",
+      `http://127.0.0.1:${address.port}/patch.diff.gz`,
+      { sha256: sha256(archive), size: archive.length },
+    );
+    expect(result.sha256).toBe(sha256(archive));
+    expect(await readFile(join(root, result.path))).toEqual(archive);
+  } finally {
+    const closed = Promise.withResolvers<void>();
+    server.close(() => closed.resolve());
+    await closed.promise;
     await rm(root, { recursive: true, force: true });
   }
 });
