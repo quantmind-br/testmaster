@@ -17,7 +17,7 @@ export const promptVersions = {
   summarize: "summarize-1",
   classify: "classify-1",
   analyze: "analyze-3-bounded-source-catalog",
-  heal: "heal-1",
+  heal: "heal-2-path-contract-abstention",
 } as const;
 export interface ModelInput {
   projectId: string;

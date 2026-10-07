@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { createServer, type RequestListener, type Server } from "node:http";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { Application } from "@testmaster/application";
 import type { ExecutablePlan, Run } from "@testmaster/contracts";
@@ -75,9 +76,13 @@ async function fixture(
           {
             message: {
               content: JSON.stringify({
-                ...patch,
-                evidenceHandles: ["E1"],
-                explanation: "Controlled-provider replacement; required business oracles unchanged",
+                kind: "patch",
+                patch: {
+                  ...patch,
+                  evidenceHandles: ["E1"],
+                  explanation:
+                    "Controlled-provider replacement; required business oracles unchanged",
+                },
               }),
             },
             finish_reason: "stop",
@@ -577,3 +582,217 @@ it("J07 M3-02 autoapplies observed hidden readiness within the original wait cei
     );
   });
 }, 360000);
+
+it("OPS-014 deterministic analysis timeout preserves terminal execution and source binding", async () => {
+  await journey("m3-analysis-deadline-source", async (session) => {
+    let requests = 0;
+    let hold = true;
+    const target = createServer((_request, response) => {
+      response.setHeader("content-type", "application/json");
+      response.end('{"price":10}');
+    });
+    const provider = createServer(async (request, response) => {
+      if (request.url === "/v1/models") {
+        response.end(JSON.stringify({ data: [{ id: "model" }] }));
+        return;
+      }
+      let raw = "";
+      for await (const chunk of request) raw += String(chunk);
+      requests++;
+      if (hold) return;
+      const data = untrustedData(raw);
+      const measurements = data.measurements as { kind: string; evidenceId: string }[];
+      const source = measurements.find((item) => item.kind === "source");
+      response.setHeader("content-type", "application/json");
+      response.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  failureKind: "unknown",
+                  hypotheses: [],
+                  recommendedAction: "collect_more_evidence",
+                  fixTargetHandle: source?.evidenceId ?? null,
+                  limitations: [],
+                }),
+              },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      );
+    });
+    let app: Application | undefined;
+    try {
+      const url = await listen(target);
+      const providerUrl = await listen(provider);
+      session.env.CI = "false";
+      session.env.TESTMASTER_OFFLINE = "false";
+      session.env.FAKE_KEY = "deterministic-analysis-key";
+      await mkdir(join(session.home, ".config/testmaster"), { recursive: true });
+      await writeFile(
+        join(session.home, ".config/testmaster/profiles.json"),
+        JSON.stringify({
+          defaultProfile: "analysis",
+          profiles: {
+            analysis: { modelProviders: [{ ...testProvider, baseUrl: `${providerUrl}/v1` }] },
+          },
+        }),
+      );
+      await writeFile(
+        join(session.home, ".config/testmaster/policy.json"),
+        JSON.stringify({ allowedModelProviders: ["fake"] }),
+      );
+      const init = await session.init(url);
+      await writeFile(join(session.cwd, "price.ts"), "export function price() { return 10; }\n");
+      execFileSync("git", ["init"], { cwd: session.cwd });
+      execFileSync("git", ["add", "price.ts"], { cwd: session.cwd });
+      execFileSync(
+        "git",
+        [
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@example.invalid",
+          "commit",
+          "-m",
+          "Source fixture",
+        ],
+        { cwd: session.cwd },
+      );
+      app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
+      const projectId = text(init.projectId);
+      app.model.grantConsent(projectId, "fake", ["execution_evidence", "code_summary"], true);
+      const test = await session.createTest(
+        executable("Analysis price", "http", [
+          action("request", "request", { method: "GET", pathSegments: [] }),
+          assertion(
+            "price",
+            { responseStepId: "request", jsonPointer: "/price" },
+            "jsonEquals",
+            10,
+          ),
+        ]),
+      );
+      await writeFile(join(session.cwd, ".gitignore"), ".testmaster/\n");
+      execFileSync("git", ["add", "."], { cwd: session.cwd });
+      execFileSync(
+        "git",
+        [
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@example.invalid",
+          "commit",
+          "-m",
+          "Freeze deterministic run inputs",
+        ],
+        { cwd: session.cwd },
+      );
+      const discovery = await app.discovery.discover({ projectId });
+      const receipt = await app.runs.admit(
+        {
+          testId: text(test.id),
+          environmentId: text(init.environmentId),
+          mode: "replay",
+          healingPolicy: "off",
+          limits: { maxAttempts: 1 },
+        },
+        { wait: true },
+      );
+      await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
+      session.runIds.push(receipt.runId);
+      const run = app.runs.get(receipt.runId);
+      expect(run).toMatchObject({ outcome: "passed", gate: "passed" });
+      const rows = failureRows(app, run.id);
+      const manifest = (await app.artifacts.get(run.id)).manifest;
+      expect(app.database.db.isTransaction).toBe(false);
+      app.close();
+      app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
+      const partial = await session.command([
+        "run",
+        "analyze",
+        run.id,
+        "--model",
+        "--deadline-ms",
+        "100",
+      ]);
+      expect(partial.source).toBe("model");
+      expect(partial.limitations).not.toHaveLength(0);
+      const afterFirst = requests;
+      expect(afterFirst).toBeGreaterThan(0);
+      const repeated = await session.command([
+        "run",
+        "analyze",
+        run.id,
+        "--model",
+        "--deadline-ms",
+        "100",
+      ]);
+      expect(repeated.id).toBe(partial.id);
+      expect(requests).toBe(afterFirst);
+      expect(failureRows(app, run.id)).toEqual(rows);
+      expect((await app.artifacts.get(run.id)).manifest).toEqual(manifest);
+      expect(
+        app.database.get("SELECT COUNT(*) AS n FROM budget_reservations WHERE state='reserved'")?.n,
+      ).toBe(0);
+      expect(app.analysis.get(run.id)?.facts.length).toBeGreaterThan(0);
+      hold = false;
+      const grounded = await session.command([
+        "run",
+        "analyze",
+        run.id,
+        "--model",
+        "--discovery",
+        discovery.job.id,
+      ]);
+      expect(grounded.fixTarget).toMatchObject({
+        codeSnapshotId: discovery.codeSnapshot.id,
+        relativePath: "price.ts",
+        contentHash: discovery.summary.fileRefs.find((ref) => ref.path === "price.ts")!.contentHash,
+      });
+      const beforeNegative = requests;
+      const key = `ai:${app.context.workspaceId}:discovery:${discovery.job.id}`;
+      const stateRow = app.database.get("SELECT value FROM operational_state WHERE key=?", key)!;
+      const state = JSON.parse(String(stateRow.value));
+      const originalProject = state.detail.featureMap.projectId;
+      state.detail.featureMap.projectId = "prj_00000000-0000-4000-8000-000000000090";
+      app.database.run(
+        "UPDATE operational_state SET value=? WHERE key=?",
+        JSON.stringify(state),
+        key,
+      );
+      await expect(
+        app.analysis.analyze(run.id, { model: true, discoveryId: discovery.job.id }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      state.detail.featureMap.projectId = originalProject;
+      state.detail.summary.fileRefs[0].contentHash = "0".repeat(64);
+      app.database.run(
+        "UPDATE operational_state SET value=? WHERE key=?",
+        JSON.stringify(state),
+        key,
+      );
+      await expect(
+        app.analysis.analyze(run.id, { model: true, discoveryId: discovery.job.id }),
+      ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+      expect(requests).toBe(beforeNegative);
+      session.oracles.push({
+        check: "analysisDeadlineSourceBinding",
+        controlledProvider: true,
+        qualityEvidence: false,
+        runId: run.id,
+        timeoutAnalysisId: partial.id,
+        sourceAnalysisId: grounded.id,
+        dispatches: requests,
+      });
+    } finally {
+      app?.close();
+      for (const server of [target, provider]) {
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }
+  });
+}, 240000);

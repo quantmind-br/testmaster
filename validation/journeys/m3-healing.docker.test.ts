@@ -50,15 +50,18 @@ it("M3-02 deterministic controlled-provider Chromium healing preserves original 
             {
               message: {
                 content: JSON.stringify({
-                  changes: [
-                    {
-                      stepId: "save",
-                      path: "/input/locator",
-                      value: { by: "testId", value: "save-renamed" },
-                    },
-                  ],
-                  evidenceHandles: ["E1"],
-                  explanation: "Observed unique renamed save control; business oracle unchanged",
+                  kind: "patch",
+                  patch: {
+                    changes: [
+                      {
+                        stepId: "save",
+                        path: "/input/locator",
+                        value: { by: "testId", value: "save-renamed" },
+                      },
+                    ],
+                    evidenceHandles: ["E1"],
+                    explanation: "Observed unique renamed save control; business oracle unchanged",
+                  },
                 }),
               },
               finish_reason: "stop",
