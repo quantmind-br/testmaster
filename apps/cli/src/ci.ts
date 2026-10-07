@@ -112,6 +112,7 @@ export function ciCommands(program: Command, runtime: Runtime): void {
       .requiredOption("--runtime-tag <tag>")
       .requiredOption("--runtime-assets <json-array>")
       .requiredOption("--runtime-manifest-sha256 <hash>")
+      .requiredOption("--target-url <url>")
       // `--output` is the global format option; a subcommand `--output` would be shadowed.
       .option("--workflow-file <path>")
       .option("--overwrite"),
@@ -132,6 +133,7 @@ export function ciCommands(program: Command, runtime: Runtime): void {
         runtimeTag: required(options, "runtimeTag"),
         runtimeAssets: assets as string[],
         manifestSha256: required(options, "runtimeManifestSha256"),
+        targetUrl: required(options, "targetUrl"),
       });
       const path = rt.path(string(options, "workflowFile") ?? ".github/workflows/testmaster.yml");
       await mkdir(dirname(path), { recursive: true, mode: 0o700 });
@@ -144,7 +146,7 @@ export function ciCommands(program: Command, runtime: Runtime): void {
           path,
           actionRef: reference,
           prerequisites: [
-            "The declared setup script must initialize the application target and TestMaster ci environment with active tests",
+            "The declared setup script must serve the application at the target URL from the checkout and create the TestMaster ci environment with that base URL, network profile local-loopback and active tests",
             "Configure TestMaster / required-gate as the required check with admin enforcement; TestMaster / result is informational",
           ],
         },

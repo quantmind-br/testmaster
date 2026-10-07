@@ -123,6 +123,8 @@ describe("CLI machine output and offline authoring", () => {
       ]),
       "--runtime-manifest-sha256",
       "b".repeat(64),
+      "--target-url",
+      "http://127.0.0.1:18080",
       "--workflow-file",
       "workflows/custom.yml",
     ]);

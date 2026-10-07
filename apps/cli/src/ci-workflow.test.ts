@@ -18,6 +18,7 @@ const options: GithubWorkflowOptions = {
     "testmaster-runner-python.tar.gz.part-0000",
   ],
   manifestSha256: "b".repeat(64),
+  targetUrl: "http://127.0.0.1:18080",
 };
 describe("operational public GitHub onboarding", () => {
   it("isolates assessed execution from pinned clean publication and denies forks before setup/download", () => {
@@ -127,5 +128,20 @@ describe("operational public GitHub onboarding", () => {
     expect(() =>
       githubWorkflow({ ...options, runtimeAssets: ["manifest.json", "runtime.tar.gz"] }),
     ).toThrow();
+  });
+  it.each([
+    "https://staging.example.com",
+    "http://user:secret@127.0.0.1:8080",
+    "file:///etc/passwd",
+    "not a url",
+  ])("refuses target %s that cannot bind CI evidence", (targetUrl) => {
+    expect(() => githubWorkflow({ ...options, targetUrl })).toThrow(/loopback|Invalid target/u);
+  });
+  it("cannot smuggle a workflow expression through the target URL", () => {
+    const workflow = githubWorkflow({
+      ...options,
+      targetUrl: "http://127.0.0.1:8080/${{ secrets.X }}",
+    });
+    expect(workflow).not.toContain("secrets.X }}");
   });
 });

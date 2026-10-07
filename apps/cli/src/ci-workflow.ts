@@ -6,11 +6,34 @@ export interface GithubWorkflowOptions {
   runtimeTag: string;
   runtimeAssets: string[];
   manifestSha256: string;
+  /** Loopback origin the setup script serves from the checkout; only it binds CI evidence. */
+  targetUrl: string;
 }
 const expression = (body: string) => `\${{ ${body} }}`;
+function loopbackTarget(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new ContractError("INVALID_ARGUMENT", "Invalid target URL");
+  }
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)
+  )
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "CI evidence binds only a credential-free loopback target served from the checkout",
+    );
+  // The serialized URL percent-encodes braces, so it cannot form a workflow expression.
+  return url.href;
+}
 export function githubWorkflow(options: GithubWorkflowOptions): string {
   const { actionRef, setupScript, runtimeRepo, runtimeTag, runtimeAssets, manifestSha256 } =
     options;
+  const targetUrl = loopbackTarget(options.targetUrl);
   if (
     !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[a-f0-9]{40}$/u.test(actionRef) ||
     !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(runtimeRepo) ||
@@ -134,6 +157,7 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
               "runtime-manifest": manifest,
               all: "true",
               environment: "ci",
+              "target-url": targetUrl,
               "commit-sha": assessed,
               "checkout-sha": checkout,
               "quarantine-policy": "strict",
