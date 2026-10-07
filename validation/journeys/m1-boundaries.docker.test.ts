@@ -109,6 +109,8 @@ syncBuiltinESMExports();
 it("CLI-003 read-only HOME reports session-only initialization rather than pretending identity was persisted", async () => {
   await journey("cli-003-readonly-home", async (session) => {
     const before = await diskSnapshot(session.home);
+    // Restore the mode the harness created (it follows the caller's umask), not a fixed one.
+    const originalMode = (await stat(session.home)).mode & 0o777;
     await chmod(session.home, 0o555);
     try {
       const identity = await session.command([
@@ -127,7 +129,7 @@ it("CLI-003 read-only HOME reports session-only initialization rather than prete
         /session.only|ephemeral|not.persist/i,
       );
       expect(await files(session.home)).toHaveLength(0);
-      await chmod(session.home, 0o755);
+      await chmod(session.home, originalMode);
       expect(await diskSnapshot(session.home)).toEqual(before);
       session.oracles.push({
         check: "readonlyHomeSessionNotice",
