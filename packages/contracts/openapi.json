@@ -10548,6 +10548,162 @@
         },
         "$defs": {}
       },
+      "AIHealingOutput": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "patch"
+            ],
+            "properties": {
+              "kind": {
+                "const": "patch",
+                "type": "string"
+              },
+              "patch": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "changes",
+                  "evidenceHandles",
+                  "explanation"
+                ],
+                "properties": {
+                  "changes": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "stepId",
+                        "path",
+                        "value"
+                      ],
+                      "properties": {
+                        "stepId": {
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+                          "type": "string"
+                        },
+                        "path": {
+                          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                          "type": "string"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/AIHealingOutput/$defs/T0"
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "patternProperties": {
+                                "^(.*)$": {
+                                  "$ref": "#/components/schemas/AIHealingOutput/$defs/T0"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "evidenceHandles": {
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "pattern": "^E[1-9][0-9]{0,5}$",
+                      "type": "string"
+                    }
+                  },
+                  "explanation": {
+                    "maxLength": 8000,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "reason",
+              "evidenceHandles"
+            ],
+            "properties": {
+              "kind": {
+                "const": "abstain",
+                "type": "string"
+              },
+              "reason": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "evidenceHandles": {
+                "minItems": 1,
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "pattern": "^E[1-9][0-9]{0,5}$",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AIHealingOutput/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/AIHealingOutput/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
       "AIProposalsOutput": {
         "additionalProperties": false,
         "type": "object",
@@ -24279,6 +24435,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -24336,6 +24496,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -24375,6 +24539,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -24432,6 +24600,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -24451,6 +24623,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -24508,6 +24684,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -24619,6 +24799,10 @@
               ],
               "observationSeq": [
                 "runId"
+              ],
+              "codeSnapshotId": [
+                "relativePath",
+                "contentHash"
               ]
             },
             "type": "object",
@@ -24676,6 +24860,10 @@
               "observationSeq": {
                 "minimum": 0,
                 "type": "integer"
+              },
+              "codeSnapshotId": {
+                "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
               }
             }
           },
@@ -24754,6 +24942,10 @@
         "properties": {
           "model": {
             "type": "boolean"
+          },
+          "discoveryId": {
+            "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
           },
           "budget": {
             "additionalProperties": false,
@@ -29375,6 +29567,10 @@
               ],
               "observationSeq": [
                 "runId"
+              ],
+              "codeSnapshotId": [
+                "relativePath",
+                "contentHash"
               ]
             },
             "type": "object",
@@ -29432,6 +29628,10 @@
               "observationSeq": {
                 "minimum": 0,
                 "type": "integer"
+              },
+              "codeSnapshotId": {
+                "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
               }
             }
           }
@@ -31026,6 +31226,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -31083,6 +31287,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -31478,6 +31686,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -31535,6 +31747,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -33441,6 +33657,10 @@
           ],
           "observationSeq": [
             "runId"
+          ],
+          "codeSnapshotId": [
+            "relativePath",
+            "contentHash"
           ]
         },
         "type": "object",
@@ -33498,6 +33718,10 @@
           "observationSeq": {
             "minimum": 0,
             "type": "integer"
+          },
+          "codeSnapshotId": {
+            "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
           }
         },
         "$defs": {}
@@ -48625,6 +48849,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -48682,6 +48910,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -49027,6 +49259,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -49084,6 +49320,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -49764,6 +50004,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -49821,6 +50065,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -51288,6 +51536,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -51345,6 +51597,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -51548,6 +51804,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -51605,6 +51865,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -51778,6 +52042,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -51835,6 +52103,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -60925,6 +61197,10 @@
                         ],
                         "observationSeq": [
                           "runId"
+                        ],
+                        "codeSnapshotId": [
+                          "relativePath",
+                          "contentHash"
                         ]
                       },
                       "type": "object",
@@ -60982,6 +61258,10 @@
                         "observationSeq": {
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "codeSnapshotId": {
+                          "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "type": "string"
                         }
                       }
                     }
@@ -61012,6 +61292,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -61069,6 +61353,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -67312,6 +67600,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -67369,6 +67661,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -67551,6 +67847,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -67608,6 +67908,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -67716,6 +68020,10 @@
                     ],
                     "observationSeq": [
                       "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
                     ]
                   },
                   "type": "object",
@@ -67773,6 +68081,10 @@
                     "observationSeq": {
                       "minimum": 0,
                       "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
                     }
                   }
                 },
@@ -67789,6 +68101,10 @@
                     ],
                     "observationSeq": [
                       "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
                     ]
                   },
                   "type": "object",
@@ -67846,6 +68162,10 @@
                     "observationSeq": {
                       "minimum": 0,
                       "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
                     }
                   }
                 }
@@ -67951,6 +68271,10 @@
                       ],
                       "observationSeq": [
                         "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
                       ]
                     },
                     "type": "object",
@@ -68008,6 +68332,10 @@
                       "observationSeq": {
                         "minimum": 0,
                         "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
                       }
                     }
                   }
@@ -68262,6 +68590,10 @@
                   ],
                   "observationSeq": [
                     "runId"
+                  ],
+                  "codeSnapshotId": [
+                    "relativePath",
+                    "contentHash"
                   ]
                 },
                 "type": "object",
@@ -68319,6 +68651,10 @@
                   "observationSeq": {
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "codeSnapshotId": {
+                    "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
                   }
                 }
               },
@@ -73334,6 +73670,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -73391,6 +73731,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }
@@ -85095,6 +85439,10 @@
                 ],
                 "observationSeq": [
                   "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
                 ]
               },
               "type": "object",
@@ -85152,6 +85500,10 @@
                 "observationSeq": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
                 }
               }
             }

@@ -1,0 +1,158 @@
+{
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "patch"
+      ],
+      "properties": {
+        "kind": {
+          "const": "patch",
+          "type": "string"
+        },
+        "patch": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "changes",
+            "evidenceHandles",
+            "explanation"
+          ],
+          "properties": {
+            "changes": {
+              "minItems": 1,
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "stepId",
+                  "path",
+                  "value"
+                ],
+                "properties": {
+                  "stepId": {
+                    "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+                    "type": "string"
+                  },
+                  "path": {
+                    "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                    "type": "string"
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/T0"
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "patternProperties": {
+                          "^(.*)$": {
+                            "$ref": "#/$defs/T0"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "evidenceHandles": {
+              "minItems": 1,
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "pattern": "^E[1-9][0-9]{0,5}$",
+                "type": "string"
+              }
+            },
+            "explanation": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "reason",
+        "evidenceHandles"
+      ],
+      "properties": {
+        "kind": {
+          "const": "abstain",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        "evidenceHandles": {
+          "minItems": 1,
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "pattern": "^E[1-9][0-9]{0,5}$",
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:AIHealingOutput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

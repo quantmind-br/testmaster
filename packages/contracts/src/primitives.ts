@@ -155,6 +155,8 @@ export const EvidenceRef = Obj(
     attemptId: Type.Optional(id("att")),
     stepId: Type.Optional(Name),
     observationSeq: Type.Optional(Nonnegative),
+    /** Authorized discovery code snapshot; binds an exact file location by relative path and content hash. */
+    codeSnapshotId: Type.Optional(id("csp")),
   },
   {
     minProperties: 1,
@@ -162,6 +164,7 @@ export const EvidenceRef = Obj(
       attemptId: ["runId"],
       stepId: ["runId", "attemptId"],
       observationSeq: ["runId"],
+      codeSnapshotId: ["relativePath", "contentHash"],
     },
   },
 );

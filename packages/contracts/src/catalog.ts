@@ -12,6 +12,18 @@ const names = Type.Array(P.Name);
 /** Model-facing citation of supplied evidence (`E1`, `E2`, …); resolved by the application. */
 const EvidenceHandle = Type.String({ pattern: "^E[1-9][0-9]{0,5}$" });
 const evidenceIds = (minItems: number) => Type.Array(EvidenceHandle, { minItems, maxItems: 100 });
+const HealingPatch = P.Obj({
+  changes: Type.Array(
+    P.Obj({
+      stepId: Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" }),
+      path: P.JsonPointer,
+      value: P.Json,
+    }),
+    { minItems: 1, maxItems: 20 },
+  ),
+  evidenceHandles: evidenceIds(1),
+  explanation: P.Description,
+});
 const supplemental = {
   DocumentValidationInput: P.Obj({
     schema: P.Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
@@ -221,6 +233,8 @@ const supplemental = {
   }),
   AnalysisInput: P.Obj({
     model: Type.Optional(Type.Boolean()),
+    /** Authorized code discovery whose snapshot grounds optional source fix targets. */
+    discoveryId: Type.Optional(P.id("dsc")),
     budget: Type.Optional(
       P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
     ),
@@ -252,18 +266,16 @@ const supplemental = {
     ),
   }),
   HealingRejectInput: P.Obj({ reason: Type.String({ minLength: 1, maxLength: 8000 }) }),
-  HealingPatch: P.Obj({
-    changes: Type.Array(
-      P.Obj({
-        stepId: Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" }),
-        path: P.JsonPointer,
-        value: P.Json,
-      }),
-      { minItems: 1, maxItems: 20 },
-    ),
-    evidenceHandles: evidenceIds(1),
-    explanation: P.Description,
-  }),
+  HealingPatch,
+  /** Model-only healing response: an admissible patch or an evidence-backed abstention. */
+  AIHealingOutput: Type.Union([
+    P.Obj({ kind: Type.Literal("patch"), patch: HealingPatch }),
+    P.Obj({
+      kind: Type.Literal("abstain"),
+      reason: P.Description,
+      evidenceHandles: evidenceIds(1),
+    }),
+  ]),
   QuarantineInput: P.Obj({
     reason: Type.String({ minLength: 1, maxLength: 2000 }),
     expiresAt: P.Timestamp,
