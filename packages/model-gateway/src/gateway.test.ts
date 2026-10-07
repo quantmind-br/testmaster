@@ -237,6 +237,32 @@ describe("policy-controlled model requests", () => {
     expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "invalid", "success"]);
   });
 
+  it("repairs analysis limitations longer than the persisted Analysis can hold", async () => {
+    const output = (limitation: string) => ({
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [limitation],
+    });
+    const f = await fixture((_req, res, _body, n) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: { content: JSON.stringify(output(n === 1 ? "x".repeat(201) : "short")) },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      ),
+    );
+    const result = await f.gateway.complete({ ...testRequest, responseSchema: "AIAnalysisOutput" });
+    expect(result.output).toEqual(output("short"));
+    expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "success"]);
+  });
+
   it("bounds repair feedback for union-heavy schema failures", async () => {
     const step = { id: "s", kind: "action", operation: "request", input: { method: "BREW" } };
     const invalid = {

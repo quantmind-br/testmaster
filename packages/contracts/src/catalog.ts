@@ -258,7 +258,8 @@ const supplemental = {
       "collect_more_evidence",
     ]),
     fixTargetHandle: Type.Union([EvidenceHandle, Type.Null()]),
-    limitations: Type.Array(P.Description, { maxItems: 100 }),
+    /** Persisted verbatim into `Analysis.limitations`, so each item uses that bound (Name). */
+    limitations: Type.Array(P.Name, { maxItems: 100 }),
   }),
   HealingInput: P.Obj({
     budget: Type.Optional(
