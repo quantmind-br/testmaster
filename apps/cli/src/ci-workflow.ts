@@ -99,9 +99,17 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
           paths("testmaster-execution-data"),
           {
             uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-            with: { "persist-credentials": false },
+            // A pull request checks out the synthetic merge commit; depth 2 keeps the assessed PR
+            // head (its second parent) available for the ancestry binding.
+            with: { "persist-credentials": false, "fetch-depth": 2 },
           },
           trusted,
+          {
+            // The trusted distribution is runner tooling, not application source; untracked it
+            // would make every assessed tree dirty and unbound.
+            name: "Exclude trusted distribution from the assessed tree",
+            run: `set -euo pipefail\nexclude=$(git rev-parse --git-path info/exclude)\nmkdir -p "$(dirname "$exclude")"\nprintf '/.testmaster-trusted/\\n' >> "$exclude"`,
+          },
           node,
           store,
           download,

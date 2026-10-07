@@ -108,15 +108,19 @@ The GitHub Action is published from a dedicated distribution commit built by
 `node tools/dist/distribution/action-dist.js CLEAN_SOURCE_ROOT NEW_OUTPUT_DIRECTORY` (builtin-only
 module closure, licenses, hashed `source-commit` provenance; no development `node_modules`).
 Workflows pin the full distribution commit SHA and the runtime manifest SHA-256; tags are
-discovery labels only. `testmaster ci init github --action-ref SHA --setup-script PATH
---runtime-repo OWNER/REPO --runtime-tag TAG --runtime-assets JSON --runtime-manifest-sha256 HEX`
-generates the complete workflow: a fork guard before any download, a `contents: read` execute job
-(credentials not persisted, containerd image store, anonymous hash-verified downloads, runtime
-install, the repository's declared setup script, strict CI, upload of only the sanitized
-envelope bound to run/job/SHA) and a separate `checks: write` publisher that runs trusted pinned
-code in clean state and never executes PR code or loads execution state. It reports the
-informational `TestMaster / result` and the required `TestMaster / required-gate` checks; only
-passed, provenance-bound, complete evidence approves. `examples/github/` is the maintained example.
+discovery labels only. `testmaster ci init github --action-ref OWNER/REPO@SHA --setup-script PATH
+--runtime-repo OWNER/REPO --runtime-tag TAG --runtime-assets JSON --runtime-manifest-sha256 HEX
+[--workflow-file PATH] [--overwrite]` (default `.github/workflows/testmaster.yml`; `--output` is the
+global format option) generates the complete workflow: a fork guard before any download, a
+`contents: read` execute job (credentials not persisted, depth-2 checkout so a pull request's
+assessed head stays reachable from the synthetic merge, containerd image store, anonymous
+hash-verified downloads, runtime install, the repository's declared setup script, strict CI,
+upload of only the sanitized envelope bound to run/job/SHA) and a separate `checks: write`
+publisher that runs trusted pinned code in clean state and never executes PR code or loads
+execution state. Runner-temp paths are exported by each job's first step because job-level `env`
+cannot read the `runner` context. It reports the informational `TestMaster / result` and the
+required `TestMaster / required-gate` checks; only passed, provenance-bound, complete evidence
+approves. `examples/github/` is the maintained example.
 
 
 ## Conventions

@@ -169,6 +169,9 @@ export function resolveRepositoryProvenance(
           untracked: paths.map((path) => {
             const absolute = join(root, path);
             const info = lstatSync(absolute);
+            // Git lists an untracked nested repository as one `dir/` entry; its content is not
+            // hashed, but the entry still marks the tree dirty.
+            if (info.isDirectory()) return { path, hash: null };
             return {
               path,
               hash: semanticHash(
@@ -192,6 +195,7 @@ export function resolveRepositoryProvenance(
     limitations: [
       ...(assessed !== checkout ? ["synthetic-merge-checkout-differs-from-assessed-head"] : []),
       ...(dirtyHash ? ["working-tree-dirty"] : []),
+      ...(paths.some((path) => path.endsWith("/")) ? ["untracked-nested-repository-unhashed"] : []),
     ],
   };
 }

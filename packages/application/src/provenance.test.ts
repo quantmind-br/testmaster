@@ -121,6 +121,16 @@ it("keeps absent repositories unbound and verifies checkout, dirty and ancestor 
     expect(() => resolveRepositoryProvenance(root, { commitSha: "a".repeat(40) })).toThrow(
       expect.objectContaining({ code: "PRECONDITION_FAILED" }),
     );
+    // An untracked nested clone (for example a checked-out tool) is one `dir/` entry.
+    execFileSync("git", ["init", "--quiet", join(root, "nested-tool")]);
+    await writeFile(join(root, "nested-tool", "tool.js"), "tool\n");
+    expect(resolveRepositoryProvenance(root)).toMatchObject({
+      binding: "verified",
+      dirtyHash: expect.any(String),
+      limitations: ["working-tree-dirty", "untracked-nested-repository-unhashed"],
+    });
+    await writeFile(join(root, ".git", "info", "exclude"), "/nested-tool/\n");
+    expect(resolveRepositoryProvenance(root)).toMatchObject({ dirtyHash: null, limitations: [] });
     await writeFile(join(root, ".gitattributes"), "fixture.txt filter=hostile\n");
     git(["config", "filter.hostile.clean", "touch provenance-filter-escaped"]);
     git(["config", "filter.hostile.process", "touch provenance-filter-escaped"]);
