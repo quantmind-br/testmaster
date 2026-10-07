@@ -2027,15 +2027,22 @@
       "sourceFile": "specs/06-ai-and-execution.md",
       "milestone": "M3",
       "ownerRole": "AI",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
         "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
       ],
       "oracle": [
-        "Real Chromium selector drift repaired through separate verification; independent target state remains unwritten under the semantic mutant and the unchanged saved assertion fails. Forbidden assertion/status/timeout patch paths are rejected."
+        "Real controlled-provider Chromium policy application repairs only unique equivalent selector/observed readiness; strict separate verification promotes after pass. Independent price/permission target mutants fail required business assertions and healing refuses semantic_failure; wrong button/unproved wait stay manual without target effects; original failure rows/manifests remain immutable."
       ],
       "evidence": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-price-permission.json",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-selector.json",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-wait.json",
         "validation/journeys/m3-healing.docker.test.ts",
         "packages/application/src/ai/healing.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json"
@@ -2045,16 +2052,49 @@
         "packages/application/src/ai/healing-patch.ts"
       ],
       "note": "Deterministic controlled-provider safety proof, not stochastic healer quality or a paid pilot result.",
-      "blockedReason": "Internal: deterministic selector journey kills an independent persistence mutant, but no retained price/permission semantic-defect offers exercise healing admission/verification; generic persistence safety and patch rejection cannot verify the named price/permission acceptance.",
       "coverage": {
         "positive": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
         ],
         "negative": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
           "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(failed.outcome).toBe(\"failed\");\n          expect(failed.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect((await app.analysis.analyze(failed.id)).failureKind).toBe(\"product_bug\");\n          await expect(app.healing.propose(failed.id)).rejects.toMatchObject({\n            code: \"PRECONDITION_FAILED\",\n            details: { reason: \"semantic_failure\" },\n          });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(refused).toMatchObject({\n          status: \"proposed\",\n          approvalMode: null,\n          verificationRunId: null,\n          reviewerId: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(saves).toBe(beforeSaves);\n        expect(deletes).toBe(beforeDeletes);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(refused).toMatchObject({\n          status: \"proposed\",\n          approvalMode: null,\n          verificationRunId: null,\n        });\n        expect(refused.limitations).toContain(\n          \"No recorded equivalent readiness transition within an unchanged deadline\",\n        );\n        expect(app.tests.get(wrong.id).activeRevisionId).toBe(refused.baseRevisionId);\n        expect(ready).toBe(readyBefore);"
+          },
           {
             "path": "validation/journeys/m3-healing.docker.test.ts",
             "assertion": "expect(verification.outcome).toBe(\"passed\");"
@@ -4563,13 +4603,16 @@
       "ownerRole": "Quality",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
         "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events",
         "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
       ],
       "oracle": [
-        "Real SSE socket resumes persisted cursor without gaps or duplicate terminal events; real waiting-client timeout/signal detaches without implicit cancellation."
+        "Real live Fastify SSE disconnect during a held target request does not cancel; Last-Event-ID reconnect returns exactly durable suffix. Step cancel becomes cancelled, completed pass rejects late cancel unchanged, proven assertion failure remains failed through collection cancel with exactly one terminal and actual Attempt bundle."
       ],
       "evidence": [
+        "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-live-progress-cancel-cas.json",
         "apps/server/src/server.test.ts",
         "validation/journeys/m1-recovery.docker.test.ts",
         "validation/results/cli-001-interruption.json"
@@ -4581,12 +4624,26 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
           "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events"
         ],
         "negative": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
           "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(receipt.runId).phase).not.toBe(\"completed\");\n      expect(\n        app.runs.events(receipt.runId).some((event) => event.type === \"run.cancel_requested\"),\n      ).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(reconnect.frames.map((frame) => frame.event.seq)).toEqual(\n        durable.filter((event) => event.seq > last.event.seq).map((event) => event.seq),\n      );\n      expect([...first.frames, ...reconnect.frames].map((frame) => frame.event.eventId)).toEqual(\n        durable.map((event) => event.id),\n      );\n      expect(durable.map((event) => event.seq)).toEqual(\n        Array.from({ length: durable.length }, (_, index) => index),\n      );\n      expect(durable.filter((event) => event.type === \"run.completed\")).toHaveLength(1);\n      expect(app.runs.get(receipt.runId).outcome).toBe(\"cancelled\");\n      const complete = await execute(app, session, test.id, text(identity.environmentId));\n      expect(complete.outcome).toBe(\"passed\");\n      expect(app.runs.cancel(complete.id)).toMatchObject({\n        result: \"already_terminal\",\n        status: \"passed\",\n      });\n      expect(app.runs.get(complete.id)).toEqual(complete);"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.steps(failed.runId).some((step) => step.status === \"failed\")).toBe(true);\n      const duringCollection = app.runs.cancel(failed.runId);\n      expect(duringCollection.result).toBe(\"requested\");\n      release.resolve();\n      await worker;\n      worker = undefined;\n      hook.mockRestore();\n      hook = undefined;\n      expect(app.runs.get(failed.runId).outcome).toBe(\"failed\");\n      expect(\n        app.runs.events(failed.runId).filter((event) => event.type === \"run.completed\"),\n      ).toHaveLength(1);\n      const collected = await app.artifacts.get(failed.runId);\n      expect(collected.manifest.entries.length).toBeGreaterThan(0);\n      expect(collected.manifest.attemptId).toBe(app.runs.steps(failed.runId)[0]!.attemptId);"
+          },
           {
             "path": "apps/server/src/server.test.ts",
             "assertion": "expect(originalEvents.filter((event) => event.type === \"run.completed\")).toHaveLength(1);"
@@ -4597,7 +4654,7 @@
           }
         ]
       },
-      "blockedReason": "Internal: no retained end-to-end live-progress disconnect with injected duplicate/out-of-order event delivery during step/collection cancel race; finite terminal SSE and waiting-client detachment controls are narrower. External M4: UI reconnect rendering is not exercised."
+      "blockedReason": "External M4: UI snapshot/reconnect rendering and duplicate/out-of-order event consumer handling remain unexercised; no core/UI reorder consumer exists. M3 real server SSE durable-cursor ordering/resume, disconnect without cancellation and step/collection cancel CAS with retained Attempt evidence are covered."
     },
     {
       "id": "J06",
@@ -4837,14 +4894,21 @@
       "ownerRole": "Quality",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
         "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
         "packages/application/src/ai/healing.test.ts::business input replacements require manual review and retain all protected plan content"
       ],
       "oracle": [
-        "Controlled provider repairs one real Chromium selector drift; distinct verification passes, independent persistence mutant fails saved assertion, original failure remains sealed; forbidden patches reject and business input changes remain manual-only."
+        "Real controlled-provider Chromium policy application repairs only unique equivalent selector/observed readiness; strict separate verification promotes after pass. Independent price/permission target mutants fail required business assertions and healing refuses semantic_failure; wrong button/unproved wait stay manual without target effects; original failure rows/manifests remain immutable."
       ],
       "evidence": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-price-permission.json",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-selector.json",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-wait.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
         "validation/journeys/m3-healing.docker.test.ts",
         "packages/application/src/ai/healing.test.ts"
@@ -4853,16 +4917,50 @@
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts"
       ],
-      "blockedReason": "External: paid preregistered closed-loop diagnosis/healing pilot and independent quality/safety review have not run. Internal: deterministic journey exercises manual selector approval, not authorized policy-safe automatic selector/wait application or wrong-button semantic-equivalence rejection.",
+      "blockedReason": "External: paid preregistered closed-loop diagnosis/healing pilot and independent quality/safety review have not run; deterministic controlled-provider policy selector/wait and price/permission controls do not establish live-model quality.",
       "coverage": {
         "positive": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
         ],
         "negative": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
           "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(failed.outcome).toBe(\"failed\");\n          expect(failed.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect((await app.analysis.analyze(failed.id)).failureKind).toBe(\"product_bug\");\n          await expect(app.healing.propose(failed.id)).rejects.toMatchObject({\n            code: \"PRECONDITION_FAILED\",\n            details: { reason: \"semantic_failure\" },\n          });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(refused).toMatchObject({\n          status: \"proposed\",\n          approvalMode: null,\n          verificationRunId: null,\n          reviewerId: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(saves).toBe(beforeSaves);\n        expect(deletes).toBe(beforeDeletes);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(refused).toMatchObject({\n          status: \"proposed\",\n          approvalMode: null,\n          verificationRunId: null,\n        });\n        expect(refused.limitations).toContain(\n          \"No recorded equivalent readiness transition within an unchanged deadline\",\n        );\n        expect(app.tests.get(wrong.id).activeRevisionId).toBe(refused.baseRevisionId);\n        expect(ready).toBe(readyBefore);"
+          },
           {
             "path": "validation/journeys/m3-healing.docker.test.ts",
             "assertion": "expect(proposal.status).toBe(\"proposed\");"
@@ -4890,14 +4988,19 @@
       "ownerRole": "Quality",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
         "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof"
       ],
       "oracle": [
-        "Ten real distinct serial samples yield 5 pass/5 fail with interval and independent alternating status recorder; configuration/runtime differences split identity and quarantine preserves history."
+        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure."
       ],
       "evidence": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-source-bound-flake.json",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-infrastructure-flake.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/flake.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
@@ -4910,13 +5013,53 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
         ],
         "negative": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
           "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).classification).toBe(\"passing_observed\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(combined.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 4,\n        nPass: 2,\n        nFail: 2,\n        nInFlight: 0,\n      });\n      expect(combined.classification).toBe(\"suspected_flaky\");\n      expect(combined.failureRate).toBe(0.5);\n      expect(combined.wilson95!.low).toBeCloseTo(0.1500357, 5);\n      expect(combined.wilson95!.high).toBeCloseTo(0.8499643, 5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(snapshot.repository).toMatchObject({\n          commitSha: shaA,\n          checkoutSha: shaA,\n          binding: \"verified\",\n          dirtyHash: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(before.classification).toBe(\"deterministic_failure\");\n      expect(before.counts).toMatchObject({ nPass: 0, nFail: 2 });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(diagnostic.allMembers[0]!).outcome).toBe(\"passed\");\n      expect(() => app!.flake.report(deterministic.batchId, [diagnostic.batchId])).toThrow(\n        expect.objectContaining({ code: \"INVALID_ARGUMENT\" }),\n      );\n      expect(app.flake.report(deterministic.batchId)).toEqual(before);\n      expect(app.database.get(\"SELECT data_json FROM runs WHERE id=?\", failedRun.id)).toEqual(\n        historical,\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(split.studyIds).toEqual([changed.batchId]);\n      expect(split.incompatible).toEqual([\n        { batchId: second.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      expect(split.counts).toMatchObject({ nPlanned: 2, nPass: 2, nFail: 0 });\n      expect(split.identityHash).not.toBe(combined.identityHash);\n      expect(split.classification).not.toBe(\"confirmed_flaky\");\n      expect(split.window.from! > combined.window.to!).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(revised.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      const environment = app.environments.get(input.environment);\n      app.environments.update(environment.id, { locale: \"pt-BR\" }, environment.version!);\n      const relocated = await app.flake.study(input, { wait: true });\n      expect(app.flake.report(relocated.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).counts).toMatchObject({\n        nPass: 2,\n        nInconclusive: 0,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(report.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 2,\n        nPass: 2,\n        nFail: 0,\n        nInconclusive: 2,\n      });\n      expect(report.classification).toBe(\"unstable_infrastructure\");\n      expect(report.failureCauses).toHaveLength(2);\n      expect(\n        report.failureCauses.every(\n          (cause) =>\n            cause.category === \"environment\" && cause.reasonCode === \"insufficient_evidence\",\n        ),\n      ).toBe(true);\n      expect(report.failureCauses.some((cause) => cause.category === \"product_or_contract\")).toBe(\n        false,\n      );"
+          },
           {
             "path": "validation/journeys/m3-history-selection.docker.test.ts",
             "assertion": "expect(report.failureRate).toBe(0.5);"
@@ -4943,7 +5086,7 @@
           }
         ]
       },
-      "blockedReason": "Internal: local target cohort is source-unbound and reports partially_comparable; no real verified-source-bound cohort combining intermittent and deterministic-defect controls across changed SHA/revision/environment. External M5: Chromium/Firefox/WebKit matrix cohort is not exercised; advanced matrix is outside M3 gate."
+      "blockedReason": "External M5: Chromium/Firefox/WebKit advanced matrix cohort is not exercised; local verified-source-bound M3 cohorts, cause separation, changed SHA/revision/environment windows and historical quarantine controls are retained."
     },
     {
       "id": "J09",
@@ -4977,6 +5120,9 @@
       "ownerRole": "Quality",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-ci-acceptance.docker.test.ts::exports the first assertion failure in strict JSON and JUnit even when a separate diagnostic replay passes",
+        "validation/journeys/m3-ci-acceptance.docker.test.ts::recovers a real pre-action container crash only outside strict CI and retains both recovery and strict nonpass evidence",
+        "validation/journeys/m3-ci-acceptance.docker.test.ts::expires the real CI wait deadline during collection and exports partial nonpass evidence instead of a passed suite",
         "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
         "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
         "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
@@ -4985,9 +5131,13 @@
         "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
       ],
       "oracle": [
-        "Real built CLI nonpass outcomes and XML preserve cleanup/business distinction; partial reporters keep actual failure and unavailable evidence visible."
+        "Healthy strict JSON/JUnit passes; real assertion failure remains failed despite separate diagnostic pass, with report bytes and original Run unchanged. Pre-action real container kill recovers only in non-CI execution; strict crash stays one-Attempt nonpass/no requests. Actual CI wait deadline during collection retains committed evidence with partial completeness and nonpass XML."
       ],
       "evidence": [
+        "validation/journeys/m3-ci-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-ci-first-failure-diagnostic-pass.json",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-ci-pre-action-recovery.json",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-ci-collecting-timeout.json",
         "validation/journeys/m3-ci.docker.test.ts",
         "packages/reporting/src/reporting.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
@@ -4999,9 +5149,15 @@
       "code": ["packages/application/src/ci.ts", "packages/reporting/src/index.ts"],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-ci-acceptance.docker.test.ts::exports the first assertion failure in strict JSON and JUnit even when a separate diagnostic replay passes",
+          "validation/journeys/m3-ci-acceptance.docker.test.ts::recovers a real pre-action container crash only outside strict CI and retains both recovery and strict nonpass evidence",
+          "validation/journeys/m3-ci-acceptance.docker.test.ts::expires the real CI wait deadline during collection and exports partial nonpass evidence instead of a passed suite",
           "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
         ],
         "negative": [
+          "validation/journeys/m3-ci-acceptance.docker.test.ts::exports the first assertion failure in strict JSON and JUnit even when a separate diagnostic replay passes",
+          "validation/journeys/m3-ci-acceptance.docker.test.ts::recovers a real pre-action container crash only outside strict CI and retains both recovery and strict nonpass evidence",
+          "validation/journeys/m3-ci-acceptance.docker.test.ts::expires the real CI wait deadline during collection and exports partial nonpass evidence instead of a passed suite",
           "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
           "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
           "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
@@ -5009,6 +5165,38 @@
           "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(positive.result.gate).toBe(\"passed\");\n        expect(await readFile(join(healthyOutput, \"junit.xml\"), \"utf8\")).not.toContain(\"<failure\");"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(failed.result.gate).toBe(\"failed\");\n        expect(failed.result.exitCode).toBe(1);\n        expect(failedRun.result.outcome).toBe(\"failed\");\n        expect(failedRun.attempts).toHaveLength(1);\n        expect(failedRun.steps.some((step) => step.status === \"failed\")).toBe(true);\n        expect(originalXml).toContain(\"<failure\");\n        expect(originalXml).toContain('name=\"outcome\" value=\"failed\"');"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(diagnosticRun.outcome).toBe(\"passed\");\n        expect(diagnosticRun.id).not.toBe(failedRun.run.id);\n        expect(await session.current(failedRun.run.id)).toEqual(originalRun);\n        expect(await readFile(join(failedOutput, \"report.json\"), \"utf8\")).toBe(originalBytes);\n        expect(await readFile(join(failedOutput, \"junit.xml\"), \"utf8\")).toBe(originalXml);\n        expect(failed.report!.runs.map((entry) => entry.run.id)).not.toContain(diagnosticRun.id);"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(rejected.result.kind).toBe(\"admission_rejected\");\n        expect(rejected.result.gate).toBe(\"failed\");\n        expect(rejected.result.error?.code).toBe(\"POLICY_DENIED\");\n        expect(statuses.length).toBe(hitsBefore);\n        expect(statuses).toEqual([\"ok\", \"degraded\", \"ok\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(recovered.outcome).toBe(\"passed\");\n        expect(recovered.gate).toBe(\"passed\");\n        const attempts = app.database.all(\n          \"SELECT id FROM attempts WHERE run_id=? ORDER BY number\",\n          diagnostic.runId,\n        );\n        expect(attempts).toHaveLength(2);\n        const firstSteps = app.database\n          .all(\"SELECT data_json FROM steps WHERE attempt_id=?\", String(attempts[0]!.id))\n          .map((row) => object(JSON.parse(String(row.data_json))));\n        expect(firstSteps.some((step) => step.status === \"passed\")).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(strict.gate).toBe(\"failed\");\n        expect(strict.exitCode).not.toBe(0);\n        expect(run.result.outcome).not.toBe(\"passed\");\n        expect(run.attempts).toHaveLength(1);\n        expect(target.hits()).toBe(beforeStrict);\n        expect(await readFile(strict.outputs.junit!, \"utf8\")).toContain(\"<error\");\n        expect(launches).toBe(4);"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(healthy.gate).toBe(\"passed\");\n        expect(positive.report!.completeness.state).toBe(\"complete\");"
+          },
+          {
+            "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
+            "assertion": "expect(deadlineAborted).toBe(true);\n        expect(run.run.id).toBe(heldRunId);\n        expect(timeout.error).toEqual({\n          code: \"PRECONDITION_FAILED\",\n          message: \"Wait deadline exceeded\",\n        });\n        expect(timeout.gate).toBe(\"failed\");\n        expect(timeout.exitCode).not.toBe(0);\n        expect(envelope.report!.completeness.state).toBe(\"partial\");\n        expect(envelope.report!.completeness.reasons).toContain(\"ci-wait-deadline-exceeded\");\n        expect(run.steps.some((step) => step.status === \"passed\")).toBe(true);\n        expect(run.evidenceState).toBe(\"committed\");\n        if (run.evidenceState === \"committed\")\n          expect(run.manifest.entries.some((entry) => entry.state === \"available\")).toBe(true);\n        expect(app.runs.events(run.run.id).some((event) => event.type === \"runner.finished\")).toBe(\n          true,\n        );\n        expect(await readFile(timeout.outputs.junit!, \"utf8\")).toContain(\"<error\");"
+          },
           {
             "path": "validation/journeys/m3-ci.docker.test.ts",
             "assertion": "expect(calls).toBe(0);"
@@ -5027,7 +5215,7 @@
           }
         ]
       },
-      "blockedReason": "Internal: no retained generic-CI end-to-end assertion-fail then diagnostic retry-pass plus safe pre-action infra recovery and timeout-during-collecting output controls; strict CI correctly forbids retries, while reporter/reducer unit controls alone do not exercise these J11 paths."
+      "blockedReason": "Internal policy boundary: literal same-Run assertion failure followed by diagnostic retry-pass is not an offered worker path (assertion/passed-step retry is refused); strict CI always has maxAttempts=1. Retained real separate non-CI diagnostic pass leaves strict failure/JSON/JUnit immutable, pre-action infrastructure recovery occurs only outside strict CI, and collecting deadline exports partial nonpass evidence."
     },
     {
       "id": "J12",
@@ -6600,14 +6788,21 @@
       "ownerRole": "AI",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
         "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict",
         "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
       ],
       "oracle": [
-        "Separate bound verification promotes through CAS; original failed rows/manifest survive and semantic mutant fails. Concurrent edits and ordinary promotion bypass are refused."
+        "Real controlled-provider Chromium policy application repairs only unique equivalent selector/observed readiness; strict separate verification promotes after pass. Independent price/permission target mutants fail required business assertions and healing refuses semantic_failure; wrong button/unproved wait stay manual without target effects; original failure rows/manifests remain immutable."
       ],
       "evidence": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-price-permission.json",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-selector.json",
+        "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-wait.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
         "validation/journeys/m3-healing.docker.test.ts",
         "packages/application/src/ai/healing.test.ts"
@@ -6617,17 +6812,51 @@
         "packages/application/src/ai/healing-patch.ts",
         "packages/planner/src/agent/index.ts"
       ],
-      "blockedReason": "External: paid preregistered healing pilot and independent quality/safety review not executed. Internal: no retained real policy-safe automatic apply/wait-equivalence journey; deterministic controlled-provider selector journey uses human approval and a persistence mutant, not the full price/auth drift cohort.",
+      "blockedReason": "External: paid preregistered healing pilot and independent quality/safety review not executed; deterministic controlled-provider policy-safe application and semantic-defect refusals do not establish live-model quality.",
       "coverage": {
         "positive": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
         ],
         "negative": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
           "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict",
           "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(failed.outcome).toBe(\"failed\");\n          expect(failed.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect((await app.analysis.analyze(failed.id)).failureKind).toBe(\"product_bug\");\n          await expect(app.healing.propose(failed.id)).rejects.toMatchObject({\n            code: \"PRECONDITION_FAILED\",\n            details: { reason: \"semantic_failure\" },\n          });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(refused).toMatchObject({\n          status: \"proposed\",\n          approvalMode: null,\n          verificationRunId: null,\n          reviewerId: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(saves).toBe(beforeSaves);\n        expect(deletes).toBe(beforeDeletes);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(refused).toMatchObject({\n          status: \"proposed\",\n          approvalMode: null,\n          verificationRunId: null,\n        });\n        expect(refused.limitations).toContain(\n          \"No recorded equivalent readiness transition within an unchanged deadline\",\n        );\n        expect(app.tests.get(wrong.id).activeRevisionId).toBe(refused.baseRevisionId);\n        expect(ready).toBe(readyBefore);"
+          },
           {
             "path": "validation/journeys/m3-healing.docker.test.ts",
             "assertion": "expect(approved.verificationRunId).not.toBe(failed.id);"
@@ -6649,17 +6878,30 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
+      "status": "verified",
+      "note": "M3 local source-bound cohorts and generated/manual comparison are retained. Real pre-action infrastructure recovery is outside strict samples; assertion failures are not automatically retried, and a distinct diagnostic pass never clears the first failure. Advanced visual/cross-browser execution remains M5, outside this roadmap item’s local acceptance.",
       "scenario": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
         "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
         "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits"
       ],
       "oracle": [
-        "Distinct strict samples, immutable comparison/cursor identity, quarantine and exact small-n bounds are covered locally; changed runtime/environment separates cohorts."
+        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure."
       ],
       "evidence": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-source-bound-flake.json",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-infrastructure-flake.json",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-history-infrastructure-retry.json",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-persisted-batch-comparison.json",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-model-baseline-comparison.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/flake.test.ts",
         "packages/domain/src/flake-statistics.test.ts",
@@ -6674,14 +6916,88 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
         ],
         "negative": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
           "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
           "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).classification).toBe(\"passing_observed\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(combined.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 4,\n        nPass: 2,\n        nFail: 2,\n        nInFlight: 0,\n      });\n      expect(combined.classification).toBe(\"suspected_flaky\");\n      expect(combined.failureRate).toBe(0.5);\n      expect(combined.wilson95!.low).toBeCloseTo(0.1500357, 5);\n      expect(combined.wilson95!.high).toBeCloseTo(0.8499643, 5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(snapshot.repository).toMatchObject({\n          commitSha: shaA,\n          checkoutSha: shaA,\n          binding: \"verified\",\n          dirtyHash: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(before.classification).toBe(\"deterministic_failure\");\n      expect(before.counts).toMatchObject({ nPass: 0, nFail: 2 });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(diagnostic.allMembers[0]!).outcome).toBe(\"passed\");\n      expect(() => app!.flake.report(deterministic.batchId, [diagnostic.batchId])).toThrow(\n        expect.objectContaining({ code: \"INVALID_ARGUMENT\" }),\n      );\n      expect(app.flake.report(deterministic.batchId)).toEqual(before);\n      expect(app.database.get(\"SELECT data_json FROM runs WHERE id=?\", failedRun.id)).toEqual(\n        historical,\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(split.studyIds).toEqual([changed.batchId]);\n      expect(split.incompatible).toEqual([\n        { batchId: second.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      expect(split.counts).toMatchObject({ nPlanned: 2, nPass: 2, nFail: 0 });\n      expect(split.identityHash).not.toBe(combined.identityHash);\n      expect(split.classification).not.toBe(\"confirmed_flaky\");\n      expect(split.window.from! > combined.window.to!).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(revised.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      const environment = app.environments.get(input.environment);\n      app.environments.update(environment.id, { locale: \"pt-BR\" }, environment.version!);\n      const relocated = await app.flake.study(input, { wait: true });\n      expect(app.flake.report(relocated.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).counts).toMatchObject({\n        nPass: 2,\n        nInconclusive: 0,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(report.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 2,\n        nPass: 2,\n        nFail: 0,\n        nInconclusive: 2,\n      });\n      expect(report.classification).toBe(\"unstable_infrastructure\");\n      expect(report.failureCauses).toHaveLength(2);\n      expect(\n        report.failureCauses.every(\n          (cause) =>\n            cause.category === \"environment\" && cause.reasonCode === \"insufficient_evidence\",\n        ),\n      ).toBe(true);\n      expect(report.failureCauses.some((cause) => cause.category === \"product_or_contract\")).toBe(\n        false,\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(runId).outcome).toBe(\"passed\");\n      const attempts = app.database.all(\n        \"SELECT number,outcome FROM attempts WHERE run_id=? ORDER BY number\",\n        runId,\n      );\n      expect(attempts).toHaveLength(2);\n      expect(attempts[0].outcome).not.toBe(\"passed\");\n      expect(attempts[1].outcome).toBe(\"passed\");\n      const report = await app.reports.snapshot(runId);\n      expect(report.runs[0]!.result.firstAttemptOutcome).toBe(\"inconclusive\");\n      expect(report.runs[0]!.result.passedOnRetry).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(study.counts).toMatchObject({ nPlanned: 2, nPass: 2, nFail: 0, nInconclusive: 0 });\n      expect(study.runIds).not.toContain(runId);\n      expect(() => app!.flake.report(strict.batchId, [recovered.batchId])).toThrow(\n        expect.objectContaining({ code: \"INVALID_ARGUMENT\" }),\n      );\n      expect(app.flake.report(strict.batchId)).toEqual(study);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.comparisons.batches(ids[0]!, ids[1]!).comparability).toBe(\"comparable\");\n      const diff = app.comparisons.batches(ids[0]!, ids[2]!);\n      expect(diff.comparability).toBe(\"partially_comparable\");\n      expect(diff.reasons).toEqual([\"member-added-or-removed\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(membership).toEqual(\n        expect.arrayContaining([\n          { field: expect.any(String), left: left.allMembers[1], right: null },\n          { field: expect.any(String), left: null, right: right.allMembers[0] },\n        ]),\n      );\n      const duplicate = app.comparisons.batches(ids[3]!, ids[1]!);\n      expect(duplicate.comparability).toBe(\"incomparable\");\n      expect(duplicate.reasons).toContain(\"ambiguous-logical-member-key\");\n      expect(duplicate.differences.find((row) => row.field.startsWith(\"ambiguous-\"))!.left).toEqual(\n        ambiguous.allMembers,\n      );\n      expect(app.comparisons.runs(left.allMembers[0]!, left.allMembers[1]!).comparability).toBe(\n        \"incomparable\",\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(() => app!.tests.create({ projectId, plan: unsupportedVisual })).toThrow(\n        expect.objectContaining({ code: \"CAPABILITY_UNAVAILABLE\" }),\n      );\n      expect(app.tests.list(projectId).map((test) => test.id)).toEqual(beforeTests);"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(modelDiff.comparability).toBe(\"partially_comparable\");\n      expect(modelDiff.reasons).toContain(\"generationModel-changed\");\n      expect(modelDiff.differences).toEqual(\n        expect.arrayContaining([\n          { field: expect.stringMatching(/-revisionOrigin$/), left: \"generated\", right: \"manual\" },\n          {\n            field: expect.stringMatching(/-generationModelCallId$/),\n            left: expect.stringMatching(/^mdl_/),\n            right: null,\n          },\n        ]),\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(\n        app.database.get(\"SELECT id FROM model_calls WHERE id=?\", String(callDifference.left))?.id,\n      ).toBe(callDifference.left);\n      expect(app.runs.get(generatedRun.allMembers[0]!).outcome).toBe(\"passed\");\n      expect(app.runs.get(manualRun.allMembers[0]!).outcome).toBe(\"passed\");"
+          },
           {
             "path": "validation/journeys/m3-history-selection.docker.test.ts",
             "assertion": "expect(report.failureRate).toBe(0.5);"
@@ -6715,8 +7031,7 @@
             "assertion": "expect(result.classification).toBe(n < 2 ? \"insufficient_data\" : \"passing_observed\");"
           }
         ]
-      },
-      "blockedReason": "Internal: no retained real source-bound cohort with changed assessed SHA plus retry-failure-pass controls fed through FlakeService accumulation; local Docker cohort is deliberately partially comparable, not verified source-bound statistical proof."
+      }
     },
     {
       "id": "M3-04",
@@ -6724,17 +7039,22 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
         "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
         "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff",
         "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
         "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
       ],
       "oracle": [
-        "Preview preserves execution/outbox/approvals counts and target request recorder; real producer executes before consumer; explicit valid reuse skips producer, expired/revoked/failed/foreign reuse refuses before new effects; unmapped diff conservatively selects all."
+        "Built CLI explicit list/chain passes healthy producer/consumer; failed producer blocks required consumer with upstream_failed, zero persisted steps and zero target requests. Failed historical reuse refuses before any admission/effect. Same four-ID list visibly excludes archived/quarantined members and preserves prior results; existing pure preview/diff and valid/expired/revoked reuse controls remain retained."
       ],
       "evidence": [
+        "validation/journeys/m3-selective-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-selective-upstream-failure.json",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-selective-test-list.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/selection.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-selection-preview-reuse.json"
@@ -6743,18 +7063,45 @@
         "packages/application/src/selection.ts",
         "packages/application/src/dependency-reuse.ts"
       ],
-      "blockedReason": "Internal: real successful dependency closure and expired/revoked reuse refusals are exercised, but no retained selective-run failed-producer execution asserts required consumer blocked with zero consumer steps/requests; failed historical reuse admission refusal is narrower than producer-failure propagation.",
       "coverage": {
         "positive": [
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
           "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
           "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff"
         ],
         "negative": [
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
           "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
           "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
           "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(passed.aggregate).gate).toBe(\"passed\");\n        expect(requests).toEqual([\"producer\", \"consumer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(failedProducer.outcome).toBe(\"failed\");\n          expect(blockedConsumer.outcome).toBe(\"blocked\");\n          expect(blockedConsumer.gate).toBe(\"failed\");\n          expect(object(failed.aggregate).gate).toBe(\"failed\");\n          expect(\n            database\n              .prepare(\n                \"SELECT COUNT(*) AS n FROM steps s JOIN attempts a ON a.id=s.attempt_id WHERE a.run_id=?\",\n              )\n              .get(text(blockedConsumer.id))?.n,\n          ).toBe(0);\n          const events = await session.command([\"run\", \"events\", text(blockedConsumer.id)]);\n          expect(JSON.stringify(events)).toContain(\"upstream_failed\");\n          expect(requests).toEqual([\"producer\", \"consumer\", \"producer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(object(refused.error).details).reasonCode).toBe(\"upstream_failed\");\n          expect(database.prepare(\"SELECT COUNT(*) AS n FROM runs\").get()?.n).toBe(beforeRuns);\n          expect(requests).toEqual([\"producer\", \"consumer\", \"producer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(healthy.aggregate).gate).toBe(\"passed\");\n        expect(healthy.memberRuns).toHaveLength(4);\n        expect([...paths].sort()).toEqual([\"/archived\", \"/one\", \"/quarantined\", \"/two\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(selected.aggregate).gate).toBe(\"passed\");\n        expect(selected.memberRuns).toHaveLength(2);\n        expect(\n          items(selected.excluded).map((entry) => ({ testId: entry.testId, reason: entry.reason })),\n        ).toEqual([\n          { testId: tests[2]!.id, reason: \"quarantined\" },\n          { testId: tests[3]!.id, reason: \"archived\" },\n        ]);\n        expect(paths.slice(4).sort()).toEqual([\"/one\", \"/two\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(selectedIds.sort()).toEqual([tests[0]!.id, tests[1]!.id].sort());\n          expect(\n            database\n              .prepare(\"SELECT COUNT(*) AS n FROM runs WHERE batch_id=? AND outcome='passed'\")\n              .get(text(healthy.id))?.n,\n          ).toBe(4);"
+          },
           {
             "path": "validation/journeys/m3-history-selection.docker.test.ts",
             "assertion": "expect(counts()).toEqual(before);"
@@ -8575,14 +8922,19 @@
       "ownerRole": "Operations",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
         "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
         "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
         "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
       ],
       "oracle": [
-        "Real artifact gateway revokes Range immediately, duplicate delete returns same durable operation and isolated restore reapplies expiration; legal holds remain visible pending until released then idempotent GC completes."
+        "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission."
       ],
       "evidence": [
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-privacy-lifecycle-docker-2/created/validation/results/m3-deletion-restart-acceptance.json",
+        "validation/results/m3-acceptance/001-privacy-lifecycle-docker-2/created/validation/results/m3-deletion-secret-restore-acceptance.json",
         "validation/journeys/m3-ci.docker.test.ts",
         "packages/application/src/retention.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
@@ -8594,15 +8946,43 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold"
         ],
         "negative": [
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
           "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(operation).toMatchObject({\n            physicalState: \"pending\",\n            physicalDeletionDeadlineAt: null,\n            backupExpiryDeadlineAt: null,\n          });\n          expect(operation.backupHolds).toContain(hold);\n          expect(app.retention.requestDeletion(artifact.artifactId).id).toBe(id);\n          await expect(app.artifacts.stream(artifact.artifactId)).rejects.toMatchObject({\n            code: \"NOT_FOUND\",\n          });"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(app.retention.deletionStatus(id).physicalState).toBe(\"pending\");\n          expect((await readFile(file)).byteLength).toBe(artifact.sizeBytes);\n          worker.child.kill(\"SIGKILL\");\n          expect((await worker.result).signal).toBe(\"SIGKILL\");\n          app.close();\n          app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });\n          expect(app.retention.deletionStatus(id).physicalState).toBe(\"pending\");\n          app.database.run(\"UPDATE operational_state SET value='released' WHERE key=?\", hold);\n          const released = await session.command([\"artifact\", \"deletion-status\", id]);\n          expect(\n            Date.parse(text(released.physicalDeletionDeadlineAt)) -\n              Date.parse(text(operation.revokedAt)),\n          ).toBe(86400000);\n          expect(released.backupHolds).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect((await session.command([\"artifact\", \"deletion-status\", id])).physicalState).toBe(\n            \"completed\",\n          );\n          await expect(readFile(file)).rejects.toMatchObject({ code: \"ENOENT\" });\n          await expect(app.artifacts.stream(artifact.artifactId)).rejects.toMatchObject({\n            code: \"NOT_FOUND\",\n          });\n          expect(app.database.get(\"SELECT data_json FROM runs WHERE id=?\", runId)?.data_json).toBe(\n            runBefore,\n          );\n          expect(\n            app.database.all(\n              \"SELECT data_json FROM attempts WHERE run_id=? ORDER BY number\",\n              runId,\n            ),\n          ).toEqual(attemptsBefore);"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(await (await app.secrets.release(secret.id)).resolve()).toBe(\n            \"synthetic-revoked-secret\",\n          );"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(operation).toMatchObject({\n            physicalState: \"pending\",\n            physicalDeletionDeadlineAt: null,\n            backupExpiryDeadlineAt: holds.at(-1)!.expires_at,\n          });\n          expect(\n            Date.parse(operation.backupExpiryDeadlineAt!) - Date.parse(operation.revokedAt),\n          ).toBeGreaterThan(0);\n          expect(\n            Date.parse(operation.backupExpiryDeadlineAt!) - Date.parse(operation.revokedAt),\n          ).toBeLessThanOrEqual(86400000);"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(restored.secrets.get(secret.id).revokedAt).not.toBeNull();\n          await expect(restored.secrets.release(secret.id)).rejects.toMatchObject({\n            code: \"POLICY_DENIED\",\n          });\n          await expect(restored.artifacts.stream(artifact.artifactId)).rejects.toMatchObject({\n            code: \"NOT_FOUND\",\n          });\n          expect(restored.retention.deletionStatus(operation.id)).toMatchObject({\n            id: operation.id,\n            revokedAt: operation.revokedAt,\n            physicalState: \"pending\",\n            backupExpiryDeadlineAt: operation.backupExpiryDeadlineAt,\n          });\n          expect(\n            restored.database.get(\"SELECT value FROM operational_state WHERE key='admission'\")\n              ?.value,\n          ).toBe(\"suspended_restore\");"
+          },
           {
             "path": "validation/journeys/m3-ci.docker.test.ts",
             "assertion": "expect(app.retention.requestDeletion(artifact.artifactId).id).toBe(operation.id);"
@@ -8621,7 +9001,7 @@
           }
         ]
       },
-      "blockedReason": "External M4: S3 version/lifecycle removal and server multi-organization export isolation are not exercised. Internal: no retained explicit requested-deletion restart/in-flight upload publication test or complete deadline/status and revoked-secret restore pairing for this full lifecycle scope."
+      "blockedReason": "External M4: no externally addressable in-flight Artifact exists in local M3 (Artifact is published only at final worker commit; source-document upload IDs are not Artifact IDs), so distributed worker upload/delete republication race remains unexercised. S3 version/lifecycle removal and server multi-organization export isolation remain unexercised. Local requested-deletion restart, durable status/separate physical/backup deadlines and artifact/revoked-secret restore controls are retained; backup hold expiry is not automatic erasure of operator-held backup files."
     },
     {
       "id": "OPS-023",
@@ -8900,23 +9280,39 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M3",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
+      "note": "Optional external billing reconciliation is not implemented/exercised: export explicitly reports not_requested, unknown divergence and no billed costs/provider-account read. The normative optional reconciliation clause does not require purchasing/reading billing to verify redacted local ledger acceptance.",
       "scenario": [
+        "packages/application/src/ai/usage-ledger-acceptance.test.ts::exports real aborted, repaired and cached calls without double billing and preserves historical prices",
         "packages/application/src/ai/usage.test.ts::filtered usage reconciles immutable ledger rows, unknown costs and disclosed token components"
       ],
       "oracle": [
-        "Period/project/run/model filters reconcile immutable calls with independently expected token and known/unknown money totals; reasoning separate, lifetime quota separately labeled, raw prompt omitted and reversed period refused."
+        "Real gateway HTTP calls persist structured-output repair attempts, aborted unknown usage, zero-charge cache replay and immutable old/new price versions. Public CLI --out reconciles independently summed ledger IDs/tokens/costs, separates estimated/billed/unknown and cache/reasoning components, and contains no provider key/prompt/rawPrompt despite positive provider capture."
       ],
-      "evidence": ["packages/application/src/ai/usage.test.ts"],
+      "evidence": ["packages/application/src/ai/usage.test.ts", "packages/application/src/ai/usage-ledger-acceptance.test.ts", "validation/results/m3-acceptance/001-privacy-ledger-unit-3/output.log"],
       "code": ["packages/application/src/ai/usage.ts"],
       "coverage": {
         "positive": [
+          "packages/application/src/ai/usage-ledger-acceptance.test.ts::exports real aborted, repaired and cached calls without double billing and preserves historical prices",
           "packages/application/src/ai/usage.test.ts::filtered usage reconciles immutable ledger rows, unknown costs and disclosed token components"
         ],
         "negative": [
+          "packages/application/src/ai/usage-ledger-acceptance.test.ts::exports real aborted, repaired and cached calls without double billing and preserves historical prices",
           "packages/application/src/ai/usage.test.ts::filtered usage reconciles immutable ledger rows, unknown costs and disclosed token components"
         ],
         "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/usage-ledger-acceptance.test.ts",
+            "assertion": "expect(firstRows.map((row) => JSON.parse(row.data_json).outcome).sort()).toEqual([\n      \"invalid\",\n      \"success\",\n    ]);\n    expect(firstRows.map((row) => JSON.parse(row.data_json).repairAttempt).sort()).toEqual([0, 1]);\n    expect((await gateway.complete(input)).cacheHit).toBe(true);\n    expect(completions).toBe(2);"
+          },
+          {
+            "path": "packages/application/src/ai/usage-ledger-acceptance.test.ts",
+            "assertion": "for (const row of firstRows)\n      expect(\n        app.database.get(\"SELECT data_json FROM model_calls WHERE id=?\", row.id)?.data_json,\n      ).toBe(row.data_json);\n    const ledger = app.database\n      .all<{ data_json: string }>(\"SELECT data_json FROM model_calls ORDER BY created_at,id\")\n      .map((row) => JSON.parse(row.data_json));\n    expect(ledger).toHaveLength(5);\n    expect(ledger.filter((call) => call.priceTableVersion === \"price-v1\")).toHaveLength(4);\n    expect(ledger.find((call) => call.priceTableVersion === \"price-v2\").cost.amount).toBe(\"80\");\n    expect(ledger.find((call) => call.outcome === \"cancelled\")).toMatchObject({\n      cost: \"unknown\",\n      costBasis: \"unknown\",\n      usage: { inputTokens: null, outputTokens: null },\n    });\n    expect(ledger.find((call) => call.cacheHit)).toMatchObject({\n      costBasis: \"not_billed\",\n      cost: { amount: \"0\" },\n      reservationId: null,\n      usage: { inputTokens: 0, outputTokens: 0 },\n    });\n    expect(app.database.all(\"SELECT id FROM budget_reservations\")).toHaveLength(4);\n    expect(\n      app.database.get(\"SELECT COUNT(*) AS n FROM budget_reservations WHERE state='settled'\")?.n,\n    ).toBe(4);"
+          },
+          {
+            "path": "packages/application/src/ai/usage-ledger-acceptance.test.ts",
+            "assertion": "expect(exported.calls.map((call: { id: string }) => call.id).sort()).toEqual(\n      ledger.map((call) => call.id).sort(),\n    );\n    expect(exported.estimatedCosts).toEqual([\n      {\n        amount: ledger\n          .filter((call) => call.cost !== \"unknown\")\n          .reduce((sum, call) => sum + BigInt(call.cost.amount), 0n)\n          .toString(),\n        currency: \"USD\",\n        scale: 6,\n      },\n    ]);\n    expect(exported.estimatedCosts[0].amount).toBe(\"160\");\n    expect(exported.billedCosts).toEqual([]);\n    expect(exported.billingReconciliation).toMatchObject({\n      status: \"not_requested\",\n      divergence: null,\n    });\n    expect(exported.unknownCostCalls).toBe(1);\n    expect(exported.cacheHitCalls).toBe(1);\n    expect(exported.cachedInputTokens).toBe(21);\n    expect(exported.measuredTokens).toEqual({\n      inputTokens: 60,\n      outputTokens: 30,\n      reasoningTokens: 9,\n    });\n    expect(exported.tokens.inputTokens).toBeNull();\n    expect(bytes).not.toContain(key);\n    expect(bytes).not.toContain(prompt);\n    expect(\n      exported.calls.every((call: Record<string, unknown>) => !Object.hasOwn(call, \"rawPrompt\")),\n    ).toBe(true);"
+          },
           {
             "path": "packages/application/src/ai/usage.test.ts",
             "assertion": "expect(selected.calls[0]).not.toHaveProperty(\"rawPrompt\");"
@@ -8930,8 +9326,7 @@
             "assertion": "expect(uncertain.tokens.inputTokens).toBeNull();"
           }
         ]
-      },
-      "blockedReason": "Internal: filtered ledger fixture covers known/unknown calls but not aborted/repaired/cache-hit calls, historical price-table adjustment immutability or public CLI redacted file export; these are required for full OPS-031 acceptance."
+      }
     },
     {
       "id": "OPS-032",
@@ -10740,6 +11135,8 @@
       "ownerRole": "Core",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
         "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
@@ -10749,6 +11146,10 @@
         "Immutable run comparisons distinguish outcome from logical identity/revision provenance; pagination binds both inputs; batch logical keys exclude correlation noise and preserve repetition."
       ],
       "evidence": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-persisted-batch-comparison.json",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-model-baseline-comparison.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/comparisons.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
@@ -10756,15 +11157,39 @@
       "code": ["packages/application/src/comparisons.ts"],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
           "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes"
         ],
         "negative": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
           "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
           "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
           "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.comparisons.batches(ids[0]!, ids[1]!).comparability).toBe(\"comparable\");\n      const diff = app.comparisons.batches(ids[0]!, ids[2]!);\n      expect(diff.comparability).toBe(\"partially_comparable\");\n      expect(diff.reasons).toEqual([\"member-added-or-removed\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(membership).toEqual(\n        expect.arrayContaining([\n          { field: expect.any(String), left: left.allMembers[1], right: null },\n          { field: expect.any(String), left: null, right: right.allMembers[0] },\n        ]),\n      );\n      const duplicate = app.comparisons.batches(ids[3]!, ids[1]!);\n      expect(duplicate.comparability).toBe(\"incomparable\");\n      expect(duplicate.reasons).toContain(\"ambiguous-logical-member-key\");\n      expect(duplicate.differences.find((row) => row.field.startsWith(\"ambiguous-\"))!.left).toEqual(\n        ambiguous.allMembers,\n      );\n      expect(app.comparisons.runs(left.allMembers[0]!, left.allMembers[1]!).comparability).toBe(\n        \"incomparable\",\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(() => app!.tests.create({ projectId, plan: unsupportedVisual })).toThrow(\n        expect.objectContaining({ code: \"CAPABILITY_UNAVAILABLE\" }),\n      );\n      expect(app.tests.list(projectId).map((test) => test.id)).toEqual(beforeTests);"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(modelDiff.comparability).toBe(\"partially_comparable\");\n      expect(modelDiff.reasons).toContain(\"generationModel-changed\");\n      expect(modelDiff.differences).toEqual(\n        expect.arrayContaining([\n          { field: expect.stringMatching(/-revisionOrigin$/), left: \"generated\", right: \"manual\" },\n          {\n            field: expect.stringMatching(/-generationModelCallId$/),\n            left: expect.stringMatching(/^mdl_/),\n            right: null,\n          },\n        ]),\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
+            "assertion": "expect(\n        app.database.get(\"SELECT id FROM model_calls WHERE id=?\", String(callDifference.left))?.id,\n      ).toBe(callDifference.left);\n      expect(app.runs.get(generatedRun.allMembers[0]!).outcome).toBe(\"passed\");\n      expect(app.runs.get(manualRun.allMembers[0]!).outcome).toBe(\"passed\");"
+          },
           {
             "path": "packages/application/src/comparisons.test.ts",
             "assertion": "expect(runComparability(left, right).comparability).toBe(\"comparable\");"
@@ -10779,7 +11204,7 @@
           }
         ]
       },
-      "blockedReason": "Internal: current tests cover real Run diff and pure identity/pagination/logical-key controls, not complete persisted BatchRun matching/added-removed/ambiguous keys or model-generation and baseline differences required by history/diff scope."
+      "blockedReason": "External M5: real persisted visual-baseline-bearing Run comparison remains unexercised because even optional visualMatches is CAPABILITY_UNAVAILABLE before persistence. Local persisted BatchRun matching/additions/removals/ambiguity and generated-to-manual model provenance are retained; baseline-difference metadata alone is not visual execution acceptance."
     },
     {
       "id": "REQ-029",
@@ -11401,17 +11826,22 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
         "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
         "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff",
         "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
         "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
       ],
       "oracle": [
-        "Preview preserves execution/outbox/approvals counts and target request recorder; real producer executes before consumer; explicit valid reuse skips producer, expired/revoked/failed/foreign reuse refuses before new effects; unmapped diff conservatively selects all."
+        "Built CLI explicit list/chain passes healthy producer/consumer; failed producer blocks required consumer with upstream_failed, zero persisted steps and zero target requests. Failed historical reuse refuses before any admission/effect. Same four-ID list visibly excludes archived/quarantined members and preserves prior results; existing pure preview/diff and valid/expired/revoked reuse controls remain retained."
       ],
       "evidence": [
+        "validation/journeys/m3-selective-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-selective-upstream-failure.json",
+        "validation/results/m3-acceptance/001-selection-ci-gap-05/created/validation/results/m3-selective-test-list.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/selection.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-selection-preview-reuse.json"
@@ -11420,18 +11850,45 @@
         "packages/application/src/selection.ts",
         "packages/application/src/dependency-reuse.ts"
       ],
-      "blockedReason": "Internal: selective test/chain/diff previews and real producer/reuse paths are exercised, but no test-list selection acceptance or failed-producer-to-blocked-consumer target recorder control is retained; failed historical reuse refusal alone cannot verify the complete named selective scope.",
       "coverage": {
         "positive": [
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
           "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
           "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff"
         ],
         "negative": [
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+          "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
           "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
           "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
           "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(passed.aggregate).gate).toBe(\"passed\");\n        expect(requests).toEqual([\"producer\", \"consumer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(failedProducer.outcome).toBe(\"failed\");\n          expect(blockedConsumer.outcome).toBe(\"blocked\");\n          expect(blockedConsumer.gate).toBe(\"failed\");\n          expect(object(failed.aggregate).gate).toBe(\"failed\");\n          expect(\n            database\n              .prepare(\n                \"SELECT COUNT(*) AS n FROM steps s JOIN attempts a ON a.id=s.attempt_id WHERE a.run_id=?\",\n              )\n              .get(text(blockedConsumer.id))?.n,\n          ).toBe(0);\n          const events = await session.command([\"run\", \"events\", text(blockedConsumer.id)]);\n          expect(JSON.stringify(events)).toContain(\"upstream_failed\");\n          expect(requests).toEqual([\"producer\", \"consumer\", \"producer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(object(refused.error).details).reasonCode).toBe(\"upstream_failed\");\n          expect(database.prepare(\"SELECT COUNT(*) AS n FROM runs\").get()?.n).toBe(beforeRuns);\n          expect(requests).toEqual([\"producer\", \"consumer\", \"producer\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(healthy.aggregate).gate).toBe(\"passed\");\n        expect(healthy.memberRuns).toHaveLength(4);\n        expect([...paths].sort()).toEqual([\"/archived\", \"/one\", \"/quarantined\", \"/two\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(object(selected.aggregate).gate).toBe(\"passed\");\n        expect(selected.memberRuns).toHaveLength(2);\n        expect(\n          items(selected.excluded).map((entry) => ({ testId: entry.testId, reason: entry.reason })),\n        ).toEqual([\n          { testId: tests[2]!.id, reason: \"quarantined\" },\n          { testId: tests[3]!.id, reason: \"archived\" },\n        ]);\n        expect(paths.slice(4).sort()).toEqual([\"/one\", \"/two\"]);"
+          },
+          {
+            "path": "validation/journeys/m3-selective-acceptance.docker.test.ts",
+            "assertion": "expect(selectedIds.sort()).toEqual([tests[0]!.id, tests[1]!.id].sort());\n          expect(\n            database\n              .prepare(\"SELECT COUNT(*) AS n FROM runs WHERE batch_id=? AND outcome='passed'\")\n              .get(text(healthy.id))?.n,\n          ).toBe(4);"
+          },
           {
             "path": "validation/journeys/m3-history-selection.docker.test.ts",
             "assertion": "expect(counts()).toEqual(before);"
@@ -13135,21 +13592,40 @@
       "ownerRole": "Security",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-034 real trace retains source/network/snapshot residues only as restricted raw and sanitized exports omit them",
         "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
       ],
       "oracle": [
-        "Sanitized export omits restricted raw bytes and labels omission with source seal rather than falsely marking raw trace redacted."
+        "Actual Chromium ZIP members and HAR resource links contain a synthetic token across embedded source/network/snapshot channels; raw read is forbidden and every sanitized exported file is token-free. Reports enumerate known residues/no-certified-redaction limitation; trace-off paired control still executes the target and leaves default artifacts token-free."
       ],
-      "evidence": ["packages/application/src/retention.test.ts"],
+      "evidence": ["packages/application/src/retention.test.ts", "validation/journeys/m3-live-security-acceptance.docker.test.ts", "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-trace-residue-acceptance.json"],
       "code": ["packages/runner/src/browser.ts", "packages/application/src/artifacts.ts"],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-034 real trace retains source/network/snapshot residues only as restricted raw and sanitized exports omit them",
           "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
         ],
         "negative": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-034 real trace retains source/network/snapshot residues only as restricted raw and sanitized exports omit them",
           "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(run.outcome).toBe(\"passed\");\n      expect(channels).toEqual([token]);\n      const bundle = await app.artifacts.get(run.id);\n      const trace = bundle.manifest.entries.find((entry) => entry.kind === \"restrictedRaw.trace\");\n      expect(trace).toMatchObject({ state: \"available\", redactionStatus: \"restrictedRaw\" });"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(\n        members.find((member) => member.name === requestBody)?.bytes.includes(Buffer.from(token)),\n      ).toBe(true);\n      expect(\n        members.find((member) => member.name === responseBody)?.bytes.includes(Buffer.from(token)),\n        JSON.stringify(channel.snapshot.response.content),\n      ).toBe(true);\n      await expect(app.artifacts.read(run.id, trace!.relativePath)).rejects.toMatchObject({\n        code: \"FORBIDDEN\",\n      });\n      const out = join(session.cwd, \"sanitized-trace\");\n      const exported = await app.artifacts.exportSanitized(run.id, out);\n      expect(exported.omitted).toContainEqual({\n        relativePath: trace!.relativePath,\n        reason: \"restricted_raw_export_policy\",\n      });\n      for (const path of await files(out))\n        expect((await readFile(path)).includes(Buffer.from(token)), path).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(snapshot.runs[0]!.privacy?.knownResidues.join(\" \")).toMatch(\n        /DOM snapshots.*network requests, responses and embedded page source/s,\n      );\n      expect(snapshot.runs[0]!.privacy?.limitations.join(\" \")).toContain(\n        \"no certified complete redaction\",\n      );\n      for (const format of [\"json\", \"markdown\", \"html\"] as const) {\n        const report = await app.reports.exportCaptured(snapshot, format);\n        expect(String(report.content)).not.toContain(token);\n        expect(String(report.content)).toContain(\"Playwright trace DOM snapshots\");\n      }"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(minimized.outcome).toBe(\"passed\");\n      expect(channels).toEqual([token]);\n      const minimizedBundle = await app.artifacts.get(minimized.id);\n      expect(\n        minimizedBundle.manifest.entries.some((entry) => entry.kind === \"restrictedRaw.trace\"),\n      ).toBe(false);\n      for (const entry of minimizedBundle.manifest.entries.filter(\n        (entry) => entry.state === \"available\",\n      ))\n        expect(\n          (await readFile(join(minimizedBundle.bundleDir, entry.relativePath))).includes(\n            Buffer.from(token),\n          ),\n          entry.relativePath,\n        ).toBe(false);"
+          },
           {
             "path": "packages/application/src/retention.test.ts",
             "assertion": "expect(manifest.entries[0]).toMatchObject({\n    state: \"omitted\",\n    redactionStatus: \"restrictedRaw\",\n    omissionReason: \"restricted_raw_export_policy\",\n  });"
@@ -13160,7 +13636,7 @@
           }
         ]
       },
-      "blockedReason": "Internal: no retained actual Playwright trace fixture with token in source/network/snapshot channels and report enumerating known residues. Raw labeling/export omission is proved, not certified complete trace redaction or all-channel canary coverage."
+      "blockedReason": "Internal limitation: complete trace-format redaction is not demonstrated or certified; raw traces remain restrictedRaw and sanitized exports omit them. Real embedded-source/network-request/network-response/DOM-snapshot residues and report warnings are retained; unknown PII, encoded values and media still require minimization/manual review."
     },
     {
       "id": "SEC-035",
@@ -13230,14 +13706,19 @@
       "ownerRole": "Security",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
         "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
         "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
         "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
       ],
       "oracle": [
-        "Real artifact gateway revokes Range immediately, duplicate delete returns same durable operation and isolated restore reapplies expiration; legal holds remain visible pending until released then idempotent GC completes."
+        "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission."
       ],
       "evidence": [
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-privacy-lifecycle-docker-2/created/validation/results/m3-deletion-restart-acceptance.json",
+        "validation/results/m3-acceptance/001-privacy-lifecycle-docker-2/created/validation/results/m3-deletion-secret-restore-acceptance.json",
         "validation/journeys/m3-ci.docker.test.ts",
         "packages/application/src/retention.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
@@ -13249,15 +13730,43 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold"
         ],
         "negative": [
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+          "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
           "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(operation).toMatchObject({\n            physicalState: \"pending\",\n            physicalDeletionDeadlineAt: null,\n            backupExpiryDeadlineAt: null,\n          });\n          expect(operation.backupHolds).toContain(hold);\n          expect(app.retention.requestDeletion(artifact.artifactId).id).toBe(id);\n          await expect(app.artifacts.stream(artifact.artifactId)).rejects.toMatchObject({\n            code: \"NOT_FOUND\",\n          });"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(app.retention.deletionStatus(id).physicalState).toBe(\"pending\");\n          expect((await readFile(file)).byteLength).toBe(artifact.sizeBytes);\n          worker.child.kill(\"SIGKILL\");\n          expect((await worker.result).signal).toBe(\"SIGKILL\");\n          app.close();\n          app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });\n          expect(app.retention.deletionStatus(id).physicalState).toBe(\"pending\");\n          app.database.run(\"UPDATE operational_state SET value='released' WHERE key=?\", hold);\n          const released = await session.command([\"artifact\", \"deletion-status\", id]);\n          expect(\n            Date.parse(text(released.physicalDeletionDeadlineAt)) -\n              Date.parse(text(operation.revokedAt)),\n          ).toBe(86400000);\n          expect(released.backupHolds).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect((await session.command([\"artifact\", \"deletion-status\", id])).physicalState).toBe(\n            \"completed\",\n          );\n          await expect(readFile(file)).rejects.toMatchObject({ code: \"ENOENT\" });\n          await expect(app.artifacts.stream(artifact.artifactId)).rejects.toMatchObject({\n            code: \"NOT_FOUND\",\n          });\n          expect(app.database.get(\"SELECT data_json FROM runs WHERE id=?\", runId)?.data_json).toBe(\n            runBefore,\n          );\n          expect(\n            app.database.all(\n              \"SELECT data_json FROM attempts WHERE run_id=? ORDER BY number\",\n              runId,\n            ),\n          ).toEqual(attemptsBefore);"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(await (await app.secrets.release(secret.id)).resolve()).toBe(\n            \"synthetic-revoked-secret\",\n          );"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(operation).toMatchObject({\n            physicalState: \"pending\",\n            physicalDeletionDeadlineAt: null,\n            backupExpiryDeadlineAt: holds.at(-1)!.expires_at,\n          });\n          expect(\n            Date.parse(operation.backupExpiryDeadlineAt!) - Date.parse(operation.revokedAt),\n          ).toBeGreaterThan(0);\n          expect(\n            Date.parse(operation.backupExpiryDeadlineAt!) - Date.parse(operation.revokedAt),\n          ).toBeLessThanOrEqual(86400000);"
+          },
+          {
+            "path": "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
+            "assertion": "expect(restored.secrets.get(secret.id).revokedAt).not.toBeNull();\n          await expect(restored.secrets.release(secret.id)).rejects.toMatchObject({\n            code: \"POLICY_DENIED\",\n          });\n          await expect(restored.artifacts.stream(artifact.artifactId)).rejects.toMatchObject({\n            code: \"NOT_FOUND\",\n          });\n          expect(restored.retention.deletionStatus(operation.id)).toMatchObject({\n            id: operation.id,\n            revokedAt: operation.revokedAt,\n            physicalState: \"pending\",\n            backupExpiryDeadlineAt: operation.backupExpiryDeadlineAt,\n          });\n          expect(\n            restored.database.get(\"SELECT value FROM operational_state WHERE key='admission'\")\n              ?.value,\n          ).toBe(\"suspended_restore\");"
+          },
           {
             "path": "validation/journeys/m3-ci.docker.test.ts",
             "assertion": "expect(app.retention.requestDeletion(artifact.artifactId).id).toBe(operation.id);"
@@ -13276,7 +13785,7 @@
           }
         ]
       },
-      "blockedReason": "External M4: S3 version/lifecycle removal and server multi-organization export isolation are not exercised. Internal: no retained explicit requested-deletion restart/in-flight upload publication test or complete deadline/status and revoked-secret restore pairing for this full lifecycle scope."
+      "blockedReason": "External M4: no externally addressable in-flight Artifact exists in local M3 (Artifact is published only at final worker commit; source-document upload IDs are not Artifact IDs), so distributed worker upload/delete republication race remains unexercised. S3 version/lifecycle removal and server multi-organization export isolation remain unexercised. Local requested-deletion restart, durable status/separate physical/backup deadlines and artifact/revoked-secret restore controls are retained; backup hold expiry is not automatic erasure of operator-held backup files."
     },
     {
       "id": "SEC-038",
@@ -13330,27 +13839,46 @@
       "ownerRole": "Security",
       "status": "implemented",
       "scenario": [
+        "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
         "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
         "packages/application/src/approvals.test.ts::rejects changes to policy, actor, revision and environment",
         "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
         "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer"
       ],
       "oracle": [
-        "Unit admission binds actor/policy/revision/body/environment/origins/limits and credential version, consumes once; changed claims/service reviewer/expiry refuse."
+        "Real owned-account DELETE occurs exactly once under bound approval, leaving sibling intact and audit verified/consumed request_id equal to admitted Run. Missing/body/environment/consumed/rotated-credential approvals refuse before target recorder advances."
       ],
-      "evidence": ["packages/application/src/approvals.test.ts"],
+      "evidence": ["packages/application/src/approvals.test.ts", "validation/journeys/m3-live-security-acceptance.docker.test.ts", "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-bound-destructive-approval.json"],
       "code": ["packages/application/src/approvals.ts"],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
           "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once"
         ],
         "negative": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
           "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
           "packages/application/src/approvals.test.ts::rejects changes to policy, actor, revision and environment",
           "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
           "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "await expect(admit(environment.id, changedRevision.id)).rejects.toMatchObject({\n        code: \"POLICY_DENIED\",\n      });\n      await expect(admit(alternate.id)).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n      expect(requests).toHaveLength(0);\n      expect([...accounts]).toEqual([\"owned-account-A\", \"owned-account-B\"]);\n      expect(app.approvals.get(approval.id).revokedAt).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(receipt.runId).outcome).toBe(\"passed\");\n      expect(requests).toEqual([\n        {\n          method: \"DELETE\",\n          body: JSON.stringify({ resource: \"owned-account-A\" }),\n          authorization: \"Bearer privilege-v1\",\n        },\n      ]);\n      expect([...accounts]).toEqual([\"owned-account-B\"]);\n      expect(app.approvals.get(approval.id).revokedAt).not.toBeNull();\n      await expect(admit()).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n      expect(requests).toHaveLength(1);"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "await expect(admit()).rejects.toMatchObject({\n        code: \"PRECONDITION_FAILED\",\n        details: { reasonCode: \"binding_mismatch\" },\n      });\n      expect([...accounts]).toEqual([\"owned-account-B\"]);\n      expect(requests).toHaveLength(1);\n      expect(app.approvals.get(stale.id).revokedAt).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(audit.map((row) => row.action)).toEqual([\n        \"approval.created\",\n        \"approval.verified\",\n        \"approval.consumed\",\n      ]);\n      expect(\n        audit.filter((row) => row.action !== \"approval.created\").map((row) => row.request_id),\n      ).toEqual([receipt.runId, receipt.runId]);"
+          },
           {
             "path": "packages/application/src/approvals.test.ts",
             "assertion": "expect(approvals.verify(run, test, env)?.id).toBe(approval.id);"
@@ -13365,7 +13893,7 @@
           }
         ]
       },
-      "blockedReason": "Internal: no retained real target request journey tying allowed destructive effect/audit to exact approval and proving changed-body/environment/credential/reused-approval refusal before target effects; unit-only authorization fixture is narrower. M4 dual-approver separation-of-functions scope also unexercised."
+      "blockedReason": "External M4: dual independent approvers and separation-of-functions policy acceptance remain unexercised. M3 exact destructive approval/body/environment/credential/single-use binding and audit-to-real-effect controls are retained."
     },
     {
       "id": "SEC-040",
@@ -13373,16 +13901,19 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-040 lost POST receipt reports possibly affected resource without retry and denied cleanup makes zero requests",
         "validation/journeys/resource-cleanup.docker.test.ts::manually compensates an orphan through the sandbox and preserves the owning run verdict",
         "validation/journeys/runtime-retry.docker.test.ts::OPS-009 timeout after an acknowledged target POST effect never repeats the mutation",
         "packages/application/src/resources.test.ts::denies missing approval and mismatched ownership before any compensation"
       ],
       "oracle": [
-        "Real lost POST response commits one target row, never repeats and stays nonpass; separately authorized cleanup removes exact owned orphan without changing original failure, missing grant/foreign ownership refuses."
+        "Actual POST commits one independent SQLite target row but loses response; frozen maxAttempts=2 still yields one request/Attempt/nonpass. Reports name uncertain resource; missing approval/no execution grant cleanup causes zero requests, exact authorized cleanup deletes only its owned orphan. No exactly-once/rollback guarantee is claimed."
       ],
       "evidence": [
+        "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-uncertain-effect-cleanup.json",
         "validation/journeys/resource-cleanup.docker.test.ts",
         "validation/journeys/runtime-retry.docker.test.ts",
         "packages/application/src/resources.test.ts",
@@ -13396,13 +13927,31 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-040 lost POST receipt reports possibly affected resource without retry and denied cleanup makes zero requests",
           "validation/journeys/resource-cleanup.docker.test.ts::manually compensates an orphan through the sandbox and preserves the owning run verdict"
         ],
         "negative": [
+          "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-040 lost POST receipt reports possibly affected resource without retry and denied cleanup makes zero requests",
           "validation/journeys/runtime-retry.docker.test.ts::OPS-009 timeout after an acknowledged target POST effect never repeats the mutation",
           "packages/application/src/resources.test.ts::denies missing approval and mismatched ownership before any compensation"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "await expect(\n        app.resources.cleanup(resource.id, {\n          expectedVersion: Number(resource.version),\n          idempotencyKey: randomUUID(),\n        }),\n      ).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n      expect({ posts, deletes }).toEqual(priorRequests);\n      const approval = app.approvals.create(resource.cleanupApproval);\n      const reader = app.withIdentity({ principalId: app.context.principalId, scopes: [\"R\"] });\n      await expect(\n        reader.resources.cleanup(resource.id, {\n          approvalId: approval.id,\n          expectedVersion: Number(resource.version),\n          idempotencyKey: randomUUID(),\n        }),\n      ).rejects.toMatchObject({ code: \"FORBIDDEN\" });\n      expect({ posts, deletes }).toEqual(priorRequests);"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(cleaned.state).toBe(\"cleaned\");\n      expect(deletes).toBe(priorRequests.deletes + 1);"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "expect(object(run.matrixCell).limits).toMatchObject({ maxAttempts: 2 });\n      expect(posts - before).toBe(1);\n      expect(app.database.all(\"SELECT id FROM attempts WHERE run_id=?\", run.id)).toHaveLength(1);\n      expect(run.gate).toBe(\"failed\");\n      const oracle = new DatabaseSync(target.shop.dbPath, { readOnly: true });\n      try {\n        expect(oracle.prepare(\"SELECT COUNT(*) AS n FROM users WHERE email=?\").get(email)?.n).toBe(\n          1,\n        );\n        expect(\n          oracle.prepare(\"SELECT COUNT(*) AS n FROM users WHERE email=?\").get(ownedEmail)?.n,\n        ).toBe(0);\n      } finally {\n        oracle.close();\n      }\n      const report = await app.reports.snapshot(run.id);\n      expect(report.runs[0]!.externalEffects).toMatchObject({\n        uncertain: true,\n        resources: [{ resourceType: \"user\", stepId: \"create\", handleRef: null }],\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-live-security-acceptance.docker.test.ts",
+            "assertion": "for (const format of [\"json\", \"markdown\", \"html\"] as const) {\n        const exported = await app.reports.exportCaptured(report, format);\n        const content = String(exported.content).replaceAll(\"\\\\\", \"\");\n        expect(content).toMatch(/uncertain|uncertainty/i);\n        expect(content).toContain(report.runs[0]!.externalEffects!.resources[0]!.resourceId);\n      }"
+          },
           {
             "path": "validation/journeys/resource-cleanup.docker.test.ts",
             "assertion": "expect(cleanup.state).toBe(\"cleaned\");"
@@ -13420,8 +13969,7 @@
             "assertion": "expect(app.resources.get(resource.id).state).toBe(\"orphaned\");"
           }
         ]
-      },
-      "blockedReason": "Internal: lost-effect journey proves one POST/no repeat and retained bundle, but does not assert explicit uncertainty/possibly affected resource in report; denied cleanup grant is unit-only rather than real target request recorder proof."
+      }
     },
     {
       "id": "SEC-041",
@@ -14806,16 +15354,21 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
         "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
       ],
       "oracle": [
-        "Strict report publishes planned/valid counts, interval and limitations; missing source/runtime remains incomparable and n=1 insufficient."
+        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure."
       ],
       "evidence": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-source-bound-flake.json",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-infrastructure-flake.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/flake.test.ts",
         "packages/domain/src/flake-statistics.test.ts",
@@ -14829,13 +15382,53 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
         ],
         "negative": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
           "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).classification).toBe(\"passing_observed\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(combined.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 4,\n        nPass: 2,\n        nFail: 2,\n        nInFlight: 0,\n      });\n      expect(combined.classification).toBe(\"suspected_flaky\");\n      expect(combined.failureRate).toBe(0.5);\n      expect(combined.wilson95!.low).toBeCloseTo(0.1500357, 5);\n      expect(combined.wilson95!.high).toBeCloseTo(0.8499643, 5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(snapshot.repository).toMatchObject({\n          commitSha: shaA,\n          checkoutSha: shaA,\n          binding: \"verified\",\n          dirtyHash: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(before.classification).toBe(\"deterministic_failure\");\n      expect(before.counts).toMatchObject({ nPass: 0, nFail: 2 });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(diagnostic.allMembers[0]!).outcome).toBe(\"passed\");\n      expect(() => app!.flake.report(deterministic.batchId, [diagnostic.batchId])).toThrow(\n        expect.objectContaining({ code: \"INVALID_ARGUMENT\" }),\n      );\n      expect(app.flake.report(deterministic.batchId)).toEqual(before);\n      expect(app.database.get(\"SELECT data_json FROM runs WHERE id=?\", failedRun.id)).toEqual(\n        historical,\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(split.studyIds).toEqual([changed.batchId]);\n      expect(split.incompatible).toEqual([\n        { batchId: second.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      expect(split.counts).toMatchObject({ nPlanned: 2, nPass: 2, nFail: 0 });\n      expect(split.identityHash).not.toBe(combined.identityHash);\n      expect(split.classification).not.toBe(\"confirmed_flaky\");\n      expect(split.window.from! > combined.window.to!).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(revised.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      const environment = app.environments.get(input.environment);\n      app.environments.update(environment.id, { locale: \"pt-BR\" }, environment.version!);\n      const relocated = await app.flake.study(input, { wait: true });\n      expect(app.flake.report(relocated.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).counts).toMatchObject({\n        nPass: 2,\n        nInconclusive: 0,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(report.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 2,\n        nPass: 2,\n        nFail: 0,\n        nInconclusive: 2,\n      });\n      expect(report.classification).toBe(\"unstable_infrastructure\");\n      expect(report.failureCauses).toHaveLength(2);\n      expect(\n        report.failureCauses.every(\n          (cause) =>\n            cause.category === \"environment\" && cause.reasonCode === \"insufficient_evidence\",\n        ),\n      ).toBe(true);\n      expect(report.failureCauses.some((cause) => cause.category === \"product_or_contract\")).toBe(\n        false,\n      );"
+          },
           {
             "path": "validation/journeys/m3-history-selection.docker.test.ts",
             "assertion": "expect(report.failureRate).toBe(0.5);"
@@ -14869,8 +15462,7 @@
             "assertion": "expect(result.classification).toBe(n < 2 ? \"insufficient_data\" : \"passing_observed\");"
           }
         ]
-      },
-      "blockedReason": "Internal: no retained FlakeService test directly changes assessed SHA between persisted studies and asserts report window/cohort split; pure identity tests cover environment/runtime/fixture changes, not that complete acceptance path."
+      }
     },
     {
       "id": "VAL-011",
@@ -14961,17 +15553,22 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/domain/src/flake-statistics.test.ts::keeps excluded observations out of the conditional denominator and never auto-confirms mixed outcomes",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
         "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause"
       ],
       "oracle": [
-        "Mixed/deterministic samples and configuration changes remain distinguishable; HTTP 500 abstains from certain product/locator cause."
+        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure."
       ],
       "evidence": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-source-bound-flake.json",
+        "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-infrastructure-flake.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/domain/src/flake-statistics.test.ts",
         "packages/application/src/flake.test.ts",
@@ -14986,14 +15583,54 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
           "packages/domain/src/flake-statistics.test.ts::keeps excluded observations out of the conditional denominator and never auto-confirms mixed outcomes"
         ],
         "negative": [
+          "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+          "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
           "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause"
         ],
         "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).classification).toBe(\"passing_observed\");"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(combined.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 4,\n        nPass: 2,\n        nFail: 2,\n        nInFlight: 0,\n      });\n      expect(combined.classification).toBe(\"suspected_flaky\");\n      expect(combined.failureRate).toBe(0.5);\n      expect(combined.wilson95!.low).toBeCloseTo(0.1500357, 5);\n      expect(combined.wilson95!.high).toBeCloseTo(0.8499643, 5);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(snapshot.repository).toMatchObject({\n          commitSha: shaA,\n          checkoutSha: shaA,\n          binding: \"verified\",\n          dirtyHash: null,\n        });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(before.classification).toBe(\"deterministic_failure\");\n      expect(before.counts).toMatchObject({ nPass: 0, nFail: 2 });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.runs.get(diagnostic.allMembers[0]!).outcome).toBe(\"passed\");\n      expect(() => app!.flake.report(deterministic.batchId, [diagnostic.batchId])).toThrow(\n        expect.objectContaining({ code: \"INVALID_ARGUMENT\" }),\n      );\n      expect(app.flake.report(deterministic.batchId)).toEqual(before);\n      expect(app.database.get(\"SELECT data_json FROM runs WHERE id=?\", failedRun.id)).toEqual(\n        historical,\n      );"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(split.studyIds).toEqual([changed.batchId]);\n      expect(split.incompatible).toEqual([\n        { batchId: second.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      expect(split.counts).toMatchObject({ nPlanned: 2, nPass: 2, nFail: 0 });\n      expect(split.identityHash).not.toBe(combined.identityHash);\n      expect(split.classification).not.toBe(\"confirmed_flaky\");\n      expect(split.window.from! > combined.window.to!).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(revised.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);\n      const environment = app.environments.get(input.environment);\n      app.environments.update(environment.id, { locale: \"pt-BR\" }, environment.version!);\n      const relocated = await app.flake.study(input, { wait: true });\n      expect(app.flake.report(relocated.batchId, [changed.batchId]).incompatible).toEqual([\n        { batchId: changed.batchId, reasons: [\"cohort-identity-changed\"] },\n      ]);"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(app.flake.report(healthy.batchId).counts).toMatchObject({\n        nPass: 2,\n        nInconclusive: 0,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
+            "assertion": "expect(report.counts).toMatchObject({\n        nPlanned: 4,\n        nValid: 2,\n        nPass: 2,\n        nFail: 0,\n        nInconclusive: 2,\n      });\n      expect(report.classification).toBe(\"unstable_infrastructure\");\n      expect(report.failureCauses).toHaveLength(2);\n      expect(\n        report.failureCauses.every(\n          (cause) =>\n            cause.category === \"environment\" && cause.reasonCode === \"insufficient_evidence\",\n        ),\n      ).toBe(true);\n      expect(report.failureCauses.some((cause) => cause.category === \"product_or_contract\")).toBe(\n        false,\n      );"
+          },
           {
             "path": "validation/journeys/m3-history-selection.docker.test.ts",
             "assertion": "expect(report.failureRate).toBe(0.5);"
@@ -15011,8 +15648,7 @@
             "assertion": "expect(result.classification).toBe(\"suspected_flaky\");"
           }
         ]
-      },
-      "blockedReason": "Internal: no retained FlakeService-level network fault-injection cohort proving unstable infrastructure classification and separately recorded independent intermittent-cause confirmation; isolated diagnosis and count tests are narrower."
+      }
     },
     {
       "id": "VAL-014",
@@ -17123,25 +17759,25 @@
       "id": "healing",
       "milestone": "M3",
       "requirements": ["REQ-025", "API-008"],
-      "gate": "M3 controlled-provider manual healing contract; positive/negative evidence and protected assertions. Policy-autoapply and live quality remain separately blocked by M3-02/J07/M3-06."
+      "gate": "M3 controlled-provider manual and policy-safe selector/wait healing with retained positive/negative controls; live quality and independent safety review remain blocked by M3-02/J07/M3-06."
     },
     {
       "id": "run-comparison",
       "milestone": "M3",
       "requirements": ["REQ-028", "API-008"],
-      "gate": "M3 implemented local comparison; complete history/model/baseline acceptance remains blocked by REQ-028; scenarios and oracles derive from linked requirement rows."
+      "gate": "M3 persisted immutable Run and generated/manual provenance comparison exercised; real visual-baseline-bearing comparison remains M5 residual in REQ-028."
     },
     {
       "id": "batch-comparison",
       "milestone": "M3",
       "requirements": ["REQ-028", "API-008"],
-      "gate": "M3 implemented batch comparison; persisted matching/ambiguity acceptance remains blocked by REQ-028; scenarios and oracles derive from linked requirement rows."
+      "gate": "M3 persisted logical BatchRun matching, additions/removals and ambiguity acceptance retained; real visual-baseline-bearing comparison remains M5 residual in REQ-028."
     },
     {
       "id": "flake-study",
       "milestone": "M3",
       "requirements": ["REQ-026", "API-008"],
-      "gate": "M3 local strict flake study; positive/negative evidence and protected assertions; source-bound complete cohort acceptance remains separately blocked by M3-03/VAL-010."
+      "gate": "M3 source-bound local strict flake cohorts, changed SHA/revision/environment windows, cause separation and first-Attempt exclusions retain positive/negative evidence; advanced browser matrix remains M5."
     },
     {
       "id": "ci",
@@ -17153,13 +17789,13 @@
       "id": "quarantine",
       "milestone": "M3",
       "requirements": ["M3-03", "VAL-007", "REQ-026"],
-      "gate": "M3 implemented local quarantine with reason/owner/expiry/CAS and immutable history; source-bound complete cohort and dashboard residuals remain explicit in linked items."
+      "gate": "M3 local quarantine reason/owner/expiry/CAS, reduced explicit-list coverage and immutable history exercised; dashboard rendering remains M4 residual in VAL-007."
     },
     {
       "id": "selective-run",
       "milestone": "M3",
       "requirements": ["REQ-055", "M3-04"],
-      "gate": "M3 implemented local selective execution; real dependency/reuse/preview positive/negative evidence retained. Full list selection and failed-producer propagation acceptance remain blocked by REQ-055/M3-04."
+      "gate": "M3 local test/list/chain/diff selection, pure preview, explicit reuse validity and failed-producer propagation retain positive/negative controls under verified REQ-055/M3-04."
     },
     {
       "id": "integration-planning",
@@ -17171,7 +17807,7 @@
       "id": "artifact-deletion",
       "milestone": "M3",
       "requirements": ["OPS-022", "SEC-037", "SEC-035"],
-      "gate": "M3 local durable deletion/tombstone/attachment gateway implemented and partially exercised; complete restart/publication/server-storage lifecycle residuals remain explicit in OPS-022/SEC-037."
+      "gate": "M3 durable requested deletion, immediate revocation, restart GC, separate deadlines and artifact/revoked-secret restore exercised; in-flight distributed publication and server-storage isolation residuals remain explicit in OPS-022/SEC-037."
     },
     {
       "id": "server",
