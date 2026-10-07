@@ -136,6 +136,10 @@ try {
           .some((part) => [".venv", "__pycache__", ".pytest_cache"].includes(part)),
     });
   }
+  // Both images replace Playwright's non-public ffmpeg build with the public LGPL recipe.
+  for (const directory of [runner, python])
+    if (await access(join(directory, "Dockerfile")).then(() => true, () => false))
+      await cp(join(root, "containers/ffmpeg"), join(directory, "ffmpeg"), { recursive: true });
   const lockPath = join(root, "containers/images.lock.json");
   const built = {};
   for (const [name, directory] of [
