@@ -578,6 +578,9 @@ export const TraceabilityRecord = Obj({
   oracle: names,
   evidence: names,
 });
+/** Reasoning efforts an operator may send as `reasoning_effort`; absent means provider default. */
+export const reasoningEfforts = ["low", "medium", "high", "xhigh"] as const;
+export type ReasoningEffort = (typeof reasoningEfforts)[number];
 export const ModelRequest = Obj({
   purpose: Name,
   provider: Name,
@@ -586,7 +589,7 @@ export const ModelRequest = Obj({
   schemaVersion: Name,
   inputRefs: refs,
   responseSchema: Name,
-  reasoningEffort: Type.Optional(Enum(["low", "medium", "high"])),
+  reasoningEffort: Type.Optional(Enum(reasoningEfforts)),
   policyHash: ContentDigest,
 });
 export const ModelResponse = Obj({

@@ -80,7 +80,7 @@ Plano declarativo de HTTP suporta capture JSON Pointer ou header, tipos, secretR
 
 ## 6. Geração por IA
 
-`ModelRequest`: purpose (`summarize|normalize|plan|resolve_action|generate_code|classify|heal`), modelId, modelConfigHash, promptVersion, sourceRefs, responseSchemaVersion, reasoningEffort opcional (`low|medium|high`), deadlineMs, budgetReservationId e dataPolicy. `ModelResponse`: parsed output, rawResponseRef redacted opcional, usage measured/estimated/unknown, latency, finishReason, warnings.
+`ModelRequest`: purpose (`summarize|normalize|plan|resolve_action|generate_code|classify|heal`), modelId, modelConfigHash, promptVersion, sourceRefs, responseSchemaVersion, reasoningEffort opcional (`low|medium|high|xhigh`), deadlineMs, budgetReservationId e dataPolicy. `ModelResponse`: parsed output, rawResponseRef redacted opcional, usage measured/estimated/unknown, latency, finishReason, warnings.
 
 Capacidades: structured JSON/tool calls/vision/contextTokens/maxOutputTokens. Limites declarados do modelo são metadados para admissão e reserva local, não parâmetros de geração. `reasoningEffort` da chamada prevalece sobre a configuração por modelo no perfil; quando definido, enviar `reasoning_effort` e incluir o valor efetivo nos hashes e cache. Omissão usa default do provider; valor inválido ou recusa do provider não permite fallback silencioso. A aplicação não envia `max_tokens`, `max_completion_tokens`, temperature, top-p, seed, penalidades ou `enable_thinking`. Provedor ausente ou capability necessária faltando: `CAPABILITY_UNAVAILABLE`; nunca trocar modelo ou remoto sem política. Truncation/context overflow: reduzir inputs por chunk grounded e reexecutar dentro do budget, mantendo refs; não truncar silent.
 

@@ -146,7 +146,7 @@ at execution time; configuring a model does not authorize data transfer or estab
 ```
 
 To control reasoning effort, add `"reasoningEffort": "medium"` to the model entry
-(alongside `id` and `capabilities`). Supported values: `low`, `medium`, `high`.
+(alongside `id` and `capabilities`). Supported values: `low`, `medium`, `high`, `xhigh`.
 When omitted, the provider default applies. TestMaster sends `reasoning_effort` only
 when configured; it still omits token ceilings, sampling parameters and `enable_thinking`.
 

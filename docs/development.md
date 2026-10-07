@@ -579,7 +579,7 @@ them; an operator must inspect preserved data before attempting a corrected upgr
 ### Provider-controlled generation
 
 Model requests contain model/messages and, when needed, response_format/tools and
-reasoning_effort. Configure reasoningEffort (low, medium or high) on a model entry in the
+reasoning_effort. Configure reasoningEffort (low, medium, high or xhigh) on a model entry in the
 user profile; an explicit ModelService.complete call overrides the model setting. Omission
 uses the provider default. Invalid values are rejected before network access. The effective
 effort participates in the model configuration hash, prompt hash and gateway cache key and

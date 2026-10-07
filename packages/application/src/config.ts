@@ -9,6 +9,7 @@ import {
   type ExecutionLimits,
   type ProjectConfig,
   parseStrictJson,
+  reasoningEfforts,
   validate,
 } from "@testmaster/contracts";
 import { scrubEvidenceText, semanticHash } from "@testmaster/domain";
@@ -332,7 +333,7 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
             if (
               model.reasoningEffort !== undefined &&
               (typeof model.reasoningEffort !== "string" ||
-                !["low", "medium", "high"].includes(model.reasoningEffort))
+                !(reasoningEfforts as readonly string[]).includes(model.reasoningEffort))
             )
               throw new ContractError("INVALID_ARGUMENT", "Invalid model reasoning effort");
             const capabilities = object(model.capabilities, "Model capabilities");

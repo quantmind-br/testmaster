@@ -1,0 +1,70 @@
+{
+ "schemaVersion": "1.0.0",
+ "observedAt": "2026-10-07T19:18:25.055Z",
+ "scenario": "operator profile ~/.config/testmaster (quantforge, muse-spark-1.3, reasoningEffort xhigh) resolved by resolveConfig; one built Application.model.complete normalize call with trusted instruction and separate data through an inspecting forwarder to real QuantForge",
+ "resolvedProfile": {
+  "providers": [
+   {
+    "id": "quantforge",
+    "baseUrl": "https://api.quantforge.com.br/v1",
+    "apiKeyEnv": "QUANTFORGE_API_KEY",
+    "models": [
+     {
+      "id": "muse-spark-1.3",
+      "reasoningEffort": "xhigh",
+      "capabilities": {
+       "structuredJson": true,
+       "toolCalls": true
+      }
+     }
+    ]
+   }
+  ],
+  "allowedModelProviders": [
+   "quantforge"
+  ]
+ },
+ "requests": [
+  {
+   "path": "/chat/completions",
+   "keys": [
+    "messages",
+    "model",
+    "reasoning_effort",
+    "response_format"
+   ],
+   "model": "muse-spark-1.3",
+   "reasoningEffort": "xhigh",
+   "status": 200,
+   "durationMs": 7567,
+   "reasoningObserved": true,
+   "usage": {
+    "completion_tokens": 653,
+    "total_tokens": 863,
+    "prompt_tokens": 210,
+    "prompt_tokens_details": {
+     "cached_tokens": 113
+    },
+    "completion_tokens_details": {
+     "reasoning_tokens": 604
+    }
+   },
+   "responseFormat": "{\"type\":\"json_object\"}"
+  }
+ ],
+ "output": {
+  "amount": 1234,
+  "currency": "USD",
+  "scale": 2
+ },
+ "outcome": "success",
+ "error": null,
+ "priorObservations": [
+  "Before the gateway fix the same call made 3 requests, each HTTP 200 with correct JSON content, and failed with 'Provider returned invalid output after two repairs': the provider sends tool_calls: null on plain content replies, which the gateway rejected as malformed tool calls.",
+  "Direct tool probe (curl, reasoning_effort xhigh): tool_choice auto returned a valid function tool call; tool_choice required/none/named is refused by the provider (TestMaster does not send tool_choice)."
+ ],
+ "limitations": [
+  "Single smoke call; not model-quality evidence.",
+  "Monetary cost unknown; muse-spark-1.3 is unpriced in TestMaster."
+ ]
+}

@@ -1,3 +1,6 @@
+import type { ReasoningEffort } from "@testmaster/contracts";
+
+export type { ReasoningEffort };
 export interface MoneyAmount {
   amount: string;
   currency: string;
@@ -81,7 +84,6 @@ export interface ModelPrice {
   outputPerMillion: string;
   version: string;
 }
-export type ReasoningEffort = "low" | "medium" | "high";
 export interface ProviderConfig {
   id: string;
   kind: "openai-compatible";

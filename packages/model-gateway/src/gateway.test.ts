@@ -537,4 +537,28 @@ describe("policy-controlled model requests", () => {
     expect(result.finishReason).toBe("tool_calls");
     expect(result.reasoningContent).toBe("reasoning");
   });
+
+  it("treats an explicit null tool_calls field as no tool calls", async () => {
+    const f = await fixture((_req, res) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: '{"amount":1,"currency":"USD","scale":2}',
+                tool_calls: null,
+              },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      ),
+    );
+    const result = await f.gateway.complete(testRequest);
+    expect(result.output).toEqual({ amount: 1, currency: "USD", scale: 2 });
+    expect(result.toolCalls).toEqual([]);
+    expect(f.records.map((record) => record.outcome)).toEqual(["success"]);
+  });
 });

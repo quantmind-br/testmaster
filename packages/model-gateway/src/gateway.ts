@@ -1,4 +1,10 @@
-import { ContractError, jsonSchema, parseStrictJson, validate } from "@testmaster/contracts";
+import {
+  ContractError,
+  jsonSchema,
+  parseStrictJson,
+  reasoningEfforts,
+  validate,
+} from "@testmaster/contracts";
 import { canonicalJson, scrubText, sha256, uuidV7IdGenerator } from "@testmaster/domain";
 import { OpenAICompatibleProvider, ProviderTransportError } from "./provider.js";
 import { compactPromptSchema } from "./schema-prompt.js";
@@ -78,7 +84,7 @@ export class ModelGateway {
         milestone: "M2",
       });
     const reasoningEffort = input.reasoningEffort ?? declared.reasoningEffort;
-    if (reasoningEffort !== undefined && !["low", "medium", "high"].includes(reasoningEffort))
+    if (reasoningEffort !== undefined && !reasoningEfforts.includes(reasoningEffort))
       throw new ContractError("INVALID_ARGUMENT", "Invalid reasoning effort");
     const required = new Set(input.requiredCapabilities ?? []);
     if (input.responseSchema) required.add("structuredJson");
@@ -372,7 +378,8 @@ export class ModelGateway {
             ) as T;
           } else if (input.responseSchema)
             throw new ContractError("INVALID_ARGUMENT", "Structured completion content is missing");
-          if (message.tool_calls !== undefined) {
+          // OpenAI-compatible providers may send `tool_calls: null` for a plain content reply.
+          if (message.tool_calls !== undefined && message.tool_calls !== null) {
             if (!Array.isArray(message.tool_calls))
               throw new ContractError("INVALID_ARGUMENT", "Tool calls are malformed");
             result.toolCalls = message.tool_calls.map((value: unknown): ModelToolCall => {

@@ -22,7 +22,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
   delete process.env.FAKE_KEY;
 });
-async function fixture(reasoningEffort?: "low" | "medium" | "high") {
+async function fixture(reasoningEffort?: "low" | "medium" | "high" | "xhigh") {
   const root = await mkdtemp(join(tmpdir(), "tm-ai-core-"));
   roots.push(root);
   const home = join(root, "home");
@@ -140,7 +140,7 @@ it("records consent before data crosses a real boundary, and source injection ca
   expect(f.counts().completions).toBe(1);
 });
 it("uses profile reasoning effort unless an application call overrides it", async () => {
-  const f = await fixture("medium");
+  const f = await fixture("xhigh");
   f.app.model.grantConsent(f.projectId, "fake", ["documents"], true);
   const input = {
     projectId: f.projectId,
@@ -150,7 +150,7 @@ it("uses profile reasoning effort unless an application call overrides it", asyn
   };
   await f.app.model.complete(input);
   await f.app.model.complete({ ...input, reasoningEffort: "high" });
-  expect(f.payloads.map((payload) => payload.reasoning_effort)).toEqual(["medium", "high"]);
+  expect(f.payloads.map((payload) => payload.reasoning_effort)).toEqual(["xhigh", "high"]);
   const records = f.app.usage.get({ projectId: f.projectId }).calls;
   expect(records[0]?.modelConfigHash).not.toBe(records[1]?.modelConfigHash);
 });
