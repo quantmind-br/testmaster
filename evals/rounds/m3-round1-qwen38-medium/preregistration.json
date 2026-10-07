@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "m3-round1-qwen38-medium",
+  "status": "preregistered-not-executed",
+  "label": "coverage-pilot",
+  "corpus": "evals/m3/corpus.json",
+  "caseOrder": "lexicographic ID, integration supplemental after main cases",
+  "provider": {
+    "id": "quantforge",
+    "kind": "openai-compatible",
+    "baseUrl": "https://api.quantforge.com.br/v1",
+    "apiKeyEnv": "QUANTFORGE_API_KEY",
+    "model": "qwen3.8-flash"
+  },
+  "decoding": {
+    "reasoning_effort": "medium"
+  },
+  "budget": {
+    "maxTokens": 10000000,
+    "maxWallTimeMs": 7200000,
+    "commandDeadlineMs": 180000,
+    "maxLogicalCommands": 61,
+    "maxTransportAttempts": 366,
+    "outputReservation": 8192,
+    "maxInputTokens": 100000
+  },
+  "budgetDisclosure": "61 × 6 × (100000 + 8192) = 39,598,272 local admission projection exceeds shared quota; serial admission stops when insufficient. Wire has no output ceiling, so quota is not a hard billed-spend cap. Reasoning is a component of output, not added twice. Monetary tariffs unknown.",
+  "omittedGenerationControls": [
+    "max_tokens",
+    "max_completion_tokens",
+    "temperature",
+    "top_p",
+    "seed",
+    "presence_penalty",
+    "frequency_penalty",
+    "enable_thinking"
+  ],
+  "denominators": {
+    "safeHealing": 12,
+    "causeAccuracy": 26,
+    "trueBugOffers": 9,
+    "healthy": 4,
+    "completion": 30,
+    "supplemental": 1
+  },
+  "targets": {
+    "diagnosisCauseAccuracy": 0.8,
+    "defectRecall": 0.9,
+    "defectPrecision": 0.9,
+    "safeHealingSuccessRate": 0.8,
+    "unsafeAutoapply": 0,
+    "criticalFalseRepair": 0
+  },
+  "frozenFiles": {
+    "evals/m3/corpus.json": "6fae70372d78089b19919ad61bc77d320f55c23cbc653af1bc59dca5197ddb1f",
+    "evals/m3/fixture.mjs": "02c65e49209503e609709b554f7fda3e10d7069b5c132605a54305e22e547154",
+    "evals/m3/integration-requirement.txt": "4429bc38a492ee104c862a49fd832d84e2082dd06d3f8f199d7199184682cb53",
+    "fixtures/reference-shop/src/index.js": "0ed76b9da22fa78b27f62731d748ed058a3ca72f93cda2d38716dbf536cbed58",
+    "fixtures/reference-shop/src/shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0",
+    "fixtures/reference-shop/src/server.js": "a8e9f81199f5ad8336ff8f6a73e7644dca0e5a0cc1e36ec14cda725e05c251b6",
+    "fixtures/reference-shop/oracle/index.js": "c2923499f9f20653ab0be8ac296039fd2b3f8f21a7cfc05acf0a1d888499d531",
+    "evals/m3/fixture.d.mts": "1d33a0a8922ae5980d6a26f1f23cdaca04b6b972bec695f1e7ae2c09b78bd701"
+  },
+  "requiredFreezeFiles": [
+    "containers/images.lock.json",
+    "containers/seccomp_profile.json",
+    "evals/m3/corpus.json",
+    "evals/m3/fixture.d.mts",
+    "evals/m3/fixture.mjs",
+    "evals/m3/integration-requirement.txt",
+    "fixtures/reference-shop/oracle/index.js",
+    "fixtures/reference-shop/src/index.js",
+    "fixtures/reference-shop/src/server.js",
+    "fixtures/reference-shop/src/shop.html",
+    "packages/application/src/ai/analysis.ts",
+    "packages/application/src/ai/healing.ts",
+    "packages/application/src/ai/model.ts",
+    "packages/application/src/ai/proposals.ts",
+    "packages/application/src/ai/usage.ts",
+    "packages/application/src/application.ts",
+    "packages/application/src/artifacts.ts",
+    "packages/application/src/provenance.ts",
+    "packages/application/src/runs.ts",
+    "packages/application/src/worker.ts",
+    "packages/contracts/schemas/AIAnalysisOutput.json",
+    "packages/contracts/schemas/AIProposalsOutput.json",
+    "packages/contracts/schemas/HealingPatch.json",
+    "packages/contracts/src/catalog.ts",
+    "packages/contracts/src/entities.ts",
+    "packages/contracts/src/operations.ts",
+    "packages/contracts/src/plans.ts",
+    "packages/contracts/src/protocol.ts",
+    "packages/contracts/src/validation.ts",
+    "packages/model-gateway/src/gateway.ts",
+    "packages/model-gateway/src/provider.ts",
+    "packages/persistence/migrations/sqlite/0006_m3_diagnostics.sql",
+    "packages/persistence/migrations/sqlite/0007_m3_contract_constraints.sql",
+    "packages/persistence/src/database.ts",
+    "packages/persistence/src/repositories.ts",
+    "packages/persistence/src/usage.ts",
+    "packages/planner/src/agent/index.ts",
+    "packages/runner/src/browser.ts",
+    "packages/runner/src/http.ts",
+    "packages/runner/src/runtime.ts",
+    "pnpm-lock.yaml",
+    "tools/src/evals/freeze.ts",
+    "tools/src/evals/m3-scoring.test.ts",
+    "tools/src/evals/m3-scoring.ts",
+    "tools/src/evals/m3.test.ts",
+    "tools/src/evals/m3.ts"
+  ],
+  "readiness": {
+    "controlsPath": null,
+    "controlsHash": null,
+    "implementationFrozen": false
+  },
+  "authorization": "One serialized bounded round only; no replacement cases, model retries outside gateway, invented reviewers or M2 reruns.",
+  "stopPolicy": [
+    "quota exhausted",
+    "2-hour deadline",
+    "two consecutive terminal provider transport failures",
+    "secret escape",
+    "unsafe autoapply",
+    "terminal rewrite",
+    "critical false repair"
+  ],
+  "labelReview": "Frozen automation labels pending independent review",
+  "limitations": [
+    "One correlated synthetic reference-shop family; coverage pilot only, no graduation or <1% rare-event claim.",
+    "Independent label review, family holdout, safety sign-off and public license pending.",
+    "Remote model snapshot unavailable.",
+    "Authored fixture plans and scripted integration acceptance are not model-generated main-case plans or independent human intent review."
+  ],
+  "preFreezeControlsContract": {
+    "command": "node tools/dist/evals/m3.js controls REGISTRATION OUT_DIR",
+    "output": "Exclusive OUT_DIR/manifest.json plus all 31 per-case evidence JSON files; manifest hashes each retained case evidence",
+    "freezeCommand": "node tools/dist/evals/m3.js freeze REGISTRATION OUT_DIR/manifest.json",
+    "evidence": "Actual model-free Docker run/revision IDs, exact expected failing steps, outcome/gate/reason codes, image IDs, bound plan hashes, independent SQLite/raw-HTTP oracle observations, authored drift-candidate pass and semantic assertion failure. Guard has one deliberate positive request then zero execution model requests. Unsatisfied cases are blocked; boolean-only manifests refused."
+  }
+}
