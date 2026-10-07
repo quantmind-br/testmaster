@@ -1,0 +1,434 @@
+execute	Set up job	﻿2026-10-07T11:12:55.6362649Z Current runner version: '2.337.0'
+execute	Set up job	2026-10-07T11:12:55.6388962Z ##[group]Runner Image Provisioner
+execute	Set up job	2026-10-07T11:12:55.6389911Z Hosted Compute Agent
+execute	Set up job	2026-10-07T11:12:55.6390493Z Version: 20260901.588
+execute	Set up job	2026-10-07T11:12:55.6391195Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+execute	Set up job	2026-10-07T11:12:55.6392328Z Build Date: 2026-09-01T19:56:44Z
+execute	Set up job	2026-10-07T11:12:55.6393127Z Worker ID: {bbc6955c-c333-47ae-bd99-aebe607e9943}
+execute	Set up job	2026-10-07T11:12:55.6393891Z Azure Region: northcentralus
+execute	Set up job	2026-10-07T11:12:55.6394508Z ##[endgroup]
+execute	Set up job	2026-10-07T11:12:55.6395915Z ##[group]Operating System
+execute	Set up job	2026-10-07T11:12:55.6396572Z Ubuntu
+execute	Set up job	2026-10-07T11:12:55.6397103Z 24.04.5
+execute	Set up job	2026-10-07T11:12:55.6397632Z LTS
+execute	Set up job	2026-10-07T11:12:55.6398150Z ##[endgroup]
+execute	Set up job	2026-10-07T11:12:55.6398790Z ##[group]Runner Image
+execute	Set up job	2026-10-07T11:12:55.6399466Z Image: ubuntu-24.04
+execute	Set up job	2026-10-07T11:12:55.6400052Z Version: 20260927.320.1
+execute	Set up job	2026-10-07T11:12:55.6401214Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+execute	Set up job	2026-10-07T11:12:55.6403318Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+execute	Set up job	2026-10-07T11:12:55.6404371Z ##[endgroup]
+execute	Set up job	2026-10-07T11:12:55.6405509Z ##[group]GITHUB_TOKEN Permissions
+execute	Set up job	2026-10-07T11:12:55.6407592Z Contents: read
+execute	Set up job	2026-10-07T11:12:55.6408193Z Metadata: read
+execute	Set up job	2026-10-07T11:12:55.6408793Z ##[endgroup]
+execute	Set up job	2026-10-07T11:12:55.6410766Z Secret source: Actions
+execute	Set up job	2026-10-07T11:12:55.6411737Z Cache mode: write
+execute	Set up job	2026-10-07T11:12:55.6412645Z Prepare workflow directory
+execute	Set up job	2026-10-07T11:12:55.6932640Z Prepare all required actions
+execute	Set up job	2026-10-07T11:12:55.7004436Z Getting action download info
+execute	Set up job	2026-10-07T11:12:55.9644872Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+execute	Set up job	2026-10-07T11:12:56.0775629Z Download action repository 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020' (SHA:820762786026740c76f36085b0efc47a31fe5020)
+execute	Set up job	2026-10-07T11:12:56.1925290Z Download action repository 'quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a@b3dcb58a397a9bbfe89a36d55cd42dc51355c725' (SHA:b3dcb58a397a9bbfe89a36d55cd42dc51355c725)
+execute	Set up job	2026-10-07T11:12:56.3753742Z Download action repository 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' (SHA:043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
+execute	Set up job	2026-10-07T11:12:56.5952589Z Complete job name: execute
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	﻿2026-10-07T11:12:56.6749315Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6750921Z with:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6751534Z   persist-credentials: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6752488Z   fetch-depth: 2
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6753520Z   repository: quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6759967Z   token: ***
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6760655Z   ssh-strict: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6761325Z   ssh-user: git
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6761870Z   clean: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6762752Z   sparse-checkout-cone-mode: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6763510Z   fetch-tags: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6764265Z   show-progress: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6764871Z   lfs: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6765549Z   submodules: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6766165Z   set-safe-directory: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6767066Z   allow-unsafe-pr-checkout: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6768422Z env:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6769082Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6770048Z   RUNTIME_TAG: runtime-a0e2222
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6771398Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6772720Z   FIXTURE_PORT: 18080
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.6773399Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7797946Z Syncing repository: quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7800870Z ##[group]Getting Git version info
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7802893Z Working directory is '/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a'
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7804867Z [command]/usr/bin/git version
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7873367Z git version 2.55.0
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7894589Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7906053Z Temporarily overriding HOME='/home/runner/work/_temp/9329c60d-24bf-4e36-881b-9df1d64cf760' before making global git config changes
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7907765Z Adding repository directory to the temporary git global config as a safe directory
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7913199Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7962914Z Deleting the contents of '/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a'
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7966279Z ##[group]Determining repository object format
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7967882Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7968741Z ##[group]Initializing the repository
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.7973588Z [command]/usr/bin/git init /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8081796Z hint: Using 'master' as the name for the initial branch. This default branch name
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8083863Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8085413Z hint: to use in all of your new repositories, which will suppress this warning,
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8086497Z hint: call:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8087216Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8088061Z hint: 	git config --global init.defaultBranch <name>
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8089092Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8090132Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8091740Z hint: 'development'. The just-created branch can be renamed via this command:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8093175Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8093899Z hint: 	git branch -m <name>
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8095252Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8096267Z hint: Disable this message with "git config set advice.defaultBranchName false"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8098776Z Initialized empty Git repository in /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git/
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8102928Z [command]/usr/bin/git remote add origin https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8156212Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8158255Z ##[group]Disabling automatic garbage collection
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8159641Z [command]/usr/bin/git config --local gc.auto 0
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8190796Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8193596Z ##[group]Setting up auth
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8195386Z Removing SSH command configuration
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8200064Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8230054Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8574217Z Removing HTTP extra header
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8580542Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8611868Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8814801Z Removing includeIf entries pointing to credentials config files
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8820019Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.8850772Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9054534Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9335724Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git.path /home/runner/work/_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9472287Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9651729Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9685305Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9713534Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9714450Z ##[group]Fetching the repository
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:56.9720511Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=2 origin +2c41c7be0730dcacb91a3b9ff6a9572c2ff28845:refs/remotes/origin/main
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2484357Z From https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2487832Z  * [new ref]         2c41c7be0730dcacb91a3b9ff6a9572c2ff28845 -> origin/main
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2492823Z [command]/usr/bin/git branch --list --remote origin/main
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2517308Z   origin/main
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2525085Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2546923Z 2c41c7be0730dcacb91a3b9ff6a9572c2ff28845
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2564610Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2566800Z ##[group]Determining the checkout info
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2569013Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2570351Z [command]/usr/bin/git sparse-checkout disable
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2610512Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2641236Z ##[group]Checking out the ref
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2644652Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2873906Z Switched to a new branch 'main'
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2884486Z branch 'main' set up to track 'origin/main'.
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2893348Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2932261Z [command]/usr/bin/git log -1 --format=%H
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2956599Z 2c41c7be0730dcacb91a3b9ff6a9572c2ff28845
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2963945Z ##[group]Removing auth
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2965269Z Removing SSH command configuration
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.2967974Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3003366Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3187133Z Removing HTTP extra header
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3190563Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3220712Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3403261Z Removing includeIf entries pointing to credentials config files
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3406065Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3431848Z includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3438212Z includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3442700Z includeif.gitdir:/github/workspace/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3444622Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3450229Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3458349Z /home/runner/work/_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3469298Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-fd3cf179\-6765\-41c8\-8480\-c015f9bdb773\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3537349Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3563056Z /home/runner/work/_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3575091Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-fd3cf179\-6765\-41c8\-8480\-c015f9bdb773\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3603331Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3644887Z /github/runner_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3674133Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-fd3cf179\-6765\-41c8\-8480\-c015f9bdb773\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3709240Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3733811Z /github/runner_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3741880Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-fd3cf179\-6765\-41c8\-8480\-c015f9bdb773\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3773756Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3959820Z Removing credentials config '/home/runner/work/_temp/git-credentials-fd3cf179-6765-41c8-8480-c015f9bdb773.config'
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.3969506Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	﻿2026-10-07T11:12:57.4344300Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4345980Z with:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4346967Z   ref: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4348253Z   path: .trusted
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4349245Z   persist-credentials: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4350865Z   repository: quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4360489Z   token: ***
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4361420Z   ssh-strict: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4362503Z   ssh-user: git
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4363480Z   clean: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4364453Z   sparse-checkout-cone-mode: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4365630Z   fetch-depth: 1
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4366555Z   fetch-tags: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4367505Z   show-progress: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4368540Z   lfs: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4369431Z   submodules: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4370454Z   set-safe-directory: true
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4371572Z   allow-unsafe-pr-checkout: false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4372819Z env:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4374011Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4375376Z   RUNTIME_TAG: runtime-a0e2222
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4377057Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4378806Z   FIXTURE_PORT: 18080
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.4379889Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5237615Z Syncing repository: quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5251564Z ##[group]Getting Git version info
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5255952Z Working directory is '/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted'
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5286136Z [command]/usr/bin/git version
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5341446Z git version 2.55.0
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5363100Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5371335Z Temporarily overriding HOME='/home/runner/work/_temp/dc5f3411-51c2-438f-89fd-23dae4a26c3f' before making global git config changes
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5376131Z Adding repository directory to the temporary git global config as a safe directory
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5379920Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5415289Z ##[group]Determining repository object format
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5417705Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5419312Z ##[group]Initializing the repository
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5423351Z [command]/usr/bin/git init /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5464827Z hint: Using 'master' as the name for the initial branch. This default branch name
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5468117Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5470463Z hint: to use in all of your new repositories, which will suppress this warning,
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5472396Z hint: call:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5473768Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5474952Z hint: 	git config --global init.defaultBranch <name>
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5476420Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5477749Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5479867Z hint: 'development'. The just-created branch can be renamed via this command:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5481506Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5483340Z hint: 	git branch -m <name>
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5484949Z hint:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5486926Z hint: Disable this message with "git config set advice.defaultBranchName false"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5529798Z Initialized empty Git repository in /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git/
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5537301Z [command]/usr/bin/git remote add origin https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5542670Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5545614Z ##[group]Disabling automatic garbage collection
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5547465Z [command]/usr/bin/git config --local gc.auto 0
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5562852Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5565254Z ##[group]Setting up auth
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5566821Z Removing SSH command configuration
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5569430Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5602450Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5823306Z Removing HTTP extra header
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5828086Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.5859925Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6110944Z Removing includeIf entries pointing to credentials config files
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6116714Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6152885Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6378894Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6411790Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git.path /home/runner/work/_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6444098Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6474187Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.trusted/.git.path /github/runner_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6509786Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.trusted/.git/worktrees/*.path /github/runner_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6540025Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6548104Z ##[group]Fetching the repository
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.6550443Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.8988292Z From https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.8991289Z  * branch            b3dcb58a397a9bbfe89a36d55cd42dc51355c725 -> FETCH_HEAD
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.8999610Z [command]/usr/bin/git rev-parse --verify --quiet b3dcb58a397a9bbfe89a36d55cd42dc51355c725^{object}
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9023945Z b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9029100Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9030669Z ##[group]Determining the checkout info
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9033019Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9033985Z [command]/usr/bin/git sparse-checkout disable
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9076689Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9110432Z ##[group]Checking out the ref
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9113344Z [command]/usr/bin/git checkout --progress --force b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9147750Z Note: switching to 'b3dcb58a397a9bbfe89a36d55cd42dc51355c725'.
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9149243Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9150508Z You are in 'detached HEAD' state. You can look around, make experimental
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9153876Z changes and commit them, and you can discard any commits you make in this
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9156674Z state without impacting any branches by switching back to a branch.
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9158373Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9159696Z If you want to create a new branch to retain commits you create, you may
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9162294Z do so (now or later) by using -c with the switch command. Example:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9163694Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9164298Z   git switch -c <new-branch-name>
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9165149Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9165850Z Or undo this operation with:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9166936Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9167292Z   git switch -
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9167791Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9168521Z Turn off this advice by setting config variable advice.detachedHead to false
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9169709Z 
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9170457Z HEAD is now at b3dcb58 Trusted TestMaster Action built from testmaster@a0e2222
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9174662Z ##[endgroup]
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9203853Z [command]/usr/bin/git log -1 --format=%H
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9216920Z b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9226922Z ##[group]Removing auth
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9228469Z Removing SSH command configuration
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9230670Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9261122Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9448793Z Removing HTTP extra header
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9457674Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9489712Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9676523Z Removing includeIf entries pointing to credentials config files
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9679659Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9705835Z includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9710415Z includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9713912Z includeif.gitdir:/github/workspace/.trusted/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9715468Z includeif.gitdir:/github/workspace/.trusted/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9721323Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9732844Z /home/runner/work/_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9743906Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-d6fb815f\-9cf9\-40ab\-8fc6\-5a79d0a48b14\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9777080Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9796646Z /home/runner/work/_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9814338Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-d6fb815f\-9cf9\-40ab\-8fc6\-5a79d0a48b14\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9848172Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.trusted/.git.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9868826Z /github/runner_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9877155Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.trusted/.git.path \/github\/runner_temp\/git\-credentials\-d6fb815f\-9cf9\-40ab\-8fc6\-5a79d0a48b14\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9962756Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.trusted/.git/worktrees/*.path
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9989098Z /github/runner_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:57.9997391Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.trusted/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-d6fb815f\-9cf9\-40ab\-8fc6\-5a79d0a48b14\.config
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:58.0031273Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:58.0218907Z Removing credentials config '/home/runner/work/_temp/git-credentials-d6fb815f-9cf9-40ab-8fc6-5a79d0a48b14.config'
+execute	Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:12:58.0229076Z ##[endgroup]
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	﻿2026-10-07T11:12:58.0473224Z ##[group]Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0474627Z with:
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0475399Z   node-version: 24
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0476232Z   check-latest: false
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0484054Z   token: ***
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0484943Z   package-manager-cache: true
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0485890Z env:
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0486805Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0487988Z   RUNTIME_TAG: runtime-a0e2222
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0489425Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0490980Z   FIXTURE_PORT: 18080
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.0491845Z ##[endgroup]
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.1783629Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.1786586Z ##[group]Environment details
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.6258375Z node: v24.21.0
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.6259567Z npm: 11.19.0
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.6260226Z yarn: 1.22.22
+execute	Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020	2026-10-07T11:12:58.6261972Z ##[endgroup]
+execute	Free runner disk for locked runner images	﻿2026-10-07T11:12:58.6387241Z ##[group]Run sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6388573Z ^[[36;1msudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /^[[0m
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6596022Z shell: /usr/bin/bash -e {0}
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6596712Z env:
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6597371Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6598085Z   RUNTIME_TAG: runtime-a0e2222
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6598863Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6599690Z   FIXTURE_PORT: 18080
+execute	Free runner disk for locked runner images	2026-10-07T11:12:58.6600279Z ##[endgroup]
+execute	Free runner disk for locked runner images	2026-10-07T11:15:08.4651707Z Filesystem      Size  Used Avail Use% Mounted on
+execute	Free runner disk for locked runner images	2026-10-07T11:15:08.4652803Z /dev/root       145G   41G  105G  28% /
+execute	Use the containerd image store required by the image lock	﻿2026-10-07T11:15:08.4709511Z ##[group]Run docker version --format 'client={{.Client.Version}} server={{.Server.Version}}'
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4710329Z ^[[36;1mdocker version --format 'client={{.Client.Version}} server={{.Server.Version}}'^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4710913Z ^[[36;1mconfig=/etc/docker/daemon.json^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4711429Z ^[[36;1mcurrent=$(sudo cat "$config" 2>/dev/null || echo '{}')^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4712432Z ^[[36;1mecho "$current" | jq '.features = ((.features // {}) + {"containerd-snapshotter": true})' | sudo tee "$config" > /dev/null^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4713075Z ^[[36;1msudo systemctl restart docker^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4713572Z ^[[36;1mdriver=$(docker info --format '{{json .DriverStatus}}')^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4714028Z ^[[36;1mecho "driver-status=$driver"^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4715041Z ^[[36;1mcase "$driver" in *io.containerd.snapshotter.v1*) ;; *) echo "::error::containerd image store not active"; exit 1;; esac^[[0m
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4760877Z shell: /usr/bin/bash -e {0}
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4761298Z env:
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4761868Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4762470Z   RUNTIME_TAG: runtime-a0e2222
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4762967Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4763500Z   FIXTURE_PORT: 18080
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.4763880Z ##[endgroup]
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:08.5718692Z client=28.0.4 server=28.0.4
+execute	Use the containerd image store required by the image lock	2026-10-07T11:15:09.5912006Z driver-status=[["driver-type","io.containerd.snapshotter.v1"]]
+execute	Download pinned private runtime release	﻿2026-10-07T11:15:09.5953245Z ##[group]Run gh release download "$RUNTIME_TAG" -R "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/dist"
+execute	Download pinned private runtime release	2026-10-07T11:15:09.5954014Z ^[[36;1mgh release download "$RUNTIME_TAG" -R "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/dist"^[[0m
+execute	Download pinned private runtime release	2026-10-07T11:15:09.5954548Z ^[[36;1mmkdir "$RUNNER_TEMP/dist/images"^[[0m
+execute	Download pinned private runtime release	2026-10-07T11:15:09.5955090Z ^[[36;1mmv "$RUNNER_TEMP"/dist/*.part-* "$RUNNER_TEMP/dist/images/"^[[0m
+execute	Download pinned private runtime release	2026-10-07T11:15:09.5999994Z shell: /usr/bin/bash -e {0}
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6000419Z env:
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6000801Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6001500Z   RUNTIME_TAG: runtime-a0e2222
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6001986Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6002986Z   FIXTURE_PORT: 18080
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6005460Z   GH_TOKEN: ***
+execute	Download pinned private runtime release	2026-10-07T11:15:09.6005774Z ##[endgroup]
+execute	Install verified runtime for fixture preparation	﻿2026-10-07T11:15:14.2874801Z ##[group]Run node .trusted/tools/dist/distribution/install.js --manifest "$RUNNER_TEMP/dist/manifest.json" --manifest-sha256 "$MANIFEST_SHA256" --dest "$RUNNER_TEMP/setup-runtime"
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2876065Z ^[[36;1mnode .trusted/tools/dist/distribution/install.js --manifest "$RUNNER_TEMP/dist/manifest.json" --manifest-sha256 "$MANIFEST_SHA256" --dest "$RUNNER_TEMP/setup-runtime"^[[0m
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2919220Z shell: /usr/bin/bash -e {0}
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2919691Z env:
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2920062Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2920522Z   RUNTIME_TAG: runtime-a0e2222
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2921039Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2921922Z   FIXTURE_PORT: 18080
+execute	Install verified runtime for fixture preparation	2026-10-07T11:15:14.2922427Z ##[endgroup]
+execute	Install verified runtime for fixture preparation	2026-10-07T11:16:31.2484156Z {"runtimeDir":"/home/runner/work/_temp/setup-runtime","cliPath":"/home/runner/work/_temp/setup-runtime/apps/cli/dist/main.js","sourceCommit":"a0e22228d883329cf2fa8fe2e18b188a57960203","manifestSha256":"9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71"}
+execute	Start minimal fixture	﻿2026-10-07T11:16:31.4432611Z ##[group]Run nohup node fixture/server.mjs > "$RUNNER_TEMP/fixture.log" 2>&1 &
+execute	Start minimal fixture	2026-10-07T11:16:31.4433286Z ^[[36;1mnohup node fixture/server.mjs > "$RUNNER_TEMP/fixture.log" 2>&1 &^[[0m
+execute	Start minimal fixture	2026-10-07T11:16:31.4473979Z shell: /usr/bin/bash -e {0}
+execute	Start minimal fixture	2026-10-07T11:16:31.4474387Z env:
+execute	Start minimal fixture	2026-10-07T11:16:31.4474802Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Start minimal fixture	2026-10-07T11:16:31.4475269Z   RUNTIME_TAG: runtime-a0e2222
+execute	Start minimal fixture	2026-10-07T11:16:31.4475790Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Start minimal fixture	2026-10-07T11:16:31.4476321Z   FIXTURE_PORT: 18080
+execute	Start minimal fixture	2026-10-07T11:16:31.4476642Z ##[endgroup]
+execute	Prepare disposable workspace	﻿2026-10-07T11:16:31.6039574Z ##[group]Run node setup.mjs
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6039980Z ^[[36;1mnode setup.mjs^[[0m
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6081118Z shell: /usr/bin/bash -e {0}
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6081576Z env:
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6081972Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6082531Z   RUNTIME_TAG: runtime-a0e2222
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6083033Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6083526Z   FIXTURE_PORT: 18080
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6083896Z   SCENARIO: sha-mismatch
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6084213Z   PR_HEAD_SHA: 
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6084642Z   TESTMASTER_CLI: /home/runner/work/_temp/setup-runtime/apps/cli/dist/main.js
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6085255Z   TESTMASTER_DATA_DIR: /home/runner/work/_temp/testmaster-data
+execute	Prepare disposable workspace	2026-10-07T11:16:31.6085703Z ##[endgroup]
+execute	Prepare disposable workspace	2026-10-07T11:16:34.9680113Z {"scenario":"sha-mismatch","project-id":"prj_01a11614-5306-71c1-82c3-049120187950","environment-id":"env_01a11614-534d-719e-b0bc-64744075de7e","target-url":"http://127.0.0.1:18080","test-ids":"[\"tst_01a11614-5823-711a-ba62-03ecd34293ad\"]","allow-empty":"false","empty-reason":"","commit-sha":"2c41c7be0730dcacb91a3b9ff6a9572c2ff28845","checkout-sha":"e389930d23e20780dbad5684043834cb9caa306d"}
+execute	TestMaster strict CI	﻿2026-10-07T11:16:34.9816600Z ##[group]Run quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a@b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	TestMaster strict CI	2026-10-07T11:16:34.9817350Z with:
+execute	TestMaster strict CI	2026-10-07T11:16:34.9817935Z   runtime-manifest: /home/runner/work/_temp/dist/manifest.json#9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	TestMaster strict CI	2026-10-07T11:16:34.9818639Z   test-ids: ["tst_01a11614-5823-711a-ba62-03ecd34293ad"]
+execute	TestMaster strict CI	2026-10-07T11:16:34.9819089Z   environment: env_01a11614-534d-719e-b0bc-64744075de7e
+execute	TestMaster strict CI	2026-10-07T11:16:34.9819504Z   target-url: http://127.0.0.1:18080
+execute	TestMaster strict CI	2026-10-07T11:16:34.9819966Z   commit-sha: 2c41c7be0730dcacb91a3b9ff6a9572c2ff28845
+execute	TestMaster strict CI	2026-10-07T11:16:34.9820412Z   checkout-sha: e389930d23e20780dbad5684043834cb9caa306d
+execute	TestMaster strict CI	2026-10-07T11:16:34.9821562Z   allow-empty: false
+execute	TestMaster strict CI	2026-10-07T11:16:34.9821888Z   all: false
+execute	TestMaster strict CI	2026-10-07T11:16:34.9822403Z   quarantine-policy: exclude
+execute	TestMaster strict CI	2026-10-07T11:16:34.9822804Z   publish-check: false
+execute	TestMaster strict CI	2026-10-07T11:16:34.9823116Z env:
+execute	TestMaster strict CI	2026-10-07T11:16:34.9823474Z   ACTION_SHA: b3dcb58a397a9bbfe89a36d55cd42dc51355c725
+execute	TestMaster strict CI	2026-10-07T11:16:34.9824014Z   RUNTIME_TAG: runtime-a0e2222
+execute	TestMaster strict CI	2026-10-07T11:16:34.9824505Z   MANIFEST_SHA256: 9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71
+execute	TestMaster strict CI	2026-10-07T11:16:34.9824992Z   FIXTURE_PORT: 18080
+execute	TestMaster strict CI	2026-10-07T11:16:34.9825378Z   TESTMASTER_DATA_DIR: /home/runner/work/_temp/testmaster-data
+execute	TestMaster strict CI	2026-10-07T11:16:34.9825876Z   TESTMASTER_PROJECT_ID: prj_01a11614-5306-71c1-82c3-049120187950
+execute	TestMaster strict CI	2026-10-07T11:16:34.9826342Z ##[endgroup]
+execute	TestMaster strict CI	2026-10-07T11:16:35.0243062Z POLICY_DENIED: Action SHA context does not match checkout
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	﻿2026-10-07T11:16:35.0444317Z Post job cleanup.
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1250709Z [command]/usr/bin/git version
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1289542Z git version 2.55.0
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1331068Z Temporarily overriding HOME='/home/runner/work/_temp/f35d4068-8b8f-4d61-b38d-21c791b85939' before making global git config changes
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1333131Z Adding repository directory to the temporary git global config as a safe directory
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1336756Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a/.trusted
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1367806Z Removing SSH command configuration
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1374499Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1408193Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1624157Z Removing HTTP extra header
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1629607Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1660910Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1862853Z Removing includeIf entries pointing to credentials config files
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1869659Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.1904031Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	﻿2026-10-07T11:16:35.2337698Z Post job cleanup.
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3263978Z [command]/usr/bin/git version
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3323910Z git version 2.55.0
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3369547Z Temporarily overriding HOME='/home/runner/work/_temp/28013476-3b53-4ac6-b020-e8d0f8750fae' before making global git config changes
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3371632Z Adding repository directory to the temporary git global config as a safe directory
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3375193Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/testmaster-m3-acceptance-20261007t011247z-4eafc26a/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3422523Z Removing SSH command configuration
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3430066Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3472660Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3698215Z Removing HTTP extra header
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3705793Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3740726Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3941587Z Removing includeIf entries pointing to credentials config files
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3949703Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+execute	Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1	2026-10-07T11:16:35.3987247Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+execute	Complete job	﻿2026-10-07T11:16:35.4358295Z Evaluate and set job outputs
+execute	Complete job	2026-10-07T11:16:35.4369390Z Set output 'job-id'
+execute	Complete job	2026-10-07T11:16:35.4371874Z Cleaning up orphan processes
+execute	Complete job	2026-10-07T11:16:35.4830880Z Terminate orphan process: pid (3081) (MainThread)

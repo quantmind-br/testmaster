@@ -1,0 +1,390 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "local-action-rehearsal",
+  "limitations": [
+    "Local workstation execution of the pinned action tree; not GitHub-hosted runner, Actions artifact, Checks API or branch-protection evidence."
+  ],
+  "manifestSha256": "9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71",
+  "shaA": "4ef216cb4d22b21af967f7fca4f41dc807ed7cd1",
+  "shaB": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+  "results": [
+    {
+      "name": "defect-on-A",
+      "ref": "4ef216cb4d22b21af967f7fca4f41dc807ed7cd1",
+      "event": "workflow_dispatch",
+      "scenarioInput": "selected",
+      "actionExit": 1,
+      "actionSignal": null,
+      "stderr": "",
+      "outputs": {
+        "gate": "failed",
+        "exit-code": "1",
+        "batch-id": "bat_01a11412-20fe-7636-97d2-5709b63acd01",
+        "assessed-sha": "4ef216cb4d22b21af967f7fca4f41dc807ed7cd1",
+        "checkout-sha": "4ef216cb4d22b21af967f7fca4f41dc807ed7cd1",
+        "report-hash": "195dbb855d3d765929d5696afe4e32999dcf0ed50011e6d501e7d81a97deef51"
+      },
+      "outputKeys": [
+        "assessed-sha",
+        "batch-id",
+        "bundle-index-path",
+        "checkout-sha",
+        "exit-code",
+        "gate",
+        "junit-path",
+        "report-hash",
+        "report-path",
+        "summary-path"
+      ],
+      "report": {
+        "sha256": "450e584c77bc070c789186e8da8ef5447e4937ac1eea00fea1d671b0eadec12f",
+        "gate": "failed",
+        "exitCode": 1,
+        "counts": {
+          "passed": 0,
+          "failed": 1,
+          "blocked": 0,
+          "cancelled": 0,
+          "inconclusive": 0,
+          "inFlight": 0
+        },
+        "provenance": {
+          "assessedSha": "4ef216cb4d22b21af967f7fca4f41dc807ed7cd1",
+          "checkoutSha": "4ef216cb4d22b21af967f7fca4f41dc807ed7cd1",
+          "binding": "verified",
+          "targetBinding": "local-checkout"
+        },
+        "selection": {
+          "requested": 1,
+          "excluded": [],
+          "emptyReason": null,
+          "quarantinePolicy": "exclude"
+        },
+        "error": null,
+        "junitHasFailure": true
+      }
+    },
+    {
+      "name": "healthy-on-B",
+      "ref": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+      "event": "workflow_dispatch",
+      "scenarioInput": "selected",
+      "actionExit": 0,
+      "actionSignal": null,
+      "stderr": "",
+      "outputs": {
+        "gate": "passed",
+        "exit-code": "0",
+        "batch-id": "bat_01a11412-5be8-723e-9cdc-e8e6a795eb99",
+        "assessed-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "checkout-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "report-hash": "ef698542f32f5eb047df659d328ee9223acc5b37611fd669e528aee144d1a251"
+      },
+      "outputKeys": [
+        "assessed-sha",
+        "batch-id",
+        "bundle-index-path",
+        "checkout-sha",
+        "exit-code",
+        "gate",
+        "junit-path",
+        "report-hash",
+        "report-path",
+        "summary-path"
+      ],
+      "report": {
+        "sha256": "76f358d95b11b32b2df878120a7b3230e5ea091081ca63a0d08d411c1d16383b",
+        "gate": "passed",
+        "exitCode": 0,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "blocked": 0,
+          "cancelled": 0,
+          "inconclusive": 0,
+          "inFlight": 0
+        },
+        "provenance": {
+          "assessedSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "checkoutSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "binding": "verified",
+          "targetBinding": "local-checkout"
+        },
+        "selection": {
+          "requested": 1,
+          "excluded": [],
+          "emptyReason": null,
+          "quarantinePolicy": "exclude"
+        },
+        "error": null,
+        "junitHasFailure": false
+      }
+    },
+    {
+      "name": "authorized-empty-on-B",
+      "ref": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+      "event": "workflow_dispatch",
+      "scenarioInput": "authorized-empty",
+      "actionExit": 0,
+      "actionSignal": null,
+      "stderr": "",
+      "outputs": {
+        "gate": "not_applicable",
+        "exit-code": "0",
+        "batch-id": "bat_01a11412-960c-7113-8a56-007c87353d75",
+        "assessed-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "checkout-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "report-hash": "dbd9c683466cc9fe73b9b34109d84fecad0112b43bd9946c28e895045b373ec9"
+      },
+      "outputKeys": [
+        "assessed-sha",
+        "batch-id",
+        "bundle-index-path",
+        "checkout-sha",
+        "exit-code",
+        "gate",
+        "junit-path",
+        "report-hash",
+        "report-path",
+        "summary-path"
+      ],
+      "report": {
+        "sha256": "ce02ff66d388921b8e4f4dc3e557befea308f447ae9a2db99a4d1961bd68ed74",
+        "gate": "not_applicable",
+        "exitCode": 0,
+        "counts": {
+          "passed": 0,
+          "failed": 0,
+          "blocked": 0,
+          "cancelled": 0,
+          "inconclusive": 0,
+          "inFlight": 0
+        },
+        "provenance": {
+          "assessedSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "checkoutSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "binding": "unbound",
+          "targetBinding": "unbound"
+        },
+        "selection": {
+          "requested": 0,
+          "excluded": [
+            {
+              "testId": "tst_01a11412-662d-71a4-a118-9c941d5cf5c4",
+              "reason": "unaffected",
+              "owner": null,
+              "expiresAt": null
+            }
+          ],
+          "emptyReason": "Acceptance control: no tests are affected",
+          "quarantinePolicy": "exclude"
+        },
+        "error": null,
+        "junitHasFailure": true
+      }
+    },
+    {
+      "name": "empty-unauthorized-on-B",
+      "ref": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+      "event": "workflow_dispatch",
+      "scenarioInput": "empty",
+      "actionExit": 5,
+      "actionSignal": null,
+      "stderr": "",
+      "outputs": {
+        "gate": "failed",
+        "exit-code": "5",
+        "batch-id": "",
+        "assessed-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "checkout-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "report-hash": "0c9a0212245d315b2ee38fc12a016b4fe963b3205c3872ed4f73f9821e66af42"
+      },
+      "outputKeys": [
+        "assessed-sha",
+        "batch-id",
+        "bundle-index-path",
+        "checkout-sha",
+        "exit-code",
+        "gate",
+        "junit-path",
+        "report-hash",
+        "report-path",
+        "summary-path"
+      ],
+      "report": {
+        "sha256": "0a3fcb28a9bfadf833d8519b16322278c4ab125718c001cc07e1ff43b122f484",
+        "gate": "failed",
+        "exitCode": 5,
+        "counts": null,
+        "provenance": {
+          "assessedSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "checkoutSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "binding": "unbound",
+          "targetBinding": "unbound"
+        },
+        "selection": {
+          "requested": 0,
+          "excluded": [],
+          "emptyReason": null,
+          "quarantinePolicy": "exclude"
+        },
+        "error": {
+          "code": "INVALID_ARGUMENT",
+          "message": "Select exactly one of testIds, runIds, diff or all"
+        },
+        "junitHasFailure": true
+      }
+    },
+    {
+      "name": "input-injection-on-B",
+      "ref": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+      "event": "workflow_dispatch",
+      "scenarioInput": "injection",
+      "actionExit": 7,
+      "actionSignal": null,
+      "stderr": "INVALID_ARGUMENT: test-ids contains malformed or duplicate IDs",
+      "outputs": {},
+      "outputKeys": [],
+      "report": null
+    },
+    {
+      "name": "checkout-sha-mismatch-on-B",
+      "ref": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+      "event": "workflow_dispatch",
+      "scenarioInput": "sha-mismatch",
+      "actionExit": 7,
+      "actionSignal": null,
+      "stderr": "POLICY_DENIED: Action SHA context does not match checkout",
+      "outputs": {},
+      "outputKeys": [],
+      "report": null
+    },
+    {
+      "name": "cancelled-on-B",
+      "ref": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+      "event": "workflow_dispatch",
+      "scenarioInput": "cancel",
+      "actionExit": 143,
+      "actionSignal": null,
+      "stderr": "",
+      "outputs": {
+        "gate": "failed",
+        "exit-code": "143",
+        "batch-id": "bat_01a11413-0dcd-71fb-9fcf-37c0b3ca5043",
+        "assessed-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "checkout-sha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+        "report-hash": "2d0943c2e66bed480b5dc06da0feabe4bf9b99d3eaf9efc92691aa767b5ce543"
+      },
+      "outputKeys": [
+        "assessed-sha",
+        "batch-id",
+        "bundle-index-path",
+        "checkout-sha",
+        "exit-code",
+        "gate",
+        "junit-path",
+        "report-hash",
+        "report-path",
+        "summary-path"
+      ],
+      "report": {
+        "sha256": "f117e6043eb61dc96bdbbc359c849ee2bbc8e06425498e33f14d1f7c3ced2a44",
+        "gate": "failed",
+        "exitCode": 143,
+        "counts": {
+          "passed": 0,
+          "failed": 0,
+          "blocked": 0,
+          "cancelled": 0,
+          "inconclusive": 1,
+          "inFlight": 0
+        },
+        "provenance": {
+          "assessedSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "checkoutSha": "ece55ff2904bdd1b0cc566f34d69c04a08f9ac66",
+          "binding": "verified",
+          "targetBinding": "local-checkout"
+        },
+        "selection": {
+          "requested": 1,
+          "excluded": [],
+          "emptyReason": null,
+          "quarantinePolicy": "exclude"
+        },
+        "error": {
+          "code": "UNAVAILABLE",
+          "message": "CI interrupted"
+        },
+        "junitHasFailure": true
+      }
+    },
+    {
+      "name": "same-repo-pr-synthetic-merge",
+      "ref": "fbf96d542cc4c3fb28ddff669b0b40942a7aa54f",
+      "event": "pull_request",
+      "scenarioInput": "selected",
+      "actionExit": 0,
+      "actionSignal": null,
+      "stderr": "",
+      "outputs": {
+        "gate": "passed",
+        "exit-code": "0",
+        "batch-id": "bat_01a11414-7103-70d1-ac83-036b75c50923",
+        "assessed-sha": "2f50d94e8c0281461fc03af3bf642c3419710762",
+        "checkout-sha": "fbf96d542cc4c3fb28ddff669b0b40942a7aa54f",
+        "report-hash": "9414159319a8c8de7374ba17d37f348fc273a95c3a901b9e39482429774d966c"
+      },
+      "outputKeys": [
+        "assessed-sha",
+        "batch-id",
+        "bundle-index-path",
+        "checkout-sha",
+        "exit-code",
+        "gate",
+        "junit-path",
+        "report-hash",
+        "report-path",
+        "summary-path"
+      ],
+      "report": {
+        "sha256": "0de0ba7261ad81d8e051895bdaf8aed9b1a603bf69c6aade8e5908d80fb7b411",
+        "gate": "passed",
+        "exitCode": 0,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "blocked": 0,
+          "cancelled": 0,
+          "inconclusive": 0,
+          "inFlight": 0
+        },
+        "provenance": {
+          "assessedSha": "2f50d94e8c0281461fc03af3bf642c3419710762",
+          "checkoutSha": "fbf96d542cc4c3fb28ddff669b0b40942a7aa54f",
+          "binding": "verified",
+          "targetBinding": "local-checkout"
+        },
+        "selection": {
+          "requested": 1,
+          "excluded": [],
+          "emptyReason": null,
+          "quarantinePolicy": "exclude"
+        },
+        "error": null,
+        "junitHasFailure": false
+      }
+    },
+    {
+      "name": "fork-pr-denied",
+      "ref": "fbf96d542cc4c3fb28ddff669b0b40942a7aa54f",
+      "event": "pull_request",
+      "scenarioInput": "selected",
+      "actionExit": 7,
+      "actionSignal": null,
+      "stderr": "POLICY_DENIED: Fork execution cannot receive private runtime assets",
+      "outputs": {},
+      "outputKeys": [],
+      "report": null
+    }
+  ]
+}

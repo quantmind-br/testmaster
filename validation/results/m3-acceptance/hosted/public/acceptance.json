@@ -1,0 +1,413 @@
+{
+ "schemaVersion": "1.0.0",
+ "kind": "hosted-action-acceptance",
+ "repository": "quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a",
+ "visibility": "public",
+ "visibilityChange": "Operator instructed on 2026-10-07 to make the repository public and retry; the private run 37558757541 had been refused by account billing. Before publication the release runtime, both image archives (decompressed per layer) and the trusted action tree were scanned for the QuantForge key, the gh token, private-key/token patterns and /home/diogo paths: zero findings (one jose library literal). Fork PR workflows require approval for all external contributors.",
+ "runner": "GitHub-hosted ubuntu-24.04, Docker 28.0.4 switched to the containerd image store",
+ "runtime": {
+  "releaseTag": "runtime-a0e2222",
+  "manifestSha256": "9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71"
+ },
+ "trustedActionCommits": {
+  "b3dcb58a397a9bbfe89a36d55cd42dc51355c725": "testmaster@a0e2222 (runs 00-13, 15-16)",
+  "70970eadb884aefeb0b70e22fc9849a3b7900d28": "testmaster@01e4528 same-repo PR publication fix (runs 14, 17-18)"
+ },
+ "commits": {
+  "A": "e389930d23e20780dbad5684043834cb9caa306d",
+  "B": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845"
+ },
+ "defectsFoundHosted": [
+  "Locked image IDs come from Docker's containerd image store; the runner's classic store loads the same archives under other IDs (run 37611017516: No such image). Workflow enables the containerd snapshotter; documented in docs/development.md.",
+  "Trusted publisher refused every same-repository PR as a fork because the workflow-run API omits pull_requests[].head.repo.full_name (runs 37615277874/37615282830, reproduced read-only against the real run). Fixed in testmaster 01e4528 / action 70970ea and verified by runs 37616835169, 37618686282, 37618689937."
+ ],
+ "observations": [
+  "Defect on A (degraded health): gate failed, exit 1, result/required-gate failure on A (run 37611604777).",
+  "Authorized-empty on B: gate not_applicable, exit 0, result neutral and required-gate failure on the same snapshot (run 37612533143).",
+  "Unauthorized empty on B: exit 5, gate failed, failure/failure (run 37612542116).",
+  "Input injection and checkout-SHA mismatch on B: Action refused before execution (exit 7), no artifact, publisher skipped (runs 37612550621, 37612559422).",
+  "Cancel during strict CI on B: exit 143, Run inconclusive, gate failed, failure/failure (run 37612568287).",
+  "Healthy on B: gate passed, result/required-gate success on B (run 37613698350).",
+  "Old A after new B: A's later result stays on A (failure at 11:36); B's latest checks remain success from 11:29 (run 37614541268).",
+  "Branch protection requires TestMaster / required-gate from app 15368 with enforce_admins; an admin direct push to main is refused (GH006).",
+  "Same-repo PRs (synthetic merge checkout, assessed PR head, binding verified): healthy PR mergeable clean; defect PR merge refused 'Required status check is failing'; authorized-empty-only PR merge refused 'Required status check is expected'."
+ ],
+ "pullRequests": {
+  "1": {
+   "head": "57a37d5f4fa715dcee6b7dbaca9830adcbe1a504",
+   "state": "open",
+   "merged": false,
+   "mergeableState": "clean"
+  },
+  "2": {
+   "head": "9adb47d063e46b68e6dbd044f8bc89c28852e0dd",
+   "state": "open",
+   "merged": false,
+   "mergeableState": "blocked"
+  },
+  "3": {
+   "head": "978c0259472783c1f03d359dc973f8fe6f044619",
+   "state": "open",
+   "merged": false,
+   "mergeableState": "blocked"
+  },
+  "4": {
+   "head": "3078d7aaf4dd75d750235d9a3b31eba1acabc517",
+   "state": "closed",
+   "merged": true,
+   "mergeableState": "unknown"
+  }
+ },
+ "runs": [
+  {
+   "label": "00-classic-image-store-install-failure",
+   "runId": 37611017516,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37611017516",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "8bfb69a9020313f7675d12a7134b00cb3d74e058",
+   "conclusion": "failure",
+   "gate": null,
+   "exitCode": null,
+   "provenance": null,
+   "failedSteps": {
+    "execute": [
+     "Install verified runtime for fixture preparation"
+    ]
+   }
+  },
+  {
+   "label": "01-defect-on-A",
+   "runId": 37611604777,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37611604777",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "e389930d23e20780dbad5684043834cb9caa306d",
+   "conclusion": "failure",
+   "gate": "failed",
+   "exitCode": 1,
+   "provenance": {
+    "assessedSha": "e389930d23e20780dbad5684043834cb9caa306d",
+    "checkoutSha": "e389930d23e20780dbad5684043834cb9caa306d",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  },
+  {
+   "label": "02-authorized-empty-on-B",
+   "runId": 37612533143,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37612533143",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+   "conclusion": "success",
+   "gate": "not_applicable",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "checkoutSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "binding": "unbound",
+    "targetBinding": "unbound"
+   },
+   "failedSteps": {}
+  },
+  {
+   "label": "03-empty-unauthorized-on-B",
+   "runId": 37612542116,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37612542116",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+   "conclusion": "failure",
+   "gate": "failed",
+   "exitCode": 5,
+   "provenance": {
+    "assessedSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "checkoutSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "binding": "unbound",
+    "targetBinding": "unbound"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  },
+  {
+   "label": "04-input-injection-on-B",
+   "runId": 37612550621,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37612550621",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+   "conclusion": "failure",
+   "gate": null,
+   "exitCode": null,
+   "provenance": null,
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  },
+  {
+   "label": "05-checkout-sha-mismatch-on-B",
+   "runId": 37612559422,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37612559422",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+   "conclusion": "failure",
+   "gate": null,
+   "exitCode": null,
+   "provenance": null,
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  },
+  {
+   "label": "06-cancelled-on-B",
+   "runId": 37612568287,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37612568287",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+   "conclusion": "cancelled",
+   "gate": "failed",
+   "exitCode": 143,
+   "provenance": {
+    "assessedSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "checkoutSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  },
+  {
+   "label": "07-healthy-on-B",
+   "runId": 37613698350,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37613698350",
+   "event": "workflow_dispatch",
+   "headBranch": "main",
+   "headSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+   "conclusion": "success",
+   "gate": "passed",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "checkoutSha": "2c41c7be0730dcacb91a3b9ff6a9572c2ff28845",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {}
+  },
+  {
+   "label": "08-old-A-after-new-B",
+   "runId": 37614541268,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37614541268",
+   "event": "workflow_dispatch",
+   "headBranch": "old-a",
+   "headSha": "e389930d23e20780dbad5684043834cb9caa306d",
+   "conclusion": "failure",
+   "gate": "failed",
+   "exitCode": 1,
+   "provenance": {
+    "assessedSha": "e389930d23e20780dbad5684043834cb9caa306d",
+    "checkoutSha": "e389930d23e20780dbad5684043834cb9caa306d",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  },
+  {
+   "label": "10-same-repo-pr-healthy",
+   "runId": 37615277874,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37615277874",
+   "event": "pull_request",
+   "headBranch": "pr-healthy",
+   "headSha": "f565fadb9df61d3572c59510aacb33f95919da60",
+   "conclusion": "failure",
+   "gate": "passed",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "f565fadb9df61d3572c59510aacb33f95919da60",
+    "checkoutSha": "090c8a6a2b1c2a466c8905ab424c774ef3e87858",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "publish": [
+     "Publish frozen result"
+    ]
+   }
+  },
+  {
+   "label": "11-same-repo-pr-defect",
+   "runId": 37615282830,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37615282830",
+   "event": "pull_request",
+   "headBranch": "pr-defect",
+   "headSha": "be1e7fac9fdfb98f443f04bbe79c739bf99a85e5",
+   "conclusion": "failure",
+   "gate": "failed",
+   "exitCode": 1,
+   "provenance": {
+    "assessedSha": "be1e7fac9fdfb98f443f04bbe79c739bf99a85e5",
+    "checkoutSha": "0d9ee474c93b4354cab20bfb6ba2c74a780d37da",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ],
+    "publish": [
+     "Publish frozen result"
+    ]
+   }
+  },
+  {
+   "label": "12-pr-authorized-empty-only",
+   "runId": 37615313925,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37615313925",
+   "event": "workflow_dispatch",
+   "headBranch": "pr-empty",
+   "headSha": "978c0259472783c1f03d359dc973f8fe6f044619",
+   "conclusion": "success",
+   "gate": "not_applicable",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "978c0259472783c1f03d359dc973f8fe6f044619",
+    "checkoutSha": "978c0259472783c1f03d359dc973f8fe6f044619",
+    "binding": "unbound",
+    "targetBinding": "unbound"
+   },
+   "failedSteps": {}
+  },
+  {
+   "label": "14-pr-pin-fixed-action",
+   "runId": 37616835169,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37616835169",
+   "event": "pull_request",
+   "headBranch": "action-01e4528",
+   "headSha": "3078d7aaf4dd75d750235d9a3b31eba1acabc517",
+   "conclusion": "success",
+   "gate": "passed",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "3078d7aaf4dd75d750235d9a3b31eba1acabc517",
+    "checkoutSha": "47b2aa8f21080dac6d350d4a24f2bad41cddd4f8",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {}
+  },
+  {
+   "label": "15-same-repo-pr-healthy-fixed",
+   "runId": 37617653451,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37617653451",
+   "event": "pull_request",
+   "headBranch": "pr-healthy",
+   "headSha": "f565fadb9df61d3572c59510aacb33f95919da60",
+   "conclusion": "failure",
+   "gate": "passed",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "f565fadb9df61d3572c59510aacb33f95919da60",
+    "checkoutSha": "090c8a6a2b1c2a466c8905ab424c774ef3e87858",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "publish": [
+     "Publish frozen result"
+    ]
+   }
+  },
+  {
+   "label": "16-same-repo-pr-defect-fixed",
+   "runId": 37617658956,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37617658956",
+   "event": "pull_request",
+   "headBranch": "pr-defect",
+   "headSha": "be1e7fac9fdfb98f443f04bbe79c739bf99a85e5",
+   "conclusion": "failure",
+   "gate": "failed",
+   "exitCode": 1,
+   "provenance": {
+    "assessedSha": "be1e7fac9fdfb98f443f04bbe79c739bf99a85e5",
+    "checkoutSha": "0d9ee474c93b4354cab20bfb6ba2c74a780d37da",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ],
+    "publish": [
+     "Publish frozen result"
+    ]
+   }
+  },
+  {
+   "label": "17-same-repo-pr-healthy-fixed-action",
+   "runId": 37618686282,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37618686282",
+   "event": "pull_request",
+   "headBranch": "pr-healthy",
+   "headSha": "57a37d5f4fa715dcee6b7dbaca9830adcbe1a504",
+   "conclusion": "success",
+   "gate": "passed",
+   "exitCode": 0,
+   "provenance": {
+    "assessedSha": "57a37d5f4fa715dcee6b7dbaca9830adcbe1a504",
+    "checkoutSha": "4f703f35604314cfa8944faf1465e4195b292607",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {}
+  },
+  {
+   "label": "18-same-repo-pr-defect-fixed-action",
+   "runId": 37618689937,
+   "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/37618689937",
+   "event": "pull_request",
+   "headBranch": "pr-defect",
+   "headSha": "9adb47d063e46b68e6dbd044f8bc89c28852e0dd",
+   "conclusion": "failure",
+   "gate": "failed",
+   "exitCode": 1,
+   "provenance": {
+    "assessedSha": "9adb47d063e46b68e6dbd044f8bc89c28852e0dd",
+    "checkoutSha": "5135af64e8f702e645b29fd48e0a34a576b7329c",
+    "binding": "verified",
+    "targetBinding": "local-checkout"
+   },
+   "failedSteps": {
+    "execute": [
+     "TestMaster strict CI"
+    ]
+   }
+  }
+ ],
+ "residuals": [
+  "Fork pull_request token isolation is not exercised on GitHub: it needs a second account; only the fork-denial code path (unit test with the real response shape) and the approval policy exist.",
+  "Repository is public, so this is public disposable acceptance, not the private acceptance of the plan; public immutable distribution of the Action/runtime remains blocked by the UNLICENSED license decision.",
+  "Checks API 429/5xx retry and 401/403 dead-letter paths were not provoked on GitHub."
+ ]
+}
