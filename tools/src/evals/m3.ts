@@ -381,7 +381,7 @@ function captureControl(app: Application, runId: string, plan: ExecutablePlan): 
       .map((row) => row.imageId ?? "")
       .filter(Boolean),
     planHash: hash(JSON.stringify(plan)),
-    seed: Number(run.seed),
+    seed: Number((run.matrixCell as Record<string, unknown>).seed),
     healingPolicy: String((run.matrixCell as Record<string, unknown>).healingPolicy),
     environmentRevisionId: run.environmentRevisionId,
     admissionHash: semanticHash(
@@ -864,6 +864,13 @@ export async function policyProbesM3(root: string, path: string, outDir: string)
     }
     manifest.localRequests++;
     res.writeHead(200, { "content-type": "application/json" });
+    // The gateway verifies the declared model against the provider inventory before completing.
+    if (req.method === "GET" && new URL(req.url ?? "/", "http://local").pathname === "/v1/models") {
+      res.end(
+        JSON.stringify({ object: "list", data: [{ id: r.provider.model, object: "model" }] }),
+      );
+      return;
+    }
     res.end(
       JSON.stringify({
         id: "controlled-policy-probe",
