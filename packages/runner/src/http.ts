@@ -16,6 +16,12 @@ import { type RunnerResult, type Runtime, RuntimeError } from "./runtime.js";
 /** Shared with the sandbox egress proxy (packages/sandbox/src/egress/proxy.ts). */
 const EGRESS_DIAGNOSTICS_HEADER = "x-testmaster-egress-diagnostics";
 const UPSTREAM_FAILURE_HEADER = "x-testmaster-upstream-failure";
+/** The egress proxy reported that the target connection failed (code is the socket error). */
+class UpstreamFailure extends Error {
+  constructor(readonly code: string) {
+    super("Egress proxy reported an upstream connection failure");
+  }
+}
 
 type RequestInput = Extract<PlanStep, { operation: "request" }>["input"];
 type ResourceState =
@@ -567,16 +573,12 @@ export class HttpEngine {
             responseHeaders[name.toLowerCase()] = Array.isArray(value) ? value.join(", ") : value;
         const upstreamFailure = responseHeaders[UPSTREAM_FAILURE_HEADER];
         if (upstreamFailure !== undefined) {
-          // Only the egress proxy can emit this marker (it strips it from target responses):
-          // the target was never reached, so no response exists to evaluate.
+          // Only the egress proxy can emit this marker (it strips it from target responses). The
+          // connection failed or was reset, so no response exists; the request may still have
+          // reached the target, so the common transport mapping below decides the reason.
           // dump() discards the (empty) proxy body; destroy() would emit an unhandled AbortError.
           await incoming.body.dump().catch(() => undefined);
-          throw new RuntimeError(
-            "insufficient_evidence",
-            "Egress proxy could not connect to the target",
-            "inconclusive",
-            /^E[A-Z]+$/.test(upstreamFailure) ? upstreamFailure : undefined,
-          );
+          throw new UpstreamFailure(upstreamFailure);
         }
         const chunks: Uint8Array[] = [];
         let bytes = 0;
@@ -770,6 +772,7 @@ export class HttpEngine {
         resource && sent ? "retry_unsafe_external_effect" : "insufficient_evidence",
         "HTTP transport did not produce a complete usable response",
         "inconclusive",
+        error instanceof UpstreamFailure && /^E[A-Z]+$/.test(error.code) ? error.code : undefined,
       );
     }
   }

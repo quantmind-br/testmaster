@@ -572,8 +572,7 @@ async function stream(
       const result = await reader.read();
       if (result.done) break;
       buffered += decoder.decode(result.value, { stream: true });
-      let index: number;
-      while ((index = buffered.indexOf("\n\n")) >= 0) {
+      for (let index = buffered.indexOf("\n\n"); index >= 0; index = buffered.indexOf("\n\n")) {
         const block = buffered.slice(0, index);
         buffered = buffered.slice(index + 2);
         const payload = /^data: (.+)$/m.exec(block)?.[1];

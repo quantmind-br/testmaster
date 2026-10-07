@@ -242,7 +242,7 @@ it("fails assertions whose JSON target is absent from a complete response", asyn
 
 it("keeps a target the egress proxy could not reach inconclusive with its socket error code", async () => {
   const proxy = createServer((_req, res) => {
-    res.writeHead(502, { "x-testmaster-upstream-failure": "ECONNREFUSED", connection: "close" });
+    res.writeHead(502, { "x-testmaster-upstream-failure": "ECONNRESET", connection: "close" });
     res.end();
   });
   servers.push(proxy);
@@ -250,17 +250,37 @@ it("keeps a target the egress proxy could not reach inconclusive with its socket
   const address = proxy.address();
   if (!address || typeof address === "string") throw new Error("Missing proxy fixture address");
   vi.stubEnv("TESTMASTER_EGRESS_PROXY", `http://127.0.0.1:${address.port}`);
-  const { runtime, events } = fixture("http://127.0.0.1:9", {
-    plan: plan([requestStep("health", [])]),
-  });
-  expect(await runHttp(runtime)).toMatchObject({
+  const read = fixture("http://127.0.0.1:9", { plan: plan([requestStep("health", [])]) });
+  expect(await runHttp(read.runtime)).toMatchObject({
     outcome: "inconclusive",
     reasonCode: "insufficient_evidence",
   });
   expect(
-    events.find((event) => event.type === "step.finished" && event.payload.stepId === "health")
+    read.events.find((event) => event.type === "step.finished" && event.payload.stepId === "health")
       ?.payload,
-  ).toMatchObject({ status: "inconclusive", error: { code: "ECONNREFUSED" } });
+  ).toMatchObject({
+    status: "inconclusive",
+    // Same transport class as a direct socket loss, so flake studies classify it as infrastructure.
+    error: {
+      code: "ECONNRESET",
+      message: "HTTP transport did not produce a complete usable response",
+    },
+  });
+  // A reset after a mutating request was sent may have reached the target: never retry-safe.
+  const create = requestStep("create", ["orders"], {
+    method: "POST",
+    resource: {
+      resourceType: "order",
+      correlationKey: { literal: "order-correlation" },
+      handle: "/id",
+      ownerProof: "/owner",
+    },
+  });
+  const write = fixture("http://127.0.0.1:9", { plan: plan([create]) });
+  expect(await runHttp(write.runtime)).toMatchObject({
+    outcome: "inconclusive",
+    reasonCode: "retry_unsafe_external_effect",
+  });
 });
 
 it("sends typed sensitive captures only over trusted IPC and keeps artifacts redacted", async () => {

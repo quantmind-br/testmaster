@@ -332,9 +332,11 @@ Browser value predicates (`textEquals`, `textContains`, `valueEquals`, `enabled`
 bound element until the step deadline and fail with the last observation, so an eventually
 rendered value passes while a stale one fails. An HTTP assertion whose JSON Pointer target is
 absent from a complete, valid response fails as `assertion_mismatch`; captures still treat an
-absent target as insufficient evidence. When the target cannot be reached, the egress proxy
-answers opted-in HTTP runners with `502` plus `x-testmaster-upstream-failure: <socket code>`
-(stripped from real target responses), and the step stays `inconclusive` with that error code.
+absent target as insufficient evidence. When the target connection fails or resets, the egress
+proxy answers opted-in HTTP runners with `502` plus `x-testmaster-upstream-failure: <socket code>`
+(stripped from real target responses). The step is the same transport loss as a direct socket
+failure: `inconclusive` with that error code, `insufficient_evidence` for reads and
+`retry_unsafe_external_effect` once a mutating owned-resource request was sent.
 Browser and HTTP assertions retain bounded observed/expected comparisons for rules-first
 diagnosis only when neither value is secret-derived or altered by redaction; oversized pairs
 are omitted, not truncated into misleading evidence. The paired Docker controls in
