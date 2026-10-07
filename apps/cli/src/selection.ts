@@ -2,8 +2,8 @@ import type { SelectionInput } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { batchExitCode, exitCodeForGate, exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
-import { environmentId, waitForRun } from "./execution.js";
-import { collect, type Runtime, string, strings } from "./runtime.js";
+import { environmentId, receiptResult, waitForRun } from "./execution.js";
+import { collect, type Result, type Runtime, seconds, string, strings } from "./runtime.js";
 
 export function selectionCommands(test: Command, runtime: Runtime): void {
   runtime.bind(
@@ -21,6 +21,9 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
       .option("--allow-empty")
       .option("--empty-reason <text>")
       .option("--wait")
+      .option("--timeout <seconds>", "Wait deadline in seconds", seconds)
+      .option("--revision <id>", "Explicit revision for exactly one test or Run")
+      .option("--idempotency-key <key>", "Run reproduction idempotency key")
       .option("--expected-selection-hash <hash>"),
     async (rt, args, options) => {
       const ids = Array.isArray(args[0]) ? args[0].map(String) : [];
@@ -36,6 +39,46 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
       const runIds = ids.filter((id) => id.startsWith("run_"));
       if (runIds.length && runIds.length !== ids.length)
         throw new ContractError("INVALID_ARGUMENT", "Test and Run IDs cannot be mixed");
+      if (runIds.length) {
+        // A Run ID requests reproduction of that Run (pinned environment revision, admission
+        // snapshot and verified evidence), the same contract as POST /runs/{id}/rerun.
+        const selectionOnly = [
+          "chain",
+          "reuseFromRun",
+          "skipDependencies",
+          "preview",
+          "allowEmpty",
+          "emptyReason",
+          "expectedSelectionHash",
+        ].filter((key) => options[key] !== undefined);
+        if (selectionOnly.length)
+          throw new ContractError(
+            "INVALID_ARGUMENT",
+            "Run reproduction does not accept selection options; select test IDs instead",
+            { options: selectionOnly },
+          );
+        const revisionId = string(options, "revision");
+        const explicitEnvironment = string(options, "env")
+          ? await environmentId(rt, options, projectId)
+          : undefined;
+        const results: Result[] = [];
+        for (const id of runIds) {
+          const key = string(options, "idempotencyKey");
+          const receipt = await app.runs.rerun(id, {
+            wait: options.wait === true,
+            ...(key ? { idempotencyKey: key } : {}),
+            ...(revisionId ? { revisionId } : {}),
+            ...(explicitEnvironment ? { environmentId: explicitEnvironment } : {}),
+          });
+          results.push(await receiptResult(rt, app, receipt, options));
+        }
+        return results.length === 1
+          ? (results[0] as Result)
+          : {
+              data: { members: results.map((result) => result.data) },
+              exit: batchExitCode(results.map((result) => result.exit ?? 0)),
+            };
+      }
       const input: SelectionInput = {
         projectId,
         environmentId: await environmentId(rt, options, projectId),
@@ -53,9 +96,10 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
                         : {}),
                     },
             }
-          : runIds.length
-            ? { runIds }
-            : { testIds: ids }),
+          : { testIds: ids }),
+        ...(string(options, "revision")
+          ? { revisionId: string(options, "revision") as string }
+          : {}),
         reuseFromRunIds: strings(options, "reuseFromRun"),
         skipDependencies: options.skipDependencies === true,
         allowEmpty: options.allowEmpty === true,

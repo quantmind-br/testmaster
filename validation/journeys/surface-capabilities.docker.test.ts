@@ -45,6 +45,10 @@ it("capabilities HTTP endpoint refuses to advertise missing runner images and di
           "agent-mode",
           "resolve_action",
           "resources-cleanup",
+          "healing",
+          "flake-study",
+          "selective-run",
+          "ci",
         ]) {
           const feature = features.find((f) => f.id === id);
           expect(feature).toMatchObject({ enabled: false });
@@ -61,6 +65,10 @@ it("capabilities HTTP endpoint refuses to advertise missing runner images and di
           "mcp",
           "agent-skills",
           "model-accounting",
+          "analysis",
+          "run-comparison",
+          "batch-comparison",
+          "quarantine",
         ]) {
           expect(features.find((f) => f.id === id)).toMatchObject({
             enabled: true,
@@ -69,7 +77,7 @@ it("capabilities HTTP endpoint refuses to advertise missing runner images and di
         }
         expect(
           features
-            .filter((f) => ["healing", "visualMatches"].includes(f.id))
+            .filter((f) => ["visualMatches", "schedules"].includes(f.id))
             .every((f) => !f.enabled),
         ).toBe(true);
         session.oracles.push({

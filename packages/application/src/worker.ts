@@ -10,6 +10,7 @@ import {
   type ExecutablePlan,
   type PlanStep,
   type RunnerEvent,
+  reasonRegistry,
   type VariableValue,
   validate,
 } from "@testmaster/contracts";
@@ -192,8 +193,13 @@ export class WorkerService {
               event.payload.status === "pending" || event.payload.status === "running"
                 ? "inconclusive"
                 : event.payload.status,
+            // A required step whose runner observed a contradicting or timed-out target
+            // (registry effect "failed") is a reliable observation (spec 03 outcome table).
             assertion: plan
-              ? step?.kind === "assertion" || Boolean(step && "expectation" in step)
+              ? step?.kind === "assertion" ||
+                Boolean(step && "expectation" in step) ||
+                (event.payload.status === "failed" &&
+                  reasonRegistry[String(event.payload.reasonCode)]?.effect === "failed")
               : event.payload.stepId === "imported-code",
             reliable: event.payload.status === "passed" || event.payload.status === "failed",
             ...(event.payload.reasonCode ? { reasonCode: event.payload.reasonCode } : {}),

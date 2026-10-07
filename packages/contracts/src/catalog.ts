@@ -270,6 +270,8 @@ const supplemental = {
     environmentId: P.id("env"),
     testIds: Type.Optional(Type.Array(P.id("tst"), { maxItems: 500, uniqueItems: true })),
     runIds: Type.Optional(Type.Array(P.id("run"), { maxItems: 500, uniqueItems: true })),
+    /** Explicit immutable revision for exactly one selected test or Run. */
+    revisionId: Type.Optional(P.id("rev")),
     all: Type.Optional(Type.Boolean()),
     diff: Type.Optional(
       P.Obj({

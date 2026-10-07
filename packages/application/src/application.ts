@@ -782,6 +782,11 @@ export class Application {
       "agent-mode": true,
       resolve_action: true,
       "resources-cleanup": true,
+      // M3 features whose core operation dispatches sandboxed Runs (verification, studies, CI).
+      healing: true,
+      "flake-study": true,
+      "selective-run": true,
+      ci: true,
     };
     const features = Object.values(capabilityRegistry).map((feature) => {
       const enabled =

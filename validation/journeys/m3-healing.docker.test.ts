@@ -81,6 +81,7 @@ it("M3-02 deterministic controlled-provider Chromium healing preserves original 
     const url = `http://127.0.0.1:${address.port}`;
     let app: Application | undefined;
     process.env.FAKE_KEY = "deterministic-test-provider-key";
+    session.env.TESTMASTER_OFFLINE = "false";
     try {
       await mkdir(join(session.home, ".config/testmaster"), { recursive: true });
       await writeFile(

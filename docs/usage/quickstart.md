@@ -160,7 +160,8 @@ Exact flags: `testmaster <group> <command> --help`.
 
 ```bash
 testmaster test rerun "$TEST_ID" --preview --env local
-testmaster test rerun "$RUN_ID" --wait --env local       # preserves the Run's revision
+testmaster test rerun "$RUN_ID" --wait                    # reproduces the Run's pinned revision/environment
+testmaster test rerun "$TEST_ID" --revision "$REV_ID" --wait --env local
 testmaster test rerun --diff --base HEAD~1 --head HEAD --preview --env local
 testmaster test rerun --working-tree --wait --env local
 testmaster test rerun "$CONSUMER_ID" --reuse-from-run "$PRODUCER_RUN_ID" --skip-dependencies --wait --env local
@@ -175,6 +176,9 @@ Active quarantine excludes directly selected tests, but required producers remai
 in the closure. Explicit fixture reuse requires the exact passing producer revision,
 environment/origin, compatible output/taint, unexpired output and live owned resources;
 these checks run again before release. `--skip-dependencies` refuses incomplete reuse.
+A Run ID reproduces that Run (same revision, environment revision and admission snapshot,
+after verifying its evidence); `--env` re-admits the same revision in another environment.
+Selection options (`--preview`, `--chain`, reuse, empty coverage) require test IDs or a diff.
 
 ## Code export and import
 

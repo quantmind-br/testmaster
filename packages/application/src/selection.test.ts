@@ -205,6 +205,28 @@ describe("selection", () => {
       app.close();
     }
   });
+  it("selects an explicit revision only for exactly one test of that revision", async () => {
+    const { app, input, test, init } = await fixture();
+    try {
+      const original = String(test.activeRevisionId);
+      const next = app.revisions.create(test.id, scaffoldPlan("backend"));
+      app.revisions.promote(next.id, app.tests.get(test.id).version ?? 1);
+      const explicit = await app.selection.preview({ ...input, revisionId: original });
+      expect(explicit.requested).toEqual([
+        { testId: test.id, revisionId: original, reason: `Explicit revision ${original}` },
+      ]);
+      expect(explicit.selectionHash).not.toBe((await app.selection.preview(input)).selectionHash);
+      const other = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+      await expect(
+        app.selection.preview({ ...input, testIds: [test.id, other.id], revisionId: original }),
+      ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+      await expect(
+        app.selection.preview({ ...input, testIds: [other.id], revisionId: original }),
+      ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    } finally {
+      app.close();
+    }
+  });
   it("expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse", async () => {
     const { app, input } = await fixture();
     try {

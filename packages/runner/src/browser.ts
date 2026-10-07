@@ -10,6 +10,7 @@ import {
   type BrowserContext,
   chromium,
   type Download,
+  errors,
   type Frame,
   type Locator,
   type Page,
@@ -141,7 +142,19 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         `Locator is ambiguous; matched ${initialCount}`,
         "failed",
       );
-    await locator.waitFor({ state: "attached", timeout });
+    try {
+      await locator.waitFor({ state: "attached", timeout });
+    } catch (error) {
+      // A live page that never attaches the target within the step deadline is a reliable
+      // observation (spec 03: step timeout with reliable observation is failed).
+      if (error instanceof errors.TimeoutError && !runtime.signal.aborted)
+        throw new RuntimeError(
+          "assertion_timeout",
+          "Locator did not match an attached element before the step deadline",
+          "failed",
+        );
+      throw error;
+    }
     const count = await locator.count();
     if (count !== 1)
       throw new RuntimeError(

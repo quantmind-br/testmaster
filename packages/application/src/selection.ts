@@ -20,6 +20,8 @@ export interface SelectionInput {
   environmentId: string;
   testIds?: string[];
   runIds?: string[];
+  /** Explicit immutable revision for exactly one selected test or Run. */
+  revisionId?: string;
   all?: boolean;
   diff?: { base?: string; head?: string; workingTree?: boolean };
   reuseFromRunIds?: string[];
@@ -278,6 +280,19 @@ export class SelectionService {
         revisionId: String(test.activeRevisionId),
         reason: mode === "all" ? "All active tests" : "Explicit test",
       }));
+    if (input.revisionId !== undefined) {
+      const target = selected[0];
+      if (selected.length !== 1 || !target || (!input.testIds && !input.runIds))
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "An explicit revision requires exactly one test or Run",
+        );
+      const revision = requireEntity(this.ctx, "TestRevision", input.revisionId);
+      if (revision.testId !== target.testId)
+        throw new ContractError("INVALID_ARGUMENT", "Revision belongs to another test");
+      target.revisionId = revision.id;
+      target.reason = `Explicit revision ${revision.id}`;
+    }
     if (input.diff) {
       const diff = await analyzeDiff({ repoRoot: this.runs.host.config.cwd, ...input.diff });
       const changedPaths = [

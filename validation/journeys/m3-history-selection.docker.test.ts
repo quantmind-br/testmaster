@@ -214,7 +214,7 @@ describe("selection", () => {
               "--env",
               text(identity.environmentId),
             ],
-            5,
+            6,
           );
           expect(hits).toEqual(beforeRefusal);
           await session.command(["secret", "remove", text(variable.encryptedValueRef)]);
@@ -230,7 +230,7 @@ describe("selection", () => {
               "--env",
               text(identity.environmentId),
             ],
-            5,
+            6,
           );
           expect(hits).toEqual(beforeRefusal);
         } finally {
