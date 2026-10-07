@@ -9,6 +9,7 @@ import {
   type DistributionManifest,
   digestFile,
   extractSafeArchive,
+  LICENSE_ASSETS,
   MAX_IMAGE_SIZE,
   MAX_PART_SIZE,
   MAX_RUNTIME_SIZE,
@@ -72,6 +73,33 @@ export function verifyManifest(bytes: Buffer, expectedSha256: string): Distribut
     )
       throw new Error("Invalid manifest file");
     paths.add(file.path);
+  }
+  for (const asset of LICENSE_ASSETS)
+    if (!value.files.some((file) => file.path === asset && file.size > 0))
+      throw new Error(`Required license asset missing: ${asset}`);
+  if (value.sourcesIndexHash !== undefined || value.sourcesArchive !== undefined) {
+    if (
+      typeof value.sourcesIndexHash !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(value.sourcesIndexHash) ||
+      !value.sourcesArchive ||
+      !validDigest(value.sourcesArchive, MAX_IMAGE_SIZE) ||
+      !Array.isArray(value.sourcesArchive.parts) ||
+      !value.sourcesArchive.parts.length ||
+      value.sourcesArchive.parts.some(
+        (part) => !validDigest(part, MAX_PART_SIZE) || typeof part.path !== "string",
+      ) ||
+      value.sourcesArchive.parts.reduce((sum, part) => sum + part.size, 0) !==
+        value.sourcesArchive.size
+    )
+      throw new Error("Invalid corresponding-source provenance");
+    for (const part of value.sourcesArchive.parts) safeArchivePath(part.path);
+    if (
+      !value.files.some(
+        (file) =>
+          file.path === "licenses/sources-index.json" && file.sha256 === value.sourcesIndexHash,
+      )
+    )
+      throw new Error("Corresponding-source index missing from runtime");
   }
   for (const dependency of value.dependencies)
     if (
@@ -220,6 +248,12 @@ export async function installRuntime(options: InstallRuntimeOptions): Promise<In
       })
     )
       throw new Error("Runtime file inventory mismatch");
+    if (
+      manifest.sourcesIndexHash &&
+      sha256(await readFile(join(destination, "licenses/sources-index.json"))) !==
+        manifest.sourcesIndexHash
+    )
+      throw new Error("Corresponding-source index hash mismatch");
     const lockBytes = await readFile(join(destination, "containers/images.lock.json"));
     if (sha256(lockBytes) !== manifest.imageLockHash) throw new Error("Image lock hash mismatch");
     const lock = JSON.parse(lockBytes.toString("utf8")) as Record<string, { imageId: string }>;

@@ -28,11 +28,6 @@ export async function runPublisher(env: NodeJS.ProcessEnv = process.env): Promis
   if (split < 1 || !/^[0-9a-f]{64}$/.test(manifest.slice(split + 1)))
     throw new ActionInputError("INVALID_ARGUMENT", "Pinned runtime manifest required");
   const cwd = await mkdtemp(join(env.RUNNER_TEMP!, "testmaster-trusted-publish-"));
-  const runtime = await installRuntime({
-    manifestPath: manifest.slice(0, split),
-    manifestSha256: manifest.slice(split + 1),
-    destination: join(cwd, "runtime"),
-  });
   const envelopePath = await downloadEnvelope({
     repository: env.GITHUB_REPOSITORY!,
     workflowRunId: env.TESTMASTER_WORKFLOW_RUN_ID!,
@@ -43,6 +38,11 @@ export async function runPublisher(env: NodeJS.ProcessEnv = process.env): Promis
     checkoutSha: env.TESTMASTER_CHECKOUT_SHA!,
     token: env.GITHUB_TOKEN!,
     runnerTemp: cwd,
+  });
+  const runtime = await installRuntime({
+    manifestPath: manifest.slice(0, split),
+    manifestSha256: manifest.slice(split + 1),
+    destination: join(cwd, "runtime"),
   });
   const deliveries = await publishEnvelope({
     runtimeDir: runtime.runtimeDir,

@@ -1,0 +1,177 @@
+{
+  "name": "TestMaster",
+  "on": {
+    "workflow_dispatch": {},
+    "pull_request": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "execute": {
+      "if": "${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 30,
+      "permissions": {
+        "contents": "read",
+        "actions": "read"
+      },
+      "env": {
+        "TESTMASTER_OFFLINE": "true",
+        "TESTMASTER_DATA_DIR": "${{ runner.temp }}/testmaster-execution-data",
+        "TESTMASTER_RUNTIME_DIR": "${{ runner.temp }}/testmaster-runtime",
+        "TESTMASTER_CLI": "${{ runner.temp }}/testmaster-runtime/apps/cli/dist/main.js",
+        "TESTMASTER_RELEASE_DIR": "${{ runner.temp }}/testmaster-release",
+        "TESTMASTER_MANIFEST_SHA256": "9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71"
+      },
+      "outputs": {
+        "artifact-id": "${{ steps.upload.outputs.artifact-id }}",
+        "artifact-sha256": "${{ steps.upload.outputs.artifact-digest }}",
+        "report-hash": "${{ steps.testmaster.outputs.report-hash }}",
+        "job-id": "${{ steps.identity.outputs.job-id }}",
+        "assessed-sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+        "checkout-sha": "${{ github.sha }}"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Checkout trusted distribution only",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "repository": "quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a",
+            "ref": "70970eadb884aefeb0b70e22fc9849a3b7900d28",
+            "path": ".testmaster-trusted",
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "with": {
+            "node-version": "24"
+          }
+        },
+        {
+          "name": "Configure locked image store",
+          "run": "set -euo pipefail\nconfig=/etc/docker/daemon.json\ncurrent=$(sudo cat \"$config\" 2>/dev/null || echo '{}')\necho \"$current\" | jq '.features = ((.features // {}) + {\"containerd-snapshotter\": true})' | sudo tee \"$config\" >/dev/null\nsudo systemctl restart docker"
+        },
+        {
+          "name": "Download anonymous pinned public runtime",
+          "run": "set -euo pipefail\nmkdir -m 700 \"$TESTMASTER_RELEASE_DIR\" \"$TESTMASTER_RELEASE_DIR/images\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/manifest.json' --output \"$TESTMASTER_RELEASE_DIR/manifest.json\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/runtime.tar.gz' --output \"$TESTMASTER_RELEASE_DIR/runtime.tar.gz\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/testmaster-runner.tar.gz.part-0000' --output \"$TESTMASTER_RELEASE_DIR/images/testmaster-runner.tar.gz.part-0000\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/testmaster-runner-python.tar.gz.part-0000' --output \"$TESTMASTER_RELEASE_DIR/images/testmaster-runner-python.tar.gz.part-0000\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/testmaster-runner-python.tar.gz.part-0001' --output \"$TESTMASTER_RELEASE_DIR/images/testmaster-runner-python.tar.gz.part-0001\"\nprintf '%s  %s\\n' \"$TESTMASTER_MANIFEST_SHA256\" \"$TESTMASTER_RELEASE_DIR/manifest.json\" | sha256sum --check --status"
+        },
+        {
+          "name": "Install verified runtime",
+          "run": "node .testmaster-trusted/tools/dist/distribution/install.js --manifest \"$TESTMASTER_RELEASE_DIR/manifest.json\" --manifest-sha256 \"$TESTMASTER_MANIFEST_SHA256\" --dest \"$TESTMASTER_RUNTIME_DIR\""
+        },
+        {
+          "id": "identity",
+          "name": "Bind execution job identity",
+          "env": {
+            "GH_TOKEN": "${{ github.token }}"
+          },
+          "run": "set -euo pipefail\nid=$(gh api \"repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs\" --jq '.jobs[] | select(.name == \"execute\" and .status == \"in_progress\") | .id')\n[[ \"$id\" =~ ^[0-9]+$ ]]\nprintf 'job-id=%s\\n' \"$id\" >> \"$GITHUB_OUTPUT\""
+        },
+        {
+          "name": "Prepare application and TestMaster workspace",
+          "run": "set -euo pipefail\ntest \"$(id -u)\" != 0\nenv -u GITHUB_TOKEN -u GH_TOKEN bash -- \"examples/github/setup.sh\""
+        },
+        {
+          "id": "testmaster",
+          "uses": "quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a@70970eadb884aefeb0b70e22fc9849a3b7900d28",
+          "with": {
+            "runtime-manifest": "${{ runner.temp }}/testmaster-release/manifest.json#9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71",
+            "all": "true",
+            "environment": "ci",
+            "commit-sha": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "checkout-sha": "${{ github.sha }}",
+            "quarantine-policy": "strict",
+            "publish-check": "false"
+          }
+        },
+        {
+          "id": "envelope",
+          "if": "${{ always() && steps.testmaster.outputs.report-path != '' }}",
+          "env": {
+            "REPORT": "${{ steps.testmaster.outputs.report-path }}"
+          },
+          "run": "set -euo pipefail\nmkdir -m 700 \"$RUNNER_TEMP/testmaster-envelope\"\nsource=$(dirname \"$REPORT\")\nfor file in report.json junit.xml summary.md bundle-index.json completion.json; do\n  test -f \"$source/$file\" && test ! -L \"$source/$file\"\n  cp -- \"$source/$file\" \"$RUNNER_TEMP/testmaster-envelope/$file\"\ndone"
+        },
+        {
+          "id": "upload",
+          "if": "${{ always() && steps.envelope.outcome == 'success' }}",
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "testmaster-ci-${{ steps.identity.outputs.job-id }}",
+            "path": "${{ runner.temp }}/testmaster-envelope/*",
+            "if-no-files-found": "error",
+            "retention-days": 3
+          }
+        }
+      ]
+    },
+    "publish": {
+      "needs": "execute",
+      "if": "${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) && needs.execute.outputs.artifact-id != '' }}",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 30,
+      "permissions": {
+        "contents": "read",
+        "actions": "read",
+        "checks": "write"
+      },
+      "env": {
+        "TESTMASTER_OFFLINE": "true",
+        "TESTMASTER_DATA_DIR": "${{ runner.temp }}/testmaster-publisher-data",
+        "TESTMASTER_RUNTIME_DIR": "${{ runner.temp }}/testmaster-runtime",
+        "TESTMASTER_CLI": "${{ runner.temp }}/testmaster-runtime/apps/cli/dist/main.js",
+        "TESTMASTER_RELEASE_DIR": "${{ runner.temp }}/testmaster-release",
+        "TESTMASTER_MANIFEST_SHA256": "9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71"
+      },
+      "steps": [
+        {
+          "name": "Checkout trusted distribution only",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "repository": "quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a",
+            "ref": "70970eadb884aefeb0b70e22fc9849a3b7900d28",
+            "path": ".testmaster-trusted",
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "with": {
+            "node-version": "24"
+          }
+        },
+        {
+          "name": "Configure locked image store",
+          "run": "set -euo pipefail\nconfig=/etc/docker/daemon.json\ncurrent=$(sudo cat \"$config\" 2>/dev/null || echo '{}')\necho \"$current\" | jq '.features = ((.features // {}) + {\"containerd-snapshotter\": true})' | sudo tee \"$config\" >/dev/null\nsudo systemctl restart docker"
+        },
+        {
+          "name": "Download anonymous pinned public runtime",
+          "run": "set -euo pipefail\nmkdir -m 700 \"$TESTMASTER_RELEASE_DIR\" \"$TESTMASTER_RELEASE_DIR/images\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/manifest.json' --output \"$TESTMASTER_RELEASE_DIR/manifest.json\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/runtime.tar.gz' --output \"$TESTMASTER_RELEASE_DIR/runtime.tar.gz\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/testmaster-runner.tar.gz.part-0000' --output \"$TESTMASTER_RELEASE_DIR/images/testmaster-runner.tar.gz.part-0000\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/testmaster-runner-python.tar.gz.part-0000' --output \"$TESTMASTER_RELEASE_DIR/images/testmaster-runner-python.tar.gz.part-0000\"\ncurl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/releases/download/runtime-a0e2222/testmaster-runner-python.tar.gz.part-0001' --output \"$TESTMASTER_RELEASE_DIR/images/testmaster-runner-python.tar.gz.part-0001\"\nprintf '%s  %s\\n' \"$TESTMASTER_MANIFEST_SHA256\" \"$TESTMASTER_RELEASE_DIR/manifest.json\" | sha256sum --check --status"
+        },
+        {
+          "name": "Publish frozen sanitized envelope",
+          "env": {
+            "GITHUB_TOKEN": "${{ github.token }}",
+            "TESTMASTER_RUNTIME_MANIFEST": "${{ runner.temp }}/testmaster-release/manifest.json#9ef70844e8624b5e4425cabc8df0d067164239b3b2c746382a5e400a74cded71",
+            "TESTMASTER_ARTIFACT_ID": "${{ needs.execute.outputs.artifact-id }}",
+            "TESTMASTER_ARTIFACT_SHA256": "${{ needs.execute.outputs.artifact-sha256 }}",
+            "TESTMASTER_REPORT_HASH": "${{ needs.execute.outputs.report-hash }}",
+            "TESTMASTER_WORKFLOW_RUN_ID": "${{ github.run_id }}",
+            "TESTMASTER_EXECUTION_JOB_ID": "${{ needs.execute.outputs.job-id }}",
+            "TESTMASTER_ASSESSED_SHA": "${{ needs.execute.outputs.assessed-sha }}",
+            "TESTMASTER_CHECKOUT_SHA": "${{ needs.execute.outputs.checkout-sha }}"
+          },
+          "run": "node .testmaster-trusted/tools/dist/github-action/publish.js"
+        }
+      ]
+    }
+  }
+}

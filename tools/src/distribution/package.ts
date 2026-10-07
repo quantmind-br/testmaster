@@ -32,6 +32,8 @@ import {
   sha256,
   writeDeterministicArchive,
 } from "./archive.js";
+import { auditLicenses } from "./licenses.js";
+import { type SourcesIndex, verifySourcesIndex } from "./sources.js";
 
 interface PackageDocument {
   name: string;
@@ -49,6 +51,9 @@ interface PackageNode {
 }
 // The paths mirror import.meta.url-relative resource lookups in the built runtime.
 export const RUNTIME_RESOURCES = [
+  "LICENSE",
+  "NOTICE",
+  "containers/NOTICE",
   "packages/contracts/schemas",
   "packages/contracts/openapi.json",
   "packages/persistence/migrations/sqlite",
@@ -156,6 +161,7 @@ async function runtimeFiles(root: string, directory = ""): Promise<FileDigest[]>
 export async function stageRuntime(
   root: string,
   destination: string,
+  entries: string[] = ["apps/cli", "packages/runner"],
 ): Promise<{ files: FileDigest[]; dependencies: DistributionManifest["dependencies"] }> {
   const workspace = new Map<string, string>();
   for (const group of ["apps", "packages"])
@@ -227,9 +233,7 @@ export async function stageRuntime(
     }
     return node;
   }
-  await add(join(root, "apps/cli"));
-  // unsafe-runtime dispatches this harness by relative path, not a package import.
-  await add(join(root, "packages/runner"));
+  for (const entry of entries) await add(join(root, entry));
   for (const resource of RUNTIME_RESOURCES)
     await copyTree(join(root, resource), join(destination, resource), "workspace");
   const dependencies = [...nodes.values()]
@@ -326,6 +330,23 @@ async function dockerSave(imageId: string, output: string): Promise<void> {
   }
 }
 async function sourceCommit(root: string): Promise<string> {
+  const status = spawn("git", ["status", "--porcelain", "--untracked-files=normal"], {
+    cwd: root,
+    shell: false,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  let changes = "";
+  status.stdout.on("data", (chunk: Buffer) => {
+    changes += chunk.toString();
+  });
+  await new Promise<void>((done, reject) => {
+    status.on("error", reject);
+    status.on("close", (code) =>
+      code === 0 && !changes.trim()
+        ? done()
+        : reject(new Error("Runtime distribution requires a clean committed source tree")),
+    );
+  });
   const child = spawn("git", ["-c", "core.hooksPath=/dev/null", "rev-parse", "HEAD"], {
     cwd: root,
     shell: false,
@@ -345,7 +366,11 @@ async function sourceCommit(root: string): Promise<string> {
   if (!/^[a-f0-9]{40}$/u.test(sha)) throw new Error("Invalid source commit");
   return sha;
 }
-export async function packageRuntime(root: string, out: string): Promise<DistributionManifest> {
+export async function packageRuntime(
+  root: string,
+  out: string,
+  sourcesIndexPath?: string,
+): Promise<DistributionManifest> {
   root = await realpath(root);
   out = resolve(out);
   await mkdir(out, { mode: 0o700 });
@@ -353,6 +378,42 @@ export async function packageRuntime(root: string, out: string): Promise<Distrib
   try {
     const commit = await sourceCommit(root);
     const staged = await stageRuntime(root, stage);
+    await auditLicenses(root, stage, join(out, "licenses"));
+    if (!sourcesIndexPath)
+      throw new Error("Image binary distribution requires a verified corresponding-source index");
+    const sourcesBytes = await readFile(sourcesIndexPath);
+    const sourcesIndex = JSON.parse(sourcesBytes.toString()) as SourcesIndex;
+    if (sourcesIndex.sourceCommit !== commit)
+      throw new Error("Corresponding-source recipe commit differs from runtime source commit");
+    const sourceCache = dirname(resolve(sourcesIndexPath));
+    await verifySourcesIndex(
+      sourceCache,
+      sourcesIndex,
+      await readFile(join(out, "licenses/obligations.json")),
+    );
+    await copyFile(sourcesIndexPath, join(out, "licenses/sources-index.json"));
+    await mkdir(join(out, "sources"), { mode: 0o700 });
+    for (const part of sourcesIndex.archive.parts) {
+      safeArchivePath(part.path);
+      const digest = await digestFile(join(sourceCache, part.path));
+      if (digest.sha256 !== part.sha256 || digest.size !== part.size)
+        throw new Error("Corresponding-source archive part hash mismatch");
+      await copyFile(join(sourceCache, part.path), join(out, "sources", basename(part.path)));
+    }
+    await copyTree(join(out, "licenses"), join(stage, "licenses"), "dependency");
+    for (const file of sourcesIndex.files) {
+      if (
+        !file.path.startsWith("notices/") &&
+        !/(?:LICENSE|COPYING|CREDITS|AUTHORS|license\.html|redistribution-limitations|material-evidence)/iu.test(
+          file.path,
+        )
+      )
+        continue;
+      const noticePath = join(stage, "licenses/upstream", file.path);
+      await mkdir(dirname(noticePath), { recursive: true, mode: 0o700 });
+      await copyFile(join(sourceCache, file.path), noticePath);
+    }
+    staged.files = await runtimeFiles(stage);
     const runtimeArchive = await writeDeterministicArchive(
       stage,
       staged.files.map((file) => file.path),
@@ -379,6 +440,8 @@ export async function packageRuntime(root: string, out: string): Promise<Distrib
       runtimeArchive,
       ...staged,
       imageLockHash: sha256(lockBytes),
+      sourcesIndexHash: sha256(sourcesBytes),
+      sourcesArchive: sourcesIndex.archive,
       images,
     };
     const manifestBytes = JSON.stringify(manifest, null, 2) + "\n";
@@ -390,11 +453,17 @@ export async function packageRuntime(root: string, out: string): Promise<Distrib
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   const args = process.argv.slice(2);
-  if (args.length !== 2 || args[0] !== "--out" || !args[1]) {
-    console.error("Usage: package.js --out DIR");
+  if (
+    args.length !== 4 ||
+    args[0] !== "--out" ||
+    !args[1] ||
+    args[2] !== "--sources-index" ||
+    !args[3]
+  ) {
+    console.error("Usage: package.js --out DIR --sources-index VERIFIED_INDEX_JSON");
     process.exitCode = 5;
   } else
-    packageRuntime(fileURLToPath(new URL("../../../", import.meta.url)), args[1])
+    packageRuntime(fileURLToPath(new URL("../../../", import.meta.url)), args[1], args[3])
       .then((result) => console.log(JSON.stringify(result)))
       .catch((error: unknown) => {
         console.error(String(error));

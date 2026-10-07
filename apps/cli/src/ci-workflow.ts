@@ -1,0 +1,187 @@
+import { ContractError } from "@testmaster/contracts";
+export interface GithubWorkflowOptions {
+  actionRef: string;
+  setupScript: string;
+  runtimeRepo: string;
+  runtimeTag: string;
+  runtimeAssets: string[];
+  manifestSha256: string;
+}
+const expression = (body: string) => `\${{ ${body} }}`;
+export function githubWorkflow(options: GithubWorkflowOptions): string {
+  const { actionRef, setupScript, runtimeRepo, runtimeTag, runtimeAssets, manifestSha256 } =
+    options;
+  if (
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[a-f0-9]{40}$/u.test(actionRef) ||
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(runtimeRepo) ||
+    !/^[A-Za-z0-9_.-]+$/u.test(runtimeTag) ||
+    !/^[a-f0-9]{64}$/u.test(manifestSha256) ||
+    !/^[A-Za-z0-9_./-]+\.sh$/u.test(setupScript) ||
+    setupScript.startsWith("/") ||
+    setupScript.split("/").some((part) => !part || part === "." || part === "..") ||
+    runtimeAssets.length < 4 ||
+    new Set(runtimeAssets).size !== runtimeAssets.length ||
+    !runtimeAssets.includes("manifest.json") ||
+    !runtimeAssets.includes("runtime.tar.gz") ||
+    runtimeAssets.some(
+      (asset) =>
+        !/^(?:manifest\.json|runtime\.tar\.gz|testmaster-runner(?:-python)?\.tar\.gz\.part-[0-9]{4})$/u.test(
+          asset,
+        ),
+    ) ||
+    !["testmaster-runner", "testmaster-runner-python"].every((image) =>
+      runtimeAssets.includes(`${image}.tar.gz.part-0000`),
+    )
+  )
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "Immutable Action, public release assets, pinned manifest and repository-relative setup script are required",
+    );
+  const [actionRepo, actionSha] = actionRef.split("@");
+  const guard =
+    "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)";
+  const assessed = expression("github.event.pull_request.head.sha || github.sha");
+  const checkout = expression("github.sha");
+  const env = {
+    TESTMASTER_OFFLINE: "true",
+    TESTMASTER_DATA_DIR: expression("runner.temp") + "/testmaster-execution-data",
+    TESTMASTER_RUNTIME_DIR: expression("runner.temp") + "/testmaster-runtime",
+    TESTMASTER_CLI: expression("runner.temp") + "/testmaster-runtime/apps/cli/dist/main.js",
+    TESTMASTER_RELEASE_DIR: expression("runner.temp") + "/testmaster-release",
+    TESTMASTER_MANIFEST_SHA256: manifestSha256,
+  };
+  const node = {
+    uses: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+    with: { "node-version": "24" },
+  };
+  const store = {
+    name: "Configure locked image store",
+    run: `set -euo pipefail\nconfig=/etc/docker/daemon.json\ncurrent=$(sudo cat "$config" 2>/dev/null || echo '{}')\necho "$current" | jq '.features = ((.features // {}) + {"containerd-snapshotter": true})' | sudo tee "$config" >/dev/null\nsudo systemctl restart docker`,
+  };
+  const download = {
+    name: "Download anonymous pinned public runtime",
+    run: `set -euo pipefail\nmkdir -m 700 "$TESTMASTER_RELEASE_DIR" "$TESTMASTER_RELEASE_DIR/images"\n${runtimeAssets.map((asset) => `curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/${runtimeRepo}/releases/download/${runtimeTag}/${asset}' --output "$TESTMASTER_RELEASE_DIR/${asset.endsWith(".json") || asset === "runtime.tar.gz" ? asset : "images/" + asset}"`).join("\n")}\nprintf '%s  %s\\n' "$TESTMASTER_MANIFEST_SHA256" "$TESTMASTER_RELEASE_DIR/manifest.json" | sha256sum --check --status`,
+  };
+  const trusted = {
+    name: "Checkout trusted distribution only",
+    uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    with: {
+      repository: actionRepo,
+      ref: actionSha,
+      path: ".testmaster-trusted",
+      "persist-credentials": false,
+    },
+  };
+  const manifest =
+    expression("runner.temp") + `/testmaster-release/manifest.json#${manifestSha256}`;
+  const workflow = {
+    name: "TestMaster",
+    on: { workflow_dispatch: {}, pull_request: {} },
+    permissions: { contents: "read" },
+    jobs: {
+      execute: {
+        if: expression(guard),
+        "runs-on": "ubuntu-24.04",
+        "timeout-minutes": 30,
+        permissions: { contents: "read", actions: "read" },
+        env,
+        outputs: {
+          "artifact-id": expression("steps.upload.outputs.artifact-id"),
+          "artifact-sha256": expression("steps.upload.outputs.artifact-digest"),
+          "report-hash": expression("steps.testmaster.outputs.report-hash"),
+          "job-id": expression("steps.identity.outputs.job-id"),
+          "assessed-sha": assessed,
+          "checkout-sha": checkout,
+        },
+        steps: [
+          {
+            uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            with: { "persist-credentials": false },
+          },
+          trusted,
+          node,
+          store,
+          download,
+          {
+            name: "Install verified runtime",
+            run: `node .testmaster-trusted/tools/dist/distribution/install.js --manifest "$TESTMASTER_RELEASE_DIR/manifest.json" --manifest-sha256 "$TESTMASTER_MANIFEST_SHA256" --dest "$TESTMASTER_RUNTIME_DIR"`,
+          },
+          {
+            id: "identity",
+            name: "Bind execution job identity",
+            env: { GH_TOKEN: expression("github.token") },
+            run: `set -euo pipefail\nid=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --jq '.jobs[] | select(.name == "execute" and .status == "in_progress") | .id')\n[[ "$id" =~ ^[0-9]+$ ]]\nprintf 'job-id=%s\\n' "$id" >> "$GITHUB_OUTPUT"`,
+          },
+          {
+            name: "Prepare application and TestMaster workspace",
+            run: `set -euo pipefail\ntest "$(id -u)" != 0\nenv -u GITHUB_TOKEN -u GH_TOKEN bash -- ${JSON.stringify(setupScript)}`,
+          },
+          {
+            id: "testmaster",
+            uses: actionRef,
+            with: {
+              "runtime-manifest": manifest,
+              all: "true",
+              environment: "ci",
+              "commit-sha": assessed,
+              "checkout-sha": checkout,
+              "quarantine-policy": "strict",
+              "publish-check": "false",
+            },
+          },
+          {
+            id: "envelope",
+            if: expression("always() && steps.testmaster.outputs.report-path != ''"),
+            env: { REPORT: expression("steps.testmaster.outputs.report-path") },
+            run: `set -euo pipefail\nmkdir -m 700 "$RUNNER_TEMP/testmaster-envelope"\nsource=$(dirname "$REPORT")\nfor file in report.json junit.xml summary.md bundle-index.json completion.json; do\n  test -f "$source/$file" && test ! -L "$source/$file"\n  cp -- "$source/$file" "$RUNNER_TEMP/testmaster-envelope/$file"\ndone`,
+          },
+          {
+            id: "upload",
+            if: expression("always() && steps.envelope.outcome == 'success'"),
+            uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            with: {
+              name: "testmaster-ci-" + expression("steps.identity.outputs.job-id"),
+              path: expression("runner.temp") + "/testmaster-envelope/*",
+              "if-no-files-found": "error",
+              "retention-days": 3,
+            },
+          },
+        ],
+      },
+      publish: {
+        needs: "execute",
+        if: expression(`always() && (${guard}) && needs.execute.outputs.artifact-id != ''`),
+        "runs-on": "ubuntu-24.04",
+        "timeout-minutes": 30,
+        permissions: { contents: "read", actions: "read", checks: "write" },
+        env: {
+          ...env,
+          TESTMASTER_DATA_DIR: expression("runner.temp") + "/testmaster-publisher-data",
+        },
+        steps: [
+          trusted,
+          node,
+          store,
+          download,
+          {
+            name: "Publish frozen sanitized envelope",
+            env: {
+              GITHUB_TOKEN: expression("github.token"),
+              TESTMASTER_RUNTIME_MANIFEST: manifest,
+              TESTMASTER_ARTIFACT_ID: expression("needs.execute.outputs.artifact-id"),
+              TESTMASTER_ARTIFACT_SHA256: expression("needs.execute.outputs.artifact-sha256"),
+              TESTMASTER_REPORT_HASH: expression("needs.execute.outputs.report-hash"),
+              TESTMASTER_WORKFLOW_RUN_ID: expression("github.run_id"),
+              TESTMASTER_EXECUTION_JOB_ID: expression("needs.execute.outputs.job-id"),
+              TESTMASTER_ASSESSED_SHA: expression("needs.execute.outputs.assessed-sha"),
+              TESTMASTER_CHECKOUT_SHA: expression("needs.execute.outputs.checkout-sha"),
+            },
+            run: "node .testmaster-trusted/tools/dist/github-action/publish.js",
+          },
+        ],
+      },
+    },
+  };
+  // JSON is YAML 1.2: scalar quoting prevents user input from injecting workflow structure.
+  return JSON.stringify(workflow, null, 2) + "\n";
+}

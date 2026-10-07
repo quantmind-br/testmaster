@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "executable",
+  "name": "Public CI health example",
+  "type": "backend",
+  "runner": "http",
+  "requirementRefs": [],
+  "steps": [
+    {
+      "id": "health",
+      "description": "Read service health",
+      "kind": "action",
+      "operation": "request",
+      "required": true,
+      "input": { "method": "GET", "pathSegments": [{ "literal": "health" }] }
+    },
+    {
+      "id": "status",
+      "description": "Require successful HTTP response",
+      "kind": "assertion",
+      "operation": "assert",
+      "required": true,
+      "input": { "responseStepId": "health" },
+      "expectation": { "predicate": "statusIn", "values": [200] }
+    },
+    {
+      "id": "body",
+      "description": "Require healthy semantic state",
+      "kind": "assertion",
+      "operation": "assert",
+      "required": true,
+      "input": { "responseStepId": "health", "jsonPointer": "/status" },
+      "expectation": { "predicate": "jsonEquals", "value": { "literal": "ok" } }
+    }
+  ]
+}

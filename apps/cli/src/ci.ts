@@ -11,6 +11,7 @@ import {
 } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
+import { githubWorkflow } from "./ci-workflow.js";
 import { environmentId } from "./execution.js";
 import { type Runtime, required, string } from "./runtime.js";
 
@@ -106,23 +107,32 @@ export function ciCommands(program: Command, runtime: Runtime): void {
     init
       .command("github")
       .requiredOption("--action-ref <ref>")
-      .requiredOption("--runtime-manifest <path-hash>")
+      .requiredOption("--setup-script <path>")
+      .requiredOption("--runtime-repo <owner/repo>")
+      .requiredOption("--runtime-tag <tag>")
+      .requiredOption("--runtime-assets <json-array>")
+      .requiredOption("--runtime-manifest-sha256 <hash>")
       .option("--output <path>")
       .option("--overwrite"),
     async (rt, _args, options) => {
       const reference = required(options, "actionRef");
-      const manifest = required(options, "runtimeManifest");
-      if (
-        !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[0-9a-f]{40}$/.test(reference) ||
-        !/^[^\r\n]+#[0-9a-f]{64}$/.test(manifest)
-      )
-        throw new ContractError(
-          "INVALID_ARGUMENT",
-          "Immutable action reference and pinned manifest PATH#SHA256 are required",
-        );
+      let assets: unknown;
+      try {
+        assets = JSON.parse(required(options, "runtimeAssets"));
+      } catch {
+        throw new ContractError("INVALID_ARGUMENT", "Runtime assets require a JSON array");
+      }
+      if (!Array.isArray(assets) || assets.some((asset) => typeof asset !== "string"))
+        throw new ContractError("INVALID_ARGUMENT", "Runtime assets require a string array");
+      const content = githubWorkflow({
+        actionRef: reference,
+        setupScript: required(options, "setupScript"),
+        runtimeRepo: required(options, "runtimeRepo"),
+        runtimeTag: required(options, "runtimeTag"),
+        runtimeAssets: assets as string[],
+        manifestSha256: required(options, "runtimeManifestSha256"),
+      });
       const path = rt.path(string(options, "output") ?? ".github/workflows/testmaster.yml");
-      // JSON-quoted scalar values are valid YAML and cannot inject workflow keys.
-      const content = `name: TestMaster\non: workflow_dispatch\npermissions:\n  contents: read\njobs:\n  test:\n    runs-on: ubuntu-24.04\n    steps:\n      - uses: ${JSON.stringify(reference)}\n        with:\n          runtime-manifest: ${JSON.stringify(manifest)}\n          all: 'true'\n          environment: ci\n          commit-sha: \${{ github.sha }}\n          checkout-sha: \${{ github.sha }}\n          publish-check: 'false'\n`;
       await mkdir(dirname(path), { recursive: true, mode: 0o700 });
       await writeFile(path, content, {
         mode: 0o600,
@@ -133,8 +143,8 @@ export function ciCommands(program: Command, runtime: Runtime): void {
           path,
           actionRef: reference,
           prerequisites: [
-            "Prepare a checked-out repository, pinned manifest/assets, fixture and initialized workspace before the action step",
-            "Configure TestMaster / required-gate as the required check; separate trusted publication is recommended",
+            "The declared setup script must initialize the application target and TestMaster ci environment with active tests",
+            "Configure TestMaster / required-gate as the required check with admin enforcement; TestMaster / result is informational",
           ],
         },
       };

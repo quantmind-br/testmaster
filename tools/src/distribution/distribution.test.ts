@@ -11,7 +11,7 @@ import {
   tarHeader,
   writeDeterministicArchive,
 } from "./archive.js";
-import { reassembleParts, verifyManifest } from "./install.js";
+import { installRuntime, reassembleParts, verifyManifest } from "./install.js";
 import { RUNTIME_RESOURCES, splitArchive, stageRuntime } from "./package.js";
 
 const roots: string[] = [];
@@ -130,6 +130,87 @@ describe("pinned distribution verification", () => {
     ).rejects.toThrow("Image archive hash mismatch");
   });
 });
+describe("license-bound installation", () => {
+  function manifest(files: { path: string; size: number; sha256: string }[]) {
+    const digest = { size: 3, sha256: sha256("old") };
+    return {
+      schemaVersion: "1.0.0",
+      sourceCommit: "a".repeat(40),
+      runtimeArchive: digest,
+      files,
+      dependencies: [],
+      imageLockHash: "b".repeat(64),
+      images: ["testmaster-runner", "testmaster-runner-python"].map((name) => ({
+        name,
+        imageId: `sha256:${"c".repeat(64)}`,
+        archive: { ...digest, parts: [digest] },
+      })),
+    };
+  }
+  it("refuses a hash-pinned manifest that omits the original LICENSE", () => {
+    const bytes = Buffer.from(
+      JSON.stringify(
+        manifest(
+          ["NOTICE", "containers/NOTICE"].map((path) => ({ path, size: 1, sha256: sha256("x") })),
+        ),
+      ),
+    );
+    expect(() => verifyManifest(bytes, sha256(bytes))).toThrow(
+      "Required license asset missing: LICENSE",
+    );
+  });
+  it("requires a hash-bound source index when source archive provenance is advertised", () => {
+    const value = {
+      ...manifest(
+        ["LICENSE", "NOTICE", "containers/NOTICE"].map((path) => ({
+          path,
+          size: 1,
+          sha256: sha256("x"),
+        })),
+      ),
+      sourcesIndexHash: "d".repeat(64),
+      sourcesArchive: {
+        sha256: "e".repeat(64),
+        size: 1,
+        parts: [{ path: "source.part-0000", sha256: "e".repeat(64), size: 1 }],
+      },
+    };
+    const missing = Buffer.from(JSON.stringify(value));
+    expect(() => verifyManifest(missing, sha256(missing))).toThrow(
+      "Corresponding-source index missing",
+    );
+    value.files.push({ path: "licenses/sources-index.json", size: 1, sha256: "d".repeat(64) });
+    const bound = Buffer.from(JSON.stringify(value));
+    expect(verifyManifest(bound, sha256(bound)).sourcesIndexHash).toBe("d".repeat(64));
+    value.sourcesArchive.parts[0]!.path = "../escape";
+    const escaping = Buffer.from(JSON.stringify(value));
+    expect(() => verifyManifest(escaping, sha256(escaping))).toThrow("Unsafe archive path");
+  });
+  it("refuses tampered runtime bytes before extracting or loading images", async () => {
+    const root = await temporary();
+    const bytes = Buffer.from(
+      JSON.stringify(
+        manifest(
+          ["LICENSE", "NOTICE", "containers/NOTICE"].map((path) => ({
+            path,
+            size: 1,
+            sha256: sha256("x"),
+          })),
+        ),
+      ),
+    );
+    await writeFile(join(root, "manifest.json"), bytes);
+    await writeFile(join(root, "runtime.tar.gz"), "bad");
+    await expect(
+      installRuntime({
+        manifestPath: join(root, "manifest.json"),
+        manifestSha256: sha256(bytes),
+        destination: join(root, "runtime"),
+      }),
+    ).rejects.toThrow("Runtime archive hash mismatch");
+    await expect(readFile(join(root, "runtime/LICENSE"))).rejects.toThrow();
+  });
+});
 describe("relocatable production dependency graph", () => {
   it("includes transitive production packages and runtime assets without workspace source, tests or declarations, keeping third-party runtime directories", async () => {
     const root = await temporary();
@@ -187,7 +268,7 @@ describe("relocatable production dependency graph", () => {
       join(source, "node_modules/.pnpm/external@1/node_modules/transitive"),
     );
     for (const path of RUNTIME_RESOURCES) {
-      if (path.endsWith(".json") || path.endsWith(".md")) {
+      if (path.endsWith(".json") || path.endsWith(".md") || /(?:LICENSE|NOTICE)$/u.test(path)) {
         await mkdir(join(source, path, ".."), { recursive: true });
         await writeFile(join(source, path), "resource");
       } else {

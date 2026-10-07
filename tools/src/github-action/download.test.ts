@@ -114,7 +114,6 @@ it("refuses fork or foreign-head pull request runs before job lookup", async () 
       .mockResolvedValueOnce(new Response(null, { status: 503 }));
     await expect(downloadEnvelope(input)).rejects.toMatchObject({
       code: "POLICY_DENIED",
-      message: "Fork publication cannot use private runtime assets",
     });
     expect(fetch).toHaveBeenCalledTimes(1);
     fetch.mockRestore();

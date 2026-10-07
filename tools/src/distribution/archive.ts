@@ -22,8 +22,11 @@ export interface DistributionManifest {
   files: FileDigest[];
   dependencies: { name: string; version: string; license: string }[];
   imageLockHash: string;
+  sourcesIndexHash?: string;
+  sourcesArchive?: ArchiveDigest & { parts: (ArchiveDigest & { path: string })[] };
   images: { name: string; imageId: string; archive: ArchiveDigest & { parts: ArchiveDigest[] } }[];
 }
+export const LICENSE_ASSETS = ["LICENSE", "NOTICE", "containers/NOTICE"] as const;
 export const MAX_PART_SIZE = 1024 ** 3;
 export const MAX_IMAGE_SIZE = 64 * MAX_PART_SIZE;
 export const MAX_RUNTIME_SIZE = 16 * MAX_PART_SIZE;

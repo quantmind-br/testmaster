@@ -94,7 +94,7 @@ export async function downloadEnvelope(input: DownloadEnvelopeInput): Promise<st
     )
       throw new ActionInputError(
         "POLICY_DENIED",
-        "Fork publication cannot use private runtime assets",
+        "Fork publication is denied before runtime installation",
       );
   }
   const jobResponse = await fetch(

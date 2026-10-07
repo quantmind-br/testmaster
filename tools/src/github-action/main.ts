@@ -37,7 +37,7 @@ export async function runAction(env: NodeJS.ProcessEnv = process.env): Promise<n
     )
       throw new ContractError(
         "POLICY_DENIED",
-        "Fork execution cannot receive private runtime assets",
+        "Fork execution is denied before runtime installation",
       );
   } else if (env.GITHUB_EVENT_NAME !== "workflow_dispatch")
     throw new ContractError(
