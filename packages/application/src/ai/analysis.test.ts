@@ -221,6 +221,30 @@ it("model failure retains byte-identical immutable factual predecessor and does 
   expect((await f.service.analyze(f.run.id, { model: true })).id).toBe(enriched.id);
   expect(f.complete).toHaveBeenCalledTimes(1);
 });
+it("schema-valid enrichment that contradicts the rules cause abstains and names the rejecting rule", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id, {});
+  expect(factual.failureKind).toBe("product_bug");
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: "mdl_00000000-0000-4000-8000-000000000009",
+    output: {
+      failureKind: "test_fragility",
+      hypotheses: [{ text: "Selector drift", supports: ["E1"], contradicts: [], confidence: 0.9 }],
+      recommendedAction: "fix_test",
+      fixTargetHandle: null,
+      limitations: [],
+    },
+  }));
+  const enriched = await f.service.analyze(f.run.id, { model: true });
+  expect(enriched).toMatchObject({
+    source: "model",
+    modelCallId: null,
+    failureKind: "product_bug",
+  });
+  expect(enriched.limitations).toContain(
+    "Model enrichment abstained: INVALID_ARGUMENT: Model cause contradicts the rules-derived factual cause.",
+  );
+});
 it("nonterminal and unknown Runs are refused without analysis or jobs", async () => {
   const f = await fixture({ queued: true });
   await expect(f.service.analyze(f.run.id, {})).rejects.toMatchObject({

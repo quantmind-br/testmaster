@@ -1,0 +1,1338 @@
+{
+ "schemaVersion": "1.0.0",
+ "round": "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z",
+ "frozenCommit": "b173a64411d5836401068efe5326f6b031d21ab9",
+ "registrationHash": "980e85b3e1eeffaa9a886bd8d26f0dcfd2976daf11320b5897b6e11349dbfd81",
+ "recomputation": {
+  "caseIdsMatchCorpus": true,
+  "cases": 31,
+  "modelCalls": 40,
+  "uniqueCallIds": 40,
+  "modelConfigHashes": [
+   "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+  ],
+  "models": [
+   "qwen3.8-flash"
+  ],
+  "callOutcomes": {
+   "success": 38,
+   "invalid": 2
+  },
+  "inputPlusOutputTokens": 292988,
+  "ledgerConservativeCharge": 292988,
+  "roundChargedTokens": 292988,
+  "unknownUsageCalls": 0,
+  "unknownCostCalls": 40,
+  "reportedSafeHealing": {
+   "status": "measured",
+   "successes": 0,
+   "n": 12,
+   "estimate": 0,
+   "lower": 0,
+   "upper": 0.2425007574992425
+  },
+  "reportedCauseAccuracy": {
+   "status": "measured",
+   "successes": 1,
+   "n": 26,
+   "estimate": 0.038461538461538464,
+   "lower": 0.0068218089769898765,
+   "upper": 0.18893176991958405
+  },
+  "recomputedCauseCorrect": 1
+ },
+ "descriptive": {
+  "enrichmentRejectedAfterGatewaySuccess": 21,
+  "healingRefusalReasons": {
+   "PAYLOAD_TOO_LARGE": 9,
+   "semantic_failure": 8,
+   "POLICY_DENIED": 6,
+   "proposal": 1,
+   "no_healing_job": 6
+  },
+  "rulesKindMatchesLabelAmongCause": 12,
+  "healthyOracleTrueMain": 30
+ },
+ "cases": [
+  {
+   "id": "m3-adversarial-01",
+   "group": "adversarial",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-adversarial-02",
+   "group": "adversarial",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-adversarial-03",
+   "group": "adversarial",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-01",
+   "group": "bug",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-02",
+   "group": "bug",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "invalid"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "POLICY_DENIED",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained",
+    "pipeline_error"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-03",
+   "group": "bug",
+   "status": "error",
+   "label": "unknown",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-04",
+   "group": "bug",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-05",
+   "group": "bug",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-06",
+   "group": "bug",
+   "status": "error",
+   "label": "contract_violation",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "invalid"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": {
+    "reason": "POLICY_DENIED",
+    "refused": true
+   },
+   "errorCodes": [
+    "pipeline_error"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-07",
+   "group": "bug",
+   "status": "observed",
+   "label": "product_bug",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-bug-08",
+   "group": "bug",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-01",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-02",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "test_fragility",
+   "finalFailureKind": "test_fragility",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "POLICY_DENIED",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained",
+    "pipeline_error"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-03",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "proposalId": "hea_01a11486-96c0-72ac-8c3d-8e340f593f47"
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-04",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "test_fragility",
+   "finalFailureKind": "test_fragility",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-05",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "test_fragility",
+   "finalFailureKind": "test_fragility",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "POLICY_DENIED",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained",
+    "pipeline_error"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-06",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-07",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-08",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "POLICY_DENIED",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained",
+    "pipeline_error"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-09",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-10",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "test_fragility",
+   "finalFailureKind": "test_fragility",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ],
+    [
+     "heal",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": {
+    "reason": "POLICY_DENIED",
+    "refused": true
+   },
+   "errorCodes": [
+    "pipeline_error"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-11",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-drift-12",
+   "group": "drift",
+   "status": "error",
+   "label": "test_fragility",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": {
+    "reason": "PAYLOAD_TOO_LARGE",
+    "refused": true
+   },
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-env-01",
+   "group": "env",
+   "status": "error",
+   "label": "environment",
+   "rulesFailureKind": "environment",
+   "finalFailureKind": "environment",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [
+    "Model enrichment abstained: INVALID_ARGUMENT."
+   ],
+   "healingJobResult": null,
+   "errorCodes": [
+    "model_enrichment_abstained"
+   ],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-env-02",
+   "group": "env",
+   "status": "observed",
+   "label": "environment",
+   "rulesFailureKind": "environment",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": null,
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-env-03",
+   "group": "env",
+   "status": "observed",
+   "label": "unknown",
+   "rulesFailureKind": "product_bug",
+   "finalFailureKind": "product_bug",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": {
+    "reason": "semantic_failure",
+    "refused": true
+   },
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-healthy-01",
+   "group": "healthy",
+   "status": "observed",
+   "label": "unknown",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": null,
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-healthy-02",
+   "group": "healthy",
+   "status": "observed",
+   "label": "unknown",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": null,
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-healthy-03",
+   "group": "healthy",
+   "status": "observed",
+   "label": "unknown",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": null,
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-healthy-04",
+   "group": "healthy",
+   "status": "observed",
+   "label": "unknown",
+   "rulesFailureKind": "unknown",
+   "finalFailureKind": "unknown",
+   "modelCalls": [
+    [
+     "analyze",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": null,
+   "errorCodes": [],
+   "healthyOracle": true
+  },
+  {
+   "id": "m3-integration-01",
+   "group": "integration",
+   "status": "error",
+   "label": "product_bug",
+   "rulesFailureKind": null,
+   "finalFailureKind": null,
+   "modelCalls": [
+    [
+     "plan",
+     "success"
+    ]
+   ],
+   "enrichmentRejection": [],
+   "healingJobResult": null,
+   "errorCodes": [
+    "pipeline_error"
+   ],
+   "healthyOracle": false
+  }
+ ],
+ "observedAt": "2026-10-07T04:34:01Z",
+ "method": "Independent recomputation from retained round ledgers and each case workspace SQLite (model_calls, analyses, job_leases, test_revisions); no provider, Docker or paid call.",
+ "findings": [
+  {
+   "id": "F1",
+   "kind": "product_defect",
+   "status": "fixed_not_live_verified",
+   "summary": "Healing prompt included locator evidence for every step plus hashed evidence refs; 9 cases (drift 01/04/06/07/09/11/12, adversarial 01/02) exceeded the admitted 100000-byte model input and were refused PAYLOAD_TOO_LARGE before any request.",
+   "fix": "packages/application/src/ai/healing.ts sends locator evidence only for non-passed steps and cites evidence by handle only.",
+   "evidence": "Offline replay on copies of the retained workspaces with a local 503 stub provider: before = pre-fix healing.ts at b173a64411d5836401068efe5326f6b031d21ab9, after = fixed working tree. providerRequestBytes empty means the gateway refused before transport.",
+   "replay": [
+    {
+     "id": "m3-adversarial-01",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       25858
+      ]
+     }
+    },
+    {
+     "id": "m3-adversarial-02",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       24791
+      ]
+     }
+    },
+    {
+     "id": "m3-adversarial-03",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-bug-01",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-bug-02",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       13837
+      ]
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       6185
+      ]
+     }
+    },
+    {
+     "id": "m3-bug-03",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-bug-04",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-bug-05",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-bug-06",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       7986
+      ]
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       4174
+      ]
+     }
+    },
+    {
+     "id": "m3-bug-07",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-bug-08",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "semantic_failure",
+       "message": "Healing abstained"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-drift-01",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       24393
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-02",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       33477
+      ]
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       20738
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-03",
+     "before": {
+      "outcome": {
+       "proposal": "hea_01a11486-96c0-72ac-8c3d-8e340f593f47"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "proposal": "hea_01a11486-96c0-72ac-8c3d-8e340f593f47"
+      },
+      "providerRequestBytes": []
+     }
+    },
+    {
+     "id": "m3-drift-04",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       35464
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-05",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       99508
+      ]
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       23420
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-06",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       25040
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-07",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       24475
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-08",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       63965
+      ]
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       22418
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-09",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       24587
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-10",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       65063
+      ]
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       22728
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-11",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       27996
+      ]
+     }
+    },
+    {
+     "id": "m3-drift-12",
+     "before": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": []
+     },
+     "after": {
+      "outcome": {
+       "code": "PRECONDITION_FAILED",
+       "reason": "model_failure",
+       "message": "Healing model request did not produce an admissible candidate"
+      },
+      "providerRequestBytes": [
+       26009
+      ]
+     }
+    }
+   ],
+   "regression": "validation/journeys/m3-healing-acceptance.docker.test.ts J07 policy selector journey fails on the pre-fix code (prompt carried delete-ready locator evidence) and passes after."
+  },
+  {
+   "id": "F2",
+   "kind": "product_diagnosability_defect",
+   "status": "fixed_not_live_verified",
+   "summary": "21 model analyses succeeded at the gateway schema but were rejected by local semantic validation; the persisted limitation recorded only INVALID_ARGUMENT. Model outputs are retained as hashes only, so the rejecting rule for this round cannot be determined from evidence.",
+   "fix": "packages/application/src/ai/analysis.ts records the code-owned rule message (e.g. INVALID_ARGUMENT: Model cause contradicts the rules-derived factual cause).",
+   "regression": "packages/application/src/ai/analysis.test.ts \"names the rejecting rule\" fails on the pre-fix code and passes after."
+  },
+  {
+   "id": "F3",
+   "kind": "evaluator_scoring_defect",
+   "status": "recorded_frozen_score_unchanged",
+   "summary": "m3.ts compared assertionsHash of the raw corpus plan with the stored candidate revision; stored revisions normalize assertion timeoutMs (30000), so the locator-only drift-03 proposal (change /input/locator on invalid_password) was scored unsafeProposed (proposedUnsafePatches 1/1).",
+   "evidence": "m3-drift-03 workspace test_revisions: base rev ordinal 1 and candidate ordinal 2 have byte-identical assertion steps; the product preserveAssertions check passed when the proposal was created. Descriptive corrected reading: 0/1 unsafe proposed."
+  },
+  {
+   "id": "F4",
+   "kind": "evaluator_reporting_defect",
+   "status": "recorded_frozen_score_unchanged",
+   "summary": "report stages.healthyOracle 0/30 is an artefact: the stage key is written only on the integration path; main cases store the verdict in healing.healthyOracle, which is true for 30/30."
+  },
+  {
+   "id": "F5",
+   "kind": "preregistered_rule_note",
+   "status": "recorded",
+   "summary": "Any enrichment abstention marks the case error, excluding its rules-only diagnosis from cause accuracy. Rules failureKind matched the frozen label in 12/26 cause cases; this is descriptive, not the preregistered metric, and not model quality."
+  }
+ ],
+ "limitations": [
+  "Frozen round score and ledgers are unchanged; fixes require a new preregistered round before any live claim.",
+  "Coverage pilot of one correlated application family; no graduation or rare-event claim."
+ ]
+}

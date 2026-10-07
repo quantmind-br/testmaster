@@ -312,7 +312,11 @@ M3 healing is an explicit separate workflow: `heal propose RUN [--deadline-ms N]
 `heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--wait]`, and
 `heal reject PROPOSAL --reason TEXT`. Proposals require a terminal failed declarative Run,
 an authorized structured-output provider and `execution_evidence` consent. Diagnosed product,
-contract or security failures abstain before model execution. Replacement patches cannot alter
+contract or security failures abstain before model execution. The healing prompt carries the
+sanitized plan, factual statements cited by `E` handles, and locator evidence only for steps that
+did not pass; evidence content hashes stay local. A model enrichment rejected by local validation
+keeps the factual diagnosis and records `Model enrichment abstained: <code>: <rule>.` as a
+limitation. Replacement patches cannot alter
 assertions (including nested frames), response predicates, dependencies, cleanup or time ceilings.
 Business-input changes require manual review; generic write permission does not grant approval.
 Approval admits a distinct strict replay verification. Only its passed outcome AND passed gate,

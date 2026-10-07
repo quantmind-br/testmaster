@@ -802,7 +802,9 @@ export class AnalysisService {
             throw error;
           analysis = this.limited(
             factual,
-            `Model enrichment abstained: ${error instanceof ContractError ? error.code : "provider_or_validation_failure"}.`,
+            // ContractError messages are code-owned rule names, so they identify which
+            // validation rejected the output without echoing model or evidence content.
+            `Model enrichment abstained: ${error instanceof ContractError ? `${error.code}: ${error.message}` : "provider_or_validation_failure"}.`,
             fence,
           );
         }

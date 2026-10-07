@@ -142,9 +142,20 @@ export class HealingService {
       }
       if (!evidence.length) refuse("evidence_unavailable");
       const handles = new Map(evidence.map((item) => [item.evidenceId, item.ref]));
+      // Only locator evidence for steps that did not pass can locate the drifted control; the
+      // passed steps' candidate lists would push ordinary browser failures past the admitted
+      // model input limit before any request is sent.
+      const unresolvedSteps = new Set(
+        this.runs
+          .steps(failedRunId)
+          .filter((step) => step.status !== "passed")
+          .map((step) => String(step.planStepId)),
+      );
       let locatorEvidence: LocatorEvidence[] = [];
       try {
-        locatorEvidence = await this.locatorRecords(failedRunId);
+        locatorEvidence = (await this.locatorRecords(failedRunId)).filter((record) =>
+          unresolvedSteps.has(record.stepId),
+        );
       } catch (error) {
         if (
           !(error instanceof ContractError) ||
@@ -179,6 +190,7 @@ export class HealingService {
             JSON.stringify({
               plan: modelPlan,
               locatorEvidence,
+              // Evidence references (content hashes) stay local; the model cites handles only.
               facts: facts.facts.map((fact) => ({
                 text: fact.text,
                 evidenceHandles: fact.evidenceRefs.map(
@@ -187,7 +199,6 @@ export class HealingService {
                       .evidenceId,
                 ),
               })),
-              evidence,
             }),
             secretValues,
           ).text,

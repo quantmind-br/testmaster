@@ -1,5 +1,6 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { resolveConfig } from "@testmaster/application";
@@ -11,14 +12,21 @@ const temporary: string[] = [];
 afterEach(async () => {
   for (const path of temporary.splice(0)) await rm(path, { recursive: true, force: true });
 });
+/**
+ * The registration is historical once frozen: its inputs are the bytes committed with it, not the
+ * current working tree, which may legitimately change after the round under a new registration.
+ */
 async function fixtureCopy() {
   const root = await mkdtemp(join(tmpdir(), "tm-m3-check-"));
   temporary.push(root);
   const path = "evals/rounds/m3-round1-qwen38-medium/preregistration.json";
-  const r = JSON.parse(await readFile(resolve(path), "utf8")) as M3Registration;
+  const git = (...args: string[]) =>
+    execFileSync("git", ["--no-pager", ...args], { cwd: resolve("."), maxBuffer: 64 << 20 });
+  const commit = git("log", "-1", "--format=%H", "--", path).toString().trim();
+  const r = JSON.parse(git("show", `${commit}:${path}`).toString("utf8")) as M3Registration;
   for (const file of new Set([...Object.keys(r.frozenFiles), path])) {
     await mkdir(dirname(join(root, file)), { recursive: true });
-    await cp(resolve(file), join(root, file));
+    await writeFile(join(root, file), git("show", `${commit}:${file}`));
   }
   return { root, path, r };
 }
@@ -35,7 +43,8 @@ it("checks all fixed cases and budgets without network, model or Docker invocati
       modelCalls: 0,
       dockerCalls: 0,
       denominators: { safeHealing: 12, causeAccuracy: 26, trueBugOffers: 9, healthy: 4 },
-      readyForLive: false,
+      // The committed registration was frozen with evidence-backed controls before its round.
+      readyForLive: true,
     });
   } finally {
     globalThis.fetch = original;
@@ -49,6 +58,8 @@ it("rejects an absent exact context rather than substituting another patch", asy
       "shop.html",
     ),
   ).toThrow("context absent");
+});
+it("refuses a corpus whose frozen patch context is absent", async () => {
   const { root, path, r } = await fixtureCopy();
   const corpusPath = join(root, r.corpus);
   const corpus = JSON.parse(await readFile(corpusPath, "utf8"));

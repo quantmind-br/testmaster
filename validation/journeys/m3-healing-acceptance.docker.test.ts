@@ -3,6 +3,7 @@ import { createServer, type RequestListener, type Server } from "node:http";
 import { join } from "node:path";
 import { Application } from "@testmaster/application";
 import type { ExecutablePlan, Run } from "@testmaster/contracts";
+import { semanticHash } from "@testmaster/domain";
 import { assertionsHash, type LocatorEvidence } from "@testmaster/planner";
 import { expect, it } from "vitest";
 import { completion, testProvider } from "../../packages/model-gateway/src/test-support.js";
@@ -16,6 +17,27 @@ async function listen(server: Server): Promise<string> {
   if (!address || typeof address === "string") throw new Error("Missing fixture address");
   return `http://127.0.0.1:${address.port}`;
 }
+/** Extracts the user message's untrusted data from a chat completion request body. */
+function untrustedData(raw: string): Record<string, unknown> {
+  const body: unknown = JSON.parse(raw);
+  if (!body || typeof body !== "object" || !("messages" in body) || !Array.isArray(body.messages))
+    throw new Error("Completion request has no messages");
+  for (const message of body.messages as unknown[]) {
+    if (!message || typeof message !== "object" || !("role" in message) || !("content" in message))
+      continue;
+    if (message.role !== "user" || typeof message.content !== "string") continue;
+    const content: unknown = JSON.parse(message.content);
+    if (
+      content &&
+      typeof content === "object" &&
+      "untrustedData" in content &&
+      content.untrustedData &&
+      typeof content.untrustedData === "object"
+    )
+      return { ...content.untrustedData };
+  }
+  throw new Error("Completion request has no untrusted user data");
+}
 
 async function fixture(
   session: Journey,
@@ -27,11 +49,14 @@ async function fixture(
     environmentId: string;
     setPatch: (patch: Patch) => void;
     completions: () => number;
+    /** Parsed untrusted data of every completion request, in order. */
+    prompts: () => Record<string, unknown>[];
     run: (testId: string, revisionId?: string) => Promise<Run>;
   }) => Promise<void>,
 ): Promise<void> {
   let patch: Patch = { changes: [] };
   let completions = 0;
+  const prompts: Record<string, unknown>[] = [];
   const target = createServer(targetHandler);
   const provider = createServer(async (request, response) => {
     response.setHeader("content-type", "application/json");
@@ -39,8 +64,9 @@ async function fixture(
       response.end(JSON.stringify({ data: [{ id: "model" }] }));
       return;
     }
-    for await (const _chunk of request) {
-    }
+    let raw = "";
+    for await (const chunk of request) raw += String(chunk);
+    prompts.push(untrustedData(raw));
     completions++;
     response.end(
       JSON.stringify({
@@ -117,6 +143,7 @@ async function fixture(
         patch = value;
       },
       completions: () => completions,
+      prompts: () => prompts,
       run: async (testId, revisionId) => {
         const receipt = await current.runs.admit(
           {
@@ -324,10 +351,12 @@ it("J07 M3-02 policy autoapply promotes only the unique equivalent selector and 
           `<button data-testid="${drift ? "save-new" : "save"}">Save order</button><button data-testid="delete">Delete order</button><output data-testid="saved">Not saved</output><script>document.querySelector('button').onclick=async()=>{await fetch('/save');document.querySelector('output').textContent='Saved'};document.querySelector('[data-testid=delete]').onclick=async()=>{await fetch('/delete');document.querySelector('output').textContent='Deleted'}</script>`,
         );
       },
-      async ({ app, projectId, run, setPatch, completions }) => {
+      async ({ app, projectId, run, setPatch, completions, prompts }) => {
         const plan = (): ExecutablePlan =>
           executable("Only save order", "playwright", [
             action("open", "navigate", { path: "/" }),
+            // A passed locator step: its evidence must not enter the healing prompt.
+            assertion("delete-ready", { locator: { by: "testId", value: "delete" } }, "visible"),
             {
               ...action("save", "click", { locator: { by: "testId", value: "save" } }),
               timeoutMs: 1000,
@@ -356,6 +385,25 @@ it("J07 M3-02 policy autoapply promotes only the unique equivalent selector and 
           ],
         });
         const accepted = await app.healing.propose(failedSafe.id);
+        // Only the failed step's locator evidence is sent, and evidence stays referenced by
+        // handle: content hashes of the cited steps/observations never leave the process.
+        const healPrompt = prompts().at(-1)!;
+        const records = healPrompt.locatorEvidence;
+        if (!Array.isArray(records)) throw new Error("Healing prompt lacks locator evidence");
+        const stepIds = records.map((record: unknown) =>
+          record && typeof record === "object" && "stepId" in record ? record.stepId : null,
+        );
+        expect(new Set(stepIds)).toEqual(new Set(["save"]));
+        expect(healPrompt).not.toHaveProperty("evidence");
+        const cited = app.database.all(
+          "SELECT data_json FROM steps WHERE attempt_id IN (SELECT id FROM attempts WHERE run_id=?)",
+          failedSafe.id,
+        );
+        expect(cited.length).toBeGreaterThan(0);
+        for (const row of cited)
+          expect(JSON.stringify(healPrompt)).not.toContain(
+            semanticHash(JSON.parse(String(row.data_json))),
+          );
         expect(accepted).toMatchObject({
           status: "approved",
           approvalMode: "policy",
