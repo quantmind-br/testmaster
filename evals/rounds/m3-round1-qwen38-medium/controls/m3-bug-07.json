@@ -1,0 +1,167 @@
+{
+  "id": "m3-bug-07",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1146f-90d9-7710-baf8-965e362c6907",
+    "revisionId": "rev_01a1146f-9099-734b-b509-194f4999eddd",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "page",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "ff70191ac01ba194db83cb94a91bfed917700d8d40ae129d5cb776b52d0f86c0"
+  },
+  "transformed": {
+    "runId": "run_01a1146f-9409-769e-bcf6-4cd7cef5ae0b",
+    "revisionId": "rev_01a1146f-9099-734b-b509-194f4999eddd",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "page",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "ff70191ac01ba194db83cb94a91bfed917700d8d40ae129d5cb776b52d0f86c0"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "paginationContinuity",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "expected": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ],
+      "observed": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ]
+    }
+  },
+  "transformedOracle": {
+    "check": "paginationContinuity",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "expected": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ],
+      "observed": [
+        "p1",
+        "p2",
+        "p4",
+        "p5"
+      ]
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-07",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "page",
+        "kind": "action",
+        "operation": "request",
+        "description": "page",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "offset"
+              },
+              "value": {
+                "literal": "2"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "page",
+          "jsonPointer": "/items/0/id"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "p3"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

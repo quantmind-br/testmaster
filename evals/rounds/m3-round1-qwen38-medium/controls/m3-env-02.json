@@ -1,0 +1,152 @@
+{
+  "id": "m3-env-02",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a11479-c55a-714a-9369-b36057f3a5ae",
+    "revisionId": "rev_01a11479-c50d-7156-b175-5f9734b78eca",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "health",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "02c5a0179bb6a11140fb8f2e8e480aa72a5685bfba080877f2d06a90679c0d3f"
+  },
+  "transformed": {
+    "runId": "run_01a11479-c90f-76c2-b542-15febbfc44bd",
+    "revisionId": "rev_01a11479-c50d-7156-b175-5f9734b78eca",
+    "outcome": "inconclusive",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "health",
+        "status": "inconclusive",
+        "reasonCode": "insufficient_evidence",
+        "errorCode": "ECONNREFUSED"
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "insufficient_evidence",
+      "stopped_after_failure",
+      "insufficient_evidence",
+      "insufficient_evidence"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "02c5a0179bb6a11140fb8f2e8e480aa72a5685bfba080877f2d06a90679c0d3f"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Wed, 07 Oct 2026 03:48:07 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Wed, 07 Oct 2026 03:48:07 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-env-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "health",
+        "kind": "action",
+        "operation": "request",
+        "description": "health",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "health"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "health",
+          "jsonPointer": "/status"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "ok"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

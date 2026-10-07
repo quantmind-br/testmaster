@@ -1,0 +1,143 @@
+{
+  "id": "m3-env-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a11479-bf74-7655-8de4-77ec0ded1070",
+    "revisionId": "rev_01a11479-bf23-75ef-9418-4890ec3ff6f9",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "health",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "24556760090a5e4c8a08984eb66c8d693253a7bfafc769eb7aab49153468e679"
+  },
+  "transformed": {
+    "runId": "run_01a11479-c324-7089-b22e-759e349dbd16",
+    "revisionId": "rev_01a11479-bf22-76d0-b69b-68f6a2be6f21",
+    "outcome": "blocked",
+    "gate": "failed",
+    "steps": [],
+    "reasonCodes": [
+      "credential_revoked"
+    ],
+    "snapshotCount": 0,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "dcb53da9e30ce802c3c077c53092260f10a79068c1966a8dcb654cac4a9a86de"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Wed, 07 Oct 2026 03:48:06 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Wed, 07 Oct 2026 03:48:06 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-env-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "missing",
+        "kind": "action",
+        "operation": "request",
+        "description": "missing",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "secretRef": "sec_01a11479-bf21-7150-8858-e7b325115af4"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "missing"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

@@ -1,0 +1,144 @@
+{
+  "id": "m3-healthy-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a11479-d5f3-7378-a07c-4ffd9552c4e1",
+    "revisionId": "rev_01a11479-d5a4-71e3-941e-37994328e830",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "3c82e390980bb9371689e6ae74e5a96ee9264fd593066316aca295bf7449efc9"
+  },
+  "transformed": {
+    "runId": "run_01a11479-d93f-750a-bb20-00b6b13bf828",
+    "revisionId": "rev_01a11479-d5a4-71e3-941e-37994328e830",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:1fd6a31ef847bd05cb6bb34e53f1b40c6f16268a5424e2059b8a133ad8720f6f",
+      "sha256:646ea20c9104d3066df80fdc3fe6864384a98d9a173283571e8724724b5ba41b"
+    ],
+    "planHash": "3c82e390980bb9371689e6ae74e5a96ee9264fd593066316aca295bf7449efc9"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "passwordValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 401,
+      "sessionsCreated": 0
+    }
+  },
+  "transformedOracle": {
+    "check": "passwordValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 401,
+      "sessionsCreated": 0
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-healthy-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}
