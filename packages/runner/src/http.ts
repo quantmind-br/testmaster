@@ -170,16 +170,53 @@ function responseJson(response: HttpResponse): unknown {
  * (e.g. a renamed field or a missing record): it is an observation, not missing evidence.
  * Captures keep treating an absent target as insufficient evidence.
  */
+/** Only structure, never response values; the step error transports this bounded diagnostic. */
+function missingPointerStructure(runtime: Runtime, json: unknown, pointer: string): string {
+  let current = json;
+  const resolved: string[] = [];
+  for (const encoded of pointer.slice(1).split("/")) {
+    const token = encoded.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (current === null || typeof current !== "object" || !Object.hasOwn(current, token)) {
+      const type = current === null ? "null" : Array.isArray(current) ? "array" : typeof current;
+      const keys = type === "object" ? Object.keys(current as object) : [];
+      return JSON.stringify({
+        deepestPrefix: runtime.scrub(resolved.length ? `/${resolved.join("/")}` : "").slice(0, 512),
+        type,
+        ...(type === "object"
+          ? {
+              keys: keys
+                .sort()
+                .slice(0, 32)
+                .map((key) => runtime.scrub(key).slice(0, 64))
+                .sort(),
+              unlistedKeyCount: Math.max(0, keys.length - 32),
+            }
+          : type === "array"
+            ? { length: (current as unknown[]).length }
+            : {}),
+        firstUnresolvedToken: runtime.scrub(token).slice(0, 64),
+      });
+    }
+    resolved.push(encoded);
+    current = (current as Record<string, unknown>)[token];
+  }
+  throw new Error("Missing-pointer diagnostic requires an unresolved target");
+}
 function assertedJsonValue(
+  runtime: Runtime,
   response: HttpResponse,
   pointer: string | undefined,
-): { present: boolean; value: unknown } {
+): { present: boolean; value: unknown; diagnostic?: string } {
   const json = responseJson(response);
   try {
     return { present: true, value: jsonPointerValue(json, pointer ?? "") };
   } catch (error) {
     if (error instanceof RuntimeError && error.reasonCode === "insufficient_evidence")
-      return { present: false, value: null };
+      return {
+        present: false,
+        value: null,
+        diagnostic: missingPointerStructure(runtime, json, pointer ?? ""),
+      };
     throw error;
   }
 }
@@ -192,6 +229,7 @@ export async function assertResponse(
   let matches = false;
   let observed: unknown;
   let expected: unknown;
+  let missingDiagnostic: string | undefined;
   switch (expectation.predicate) {
     case "statusIn":
       observed = response.status;
@@ -204,14 +242,16 @@ export async function assertResponse(
       matches = isDeepStrictEqual(observed, expected);
       break;
     case "jsonEquals": {
-      const target = assertedJsonValue(response, pointer);
+      const target = assertedJsonValue(runtime, response, pointer);
+      missingDiagnostic = target.diagnostic;
       observed = target.value;
       expected = await runtime.resolve(expectation.value);
       matches = target.present && isDeepStrictEqual(observed, expected);
       break;
     }
     case "countEquals": {
-      const { value } = assertedJsonValue(response, pointer);
+      const { value, diagnostic } = assertedJsonValue(runtime, response, pointer);
+      missingDiagnostic = diagnostic;
       observed = Array.isArray(value) ? value.length : value;
       expected = expectation.value;
       matches = Array.isArray(value) && value.length === expectation.value;
@@ -231,7 +271,7 @@ export async function assertResponse(
         );
       if (!schema || typeof schema !== "object" || Array.isArray(schema))
         deny("Invalid source schema");
-      const target = assertedJsonValue(response, pointer);
+      const target = assertedJsonValue(runtime, response, pointer);
       observed = target.value;
       expected = schema;
       try {
@@ -243,7 +283,7 @@ export async function assertResponse(
         runtime.recordComparison(observed, expected);
         throw new RuntimeError(
           "assertion_mismatch",
-          "Response does not match source schema",
+          `Response does not match source schema${target.diagnostic ? `; missing JSON pointer: ${target.diagnostic}` : ""}`,
           "failed",
         );
       }
@@ -264,7 +304,7 @@ export async function assertResponse(
   if (!matches)
     throw new RuntimeError(
       "assertion_mismatch",
-      `HTTP ${expectation.predicate} expectation was not satisfied`,
+      `HTTP ${expectation.predicate} expectation was not satisfied${missingDiagnostic ? `; missing JSON pointer: ${missingDiagnostic}` : ""}`,
       "failed",
     );
 }

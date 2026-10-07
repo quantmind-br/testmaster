@@ -239,6 +239,95 @@ it("fails assertions whose JSON target is absent from a complete response", asyn
       ),
     ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
 });
+it("records value-free missing-pointer structure and distinguishes empty arrays from absent keys", async () => {
+  const base = await serve((_req, res) =>
+    res.end(
+      JSON.stringify({
+        items: [],
+        product: { price: 125, "canary-secret": "private-value", ["z".repeat(80)]: 99 },
+      }),
+    ),
+  );
+  for (const [pointer, structure] of [
+    [
+      "/items/0/priceCents",
+      { deepestPrefix: "/items", type: "array", length: 0, firstUnresolvedToken: "0" },
+    ],
+    [
+      "/product/priceCents",
+      {
+        deepestPrefix: "/product",
+        type: "object",
+        keys: ["[REDACTED]", "price", "z".repeat(64)],
+        unlistedKeyCount: 0,
+        firstUnresolvedToken: "priceCents",
+      },
+    ],
+  ] as const) {
+    const f = fixture(base);
+    f.runtime.secrets.add("canary-secret");
+    const check: PlanStep = {
+      id: "check",
+      kind: "assertion",
+      operation: "assert",
+      description: "Check approved value",
+      input: { responseStepId: "read", jsonPointer: pointer },
+      expectation: { predicate: "jsonEquals", value: { literal: 1250 } },
+    };
+    expect(
+      await f.runtime.runSteps([requestStep("read", []), check], (step) => f.engine.perform(step)),
+    ).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+    const event = f.events.find(
+      (event) => event.type === "step.finished" && event.payload.stepId === "check",
+    )!;
+    const payload = event.payload as { error: { message: string }; observed: unknown };
+    expect(payload.observed).toBeNull();
+    expect(JSON.parse(payload.error.message.split("; missing JSON pointer: ")[1]!)).toEqual(
+      structure,
+    );
+    expect(payload.error.message).not.toContain("private-value");
+    expect(payload.error.message).not.toContain("canary-secret");
+  }
+});
+it("bounds structural keys and records no missing diagnostic for a resolved null", async () => {
+  const product = Object.fromEntries(
+    Array.from({ length: 40 }, (_, i) => [`k${String(i).padStart(2, "0")}`, "private-value"]),
+  );
+  const base = await serve((_req, res) => res.end(JSON.stringify({ product, present: null })));
+  const f = fixture(base);
+  await f.engine.perform(requestStep("read", []));
+  let message = "";
+  try {
+    await assertResponse(
+      f.runtime,
+      responseOf(f.engine, "read"),
+      { predicate: "jsonEquals", value: { literal: 1 } },
+      "/product/absent",
+    );
+  } catch (error) {
+    message = (error as Error).message;
+  }
+  const diagnostic = JSON.parse(message.split("; missing JSON pointer: ")[1]!);
+  expect(diagnostic.keys).toHaveLength(32);
+  expect(diagnostic.unlistedKeyCount).toBe(8);
+  expect(message).not.toContain("private-value");
+  await expect(
+    assertResponse(
+      f.runtime,
+      responseOf(f.engine, "read"),
+      { predicate: "jsonEquals", value: { literal: null } },
+      "/present",
+    ),
+  ).resolves.toBeUndefined();
+  await expect(
+    assertResponse(
+      f.runtime,
+      responseOf(f.engine, "read"),
+      { predicate: "jsonEquals", value: { literal: 1 } },
+      "/present",
+    ),
+  ).rejects.toMatchObject({ message: "HTTP jsonEquals expectation was not satisfied" });
+});
 
 it("keeps a target the egress proxy could not reach inconclusive with its socket error code", async () => {
   const proxy = createServer((_req, res) => {

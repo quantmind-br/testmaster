@@ -170,7 +170,7 @@ it("M3-02 deterministic controlled-provider Chromium healing preserves original 
       expect(verification.origin).toBe("verification");
       expect(verification.outcome).toBe("passed");
       expect(verification.gate).toBe("passed");
-      expect(app.healing.reconcile(verificationId).status).toBe("verified");
+      expect((await app.healing.reconcile(verificationId)).status).toBe("verified");
       expect(app.tests.get(test.id).activeRevisionId).toBe(candidate.id);
       expect(await (await fetch(`${url}/state`)).json()).toEqual({ writes: 1 });
       expect(

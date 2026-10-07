@@ -248,6 +248,89 @@ it("emits bounded hashed sanitized locator records on ordinary replay and failed
     ]),
   });
 });
+it("captures asynchronously attached action identity before acting and spends only the remaining step budget", async () => {
+  let now = 0;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  const target = context.page.locator("submit");
+  target.countValue = 0;
+  target.waitFor.mockImplementation(async () => {
+    now += 75;
+    target.countValue = 1;
+  });
+  expect(await runBrowser(runtime([{ ...click, timeoutMs: 200 }]))).toMatchObject({
+    outcome: "passed",
+  });
+  const before = JSON.parse(
+    artifacts
+      .find((entry) => entry.path === "browser/steps/click-locator-0-before.json")!
+      .bytes.toString(),
+  );
+  expect(before.cardinality).toBe(1);
+  expect(before.candidates[0].matched).toBe(true);
+  expect(target.click).toHaveBeenCalledWith(expect.objectContaining({ timeout: 125 }));
+});
+it("captures missing action targets once without restarting their attachment deadline", async () => {
+  const target = context.page.locator("submit");
+  target.countValue = 0;
+  target.waitFor.mockRejectedValue(new errors.TimeoutError("Attachment deadline"));
+  expect(await runBrowser(runtime([{ ...click, timeoutMs: 20 }]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_timeout",
+  });
+  expect(target.waitFor).toHaveBeenCalledOnce();
+  expect(target.click).not.toHaveBeenCalled();
+  for (const phase of ["before", "after"]) {
+    const record = JSON.parse(
+      artifacts
+        .find((entry) => entry.path === `browser/steps/click-locator-0-${phase}.json`)!
+        .bytes.toString(),
+    );
+    expect(record.cardinality).toBe(0);
+  }
+});
+it("retains a readiness transition that occurs while before screenshots are collected", async () => {
+  const target = context.page.locator("loading");
+  context.page.screenshot.mockImplementation(async () => {
+    target.countValue = 0;
+    return Buffer.from("png");
+  });
+  const wait: PlanStep = {
+    id: "wait",
+    kind: "action",
+    operation: "waitFor",
+    description: "Wait",
+    input: { locator: { by: "testId", value: "loading" }, state: "detached", deadlineMs: 100 },
+  };
+  expect(await runBrowser(runtime([wait]))).toMatchObject({ outcome: "passed" });
+  const record = JSON.parse(
+    artifacts
+      .find((entry) => entry.path === "browser/steps/wait-locator-0-after.json")!
+      .bytes.toString(),
+  );
+  expect(record.state.transitions.map((state: { attached: boolean }) => state.attached)).toEqual([
+    true,
+    false,
+  ]);
+});
+it("preserves cancellation and attempt deadline precedence during attachment observation", async () => {
+  for (const cancel of [false, true]) {
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const attempt = runtime([click]);
+    attempt.input.timeoutMs = 50;
+    const target = context.page.locator("submit");
+    target.countValue = 0;
+    target.waitFor.mockImplementation(async () => {
+      if (cancel) attempt.protocol.controller.abort();
+      else now = 51;
+      throw new errors.TimeoutError("Attachment deadline");
+    });
+    expect(await runBrowser(attempt)).toMatchObject({
+      reasonCode: cancel ? "user_cancelled" : "execution_deadline",
+    });
+    expect(target.click).not.toHaveBeenCalled();
+  }
+});
 it("fails ambiguous actions and skips the remaining required oracle", async () => {
   context.page.locator("submit").countValue = 2;
   expect(await runBrowser(runtime([click, assertion]))).toMatchObject({

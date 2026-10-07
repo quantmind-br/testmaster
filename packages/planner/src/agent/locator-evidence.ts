@@ -49,7 +49,7 @@ export function locatorFingerprint(
     attributes,
   });
 }
-function valid(record: LocatorEvidence): boolean {
+export function validLocatorEvidence(record: LocatorEvidence): boolean {
   try {
     const { evidenceHash, ...payload } = record;
     validate("Locator", record.locator);
@@ -127,7 +127,7 @@ export function assessLocatorEquivalence(
   const failures = failed.filter((record) => record.stepId === stepId && record.phase === "before");
   for (const base of bases) {
     if (
-      !valid(base) ||
+      !validLocatorEvidence(base) ||
       base.cardinality !== 1 ||
       base.locator.frame ||
       base.locator.container ||
@@ -141,10 +141,15 @@ export function assessLocatorEquivalence(
       base.candidates.filter((element) => element.fingerprint === original.fingerprint).length !== 1
     )
       continue;
-    if (!original.role || !original.name || original.name.includes("[REDACTED]")) continue;
+    if (
+      (!original.role && !(original.tag === "input" && original.type === "password")) ||
+      !original.name ||
+      original.name.includes("[REDACTED]")
+    )
+      continue;
     for (const failure of failures) {
       if (
-        !valid(failure) ||
+        !validLocatorEvidence(failure) ||
         failure.cardinality !== 0 ||
         failure.candidates.some((element) => element.matched) ||
         !base.frameOrigin ||
@@ -158,7 +163,7 @@ export function assessLocatorEquivalence(
           (record) =>
             record.stepId === stepId &&
             canonicalJson(record.locator) === canonicalJson(failure.locator) &&
-            (!valid(record) || record.cardinality !== 0),
+            (!validLocatorEvidence(record) || record.cardinality !== 0),
         )
       )
         continue;
@@ -198,8 +203,8 @@ export function waitStateEquivalence(
         failure.phase !== "after" ||
         !base.state ||
         !failure.state ||
-        !valid(base) ||
-        !valid(failure) ||
+        !validLocatorEvidence(base) ||
+        !validLocatorEvidence(failure) ||
         base.frameOrigin === "null" ||
         !base.frameOrigin ||
         base.frameOrigin !== failure.frameOrigin ||
@@ -248,7 +253,7 @@ export function waitStateEquivalence(
           record.stepId === stepId &&
           record.phase === "before" &&
           canonicalJson(record.locator) === canonicalJson(base.locator) &&
-          valid(record) &&
+          validLocatorEvidence(record) &&
           record.cardinality === 1,
       );
       const baselineElement = baselineBefore?.candidates.filter((element) => element.matched);

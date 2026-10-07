@@ -63,6 +63,73 @@ describe("recorded locator equivalence", () => {
       }).equivalent,
     ).toBe(true);
   });
+  it("proves named password identity without inventing an ARIA role or accepting other roleless inputs", () => {
+    const password = element({
+      role: "",
+      name: "Password",
+      tag: "input",
+      type: "password",
+      attributes: { name: "password", autocomplete: "current-password", "data-testid": "checkout" },
+    });
+    const changed = element({
+      ...password,
+      matched: false,
+      attributes: { ...password.attributes, "data-testid": "checkout-new" },
+    });
+    expect(
+      assessLocatorEquivalence(
+        [evidence({ candidates: [password] })],
+        [evidence({ cardinality: 0, candidates: [changed] })],
+        "checkout",
+        replacement,
+      ).equivalent,
+    ).toBe(true);
+    for (const original of [
+      element({ ...password, type: "text" }),
+      element({ ...password, name: "" }),
+      ...[
+        "value",
+        "data-token",
+        "data-secret",
+        "data-password",
+        "authorization",
+        "cookie",
+        "onclick",
+      ].map((key) =>
+        element({ ...password, attributes: { ...password.attributes, [key]: "private" } }),
+      ),
+    ]) {
+      const next = element({
+        ...original,
+        matched: false,
+        attributes: { ...original.attributes, "data-testid": "checkout-new" },
+      });
+      expect(
+        assessLocatorEquivalence(
+          [evidence({ candidates: [original] })],
+          [evidence({ cardinality: 0, candidates: [next] })],
+          "checkout",
+          replacement,
+        ).equivalent,
+      ).toBe(false);
+    }
+  });
+  it("keeps renamed business controls manual even when their test hook is unchanged", () => {
+    const baseline = evidence({
+      locator: { by: "role", role: "button", name: "Checkout", exact: true },
+    });
+    const failed = evidence({
+      locator: baseline.locator,
+      cardinality: 0,
+      candidates: [element({ name: "Place order", matched: false })],
+    });
+    expect(
+      assessLocatorEquivalence([baseline], [failed], "checkout", {
+        by: "testId",
+        value: "checkout",
+      }).equivalent,
+    ).toBe(false);
+  });
   it("refuses duplicated identity or duplicated replacement selection", () => {
     const duplicate = drift().candidates[0]!;
     expect(
@@ -192,6 +259,25 @@ describe("recorded wait readiness equivalence", () => {
     const { baseline, failed } = waits();
     expect(waitStateEquivalence(baseline, failed, "checkout", "hidden").equivalent).toBe(true);
     expect(waitStateEquivalence(baseline, failed, "checkout", "visible").equivalent).toBe(false);
+  });
+  it("refuses a roleless readiness control sharing its fingerprint with another paragraph", () => {
+    const { baseline, failed } = waits();
+    const paragraph = element({
+      role: "",
+      name: "",
+      tag: "p",
+      attributes: { "data-testid": "loading" },
+    });
+    const other = element({
+      ...paragraph,
+      matched: false,
+      attributes: { "data-testid": "upload-size" },
+    });
+    const initial = evidence({ ...baseline[0], candidates: [paragraph, other] });
+    const final = evidence({ ...failed[0], candidates: [paragraph, other] });
+    expect(
+      waitStateEquivalence([initial, baseline[1]!], [final], "checkout", "hidden").equivalent,
+    ).toBe(false);
   });
   it("refuses missing baseline, changed deadline, late or absent transitions and ambiguous controls", () => {
     const { baseline, failed } = waits();

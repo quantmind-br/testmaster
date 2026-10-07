@@ -1,12 +1,14 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { Application } from "@testmaster/application";
 import { type ExecutablePlan, type PlanStep, validate } from "@testmaster/contracts";
 import { semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
+import { assessLocatorEquivalence, type LocatorEvidence } from "@testmaster/planner";
 import { startShop } from "@testmaster/reference-shop";
 import { expect, it } from "vitest";
 import { FileEvidenceStore } from "../../packages/evidence/src/index.js";
@@ -265,8 +267,13 @@ it("captures real frame, popup, upload/download, hook/wait and opt-in evidence c
                 ),
               ).toBe(false);
               if (candidate.type === "password") {
-                expect(candidate.attributes).toEqual({});
-                expect(candidate.name).toBe("");
+                expect(candidate.role).toBe("");
+                expect(candidate.name).toBe("Password");
+                expect(candidate.attributes).toMatchObject({
+                  name: "password",
+                  autocomplete: "current-password",
+                  "data-testid": "password",
+                });
               }
             }
           }
@@ -311,6 +318,70 @@ it("captures real frame, popup, upload/download, hook/wait and opt-in evidence c
       await shop.close();
     }
   });
+}, 120000);
+it("captures delayed password identity without values and refuses sensitive or missing controls", async () => {
+  let drift = false;
+  // The timer runs inside the sandboxed Chromium page to exercise its real attachment
+  // auto-wait; host fake timers cannot drive the browser's platform clock.
+  const server = createServer((_request, response) => {
+    response.setHeader("content-type", "text/html");
+    response.end(
+      `<main id="view"></main><script>setTimeout(() => { document.getElementById('view').innerHTML = '<label>Password<input type="password" name="password" autocomplete="current-password" data-testid="${drift ? "new-password" : "password"}"></label><div data-sensitive><label>Private input<input type="password" data-testid="private-password"></label></div>'; }, 200);</script>`,
+    );
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Fixture address unavailable");
+  const url = `http://127.0.0.1:${address.port}`;
+  const plan = executable("Delayed password identity", "playwright", [
+    action("open", "navigate", { path: "/" }),
+    {
+      ...action("password", "fill", {
+        locator: locator("password"),
+        value: { secretRef: "SECRET_REFERENCE" },
+      }),
+      timeoutMs: 700,
+    },
+    assertion("filled", { locator: locator("password") }, "visible"),
+  ]);
+  const read = async (run: AttemptFixture, phase: string): Promise<LocatorEvidence> =>
+    JSON.parse((await run.read(`browser/steps/password-locator-0-${phase}.json`)).toString());
+  let baseline: AttemptFixture | undefined;
+  let failed: AttemptFixture | undefined;
+  try {
+    baseline = await attempt(url, plan, { secret: "private-password-value" });
+    expect(baseline.result.outcome).toBe("passed");
+    const before = await read(baseline, "before");
+    expect(before.cardinality).toBe(1);
+    expect(before.candidates.find((candidate) => candidate.matched)).toMatchObject({
+      role: "",
+      name: "Password",
+      attributes: { name: "password", autocomplete: "current-password", "data-testid": "password" },
+    });
+    expect(
+      before.candidates.filter((candidate) => candidate.type === "password" && !candidate.matched),
+    ).toEqual([expect.objectContaining({ name: "", attributes: {} })]);
+    drift = true;
+    failed = await attempt(url, plan, { secret: "private-password-value" });
+    expect(failed.result.outcome).toBe("failed");
+    expect(failed.result.reasonCode).toBe("assertion_timeout");
+    const failures = [await read(failed, "before"), await read(failed, "after")];
+    expect(
+      assessLocatorEquivalence([before], failures, "password", locator("new-password")).equivalent,
+    ).toBe(true);
+    expect(
+      assessLocatorEquivalence([before], failures, "password", locator("private-password"))
+        .equivalent,
+    ).toBe(false);
+    for (const run of [baseline, failed])
+      for (const phase of ["before", "after"])
+        expect(JSON.stringify(await read(run, phase))).not.toContain("private-password-value");
+  } finally {
+    await baseline?.dispose();
+    await failed?.dispose();
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 }, 120000);
 
 it("fails real ambiguous hooks and denies unauthorized frames without raw collection", async () => {

@@ -1896,7 +1896,7 @@ export async function runM3(root: string, commit: string, path: string) {
             ledger.healing.verificationPassed &&
             (item.group === "bug" || item.id === "m3-adversarial-03");
           if (ledger.healing.falseRepair) throw new Error("false_repair");
-          app.healing.reconcile(verified.id);
+          await app.healing.reconcile(verified.id);
           ledger.healing.applied =
             ledger.healing.verificationPassed &&
             app.tests.get(test.id).activeRevisionId === proposal.candidateRevisionId;

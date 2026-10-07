@@ -8,7 +8,7 @@ import {
   type TestRevision,
   validate,
 } from "@testmaster/contracts";
-import { scrubEvidenceText, semanticHash } from "@testmaster/domain";
+import { canonicalJson, scrubEvidenceText, semanticHash } from "@testmaster/domain";
 import {
   AuxiliaryLeaseRepository,
   type EntityDocument,
@@ -18,6 +18,7 @@ import {
   assertionsHash,
   assessLocatorEquivalence,
   type LocatorEvidence,
+  validLocatorEvidence,
   waitStateEquivalence,
 } from "@testmaster/planner";
 import { planRiskActions, type RiskClass } from "../approvals.js";
@@ -41,6 +42,50 @@ type Stored = HealingProposal & EntityDocument;
 type AIHealingOutput =
   | { kind: "patch"; patch: HealingPatch }
   | { kind: "abstain"; reason: string; evidenceHandles: string[] };
+interface DeferredLocatorProof {
+  stepId: string;
+  path: string;
+  baselineRunId: string;
+  baselineEvidenceHash: string;
+}
+function originalLocator(plan: ExecutablePlan, stepId: string, path: string): Locator | null {
+  const steps = [...plan.steps];
+  for (let index = 0; index < steps.length; index++) {
+    const step = steps[index]!;
+    if (step.operation === "frame") steps.push(...step.input.childSteps);
+    if (step.id !== stepId) continue;
+    if (path === "/input/locator" && "locator" in step.input) return step.input.locator;
+    if (path === "/input/trigger/input/locator" && step.operation === "download")
+      return step.input.trigger.input.locator;
+  }
+  return null;
+}
+function uniqueLocatorBaseline(record: LocatorEvidence, locator: Locator): boolean {
+  if (
+    !validLocatorEvidence(record) ||
+    record.phase !== "before" ||
+    record.cardinality !== 1 ||
+    !record.frameOrigin ||
+    record.frameOrigin === "null" ||
+    locator.frame ||
+    locator.container ||
+    locator.pageAlias ||
+    canonicalJson(record.locator) !== canonicalJson(locator)
+  )
+    return false;
+  const matched = record.candidates.find((element) => element.matched)!;
+  return (
+    !!matched.role &&
+    !!matched.name &&
+    !matched.name.includes("[REDACTED]") &&
+    record.candidates.filter((element) => element.fingerprint === matched.fingerprint).length === 1
+  );
+}
+function boundedRejectionReason(reason: string): string {
+  const text = scrubEvidenceText(reason).text;
+  const marker = " [truncated]";
+  return text.length <= 200 ? text : `${text.slice(0, 200 - marker.length)}${marker}`;
+}
 export class HealingService {
   constructor(
     readonly ctx: ServiceContext,
@@ -319,6 +364,9 @@ export class HealingService {
           verificationRunId: null,
           modelCallId: result.modelCallId,
           limitations: assessment.reasons,
+          extensions: assessment.deferred.length
+            ? { "testmaster:deferredLocatorProofs": assessment.deferred }
+            : {},
         }) as Stored;
         value.id = proposalId;
         validate("HealingProposal", value);
@@ -471,6 +519,7 @@ export class HealingService {
     manualOnly: boolean,
   ) {
     const reasons: string[] = [];
+    const deferred: DeferredLocatorProof[] = [];
     const run = this.runs.get(runId),
       cell = run.matrixCell as Record<string, unknown>;
     const environment = requireEntity(this.ctx, "EnvironmentRevision", run.environmentRevisionId);
@@ -489,7 +538,7 @@ export class HealingService {
       cell.healingPolicy !== "apply"
     )
       reasons.push("Policy application is not explicitly enabled and frozen");
-    if (reasons.length) return { equivalent: false, reasons };
+    if (reasons.length) return { equivalent: false, reasons, deferred };
     const baseline = this.runs
       .list()
       .filter((candidate) => {
@@ -518,16 +567,20 @@ export class HealingService {
       return {
         equivalent: false,
         reasons: ["No comparable passing locator baseline; manual review required"],
+        deferred,
       };
     try {
       const before = await this.locatorRecords(baseline.id),
         failed = await this.locatorRecords(runId);
+      const steps = [...base.steps];
+      for (let index = 0; index < steps.length; index++) {
+        const step = steps[index]!;
+        if (step.operation === "frame") steps.push(...step.input.childSteps);
+      }
+      const outcomes = this.runs.steps(runId);
+      const proven: HealingPatch["changes"] = [];
+      const pending: Array<{ change: HealingPatch["changes"][number]; reasons: string[] }> = [];
       for (const change of patch.changes) {
-        const steps = [...base.steps];
-        for (let index = 0; index < steps.length; index++) {
-          const step = steps[index]!;
-          if (step.operation === "frame") steps.push(...step.input.childSteps);
-        }
         if (steps.find((step) => step.id === change.stepId)?.operation === "frame") {
           reasons.push("Frame child-origin identity proof is unavailable; manual review required");
           continue;
@@ -547,14 +600,53 @@ export class HealingService {
                 change.value as "attached" | "visible" | "hidden" | "detached",
               )
             : assessLocatorEquivalence(before, failed, change.stepId, change.value as Locator);
-        if (!assessment.equivalent) reasons.push(...assessment.reasons);
+        if (assessment.equivalent) proven.push(change);
+        else pending.push({ change, reasons: assessment.reasons });
+      }
+      for (const { change, reasons: refusalReasons } of pending) {
+        const original = originalLocator(base, change.stepId, change.path);
+        const stepOutcomes = outcomes.filter((step) => step.planStepId === change.stepId);
+        const unexecuted =
+          stepOutcomes.length > 0 &&
+          stepOutcomes.every(
+            (step) => step.status === "skipped" && step.reasonCode === "stopped_after_failure",
+          ) &&
+          !failed.some((record) => record.stepId === change.stepId);
+        const anchor =
+          original &&
+          proven.find((other) => {
+            const anchorOriginal = originalLocator(base, other.stepId, other.path);
+            const anchorOutcomes = outcomes.filter((step) => step.planStepId === other.stepId);
+            return (
+              other.path === change.path &&
+              steps.findIndex((step) => step.id === other.stepId) <
+                steps.findIndex((step) => step.id === change.stepId) &&
+              anchorOutcomes.some((step) => step.status !== "skipped") &&
+              anchorOriginal &&
+              canonicalJson(anchorOriginal) === canonicalJson(original) &&
+              canonicalJson(other.value) === canonicalJson(change.value)
+            );
+          });
+        const baselineRecord =
+          original &&
+          before.find(
+            (record) => record.stepId === change.stepId && uniqueLocatorBaseline(record, original),
+          );
+        if (unexecuted && anchor && baselineRecord)
+          deferred.push({
+            stepId: change.stepId,
+            path: change.path,
+            baselineRunId: baseline.id,
+            baselineEvidenceHash: baselineRecord.evidenceHash,
+          });
+        else reasons.push(...refusalReasons);
       }
     } catch (error) {
       if (error instanceof ContractError && ["FORBIDDEN", "UNAUTHENTICATED"].includes(error.code))
         throw error;
       reasons.push("Locator equivalence evidence unavailable; manual review required");
     }
-    return { equivalent: !reasons.length, reasons };
+    return { equivalent: !reasons.length, reasons, deferred };
   }
   async approve(proposalId: string, expectedVersion: number): Promise<Stored> {
     const proposal = this.get(proposalId),
@@ -666,7 +758,7 @@ export class HealingService {
       const next = {
         ...current,
         status: "rejected" as const,
-        limitations: [...current.limitations, scrubEvidenceText(reason).text],
+        limitations: [...current.limitations, boundedRejectionReason(reason)],
         version: Number(current.version) + 1,
       };
       this.ctx.entities.update(
@@ -679,7 +771,7 @@ export class HealingService {
       return next;
     });
   }
-  reconcile(verificationRunId: string): Stored {
+  async reconcile(verificationRunId: string): Promise<Stored> {
     const verification = this.runs.get(verificationRunId);
     const proposal = (allEntities(this.ctx, "HealingProposal") as Stored[]).find(
       (item) => item.verificationRunId === verificationRunId,
@@ -701,10 +793,20 @@ export class HealingService {
     )
       return proposal;
     if (verification.phase !== "completed") return proposal;
+    const deferredProofPassed =
+      verification.outcome !== "passed" ||
+      verification.gate !== "passed" ||
+      proposal.approvalMode !== "policy" ||
+      (await this.verifyDeferredLocators(proposal, verificationRunId));
     const result = authoringTransaction(this.ctx, () => {
-      const current = this.get(proposal.id),
-        { test, run } = this.owner(current);
+      let current = this.get(proposal.id);
+      const { test, run } = this.owner(current);
       if (current.status !== "approved") return current;
+      if (current.version !== proposal.version)
+        throw new ContractError(
+          "REVISION_CONFLICT",
+          "Healing proposal changed during locator proof",
+        );
       if (
         verification.revisionId !== current.candidateRevisionId ||
         verification.environmentRevisionId !== run.environmentRevisionId ||
@@ -719,6 +821,27 @@ export class HealingService {
           limitations: [
             ...current.limitations,
             `Verification did not pass: ${verification.outcome}/${verification.gate}`,
+          ],
+          version: Number(current.version) + 1,
+        };
+        this.ctx.entities.update(
+          "HealingProposal",
+          this.ctx.workspaceId,
+          current.id,
+          Number(current.version),
+          next,
+        );
+        return next;
+      }
+      if (!deferredProofPassed) {
+        const next = {
+          ...current,
+          status: "proposed" as const,
+          approvalMode: null,
+          policyHash: null,
+          limitations: [
+            ...current.limitations,
+            "Deferred locator identity proof failed; manual review required",
           ],
           version: Number(current.version) + 1,
         };
@@ -752,6 +875,27 @@ export class HealingService {
         "TestRevision",
         current.candidateRevisionId,
       ) as TestRevision & EntityDocument;
+      if (
+        current.approvalMode === "policy" &&
+        current.extensions?.["testmaster:deferredLocatorProofs"] !== undefined
+      ) {
+        const proven = {
+          ...current,
+          extensions: {
+            ...current.extensions,
+            "testmaster:deferredLocatorProofRunId": verificationRunId,
+          },
+          version: Number(current.version) + 1,
+        };
+        this.ctx.entities.update(
+          "HealingProposal",
+          this.ctx.workspaceId,
+          current.id,
+          Number(current.version),
+          proven,
+        );
+        current = proven;
+      }
       promoteRevisionCas(this.ctx, candidate, test, Number(test.version));
       const next = {
         ...current,
@@ -780,6 +924,83 @@ export class HealingService {
         { proposalId: result.id },
       );
     return result;
+  }
+  private async verifyDeferredLocators(
+    proposal: Stored,
+    verificationRunId: string,
+  ): Promise<boolean> {
+    const proofs = proposal.extensions?.["testmaster:deferredLocatorProofs"];
+    if (proofs === undefined) return true;
+    if (!Array.isArray(proofs) || !proofs.length) return false;
+    try {
+      const base = requireEntity(
+        this.ctx,
+        "TestRevision",
+        proposal.baseRevisionId,
+      ) as TestRevision & EntityDocument;
+      if (!base.plan) return false;
+      const verified = await this.locatorRecords(verificationRunId);
+      for (const value of proofs) {
+        const proof: unknown = value;
+        if (
+          !proof ||
+          typeof proof !== "object" ||
+          !("stepId" in proof) ||
+          typeof proof.stepId !== "string" ||
+          !("path" in proof) ||
+          typeof proof.path !== "string" ||
+          !("baselineRunId" in proof) ||
+          typeof proof.baselineRunId !== "string" ||
+          !("baselineEvidenceHash" in proof) ||
+          typeof proof.baselineEvidenceHash !== "string"
+        )
+          return false;
+        const change = proposal.changes.find(
+          (change) => change.stepId === proof.stepId && change.path === proof.path,
+        );
+        const original = originalLocator(base.plan, proof.stepId, proof.path);
+        if (!change || !original) return false;
+        const baseline = this.runs.get(proof.baselineRunId);
+        if (
+          baseline.testId !== proposal.testId ||
+          baseline.revisionId !== proposal.baseRevisionId ||
+          baseline.outcome !== "passed" ||
+          baseline.gate !== "passed"
+        )
+          return false;
+        const records = await this.locatorRecords(baseline.id);
+        const before = records.find(
+          (record) =>
+            record.stepId === proof.stepId &&
+            record.evidenceHash === proof.baselineEvidenceHash &&
+            uniqueLocatorBaseline(record, original),
+        );
+        if (!before) return false;
+        const fingerprint = before.candidates.find((element) => element.matched)!.fingerprint;
+        const after = verified.filter(
+          (record) => record.stepId === proof.stepId && record.phase === "before",
+        );
+        if (
+          !after.length ||
+          !after.every(
+            (record) =>
+              validLocatorEvidence(record) &&
+              record.cardinality === 1 &&
+              record.frameOrigin === before.frameOrigin &&
+              canonicalJson(record.locator) === canonicalJson(change.value) &&
+              record.candidates.find((element) => element.matched)?.fingerprint === fingerprint &&
+              record.candidates.filter((element) => element.fingerprint === fingerprint).length ===
+                1,
+          )
+        )
+          return false;
+      }
+      return true;
+    } catch (error) {
+      if (error instanceof ContractError && ["FORBIDDEN", "UNAUTHENTICATED"].includes(error.code))
+        throw error;
+      return false;
+    }
   }
   /** Deterministic restart reconciliation; paid proposal calls are never reissued. */
   async settlePending(): Promise<number> {
@@ -814,7 +1035,7 @@ export class HealingService {
         const current = this.get(proposal.id);
         if (
           current.verificationRunId &&
-          this.reconcile(current.verificationRunId).status !== "approved"
+          (await this.reconcile(current.verificationRunId)).status !== "approved"
         )
           settled++;
       } catch (error) {

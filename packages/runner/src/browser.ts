@@ -450,11 +450,11 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       await download.delete();
     }
   }
-  async function perform(step: PlanStep): Promise<void> {
+  async function perform(step: PlanStep, remaining?: number): Promise<void> {
     if (violation) throw violation;
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
-    const timeout = deadline(step);
+    const timeout = deadline(step, remaining);
     if (step.kind === "assertion") {
       await assertion(step, timeout);
       return;
@@ -720,7 +720,9 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
             const tag = node.tagName.toLowerCase();
             const type = (node.getAttribute("type") ?? "").slice(0, 200);
             const sensitive =
-              !!node.closest("[data-sensitive], [autocomplete*=password]") || type === "password";
+              !!node.closest("[data-sensitive]") ||
+              (!(tag === "input" && type === "password") &&
+                !!node.closest("[autocomplete*=password]"));
             const attributes: Record<string, string> = {};
             if (!sensitive)
               for (const key of [
@@ -1094,8 +1096,23 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       (action) => JSON.stringify({ ...action, id: selected.id }) === JSON.stringify(selected),
     );
     const locators = stepLocators(selected);
+    // Action auto-wait and its evidence share one budget; missing targets must not get
+    // a second attachment timeout after we have recorded their absence.
+    let actionDeadline: number | undefined;
+    let attachmentError: unknown;
+    if (selected.kind === "action" && selected.operation !== "waitFor" && locators.length) {
+      actionDeadline = performance.now() + deadline(selected);
+      try {
+        for (const locator of locators) {
+          const remaining = deadline(selected, actionDeadline - performance.now());
+          await unique(await locate(locator, remaining), remaining);
+        }
+      } catch (error) {
+        attachmentError = error;
+      }
+    }
     const transitions: LocatorTransition[] = [];
-    let waitStarted = performance.now();
+    const waitStarted = performance.now();
     let sampling = false;
     let sampler: Promise<void> | undefined;
     let observationComplete = true;
@@ -1142,8 +1159,8 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     for (const [index, locator] of locators.entries())
       await locatorEvidence(selected, locator, index, "before", transitions, observationComplete);
     await evidence(selected, "before");
-    waitStarted = performance.now();
-    transitions.length = 0;
+    // Retain the first observation: screenshot collection can span the readiness
+    // transition, and restarting here would erase its visible predecessor.
     await sample();
     if (selected.operation === "waitFor" && "locator" in selected.input) {
       sampling = true;
@@ -1155,7 +1172,14 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       })();
     }
     try {
-      await perform(selected);
+      if (runtime.signal.aborted)
+        throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
+      deadline(selected);
+      if (attachmentError) throw attachmentError;
+      await perform(
+        selected,
+        actionDeadline === undefined ? undefined : actionDeadline - performance.now(),
+      );
     } finally {
       sampling = false;
       await sampler;

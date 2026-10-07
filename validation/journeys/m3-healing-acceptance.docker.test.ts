@@ -273,7 +273,7 @@ it("HEAL-001 policy selector repair passes while changed price and permission st
         const verification = await verify(session, app, proposal.verificationRunId!);
         expect(verification.outcome).toBe("passed");
         expect(verification.gate).toBe("passed");
-        expect(app.healing.reconcile(verification.id).status).toBe("verified");
+        expect((await app.healing.reconcile(verification.id)).status).toBe("verified");
         const candidate = app.revisions.get(proposal.candidateRevisionId);
         expect(assertionsHash(candidate.plan!)).toBe(
           assertionsHash(app.revisions.get(proposal.baseRevisionId).plan!),
@@ -430,7 +430,7 @@ it("J07 M3-02 policy autoapply promotes only the unique equivalent selector and 
           healingPolicy: "off",
           limits: { maxAttempts: 1 },
         });
-        expect(app.healing.reconcile(verification.id).status).toBe("verified");
+        expect((await app.healing.reconcile(verification.id)).status).toBe("verified");
         expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);
         setPatch({
           changes: [
@@ -551,7 +551,7 @@ it("J07 M3-02 autoapplies observed hidden readiness within the original wait cei
         expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));
         const verification = await verify(session, app, accepted.verificationRunId!);
         expect(verification).toMatchObject({ outcome: "passed", gate: "passed" });
-        expect(app.healing.reconcile(verification.id).status).toBe("verified");
+        expect((await app.healing.reconcile(verification.id)).status).toBe("verified");
         expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);
         const readyBefore = ready;
         setPatch({ changes: [{ stepId: "ready-wait", path: "/input/state", value: "visible" }] });
@@ -796,3 +796,68 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
     }
   });
 }, 240000);
+
+it("HEAL-001 repeated selector repair defers an unexecuted step until verification proves its identity", async () => {
+  await journey("m3-healing-deferred-selector", async (session) => {
+    let wrapped = false;
+    await fixture(
+      session,
+      (_request, response) => {
+        response.setHeader("content-type", "text/html");
+        const button = '<button type="button">Sign in</button>';
+        response.end(
+          `<form id="form">${wrapped ? `<section>${button}</section>` : button}</form><output data-testid="count">0</output><script>let count=0; document.querySelector('button').onclick=()=>document.querySelector('output').textContent=String(++count)</script>`,
+        );
+      },
+      async ({ app, projectId, run, setPatch }) => {
+        const originalLocator = { by: "css", value: "#form > button" } as const;
+        const test = app.tests.create({
+          projectId,
+          plan: executable("Repeated control", "playwright", [
+            action("open", "navigate", { path: "/" }),
+            { ...action("first", "click", { locator: originalLocator }), timeoutMs: 1000 },
+            { ...action("later", "click", { locator: originalLocator }), timeoutMs: 1000 },
+            assertion("count", { locator: { by: "testId", value: "count" } }, "textEquals", "2"),
+          ]),
+        });
+        expect((await run(test.id)).outcome).toBe("passed");
+        wrapped = true;
+        const failed = await run(test.id);
+        expect(failed.outcome).toBe("failed");
+        expect(app.runs.steps(failed.id).find((step) => step.planStepId === "later")).toMatchObject(
+          { status: "skipped", reasonCode: "stopped_after_failure" },
+        );
+        const historicalRows = failureRows(app, failed.id);
+        setPatch({
+          changes: ["first", "later"].map((stepId) => ({
+            stepId,
+            path: "/input/locator",
+            value: { by: "role", role: "button", name: "Sign in", exact: true },
+          })),
+        });
+        const proposal = await app.healing.propose(failed.id);
+        expect(proposal.approvalMode).toBe("policy");
+        expect(proposal.extensions).toMatchObject({
+          "testmaster:deferredLocatorProofs": [{ stepId: "later" }],
+        });
+        const verification = await verify(session, app, proposal.verificationRunId!);
+        expect(verification).toMatchObject({ outcome: "passed", gate: "passed" });
+        const reconciled = await app.healing.reconcile(verification.id);
+        expect(reconciled.status).toBe("verified");
+        expect(reconciled.extensions?.["testmaster:deferredLocatorProofRunId"]).toBe(
+          verification.id,
+        );
+        expect(app.tests.get(test.id).activeRevisionId).toBe(proposal.candidateRevisionId);
+        expect(failureRows(app, failed.id)).toEqual(historicalRows);
+        session.oracles.push({
+          check: "deferredSelectorIdentity",
+          failedRunId: failed.id,
+          verificationRunId: verification.id,
+          proposalId: proposal.id,
+          controlledProvider: true,
+          qualityEvidence: false,
+        });
+      },
+    );
+  });
+}, 180000);

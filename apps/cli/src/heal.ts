@@ -43,7 +43,7 @@ export function healingCommands(program: Command, runtime: Runtime): void {
       if (options.wait !== true) return { data: { proposal, verification: receipt } };
       const verification = await waitForRun(rt, app, run.id, options, receipt.ownership);
       return {
-        data: { proposal: app.healing.reconcile(run.id), verification },
+        data: { proposal: await app.healing.reconcile(run.id), verification },
         exit: exitCodeForRun({ outcome: verification.outcome, gate: verification.gate }),
       };
     },

@@ -554,6 +554,16 @@ export function promoteRevisionCas(
         "PRECONDITION_FAILED",
         "Healing promotion requires its exact passing verification",
       );
+    const healingExtensions = proposal.extensions as Record<string, unknown> | undefined;
+    if (
+      proposal.approvalMode === "policy" &&
+      healingExtensions?.["testmaster:deferredLocatorProofs"] !== undefined &&
+      healingExtensions["testmaster:deferredLocatorProofRunId"] !== verification.id
+    )
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Deferred locator identity requires reconciliation proof before promotion",
+      );
     const cell = failed.matrixCell as Record<string, unknown>;
     if (proposal.approvalMode === "manual")
       ctx.authorizeNamed(

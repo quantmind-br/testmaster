@@ -1,14 +1,19 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ContractError, type ExecutablePlan } from "@testmaster/contracts";
+import { ContractError, type ExecutablePlan, type Locator } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
-import { AuxiliaryLeaseRepository } from "@testmaster/persistence";
-import { assertionsHash, preserveAssertions } from "@testmaster/planner";
+import { AuxiliaryLeaseRepository, type EntityDocument } from "@testmaster/persistence";
+import {
+  assertionsHash,
+  type LocatorEvidence,
+  locatorFingerprint,
+  preserveAssertions,
+} from "@testmaster/planner";
 import { afterEach, expect, it, vi } from "vitest";
 import { Application } from "../application.js";
-import type { ArtifactsService } from "../artifacts.js";
-import { scaffoldPlan } from "../authoring.js";
+import type { ArtifactsService, EvidenceBundle } from "../artifacts.js";
+import { promoteRevisionCas, scaffoldPlan } from "../authoring.js";
 import { entity } from "../context.js";
 import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
@@ -203,7 +208,11 @@ it("a foreign approval actor cannot dispatch verification or promote a candidate
     ContractError,
   );
 });
-async function fixture(verificationOutcome: "passed" | "failed" = "passed", withProposal = true) {
+async function fixture(
+  verificationOutcome: "passed" | "failed" = "passed",
+  withProposal = true,
+  plan = scaffoldPlan("backend"),
+) {
   const root = await mkdtemp(join(tmpdir(), "tm-healing-"));
   roots.push(root);
   const home = join(root, "home");
@@ -211,7 +220,7 @@ async function fixture(verificationOutcome: "passed" | "failed" = "passed", with
   const app = await Application.open({ cwd: root, home, env: { HOME: home } });
   apps.push(app);
   const init = await app.init();
-  const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+  const test = app.tests.create({ projectId: init.projectId, plan });
   const failed = app.runs.resolve({ testId: test.id, environmentId: init.environmentId });
   Object.assign(failed, {
     phase: "completed",
@@ -288,10 +297,10 @@ it("healing approval requires named authority and ordinary promotion cannot bypa
 it("failed verification returns to reviewable without another candidate and leaves historical failure immutable", async () => {
   const f = await fixture("failed"),
     before = semanticHash(f.app.runs.get(f.failed.id));
-  const result = f.app.healing.reconcile(f.verification.id);
+  const result = await f.app.healing.reconcile(f.verification.id);
   expect(result.status).toBe("proposed");
   expect(result.verificationRunId).toBe(f.verification.id);
-  expect(f.app.healing.reconcile(f.verification.id)).toEqual(result);
+  expect(await f.app.healing.reconcile(f.verification.id)).toEqual(result);
   await expect(f.app.healing.approve(result.id, Number(result.version))).rejects.toMatchObject({
     code: "PRECONDITION_FAILED",
   });
@@ -306,16 +315,16 @@ it("healing reconciliation CAS preserves concurrent author edits and reports rev
     String(f.test.activeRevisionId),
   );
   f.app.revisions.promote(concurrent.id, Number(f.test.version));
-  expect(() => f.app.healing.reconcile(f.verification.id)).toThrow(ContractError);
+  await expect(f.app.healing.reconcile(f.verification.id)).rejects.toThrow(ContractError);
   expect(f.app.healing.get(f.proposal.id).status).toBe("proposed");
   expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(concurrent.id);
 });
 it("bound passing verification atomically promotes candidate and is restart-idempotent", async () => {
   const f = await fixture();
-  const result = f.app.healing.reconcile(f.verification.id);
+  const result = await f.app.healing.reconcile(f.verification.id);
   expect(result.status).toBe("verified");
   expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.candidate.id);
-  expect(f.app.healing.reconcile(f.verification.id)).toEqual(result);
+  expect(await f.app.healing.reconcile(f.verification.id)).toEqual(result);
   expect(f.app.runs.get(f.failed.id).outcome).toBe("failed");
 });
 it("local capability issuance cannot broaden issuer resource grants or expiry", async () => {
@@ -368,8 +377,8 @@ it("local capability issuance cannot broaden issuer resource grants or expiry", 
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
 
-async function generationFixture(output: unknown) {
-  const f = await fixture("passed", false);
+async function generationFixture(output: unknown, plan = scaffoldPlan("backend")) {
+  const f = await fixture("passed", false, plan);
   const input: ModelInput[] = [];
   const complete = vi.fn(async (request: ModelInput) => {
     input.push(request);
@@ -541,4 +550,300 @@ it("oversized evidence refuses before model dispatch rather than enlarging the c
     state: "completed",
     result: { refused: true, reason: "evidence_too_large" },
   });
+});
+
+function repeatedControlPlan(differentOriginal = false): ExecutablePlan {
+  const plan = scaffoldPlan("frontend");
+  plan.steps = ["first", "later"].map((id) => ({
+    id,
+    kind: "action" as const,
+    operation: "click" as const,
+    description: "Submit form",
+    input: {
+      locator: {
+        by: "css" as const,
+        value: differentOriginal && id === "later" ? "#other > button" : "#form > button",
+      },
+    },
+  }));
+  plan.steps.push({
+    id: "business",
+    kind: "assertion",
+    operation: "assert",
+    description: "Business oracle",
+    input: { locator: { by: "testId", value: "result" } },
+    expectation: { predicate: "textEquals", value: { literal: "Success" } },
+  });
+  return plan;
+}
+function locatorRecord(
+  stepId: string,
+  locator: Locator,
+  matched: boolean,
+  name = "Sign in",
+): LocatorEvidence {
+  const candidate = {
+    role: "button",
+    name,
+    tag: "button",
+    type: "submit",
+    attributes: {},
+    matched,
+    visible: true,
+  };
+  const payload = {
+    schemaVersion: "1.0.0" as const,
+    stepId,
+    phase: "before" as const,
+    frameOrigin: "http://localhost",
+    locator,
+    cardinality: matched ? 1 : 0,
+    candidates: [{ ...candidate, fingerprint: locatorFingerprint(candidate) }],
+    truncated: false,
+    state: null,
+  };
+  return { ...payload, evidenceHash: semanticHash(payload) };
+}
+async function deferredFixture(differentOriginal = false) {
+  const replacement: Locator = { by: "role", role: "button", name: "Sign in", exact: true };
+  const plan = repeatedControlPlan(differentOriginal);
+  const f = await generationFixture(
+    {
+      kind: "patch",
+      patch: {
+        ...patch("first", "/input/locator", replacement),
+        changes: ["first", "later"].map((stepId) => ({
+          stepId,
+          path: "/input/locator",
+          value: replacement,
+        })),
+      },
+    },
+    plan,
+  );
+  await f.app.analysis.analyze(f.failed.id, {});
+  const persistedFacts = f.app.analysis.get(f.failed.id)!;
+  vi.spyOn(f.service.analysis, "get").mockReturnValue({
+    ...persistedFacts,
+    failureKind: "unknown",
+  });
+  const effective = f.app.config.effectiveConfig;
+  effective.config.healing = { ...effective.config.healing, mode: "apply" };
+  f.service.model.config.effectiveConfig = effective;
+  const project = f.app.projects.get(String(f.test.projectId));
+  f.app.context.entities.update(
+    "Project",
+    f.app.context.workspaceId,
+    project.id,
+    Number(project.version),
+    {
+      ...project,
+      extensions: { ...project.extensions, "testmaster:healingPolicy": "apply" },
+      version: Number(project.version) + 1,
+    },
+  );
+  const failed = f.app.runs.get(f.failed.id);
+  const frozen = {
+    ...failed,
+    matrixCell: { ...failed.matrixCell, effectiveConfig: effective, healingPolicy: "apply" },
+    gatePolicy: { ...failed.gatePolicy, policyHash: effective.policyHash },
+  };
+  vi.spyOn(f.app.runs, "get").mockImplementation((id) =>
+    id === failed.id
+      ? frozen
+      : id === baseline.id
+        ? baseline
+        : f.app.context.entities.get("Run", f.app.context.workspaceId, id)!,
+  );
+  const baseline = {
+    ...frozen,
+    id: "run_00000000-0000-4000-8000-000000000098",
+    outcome: "passed",
+    gate: "passed",
+  };
+  vi.spyOn(f.app.runs, "list").mockReturnValue([baseline]);
+  vi.spyOn(f.app.runs, "steps").mockReturnValue([
+    { planStepId: "first", status: "failed" },
+    { planStepId: "later", status: "skipped", reasonCode: "stopped_after_failure" },
+  ] as EntityDocument[]);
+  const records = new Map<string, LocatorEvidence[]>([
+    [
+      baseline.id,
+      plan.steps.flatMap((step) =>
+        "locator" in step.input ? [locatorRecord(step.id, step.input.locator, true)] : [],
+      ),
+    ],
+    [failed.id, [locatorRecord("first", { by: "css", value: "#form > button" }, false)]],
+  ]);
+  vi.spyOn(f.service.artifacts, "get").mockImplementation(
+    async (id) =>
+      ({
+        manifest: {
+          entries: (records.get(id) ?? []).map((_, index) => ({
+            kind: "locator-evidence",
+            state: "available",
+            relativePath: String(index),
+          })),
+        },
+      }) as EvidenceBundle,
+  );
+  f.service.artifacts.read = vi.fn(async (id, path) => ({
+    bytes: Buffer.from(JSON.stringify(records.get(id)![Number(path)])),
+    nextOffset: null,
+  })) as ArtifactsService["read"];
+  vi.spyOn(f.app.runs, "admitHealingVerification").mockImplementation(async (proposalId) => {
+    const proposal = f.service.get(proposalId);
+    const candidateVerification = f.app.runs.resolve({
+      testId: f.test.id,
+      environmentId: String(f.failed.matrixCell.environmentId),
+      revisionId: proposal.candidateRevisionId,
+      origin: "verification",
+      mode: "replay",
+      limits: { maxAttempts: 1 },
+    });
+    Object.assign(candidateVerification, {
+      phase: "completed",
+      status: "passed",
+      outcome: "passed",
+      gate: "passed",
+    });
+    f.app.context.entities.insert("Run", candidateVerification);
+    Object.assign(f.verification, candidateVerification);
+    const verification = f.verification;
+    vi.spyOn(f.app.runs, "get").mockImplementation((id) =>
+      id === verification.id
+        ? candidateVerification
+        : id === failed.id
+          ? frozen
+          : id === baseline.id
+            ? baseline
+            : f.app.context.entities.get("Run", f.app.context.workspaceId, id)!,
+    );
+    f.app.context.entities.update(
+      "HealingProposal",
+      f.app.context.workspaceId,
+      proposalId,
+      Number(proposal.version),
+      { ...proposal, verificationRunId: verification.id, version: Number(proposal.version) + 1 },
+    );
+    return { runId: verification.id, ownership: "ephemeral" as const };
+  });
+  return { ...f, records, replacement };
+}
+it("a repeated locator on an unexecuted step is deferred and promoted only after verification identity proof", async () => {
+  const f = await deferredFixture();
+  const proposal = await f.service.propose(f.failed.id);
+  expect(proposal.approvalMode).toBe("policy");
+  expect(proposal.extensions).toMatchObject({
+    "testmaster:deferredLocatorProofs": [{ stepId: "later" }],
+  });
+  f.records.set(f.verification.id, [locatorRecord("later", f.replacement, true)]);
+  expect(() =>
+    f.app.revisions.promote(proposal.candidateRevisionId, Number(f.test.version)),
+  ).toThrow(ContractError);
+  expect(() =>
+    promoteRevisionCas(
+      f.app.context,
+      f.app.revisions.get(proposal.candidateRevisionId),
+      f.app.tests.get(f.test.id),
+      Number(f.test.version),
+    ),
+  ).toThrow("Deferred locator identity requires reconciliation proof");
+  const result = await f.service.reconcile(f.verification.id);
+  expect(result.status).toBe("verified");
+  expect(result.extensions?.["testmaster:deferredLocatorProofRunId"]).toBe(f.verification.id);
+  expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(proposal.candidateRevisionId);
+});
+it("an unexecuted step with a different original locator remains manual", async () => {
+  const f = await deferredFixture(true);
+  const proposal = await f.service.propose(f.failed.id);
+  expect(proposal.status).toBe("proposed");
+  expect(proposal.approvalMode).toBeNull();
+  expect(f.app.runs.admitHealingVerification).not.toHaveBeenCalled();
+});
+it.each(["executed later", "different replacement", "renamed anchor", "ambiguous baseline"])(
+  "deferred admission refuses %s",
+  async (condition) => {
+    const f = await deferredFixture();
+    if (condition === "executed later")
+      vi.spyOn(f.app.runs, "steps").mockReturnValue([
+        { planStepId: "first", status: "failed" },
+        { planStepId: "later", status: "failed" },
+      ] as EntityDocument[]);
+    if (condition === "different replacement")
+      f.complete.mockResolvedValueOnce({
+        output: {
+          kind: "patch",
+          patch: {
+            ...patch("first", "/input/locator", f.replacement),
+            changes: [
+              { stepId: "first", path: "/input/locator", value: f.replacement },
+              { stepId: "later", path: "/input/locator", value: { by: "testId", value: "other" } },
+            ],
+          },
+        },
+        modelCallId: "mdl_00000000-0000-4000-8000-000000000099",
+      });
+    if (condition === "renamed anchor")
+      f.records.set(f.failed.id, [
+        locatorRecord("first", { by: "css", value: "#form > button" }, false, "Authenticate"),
+      ]);
+    if (condition === "ambiguous baseline") {
+      const baselineId = f.app.runs.list()[0]!.id;
+      const records = f.records.get(baselineId)!;
+      const later = records.find((record) => record.stepId === "later")!;
+      later.candidates.push({ ...later.candidates[0]!, matched: false });
+      const { evidenceHash: _hash, ...payload } = later;
+      later.evidenceHash = semanticHash(payload);
+    }
+    const proposal = await f.service.propose(f.failed.id);
+    expect(proposal.status).toBe("proposed");
+    expect(proposal.approvalMode).toBeNull();
+    expect(f.app.runs.admitHealingVerification).not.toHaveBeenCalled();
+  },
+);
+it.each([
+  "different identity",
+  "missing evidence",
+  "invalid evidence",
+  "different origin",
+  "ambiguous match",
+])("deferred %s cannot promote a passing verification", async (condition) => {
+  const f = await deferredFixture();
+  const proposal = await f.service.propose(f.failed.id);
+  expect(proposal.approvalMode).toBe("policy");
+  if (condition === "different identity")
+    f.records.set(f.verification.id, [
+      locatorRecord("later", f.replacement, true, "Delete account"),
+    ]);
+  if (["invalid evidence", "different origin", "ambiguous match"].includes(condition)) {
+    const record = locatorRecord("later", f.replacement, true);
+    if (condition === "different origin") record.frameOrigin = "http://foreign.localhost";
+    if (condition === "ambiguous match") {
+      record.candidates.push({ ...record.candidates[0]!, matched: true });
+      record.cardinality = 2;
+    }
+    const { evidenceHash: _hash, ...payload } = record;
+    record.evidenceHash = condition === "invalid evidence" ? "0".repeat(64) : semanticHash(payload);
+    f.records.set(f.verification.id, [record]);
+  }
+  const result = await f.service.reconcile(f.verification.id);
+  expect(result.status).toBe("proposed");
+  expect(result.approvalMode).toBeNull();
+  expect(result.limitations).toContain(
+    "Deferred locator identity proof failed; manual review required",
+  );
+  expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);
+});
+it("long reviewer rejection reasons are stored as explicitly truncated limitations", async () => {
+  const f = await fixture("passed", false);
+  f.app.context.entities.insert("HealingProposal", {
+    ...f.proposal,
+    status: "proposed",
+    verificationRunId: null,
+  });
+  const result = f.app.healing.reject(f.proposal.id, "r".repeat(500));
+  expect(result.status).toBe("rejected");
+  expect(result.limitations.at(-1)).toHaveLength(200);
+  expect(result.limitations.at(-1)).toMatch(/\[truncated\]$/u);
 });

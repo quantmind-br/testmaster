@@ -6,6 +6,7 @@ import {
 } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
+import { type LocatorEvidence, locatorFingerprint } from "@testmaster/planner";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   fixtureInsert,
@@ -276,9 +277,68 @@ it("required HTTP status mismatch records the observation without proving produc
     analysis.facts.some((fact) => fact.evidenceRefs.some((ref) => ref.stepId === f.step.id)),
   ).toBe(true);
 });
+it.each([201, 204, 299])(
+  "required unexpected successful status %i is an observed product mismatch",
+  async (status) => {
+    const f = await fixture({ status: true });
+    const stored = JSON.parse(
+      String(f.db.get("SELECT data_json FROM steps WHERE id=?", f.step.id)!.data_json),
+    );
+    stored.observed = status;
+    f.db.run("UPDATE steps SET data_json=? WHERE id=?", canonicalJson(stored), f.step.id);
+    const analysis = await f.service.analyze(f.run.id);
+    expect(analysis).toMatchObject({
+      failureKind: "product_bug",
+      recommendedAction: "fix_product",
+    });
+    expect(analysis.hypotheses[0]?.supports).toContainEqual(
+      expect.objectContaining({ stepId: f.step.id }),
+    );
+    expect(analysis.hypotheses[0]?.text).toContain("not a proven source-level root cause");
+  },
+);
+it.each([302, 401, 404])(
+  "required unexpected non-success status %i remains unknown",
+  async (status) => {
+    const f = await fixture({ status: true });
+    const stored = JSON.parse(
+      String(f.db.get("SELECT data_json FROM steps WHERE id=?", f.step.id)!.data_json),
+    );
+    stored.observed = status;
+    f.db.run("UPDATE steps SET data_json=? WHERE id=?", canonicalJson(stored), f.step.id);
+    expect(await f.service.analyze(f.run.id)).toMatchObject({
+      failureKind: "unknown",
+      hypotheses: [],
+    });
+  },
+);
 it("missing JSON value does not establish an approved schema violation", async () => {
   const f = await fixture({ missing: true });
   expect((await f.service.analyze(f.run.id)).failureKind).toBe("unknown");
+});
+it("missing pointer structure reaches the catalog without turning into a rules schema claim", async () => {
+  const f = await fixture({ missing: true });
+  const stored = JSON.parse(
+    String(f.db.get("SELECT data_json FROM steps WHERE id=?", f.step.id)!.data_json),
+  );
+  const diagnostic = {
+    deepestPrefix: "/items/0",
+    type: "object",
+    keys: ["price"],
+    unlistedKeyCount: 0,
+    firstUnresolvedToken: "priceCents",
+  };
+  stored.error = {
+    code: "RuntimeError",
+    message: `HTTP jsonEquals expectation was not satisfied; missing JSON pointer: ${JSON.stringify(diagnostic)}`,
+  };
+  f.db.run("UPDATE steps SET data_json=? WHERE id=?", canonicalJson(stored), f.step.id);
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.failureKind).toBe("unknown");
+  const request = f.complete.mock.calls[0]![0] as { data: { measurements: unknown[] } };
+  expect(request.data.measurements).toContainEqual(
+    expect.objectContaining({ kind: "step", missingJsonPointer: diagnostic }),
+  );
 });
 it("structured catalog retains frozen assertion semantics and verified reference hashes", async () => {
   const f = await fixture();
@@ -298,6 +358,158 @@ it("structured catalog retains frozen assertion semantics and verified reference
       verifiedHash: expect.any(String),
     }),
   );
+});
+it.each([
+  { passed: false, namedCount: 1 },
+  { passed: true, namedCount: 1 },
+  { passed: false, namedCount: 40 },
+])(
+  "locator catalog preserves relevant identities and discloses summarized candidates ($passed, $namedCount)",
+  async ({ passed, namedCount }) => {
+    const f = await fixture({ passed });
+    const candidates = Array.from({ length: 52 }, (_, index) => {
+      const identity = {
+        role: index >= 52 - namedCount ? "button" : "",
+        name: index === 51 ? "Checkout" : index >= 52 - namedCount ? `Control ${index}` : "",
+        tag: index >= 52 - namedCount ? "button" : "div",
+        type: "",
+        attributes: {},
+      };
+      return {
+        ...identity,
+        fingerprint: locatorFingerprint(identity),
+        matched: index === 51,
+        visible: true,
+      };
+    });
+    const payload = {
+      schemaVersion: "1.0.0" as const,
+      stepId: "price",
+      phase: "before" as const,
+      frameOrigin: "http://localhost",
+      locator: { by: "role" as const, role: "button", name: "Checkout", exact: true },
+      cardinality: 1,
+      candidates,
+      truncated: false,
+      state: null,
+    };
+    const record: LocatorEvidence = { ...payload, evidenceHash: semanticHash(payload) };
+    const fixtures = relationalFixtures(f.db);
+    const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
+    const artifact = fixtures.find((item) => item.kind === "Artifact")!;
+    for (const item of [snapshot, artifact]) {
+      if (item.kind === "Artifact") {
+        Object.assign(item.dto, { state: "available", hash: "a".repeat(64) });
+        item.row.state = "available";
+        item.row.hash = "a".repeat(64);
+        item.row.data_json = canonicalJson(item.dto);
+      }
+      const insert = fixtureInsert(item);
+      f.db.run(insert.sql, ...insert.values);
+    }
+    const locatorPath = "locators/price.json";
+    const hash = "a".repeat(64);
+    const entries = [
+      {
+        artifactId: artifact.dto.id,
+        relativePath: locatorPath,
+        kind: "locator-evidence",
+        sizeBytes: 20000,
+        state: "available",
+        redactionStatus: "sanitized",
+        sha256: hash,
+      },
+    ];
+    const bundle = {
+      manifest: { snapshotId: snapshot.dto.id, attemptId: f.step.attemptId, entries },
+    };
+    vi.mocked(f.artifacts.get).mockResolvedValue(bundle as never);
+    f.artifacts.read = vi.fn(async () => ({ bytes: Buffer.from(JSON.stringify(record)) })) as never;
+    await f.service.analyze(f.run.id, { model: true });
+    expect(f.complete).toHaveBeenCalledTimes(1);
+    const request = f.complete.mock.calls[0]![0] as {
+      data: { measurements: Record<string, unknown>[] };
+    };
+    const locator = request.data.measurements.find((item) => item.kind === "locator")!;
+    expect(locator).toMatchObject({
+      stepId: "price",
+      phase: "before",
+      cardinality: 1,
+      truncated: false,
+      unlistedCandidateCount: 52 - (passed ? 1 : namedCount),
+    });
+    const listed = locator.candidates as Record<string, unknown>[];
+    expect(listed).toHaveLength(passed ? 1 : namedCount);
+    expect(listed[0]).toMatchObject({ role: "button", name: "Checkout", matched: true });
+    if (!passed)
+      expect(listed[0]).toMatchObject({
+        attributes: {},
+        equivalence: expect.objectContaining({ equivalent: false }),
+      });
+    expect(JSON.stringify(locator)).not.toContain("fingerprint");
+    expect(JSON.stringify(request.data)).not.toContain('"omitted"');
+    const ref = {
+      runId: f.run.id,
+      attemptId: f.step.attemptId,
+      snapshotId: snapshot.dto.id,
+      artifactId: artifact.dto.id,
+      relativePath: locatorPath,
+      contentHash: hash,
+    };
+    expect(await resolveAnalysisEvidence(f.ctx, f.artifacts, f.run.id, ref as never)).toMatchObject(
+      { bytes: expect.any(Buffer) },
+    );
+  },
+);
+it("catalog exposes bounded runner event metadata while retaining its resolvable handle", async () => {
+  const f = await fixture();
+  const event = {
+    protocolVersion: "1.0.0",
+    seq: 3,
+    attemptId: f.step.attemptId,
+    occurredAt: new Date().toISOString(),
+    type: "step.finished",
+    payload: {
+      stepId: "price",
+      index: 0,
+      status: "failed",
+      reasonCode: "assertion_mismatch",
+      durationMs: 1,
+      evidencePaths: [],
+    },
+  };
+  f.db.run(
+    "INSERT INTO observations(workspace_id,id,created_at,attempt_id,event_id,seq,fence,data_json) VALUES(?,?,?,?,?,?,?,?)",
+    f.ctx.workspaceId,
+    "evt_00000000-0000-4000-8000-000000000099",
+    event.occurredAt,
+    f.step.attemptId,
+    "evt_00000000-0000-4000-8000-000000000099",
+    event.seq,
+    1,
+    canonicalJson(event),
+  );
+  await f.service.analyze(f.run.id, { model: true });
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { measurements: Record<string, unknown>[]; facts: { supports: string[] }[] };
+  };
+  const measurement = request.data.measurements.find((item) => item.kind === "observation")!;
+  expect(measurement).toMatchObject({
+    eventType: "step.finished",
+    stepId: "price",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(
+    request.data.facts.some((fact) => fact.supports.includes(String(measurement.evidenceId))),
+  ).toBe(true);
+  expect(
+    await resolveAnalysisEvidence(f.ctx, f.artifacts, f.run.id, {
+      runId: f.run.id,
+      attemptId: f.step.attemptId,
+      observationSeq: event.seq,
+      contentHash: semanticHash(event),
+    }),
+  ).toEqual(event);
 });
 it("collection failure after a required mismatch preserves the mismatch and collection limitation", async () => {
   const f = await fixture();
