@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-bound-destructive-approval",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T05:00:58.666Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-bound-destructive-approval",
+        "--base-url",
+        "http://127.0.0.1:44013",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f5f9e939-67a6-42eb-b23c-a84356570733",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114bc-744a-7209-ab5a-0c732f8366c0"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "boundApprovalBeforeTargetEffects",
+      "runId": "run_01a114bc-744a-7209-ab5a-0c732f8366c0",
+      "approvalId": "apr_01a114bc-7393-7108-bc15-40a72b21928e",
+      "effects": 1,
+      "refusals": [
+        "missing",
+        "body",
+        "environment",
+        "consumed",
+        "rotated-credential"
+      ],
+      "auditActions": [
+        "approval.created",
+        "approval.verified",
+        "approval.consumed"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

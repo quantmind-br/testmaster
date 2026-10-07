@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-healing-policy-selector",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T04:53:30.596Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-healing-policy-selector",
+        "--base-url",
+        "http://127.0.0.1:37731",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82bc44e8-bee2-45df-a1e8-a7d6ef0c5dce",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114b5-748c-777f-ac81-b386b8759394",
+    "run_01a114b5-7ddf-7555-83b5-8b1cf6984b09",
+    "run_01a114b5-8750-7432-9af1-e2000f4e3517",
+    "run_01a114b5-9394-75dc-a802-ffb48d263114",
+    "run_01a114b5-9e8e-74f9-9306-a998f650daf1"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "policySelectorEquivalence",
+      "acceptedProposalId": "hea_01a114b5-9e49-74ea-9437-bebad8b2efa7",
+      "verificationRunId": "run_01a114b5-9e8e-74f9-9306-a998f650daf1",
+      "wrongButtonProposalId": "hea_01a114b5-a360-701f-80cf-7aa1e07dbe72",
+      "wrongButtonExecuted": false,
+      "controlledProvider": true,
+      "qualityEvidence": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

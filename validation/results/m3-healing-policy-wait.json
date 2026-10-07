@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-healing-policy-wait",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T04:53:49.800Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-healing-policy-wait",
+        "--base-url",
+        "http://127.0.0.1:39349",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_214cc7ce-de0f-454d-8d0c-21298f4b53b6",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114b5-a519-756d-8799-5c485ec11957",
+    "run_01a114b5-af04-74f2-bc9e-c43a74390f44",
+    "run_01a114b5-ba95-7442-84ba-e32d07bd3584",
+    "run_01a114b5-cb84-70a3-838f-27bdb0324cf3",
+    "run_01a114b5-dfa1-772a-ba07-336e2787cd25"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "policyWaitEquivalence",
+      "baselineRunId": "run_01a114b5-a519-756d-8799-5c485ec11957",
+      "failedRunId": "run_01a114b5-ba95-7442-84ba-e32d07bd3584",
+      "proposalId": "hea_01a114b5-df33-72f7-a088-7e1e5bea1688",
+      "verificationRunId": "run_01a114b5-dfa1-772a-ba07-336e2787cd25",
+      "wrongStateProposalId": "hea_01a114b5-ee5b-70db-91dc-3610d887ecd1",
+      "originalCeilingMs": 3000,
+      "controlledProvider": true,
+      "qualityEvidence": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

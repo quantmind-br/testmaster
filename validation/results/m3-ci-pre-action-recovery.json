@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-pre-action-recovery",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T05:00:35.387Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-pre-action-recovery",
+        "--base-url",
+        "http://127.0.0.1:40835",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cb6bc256-2506-4b7e-9b46-f06815a6a3a2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114bc-11f3-749e-a5d3-7b3b16d37e28",
+    "run_01a114bc-1b86-76a5-85f2-68a0b8c7ae1b"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "safePreActionRecoveryOutsideStrict",
+      "recoveredRunId": "run_01a114bc-11f3-749e-a5d3-7b3b16d37e28",
+      "recoveryAttempts": 2,
+      "strictRunId": "run_01a114bc-1b86-76a5-85f2-68a0b8c7ae1b",
+      "strictAttempts": 1,
+      "strictTargetRequests": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-collecting-timeout",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T05:00:52.071Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-collecting-timeout",
+        "--base-url",
+        "http://127.0.0.1:34915",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5f0ac219-e6cd-4b19-ab9f-eb3818b50b73",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114bc-23b5-74de-ba97-3825b8b8713f"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "ciCollectingDeadlinePartial",
+      "runId": "run_01a114bc-23b5-74de-ba97-3825b8b8713f",
+      "deadlineMs": 15000,
+      "deadlineAborted": true,
+      "evidenceState": "committed",
+      "completeness": {
+        "state": "partial",
+        "reasons": [
+          "ci-wait-deadline-exceeded"
+        ]
+      },
+      "gate": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

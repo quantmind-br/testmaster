@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-live-progress-cancel-cas",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T05:01:21.354Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-live-progress-cancel-cas",
+        "--base-url",
+        "http://127.0.0.1:45553",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b674aaf8-0a5a-49dc-85be-216d25967168",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114bc-8dbd-75a0-a44e-99c6810cd43e",
+    "run_01a114bc-cc2d-7362-b864-e4996ee222e1",
+    "run_01a114bc-cf5a-749c-82b2-b51a3034b226"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "liveReconnectAndCancelCAS",
+      "runId": "run_01a114bc-8dbd-75a0-a44e-99c6810cd43e",
+      "initialEventCount": 9,
+      "resumedEventCount": 11,
+      "terminalEvents": 1,
+      "cancelledOutcome": "cancelled",
+      "completedOutcome": "passed",
+      "provenFailureCollectionCancelOutcome": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

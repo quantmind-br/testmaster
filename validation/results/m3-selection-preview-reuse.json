@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-selection-preview-reuse",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T05:02:13.267Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-selection-preview-reuse",
+        "--base-url",
+        "http://127.0.0.1:36613",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ceb09d45-0275-46bd-8327-8e0c090eea32",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-cBEweH/repo/selection-producer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_606af3c1-c578-4583-90eb-2596392098a8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-cBEweH/repo/selection-consumer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_204aaea7-e8b8-46ba-83c4-27f8a0d333be",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a114bd-7d4b-706f-90ea-26dcf7b6df53",
+        "--preview",
+        "--env",
+        "env_01a114bd-7826-75ab-b15c-51bea181cf7c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c4b81b47-0403-407c-8c80-7bdda454aaae",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a114bd-7d4b-706f-90ea-26dcf7b6df53",
+        "--wait",
+        "--env",
+        "env_01a114bd-7826-75ab-b15c-51bea181cf7c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_dfee0a4b-d76a-4080-aeed-4c60f781c37b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a114bd-7d4b-706f-90ea-26dcf7b6df53",
+        "--reuse-from-run",
+        "run_01a114bd-8578-7184-9923-9fb8aafde1dc",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a114bd-7826-75ab-b15c-51bea181cf7c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fa50c626-9c7b-40a9-8c51-e3c64c0d7031",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-cBEweH/repo/selection-expired.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5fe5726b-d9b9-4040-ac3d-5b45b2ebe340",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a114bd-9689-7367-8233-b53712cd177f",
+        "--reuse-from-run",
+        "run_01a114bd-8578-7184-9923-9fb8aafde1dc",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a114bd-7826-75ab-b15c-51bea181cf7c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_8fdf1ed2-d452-488b-94d3-2ab4dbefa6af",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Selection cannot be admitted",
+        "details": {
+          "reasonCode": "upstream_failed",
+          "refusals": [
+            {
+              "testId": "tst_01a114bd-9689-7367-8233-b53712cd177f",
+              "code": "PRECONDITION_FAILED",
+              "message": "Fixture output is expired or incompatible"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "secret",
+        "remove",
+        "sec_01a114bd-884c-729c-a12b-264a9e55548b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_651195a8-fa11-4930-acc2-37a4160f3612",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a114bd-7d4b-706f-90ea-26dcf7b6df53",
+        "--reuse-from-run",
+        "run_01a114bd-8578-7184-9923-9fb8aafde1dc",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a114bd-7826-75ab-b15c-51bea181cf7c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_c50abadd-3df7-40a4-b4cf-a793dff09995",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Selection cannot be admitted",
+        "details": {
+          "reasonCode": "upstream_failed",
+          "refusals": [
+            {
+              "testId": "tst_01a114bd-7d4b-706f-90ea-26dcf7b6df53",
+              "code": "PRECONDITION_FAILED",
+              "message": "Sensitive fixture reference is revoked or origin-bound elsewhere"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a114bd-8578-7184-9923-9fb8aafde1dc",
+    "run_01a114bd-8576-71f1-8191-a3b011d44d47",
+    "run_01a114bd-90d0-7702-9adb-1ffdb20db3db"
+  ],
+  "oracleVerdicts": [],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
