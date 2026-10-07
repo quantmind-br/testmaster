@@ -19,6 +19,7 @@ import {
   canRetry,
   evaluateGate,
   reduceOutcome,
+  semanticHash,
 } from "@testmaster/domain";
 import {
   collectGarbage,
@@ -47,8 +48,11 @@ import {
 import { AgentModeService } from "./ai/agent-mode.js";
 import { CodeImportService } from "./ai/code-import.js";
 import { auditSecurity } from "./audit.js";
+import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, requireEntity, type ServiceContext } from "./context.js";
+import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
+import { fixtureRevoked, planRunnerPolicy, stageFixtureInputs } from "./input-fixtures.js";
 import { correlationId, OperationalLogger } from "./observability.js";
 import { reproduction, verifyAdmission } from "./provenance.js";
 import { captureDeclarations, type ResolvedDependency, type RunsService } from "./runs.js";
@@ -70,6 +74,8 @@ export interface WorkerHost {
   secrets: SecretsService;
   runs: RunsService;
   retention?: { maintenance(): Promise<unknown> };
+  analysis?: { settlePending(): Promise<number> };
+  healing?: { settlePending(): Promise<number> };
   dockerCommand?: DockerCommand;
   docker?: AttemptRuntimeExecutor;
 }
@@ -234,6 +240,18 @@ export class WorkerService {
     const variables: Record<string, { value: unknown; sensitive: boolean }> = {};
     const cell = run.matrixCell as Record<string, unknown>;
     for (const binding of this.dependencies(run)) {
+      if (binding.reuse) {
+        const batch = requireEntity(this.ctx, "BatchRun", String(run.batchId));
+        const snapshot = batch.selectionSnapshot as Record<string, unknown>;
+        const recorded = (snapshot.reuseBindings ?? []) as ReuseBinding[];
+        if (!recorded.some((entry) => semanticHash(entry) === semanticHash(binding.reuse)))
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Fixture reuse has no frozen batch authorization",
+            { reasonCode: "upstream_failed" },
+          );
+        resolveReuse(this.ctx, run, binding, [binding.producerRunId], binding.reuse);
+      }
       const producer = this.host.runs.get(binding.producerRunId);
       const producerCell = producer.matrixCell as Record<string, unknown>;
       if (
@@ -261,7 +279,10 @@ export class WorkerService {
           JSON.parse(String(row.data_json)),
         );
         if (
-          variable.batchId !== run.batchId ||
+          (variable.batchId !== run.batchId &&
+            (!binding.reuse ||
+              variable.id !== binding.reuse.variableId ||
+              semanticHash(variable) !== binding.reuse.variableHash)) ||
           variable.taint !== (binding.sensitive ? "sensitive" : "public") ||
           variable.type !== binding.type ||
           !variable.createdAt ||
@@ -506,9 +527,28 @@ export class WorkerService {
       execution.progress(fence, "running");
       const currentImages = cell.executor === "process" ? null : await this.host.images();
       const admitted = verifyAdmission(run, revision, env, currentImages, this.ctx);
+      const fixtureInputs = await stageFixtureInputs(
+        this.ctx,
+        this.host.config,
+        String(requireEntity(this.ctx, "TestCase", String(run.testId)).projectId),
+        plan,
+        inputDir,
+        admitted.inputFixtureHashes ?? {},
+        limits,
+      );
       const lock = admitted.images;
       sealedSnapshot = {
         ...admitted,
+        inputFixtureHashes: fixtureInputs.inputFixtureHashes,
+        provenance: {
+          commitSha: admitted.repository?.commitSha ?? null,
+          checkoutSha: admitted.repository?.checkoutSha ?? null,
+          baseSha: admitted.repository?.baseSha ?? null,
+          repositoryId: admitted.repository?.repositoryId ?? null,
+          dirtyHash: admitted.repository?.dirtyHash ?? null,
+          deploymentId: admitted.repository?.deploymentId ?? null,
+          binding: admitted.repository?.binding ?? "unbound",
+        },
         runId: run.id,
         revisionId: run.revisionId,
         environmentRevisionId: run.environmentRevisionId,
@@ -582,6 +622,14 @@ export class WorkerService {
       const docker = this.host.docker ?? this.dockerExecutor();
       const runtime = cell.executor === "process" ? new UnsafeRuntime(this.host.config) : docker;
       const runtimeRoot = await this.runtimeRoot();
+      for (const id of Object.keys(fixtureInputs.artifacts)) {
+        if (fixtureRevoked(this.ctx, id))
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Fixture input was revoked before dispatch",
+            { reasonCode: "security_precondition_failed", artifactRef: id },
+          );
+      }
       const result = await new AttemptExecutor(evidence, runtime, runtimeRoot).execute(
         {
           workspaceId: this.ctx.workspaceId,
@@ -627,12 +675,15 @@ export class WorkerService {
               : {}),
             baseUrl: String(cell.baseUrl),
             variables,
+            artifacts: fixtureInputs.artifacts,
+            bodyBytes: limits.bodyBytes ?? defaults.bodyBytes,
             locale: env.locale,
             timezone: env.timezone,
             browser: config.browser,
             stepTimeoutMs: limits.stepTimeoutMs ?? 30000,
             timeoutMs: attemptDeadlineMs,
             policy: {
+              ...planRunnerPolicy(plan),
               trace: config.artifacts?.trace === "on",
               video: config.artifacts?.video === "on",
               httpBodies: config.artifacts?.httpBodies === "on",
@@ -910,7 +961,17 @@ export class WorkerService {
             redactionPolicyHash: bundle.meta.redactionPolicyHash,
             executionSnapshot: sealedSnapshot,
           });
-          for (const entry of bundle.manifest.entries)
+          for (const entry of bundle.manifest.entries) {
+            if (
+              database.get(
+                "SELECT 1 FROM operational_state WHERE key=?",
+                `retention:artifact:${this.ctx.workspaceId}:${entry.artifactId}`,
+              )
+            )
+              throw new ContractError(
+                "PRECONDITION_FAILED",
+                "Artifact publication revoked by tombstone",
+              );
             execution.publish(fence, "Artifact", {
               id: entry.artifactId,
               workspaceId: this.ctx.workspaceId,
@@ -927,6 +988,7 @@ export class WorkerService {
               state: entry.state,
               redactionStatus: entry.redactionStatus,
             });
+          }
         });
         await rm(join(result.bundle.bundleDir, ".partial"), { force: true });
         evidenceComplete = !bundle.manifest.entries.some((entry) => entry.state !== "available");
@@ -1084,6 +1146,20 @@ export class WorkerService {
         attemptId: fence.attemptId,
       });
       await logs.flush();
+      if (run.origin === "verification") {
+        try {
+          await this.host.healing?.settlePending();
+        } catch (error) {
+          new OutboxRepository(database).append(
+            this.ctx.workspaceId,
+            run.id,
+            "healing.reconciliation_failed",
+            {
+              error: error instanceof ContractError ? error.code : "INTERNAL",
+            },
+          );
+        }
+      }
     }
   }
   async reconcile(options: { dryRun?: boolean } = {}) {
@@ -1474,6 +1550,19 @@ export class WorkerService {
       },
     );
     await this.host.retention?.maintenance();
+    await this.host.analysis?.settlePending();
+    try {
+      await this.host.healing?.settlePending();
+    } catch (error) {
+      new OutboxRepository(database).append(
+        this.ctx.workspaceId,
+        this.ctx.workspaceId,
+        "healing.maintenance_failed",
+        {
+          error: error instanceof ContractError ? error.code : "INTERNAL",
+        },
+      );
+    }
     for (const row of new OutboxRepository(database).pending(this.ctx.workspaceId))
       new OutboxRepository(database).delivered(this.ctx.workspaceId, String(row.id));
     const storage = await statfs(this.host.config.dataDir);
@@ -1494,7 +1583,29 @@ export class WorkerService {
       handshake?: WorkerHandshake;
     } = {},
   ) {
-    this.ctx.authorize(options.ephemeral ? "X" : "A");
+    if (options.ephemeral && options.runIds?.length) {
+      for (const id of options.runIds) {
+        const run = this.host.runs.get(id);
+        const cell = run.matrixCell as Record<string, unknown>;
+        if (run.origin === "verification" && typeof cell.healingProposalId === "string") {
+          const proposal = requireEntity(this.ctx, "HealingProposal", cell.healingProposalId);
+          if (
+            proposal.verificationRunId !== id ||
+            !["approved", "verified"].includes(String(proposal.status))
+          )
+            throw new ContractError("FORBIDDEN", "Run is not an approved healing verification");
+          const test = requireEntity(this.ctx, "TestCase", run.testId);
+          if (proposal.approvalMode === "manual")
+            this.ctx.authorizeNamed(
+              "approve",
+              "HealingProposal",
+              String(test.projectId),
+              String(cell.environmentId),
+            );
+          else this.ctx.authorize("X", String(test.projectId));
+        } else this.ctx.authorize("X");
+      }
+    } else this.ctx.authorize(options.ephemeral ? "X" : "A");
     this.drainRequested = false;
     const database = this.ctx.database;
     const leases = new LeaseRepository(database);
@@ -1625,6 +1736,11 @@ export class WorkerService {
             .filter(
               (id) =>
                 (!runIds || runIds.includes(id)) &&
+                (this.cancelled(id) ||
+                  typeof runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId !== "string" ||
+                  this.host.runs.get(
+                    String(runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId),
+                  ).phase === "completed") &&
                 (!handshake ||
                   !lock ||
                   supportsQueuedRun(

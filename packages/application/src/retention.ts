@@ -1,5 +1,5 @@
 import { readdir, statfs } from "node:fs/promises";
-import { defaults } from "@testmaster/contracts";
+import { type DeletionOperation, defaults, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import {
   ConfinedRoot,
@@ -14,7 +14,8 @@ import {
   releaseControlPlaneReserve,
 } from "@testmaster/persistence";
 import type { ResolvedConfig } from "./config.js";
-import type { ServiceContext } from "./context.js";
+import { entity, requireEntity, type ServiceContext } from "./context.js";
+import { type FixtureInput, fixtureRecord, fixtureRevoked } from "./input-fixtures.js";
 
 interface RetentionRecord {
   stage: "marked" | "tombstoned" | "deleted";
@@ -35,8 +36,8 @@ interface ArtifactRow extends Record<string, unknown> {
 const eligible = `EXISTS (
   SELECT 1 FROM runs r JOIN snapshots s ON s.workspace_id=r.workspace_id AND s.run_id=r.id
   WHERE r.workspace_id=artifacts.workspace_id AND r.id=artifacts.run_id
-    AND r.phase='completed' AND s.id=artifacts.snapshot_id AND s.committed_at<=?
-) AND artifacts.created_at<=?
+    AND r.phase='completed' AND s.id=artifacts.snapshot_id AND (s.committed_at<=? OR EXISTS (SELECT 1 FROM operational_state d WHERE d.key='retention:deletion:' || artifacts.workspace_id || ':' || artifacts.id))
+) AND (artifacts.created_at<=? OR EXISTS (SELECT 1 FROM operational_state d WHERE d.key='retention:deletion:' || artifacts.workspace_id || ':' || artifacts.id))
 AND NOT EXISTS (SELECT 1 FROM attempts a WHERE a.workspace_id=artifacts.workspace_id
   AND a.run_id=artifacts.run_id AND a.phase<>'completed')
 AND NOT EXISTS (SELECT 1 FROM job_leases j WHERE j.workspace_id=artifacts.workspace_id
@@ -54,6 +55,247 @@ export class RetentionService {
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
   ) {}
+  requestDeletion(artifactId: string): DeletionOperation {
+    const fixture = fixtureRecord(this.ctx, artifactId);
+    if (fixture) {
+      this.ctx.authorizeNamed("delete", "Artifact", fixture.project_id);
+      return this.ctx.database.withTx(() => {
+        const key = `retention:deletion:${this.ctx.workspaceId}:${artifactId}`;
+        const previous = this.ctx.database.get(
+          "SELECT value FROM operational_state WHERE key=?",
+          key,
+        );
+        if (previous) return this.deletionStatus(String(previous.value));
+        const now = new Date().toISOString();
+        const operation = entity(this.ctx, "del", {
+          resourceRefs: [artifactId],
+          requestedBy: this.ctx.principalId,
+          revokedAt: now,
+          physicalState: "pending",
+          backupHolds: [],
+          errors: [],
+        });
+        validate("DeletionOperation", operation);
+        this.ctx.entities.insert("DeletionOperation", operation);
+        this.ctx.database.run(
+          "INSERT INTO operational_state(key,value) VALUES(?,?)",
+          key,
+          operation.id,
+        );
+        this.save(artifactId, { stage: "tombstoned", expiredAt: now, tombstonedAt: now });
+        new AuditRepository(this.ctx.database).append({
+          workspaceId: this.ctx.workspaceId,
+          actor: this.ctx.principalId,
+          action: "artifact.deletion_requested",
+          resourceId: artifactId,
+          requestId: key,
+          timestamp: now,
+          beforeHash: null,
+          afterHash: semanticHash({ operationId: operation.id, revokedAt: now }),
+        });
+        return this.deletionStatus(operation.id);
+      });
+    }
+    const artifact = requireEntity(this.ctx, "Artifact", artifactId);
+    const attempt = requireEntity(this.ctx, "Attempt", String(artifact.attemptId));
+    const run = requireEntity(this.ctx, "Run", String(attempt.runId));
+    const test = requireEntity(this.ctx, "TestCase", String(run.testId));
+    const environmentId = this.ctx.database.get(
+      "SELECT environment_id FROM environment_revisions WHERE workspace_id=? AND id=?",
+      this.ctx.workspaceId,
+      run.environmentRevisionId,
+    )?.environment_id;
+    this.ctx.authorizeNamed("delete", "Artifact", String(test.projectId), String(environmentId));
+    return this.ctx.database.withTx(() => {
+      const key = `retention:deletion:${this.ctx.workspaceId}:${artifactId}`;
+      const previous = this.ctx.database.get(
+        "SELECT value FROM operational_state WHERE key=?",
+        key,
+      );
+      if (previous) return this.deletionStatus(String(previous.value));
+      const now = new Date().toISOString();
+      const operation = entity(this.ctx, "del", {
+        resourceRefs: [artifactId],
+        requestedBy: this.ctx.principalId,
+        revokedAt: now,
+        physicalState: "pending",
+        backupHolds: [],
+        errors: [],
+      });
+      validate("DeletionOperation", operation);
+      this.ctx.entities.insert("DeletionOperation", operation);
+      this.ctx.database.run(
+        "INSERT INTO operational_state(key,value) VALUES(?,?)",
+        key,
+        operation.id,
+      );
+      this.save(artifactId, { stage: "tombstoned", expiredAt: now, tombstonedAt: now });
+      this.ctx.database.run(
+        "UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND state<>'expired'",
+        this.ctx.workspaceId,
+        artifactId,
+      );
+      const row = this.ctx.database.get<ArtifactRow>(
+        "SELECT * FROM artifacts WHERE workspace_id=? AND id=?",
+        this.ctx.workspaceId,
+        artifactId,
+      )!;
+      this.event(row, "artifact.deletion_requested", null, {
+        operationId: operation.id,
+        revokedAt: now,
+      });
+      return this.deletionStatus(operation.id);
+    });
+  }
+  deletionStatus(id: string): DeletionOperation {
+    const operation = requireEntity(this.ctx, "DeletionOperation", id);
+    for (const artifactId of operation.resourceRefs as string[]) {
+      const fixture = fixtureRecord(this.ctx, artifactId);
+      if (fixture) {
+        this.ctx.authorize("R", fixture.project_id);
+        continue;
+      }
+      const artifact = requireEntity(this.ctx, "Artifact", artifactId);
+      const attempt = requireEntity(this.ctx, "Attempt", String(artifact.attemptId));
+      const run = requireEntity(this.ctx, "Run", String(attempt.runId));
+      const test = requireEntity(this.ctx, "TestCase", String(run.testId));
+      this.ctx.authorize("R", String(test.projectId));
+    }
+    const holds: string[] = [];
+    if (operation.physicalState !== "completed")
+      for (const artifactId of operation.resourceRefs as string[]) {
+        const fixture = fixtureRecord(this.ctx, artifactId);
+        if (fixture) {
+          holds.push(...this.fixtureDeletionHolds(fixture));
+          continue;
+        }
+        const artifact = this.ctx.database.get<ArtifactRow>(
+          "SELECT * FROM artifacts WHERE workspace_id=? AND id=?",
+          this.ctx.workspaceId,
+          artifactId,
+        )!;
+        for (const row of this.ctx.database.all(
+          "SELECT backup_id,expires_at FROM backup_object_holds WHERE workspace_id=? AND artifact_id=? AND expires_at>?",
+          this.ctx.workspaceId,
+          artifactId,
+          new Date().toISOString(),
+        ))
+          holds.push(`backup:${row.backup_id}:until:${row.expires_at}`);
+        for (const row of this.ctx.database.all(
+          "SELECT key FROM operational_state WHERE value<>'released' AND key IN (?,?,?)",
+          `retention:legal-hold:${this.ctx.workspaceId}`,
+          `retention:legal-hold:${this.ctx.workspaceId}:${artifact.run_id}`,
+          `retention:legal-hold:${this.ctx.workspaceId}:${artifactId}`,
+        ))
+          holds.push(String(row.key));
+        if (
+          this.ctx.database.get(
+            "SELECT 1 FROM attempts WHERE workspace_id=? AND run_id=? AND phase<>'completed'",
+            this.ctx.workspaceId,
+            artifact.run_id,
+          )
+        )
+          holds.push("active_attempt");
+        if (
+          this.ctx.database.get(
+            "SELECT 1 FROM artifacts WHERE workspace_id=? AND storage_key=? AND id<>?",
+            this.ctx.workspaceId,
+            artifact.storage_key,
+            artifactId,
+          )
+        )
+          holds.push("shared_blob_reference");
+      }
+    return { ...operation, backupHolds: holds } as unknown as DeletionOperation;
+  }
+  private fixtureDeletionHolds(fixture: FixtureInput): string[] {
+    const holds: string[] = [];
+    const references = this.ctx.database.all<FixtureInput>(
+      "SELECT * FROM fixture_inputs WHERE workspace_id=? AND storage_key=?",
+      this.ctx.workspaceId,
+      fixture.storage_key,
+    );
+    for (const reference of references) {
+      for (const row of this.ctx.database.all(
+        "SELECT key FROM operational_state WHERE value<>'released' AND key IN (?,?)",
+        `retention:legal-hold:${this.ctx.workspaceId}`,
+        `retention:legal-hold:${this.ctx.workspaceId}:${reference.id}`,
+      ))
+        holds.push(String(row.key));
+      for (const row of this.ctx.database.all(
+        "SELECT key,value FROM operational_state WHERE key LIKE ? AND value>?",
+        `retention:fixture-backup:${this.ctx.workspaceId}:${reference.id}:%`,
+        new Date().toISOString(),
+      ))
+        holds.push(`backup:${row.key}:until:${row.value}`);
+      if (
+        this.ctx.database.get(
+          "SELECT 1 FROM runs r JOIN test_revisions v ON v.workspace_id=r.workspace_id AND v.id=r.revision_id WHERE r.workspace_id=? AND r.phase<>'completed' AND instr(v.data_json,?)>0",
+          this.ctx.workspaceId,
+          reference.id,
+        )
+      )
+        holds.push("active_run");
+      if (reference.id !== fixture.id && !fixtureRevoked(this.ctx, reference.id))
+        holds.push("shared_blob_reference");
+    }
+    return holds;
+  }
+  private async collectDeletedFixtures(): Promise<string[]> {
+    const removed: string[] = [];
+    const root = new ConfinedRoot(this.config.dataDir);
+    try {
+      for (const fixture of this.ctx.database.all<FixtureInput>(
+        "SELECT f.* FROM fixture_inputs f JOIN operational_state d ON d.key='retention:deletion:' || f.workspace_id || ':' || f.id WHERE f.workspace_id=?",
+        this.ctx.workspaceId,
+      )) {
+        if (
+          this.record(fixture.id)?.stage === "deleted" ||
+          this.fixtureDeletionHolds(fixture).length
+        )
+          continue;
+        // Metadata is immutable; the tombstone remains authoritative after blob removal.
+        if (
+          fixture.storage_key !==
+          `fixture-inputs/${this.ctx.workspaceId}/${fixture.project_id}/${fixture.content_hash}`
+        )
+          continue;
+        await root.unlink(fixture.storage_key);
+        this.ctx.database.withTx(() => {
+          const previous = this.record(fixture.id);
+          if (!previous || this.fixtureDeletionHolds(fixture).length) return;
+          this.save(fixture.id, {
+            ...previous,
+            stage: "deleted",
+            deletedAt: new Date().toISOString(),
+          });
+          const pointer = this.ctx.database.get(
+            "SELECT value FROM operational_state WHERE key=?",
+            `retention:deletion:${this.ctx.workspaceId}:${fixture.id}`,
+          )!;
+          const operation = requireEntity(this.ctx, "DeletionOperation", String(pointer.value));
+          if (operation.physicalState !== "completed")
+            this.ctx.entities.update(
+              "DeletionOperation",
+              this.ctx.workspaceId,
+              operation.id,
+              Number(operation.version),
+              {
+                ...operation,
+                version: Number(operation.version) + 1,
+                physicalState: "completed",
+                backupHolds: [],
+                errors: [],
+              },
+            );
+        });
+        removed.push(fixture.storage_key);
+      }
+    } finally {
+      root.close();
+    }
+    return removed;
+  }
   repairReferences(apply = false) {
     this.ctx.authorize("A");
     return this.ctx.database.withTx(() => {
@@ -393,6 +635,30 @@ export class RetentionService {
                 deletedAt: new Date().toISOString(),
               };
               this.save(original.id, record);
+              const deletion = database.get(
+                "SELECT value FROM operational_state WHERE key=?",
+                `retention:deletion:${this.ctx.workspaceId}:${original.id}`,
+              );
+              if (deletion) {
+                const operation = requireEntity(
+                  this.ctx,
+                  "DeletionOperation",
+                  String(deletion.value),
+                );
+                this.ctx.entities.update(
+                  "DeletionOperation",
+                  this.ctx.workspaceId,
+                  operation.id,
+                  Number(operation.version),
+                  {
+                    ...operation,
+                    version: Number(operation.version) + 1,
+                    physicalState: "completed",
+                    backupHolds: [],
+                    errors: [],
+                  },
+                );
+              }
               this.event(original, "artifact.deleted", previous, record);
             }),
         },
@@ -400,6 +666,7 @@ export class RetentionService {
     } finally {
       root.close();
     }
+    removed.push(...(await this.collectDeletedFixtures()));
     const pressure = await this.storagePressure();
     return {
       expiredArtifacts,

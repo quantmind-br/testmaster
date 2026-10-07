@@ -13,7 +13,6 @@ import {
   errorData,
   integer,
   type Options,
-  type Result,
   type Runtime,
   string,
   strings,
@@ -31,7 +30,15 @@ function admissionOptions(options: Options) {
 function replayOptions(options: Options): void {
   if (options.mode !== "replay" && options.mode !== "agent")
     throw new ContractError("INVALID_ARGUMENT", "Mode must be replay or agent");
-  if (options.heal !== "off") unavailable("healing");
+  if (!["off", "propose"].includes(String(options.heal)))
+    throw new ContractError(
+      "POLICY_DENIED",
+      "Interactive execution supports post-failure proposals only",
+    );
+  if (options.heal !== "off" && (process.env.CI === "true" || options.strict === true))
+    throw new ContractError("POLICY_DENIED", "Strict CI forbids automatic healing");
+  if (options.heal === "propose" && options.wait !== true)
+    throw new ContractError("PRECONDITION_FAILED", "Post-failure healing requires --wait");
   if (string(options, "executor") === "remote" || string(options, "tunnel"))
     unavailable("distributed");
   if (string(options, "executor") && !["docker", "process"].includes(String(options.executor)))
@@ -150,13 +157,17 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
             }
           : {}),
       }));
-      if (selection.length === 1 && options.partialDispatch !== true)
-        return receiptResult(
-          rt,
-          app,
-          await app.runs.admit(selection[0] as RunRequest, admissionOptions(options)),
-          options,
-        );
+      if (selection.length === 1 && options.partialDispatch !== true) {
+        const receipt = await app.runs.admit(selection[0] as RunRequest, admissionOptions(options));
+        const result = await receiptResult(rt, app, receipt, options);
+        const finished = app.runs.get(receipt.runId);
+        if (options.heal === "propose" && finished.outcome === "failed")
+          return {
+            ...result,
+            data: { execution: result.data, healing: await app.healing.propose(finished.id, {}) },
+          };
+        return result;
+      }
       const receipt = await app.batches.admit(
         {
           selection,
@@ -232,6 +243,12 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
           ? { runId: receipt.memberRuns[index]?.runId, run: member.value }
           : { runId: receipt.memberRuns[index]?.runId, error: errorData(member.reason) },
       );
+      const healing = [];
+      if (options.heal === "propose") {
+        for (const member of settled)
+          if (member.status === "fulfilled" && member.value.outcome === "failed")
+            healing.push(await app.healing.propose(member.value.id, {}));
+      }
       const codes = settled.map((member) => {
         if (member.status === "fulfilled") {
           const completed = app.runs
@@ -278,7 +295,7 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
         return 6;
       });
       return {
-        data: { receipt, members, batch },
+        data: { receipt, members, batch, healing },
         exit: batchExitCode([...codes, ...rejectedExits, exitCodeForGate(aggregate.gate)]),
       };
     },
@@ -289,59 +306,6 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
           "INVALID_ARGUMENT",
           "--all and explicit IDs are mutually exclusive",
         );
-      return { data: null };
-    },
-  );
-  runtime.bind(
-    executionOptions(test.command("rerun <ids...>")),
-    async (rt, args, options): Promise<Result> => {
-      replayOptions(options);
-      const app = await rt.app();
-      const ids = Array.isArray(args[0]) ? args[0].map(String) : [];
-      const results: Result[] = [];
-      for (const id of ids) {
-        const revisionId = string(options, "revision");
-        const explicitEnv = string(options, "env");
-        if (id.startsWith("run_")) {
-          const environment = explicitEnv
-            ? await environmentId(rt, options, await rt.project(options))
-            : undefined;
-          const receipt = await app.runs.rerun(id, {
-            ...admissionOptions(options),
-            ...(revisionId ? { revisionId } : {}),
-            ...(environment ? { environmentId: environment } : {}),
-          });
-          results.push(await receiptResult(rt, app, receipt, options));
-        } else {
-          const entity = await app.tests.get(id);
-          const envId = await environmentId(rt, options, entity.projectId);
-          const request: RunRequest = {
-            testId: id,
-            environmentId: envId,
-            mode: options.mode === "agent" ? "agent" : "replay",
-            healingPolicy: "off",
-            origin: "cli",
-            ...(revisionId ? { revisionId } : {}),
-          };
-          results.push(
-            await receiptResult(
-              rt,
-              app,
-              await app.runs.admit(request, admissionOptions(options)),
-              options,
-            ),
-          );
-        }
-      }
-      return results.length === 1
-        ? (results[0] as Result)
-        : {
-            data: { members: results.map((result) => result.data) },
-            exit: batchExitCode(results.map((result) => result.exit ?? 0)),
-          };
-    },
-    (_rt, _args, options) => {
-      replayOptions(options);
       return { data: null };
     },
   );

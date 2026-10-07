@@ -701,7 +701,11 @@ export class AuxiliaryLeaseRepository {
       const job = this.assertCurrent(fence);
       this.database.run(
         "UPDATE job_leases SET data_json=? WHERE workspace_id=? AND id=? AND fence=?",
-        canonicalJson({ payload: job.payload, progress: { ...job.progress, ...progress }, result: null }),
+        canonicalJson({
+          payload: job.payload,
+          progress: { ...job.progress, ...progress },
+          result: null,
+        }),
         fence.workspaceId,
         fence.jobId,
         fence.fence,
@@ -772,7 +776,7 @@ export class AuxiliaryLeaseRepository {
   }
   /** Settles a `reconciliation_required` job with a recorded result; never reissues the call. */
   settle(workspaceId: string, jobId: string, result: Record<string, unknown>): AuxiliaryJob {
-    return this.database.withTx(() => {
+    const apply = (): AuxiliaryJob => {
       const job = this.get(workspaceId, jobId);
       if (!job || job.state !== "reconciliation_required")
         throw new ContractError("PRECONDITION_FAILED", "Job does not require settlement");
@@ -783,7 +787,8 @@ export class AuxiliaryLeaseRepository {
         jobId,
       );
       return this.get(workspaceId, jobId) as AuxiliaryJob;
-    });
+    };
+    return this.database.db.isTransaction ? apply() : this.database.withTx(apply);
   }
 }
 export class ExecutionRepository {

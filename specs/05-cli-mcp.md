@@ -24,6 +24,7 @@ Executável `testmaster`. Comandos abaixo são contratos futuros, não instalaç
 | Discovery | `explore --env NAME [--feature ID]` | browser exploration autorizada por budget e política |
 | Requirements | `requirement list/get/update/approve` | source refs e conflitos visíveis |
 | Plan | `plan generate/list/get/edit/accept/reject` | batchId e versão; `accept --only` retém resto; nunca aceita unknown IDs |
+| Plan | `plan generate --type frontend\|backend\|integration\|auto` | Integration requires HTTP requests linked by a captured value and a required business assertion over the downstream response. Auto selects only frontend/playwright or backend/http; omitted type remains backend. REST scope selects integration alone or distinct frontend/backend types. |
 | Author | `test scaffold --type frontend\|backend` | plano declarativo completo; output stdout/offline |
 | Author | `test lint --plan PATH` / `--dir PATH` | todos errors por pointer; nenhum network |
 | Tests | `test create --plan PATH` / `--code PATH --runner KIND` | plano vs code exclusivos; creates immutable draft revision |
@@ -35,9 +36,10 @@ Executável `testmaster`. Comandos abaixo são contratos futuros, não instalaç
 | Run | `run get/list/wait/cancel <runId>` | leitura exata, cancel idempotente, reattach |
 | Run | `run events <runId> --format ndjson` | event cursor e backpressure |
 | Evidence | `run steps <runId> [--attempt ID]`, `artifact get <runId> --out PATH` | snapshot exato, não latest moving target |
-| Analysis | `run analyze <runId>`, `run diff LEFT RIGHT` | hipótese/evidências e comparable flag |
+| Analysis | `run analyze <runId>`, `run diff LEFT RIGHT [--limit N] [--cursor C]` | Grounded diagnosis; paginated Run/Batch comparison (1–100 rows, default 50), cursor bound to both immutable inputs. Mixed IDs refuse; reported differences exit 0. |
 | Healing | `heal propose/approve/reject <id>` | origem e candidate revision, verification Run |
-| Quality | `test flaky <id> --runs N --env NAME` | n 2–100 por pedido; estudo acumula coortes compatíveis com IDs distintos para amostras maiores, sem duplicatas; no-heal/no-retry, orçamento e intervalo de confiança explícitos |
+| Quality | `test flaky <id> --runs N --env NAME [--seed N] [--include-study ID]` | 2–100 serial fresh strict first-attempt samples, healing off/maxAttempts 1. Compatible studies accumulate deduplicated Run IDs; missing source/runtime provenance prevents statistical classification. Report conditional failure, bilateral Wilson 95%, exact one-sided zero-failure bound, exclusions and correlation limitations; never auto-confirm flakiness from sample count. |
+| Quality | `test quarantine <id> --reason TEXT --expires-at UTC [--expected-version N]`, `test unquarantine <id> [--expected-version N]`, `test quarantine-list` | Project writer authority; nonempty reason/future expiry, owner/audit/outbox and version CAS. Expired records are inactive; quarantine never rewrites historical Runs. |
 | Reports | `report export <runId\|batchId> --format json\|markdown\|html\|junit\|allure --out PATH` | derivado do mesmo snapshot; sanitized |
 | Suite | `suite create/list/get/update/add/remove/archive/run` | lista cross-project mesmo workspace, env mapping |
 | Schedule | `schedule create/list/get/update/pause/resume/archive/history` | cron/timezone/overlap/misfire/budget explícitos |

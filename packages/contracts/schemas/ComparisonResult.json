@@ -4,7 +4,9 @@
   "required": [
     "comparability",
     "reasons",
-    "differences"
+    "differences",
+    "nextCursor",
+    "comparisonIdentity"
   ],
   "properties": {
     "comparability": {
@@ -32,6 +34,7 @@
       }
     },
     "differences": {
+      "maxItems": 100,
       "type": "array",
       "items": {
         "additionalProperties": false,
@@ -109,6 +112,21 @@
           }
         }
       }
+    },
+    "nextCursor": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "comparisonIdentity": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
     }
   },
   "$defs": {

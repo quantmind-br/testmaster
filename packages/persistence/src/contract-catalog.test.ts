@@ -113,7 +113,10 @@ it("every public entity has catalog-generated DTO/null/default/enum/limit/event 
     for (const migration of Object.keys(constraintMigrations) as ConstraintMigration[])
       for (const [engine, bytes] of Object.entries(generatedConstraintMigrations(migration)))
         expect(
-          await readFile(new URL(`../migrations/${engine}/${migration}.sql`, import.meta.url), "utf8"),
+          await readFile(
+            new URL(`../migrations/${engine}/${migration}.sql`, import.meta.url),
+            "utf8",
+          ),
           `${engine}/${migration}`,
         ).toBe(bytes);
     for (const rule of projectionRules()) {

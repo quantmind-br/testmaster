@@ -2,6 +2,7 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExecutablePlan, PlanStep } from "@testmaster/contracts";
 import { validateProposalPlan } from "@testmaster/planner";
 import { afterEach, expect, it } from "vitest";
 import { completion, testProvider } from "../../../model-gateway/src/test-support.js";
@@ -126,7 +127,7 @@ it("records consent before data crosses a real boundary, and source injection ca
   await f.app.model.complete(input);
   expect(f.counts().completions).toBe(1);
   expect(f.payloads[0]).not.toHaveProperty("tools");
-  expect(f.app.usage.get(f.projectId).unknownCostCalls).toBe(1);
+  expect(f.app.usage.get({ projectId: f.projectId }).unknownCostCalls).toBe(1);
   expect(
     f.app.database.all("SELECT action FROM audit_events WHERE action='consent.granted'"),
   ).toHaveLength(2);
@@ -150,7 +151,7 @@ it("uses profile reasoning effort unless an application call overrides it", asyn
   await f.app.model.complete(input);
   await f.app.model.complete({ ...input, reasoningEffort: "high" });
   expect(f.payloads.map((payload) => payload.reasoning_effort)).toEqual(["medium", "high"]);
-  const records = f.app.usage.get(f.projectId).calls;
+  const records = f.app.usage.get({ projectId: f.projectId }).calls;
   expect(records[0]?.modelConfigHash).not.toBe(records[1]?.modelConfigHash);
 });
 it("bounded model repairs never persist ready requirements or active tests", async () => {
@@ -173,7 +174,7 @@ it("bounded model repairs never persist ready requirements or active tests", asy
   expect(f.counts().completions).toBe(3);
   expect(f.app.requirements.list(f.projectId)).toEqual([]);
   expect(f.app.tests.list(f.projectId)).toEqual([]);
-  expect(f.app.usage.get(f.projectId).calls).toHaveLength(3);
+  expect(f.app.usage.get({ projectId: f.projectId }).calls).toHaveLength(3);
 });
 it("normalization resolves cited evidence handles to exact supplied refs and rejects unknown handles", async () => {
   const f = await fixture();
@@ -406,6 +407,183 @@ it("plan generation enforces requested or auto-chosen type/runner pairs with evi
     message: "Generated proposals must be backend/http or frontend/playwright plans",
   });
   expect(f.app.proposals.list(f.projectId)).toHaveLength(2);
+});
+it("integration generation rejects fake workflows before persistence and retains exact approved requirement evidence", async () => {
+  const f = await fixture();
+  await writeFile(
+    join(f.root, "prd.md"),
+    "# Products\nCreate a product priced at 123, read it, update its price to 456 and verify the persisted price.",
+  );
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "prd.md"),
+    format: "markdown",
+  });
+  f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"], true);
+  f.setOutput({
+    requirements: [
+      {
+        key: "product-workflow",
+        text: "Create, read and update a persisted product",
+        acceptanceCriteria: ["Read created product price 123", "Read updated product price 456"],
+        evidenceIds: ["E1"],
+        originKind: "explicit",
+        confidence: null,
+        reason: "PRD",
+      },
+    ],
+    conflicts: [],
+    openQuestions: [],
+  });
+  const [requirement] = (
+    await f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [source.revision.id],
+    })
+  ).requirements;
+  if (!requirement) throw new Error("Missing product requirement");
+  f.app.requirements.approve(requirement.id, requirement.version ?? 1);
+  const request = (id: string, method: "POST" | "GET" | "PUT"): PlanStep => ({
+    id,
+    kind: "action",
+    operation: "request",
+    description: `${method} product`,
+    required: true,
+    input: {
+      method,
+      pathSegments: [
+        { literal: "api" },
+        { literal: "products" },
+        ...(id === "create" ? [] : [{ variableRef: "create.product_id" }]),
+      ],
+      ...(method === "GET"
+        ? {}
+        : {
+            body: {
+              kind: "json",
+              value: { literal: { priceCents: method === "POST" ? 123 : 456 } },
+            },
+          }),
+      ...(id === "create"
+        ? {
+            capture: [
+              {
+                name: "product_id",
+                from: "jsonPointer",
+                pointer: "/id",
+                valueType: "string",
+                sensitive: false,
+              },
+            ],
+          }
+        : {}),
+    },
+  });
+  const assertion = (responseStepId: string, price: number): PlanStep => ({
+    id: `${responseStepId}_price`,
+    kind: "assertion",
+    operation: "assert",
+    description: "Require persisted product price",
+    required: true,
+    input: { responseStepId, jsonPointer: "/priceCents" },
+    expectation: { predicate: "jsonEquals", value: { literal: price } },
+  });
+  const plan: ExecutablePlan = {
+    schemaVersion: "1.0.0",
+    kind: "executable",
+    name: "Create read update persisted product",
+    type: "integration",
+    runner: "http",
+    requirementRefs: [requirement.id],
+    steps: [
+      request("create", "POST"),
+      assertion("create", 123),
+      request("read", "GET"),
+      assertion("read", 123),
+      request("update", "PUT"),
+      assertion("update", 456),
+      request("query", "GET"),
+      assertion("query", 456),
+    ],
+  };
+  const uncaptured = structuredClone(plan);
+  const unusedCapture = structuredClone(plan);
+  for (const candidate of [uncaptured, unusedCapture]) {
+    for (const step of candidate.steps) {
+      if (step.operation !== "request") continue;
+      if (candidate === uncaptured) delete step.input.capture;
+      step.input.pathSegments = step.input.pathSegments.map((value) =>
+        "variableRef" in value ? { literal: "fixed-product-id" } : value,
+      );
+    }
+  }
+  const initialOnly = {
+    ...plan,
+    steps: plan.steps.filter((step) => step.kind !== "assertion" || step.id === "create_price"),
+  };
+  const optionalDownstream = structuredClone(plan);
+  for (const step of optionalDownstream.steps)
+    if (step.kind === "assertion" && step.id !== "create_price") step.required = false;
+  const trivialDownstream = structuredClone(plan);
+  for (const step of trivialDownstream.steps)
+    if (step.kind === "assertion" && step.id !== "create_price")
+      step.expectation = {
+        predicate: "statusIn",
+        values: Array.from({ length: 11 }, (_, n) => 200 + n),
+      };
+  for (const candidate of [
+    { ...plan, steps: plan.steps.slice(0, 2) },
+    uncaptured,
+    unusedCapture,
+    initialOnly,
+    optionalDownstream,
+    trivialDownstream,
+  ]) {
+    // Every negative is otherwise a schema-valid proposal with a real required business oracle.
+    expect(() => validateProposalPlan(candidate)).not.toThrow();
+    f.setOutput({
+      proposals: [
+        { plan: candidate, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] },
+      ],
+    });
+    await expect(
+      f.app.proposals.generate({
+        projectId: f.projectId,
+        type: "integration",
+        requirementIds: [requirement.id],
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    expect(f.app.proposals.list(f.projectId)).toEqual([]);
+    expect(allEntities(f.app.context, "Proposal")).toEqual([]);
+  }
+  f.setOutput({
+    proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
+  });
+  const batch = await f.app.proposals.generate({
+    projectId: f.projectId,
+    type: "integration",
+    requirementIds: [requirement.id],
+  });
+  const [proposal] = f.app.proposals.detail(batch.id).proposals;
+  if (!proposal) throw new Error("Missing integration proposal");
+  expect(f.app.proposals.detail(batch.id).proposals).toHaveLength(1);
+  expect(proposal.plan).toEqual(plan);
+  expect(proposal.requirementRefs).toEqual([requirement.id]);
+  expect(proposal.evidenceRefs).toEqual(requirement.sourceRefs);
+  const receipt = f.app.proposals.accept(batch.id, {
+    proposalIds: [proposal.id],
+    expectedVersion: batch.version ?? 1,
+    idempotencyKey: "accept-product-integration",
+  });
+  expect(receipt.accepted).toHaveLength(1);
+  const revisions = allEntities(f.app.context, "TestRevision");
+  expect(revisions).toHaveLength(1);
+  expect(revisions[0]).toMatchObject({
+    origin: "generated",
+    plan,
+    extensions: { "testmaster:proposalId": proposal.id, "testmaster:batchId": batch.id },
+  });
 });
 it("rejects trivial body visibility as a generated business oracle", () => {
   const plan = scaffoldPlan("frontend");

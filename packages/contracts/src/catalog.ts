@@ -278,9 +278,7 @@ const supplemental = {
         workingTree: Type.Optional(Type.Boolean()),
       }),
     ),
-    reuseFromRunIds: Type.Optional(
-      Type.Array(P.id("run"), { maxItems: 100, uniqueItems: true }),
-    ),
+    reuseFromRunIds: Type.Optional(Type.Array(P.id("run"), { maxItems: 100, uniqueItems: true })),
     skipDependencies: Type.Optional(Type.Boolean()),
     quarantinePolicy: Type.Optional(P.Enum(["exclude", "strict"])),
     allowEmpty: Type.Optional(Type.Boolean()),
@@ -288,6 +286,8 @@ const supplemental = {
     seed: Type.Optional(Type.Integer()),
     provenance: Type.Optional(Ops.RunRequest.properties.provenance),
     expectedSelectionHash: Type.Optional(P.ContentDigest),
+    /** Claimed target; must equal the frozen environment revision baseUrl. Never an override. */
+    targetUrl: Type.Optional(Type.String({ format: "uri", maxLength: 2048 })),
   }),
   SelectionPreview: P.Obj({
     selectionHash: P.ContentDigest,
@@ -367,6 +367,8 @@ const supplemental = {
       assessedSha: Type.Union([P.Name, Type.Null()]),
       checkoutSha: Type.Union([P.Name, Type.Null()]),
       binding: P.Enum(["verified", "unbound"]),
+      /** "local-checkout" only for a loopback target served from the verified clean checkout. */
+      targetBinding: P.Enum(["local-checkout", "unbound"]),
     }),
     selection: P.Obj({
       requested: P.Nonnegative,

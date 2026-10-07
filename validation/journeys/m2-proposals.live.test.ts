@@ -301,7 +301,9 @@ it("J03 real model A/B/C subset review survives retry and concurrent duplicate w
         expect(items(usage.calls).length).toBeGreaterThanOrEqual(2);
         expect(usage).toMatchObject({ cost: "unknown" });
         expect(Number(object(usage.tokens).inputTokens)).toBeGreaterThan(0);
-        expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(2);
+        expect(
+          Number(object(object(usage.lifetimeBudget).reservations).settled),
+        ).toBeGreaterThanOrEqual(2);
         await session.command(["consent", "revoke", "--provider", "quantforge"]);
         const revoked = await session.command(["consent", "status", "--provider", "quantforge"]);
         expect(object(revoked.consent).revokedAt).toBeTruthy();

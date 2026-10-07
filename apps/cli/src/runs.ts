@@ -2,7 +2,7 @@ import { ContractError } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
-import { integer, type Runtime, seconds, string, unavailable } from "./runtime.js";
+import { integer, type Runtime, seconds, string } from "./runtime.js";
 
 export function runCommands(program: Command, runtime: Runtime): void {
   const group = program.command("run").alias("runs");
@@ -77,13 +77,41 @@ export function runCommands(program: Command, runtime: Runtime): void {
     data: await (await rt.app()).runs.steps(String(args[0]), string(options, "attempt")),
   }));
   runtime.bind(
-    group.command("analyze <id>").allowUnknownOption().allowExcessArguments(),
-    () => unavailable("analysis"),
-    () => unavailable("analysis"),
+    group
+      .command("analyze <id>")
+      .option("--model", "Enrich factual diagnosis using the authorized model")
+      .option("--deadline-ms <milliseconds>", "Model deadline", integer),
+    async (rt, args, options) => ({
+      data: await (await rt.app()).analysis.analyze(String(args[0]), {
+        model: options.model === true,
+        ...(typeof options.deadlineMs === "number"
+          ? { budget: { deadlineMs: options.deadlineMs } }
+          : {}),
+      }),
+      exit: 0,
+    }),
   );
   runtime.bind(
-    group.command("diff <left> <right>").allowUnknownOption().allowExcessArguments(),
-    () => unavailable("run-comparison"),
-    () => unavailable("run-comparison"),
+    group
+      .command("diff <left> <right>")
+      .option("--limit <count>", "Difference page size", integer)
+      .option("--cursor <cursor>"),
+    async (rt, args, options) => {
+      const left = String(args[0]);
+      const right = String(args[1]);
+      const app = await rt.app();
+      const page = {
+        ...(typeof options.limit === "number" ? { limit: options.limit } : {}),
+        ...(string(options, "cursor") ? { cursor: string(options, "cursor")! } : {}),
+      };
+      if (left.startsWith("run_") && right.startsWith("run_"))
+        return { data: app.comparisons.runs(left, right, page), exit: 0 };
+      if (left.startsWith("bat_") && right.startsWith("bat_"))
+        return { data: app.comparisons.batches(left, right, page), exit: 0 };
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Comparison requires two Run IDs or two Batch IDs",
+      );
+    },
   );
 }

@@ -27,12 +27,67 @@ import type { RequirementsService } from "./requirements.js";
 
 type StoredProposal = Proposal & EntityDocument;
 type StoredBatch = ProposalBatch & EntityDocument;
-export type PlanGenerationType = "frontend" | "backend" | "auto";
-const planRunners = { backend: "http", frontend: "playwright" } as const;
+export type PlanGenerationType = "frontend" | "backend" | "integration" | "auto";
+const planRunners = { backend: "http", frontend: "playwright", integration: "http" } as const;
 export interface ProposalReceipt {
   accepted: string[];
   retained: string[];
   rejected: string[];
+}
+
+function validateIntegrationPlan(plan: ExecutablePlan): void {
+  const requests = plan.steps.flatMap((step, index) =>
+    step.kind === "action" && step.operation === "request" ? [{ step, index }] : [],
+  );
+  const captures = new Set<string>();
+  for (const { step, index } of requests) {
+    const input = step.input;
+    const values = [
+      ...input.pathSegments,
+      ...(input.query ?? []).flatMap(({ name, value }) => [name, value]),
+      ...Object.values(input.headers ?? {}),
+      ...(input.body?.kind === "json" || input.body?.kind === "text"
+        ? [input.body.value]
+        : input.body?.kind === "form"
+          ? input.body.fields.flatMap(({ name, value }) => [name, value])
+          : []),
+    ];
+    if (
+      requests.length >= 2 &&
+      values.some((value) => "variableRef" in value && captures.has(value.variableRef)) &&
+      plan.steps.slice(index + 1).some((assertion) => {
+        if (
+          assertion.kind !== "assertion" ||
+          assertion.required === false ||
+          !("responseStepId" in assertion.input) ||
+          assertion.input.responseStepId !== step.id
+        )
+          return false;
+        try {
+          validateProposalPlan({
+            ...plan,
+            steps: [
+              ...plan.steps.slice(0, index + 1).filter((prior) => prior.kind !== "assertion"),
+              assertion,
+            ],
+          });
+          return true;
+        } catch (error) {
+          if (error instanceof ContractError && error.code === "INVALID_ARGUMENT") return false;
+          throw error;
+        }
+      })
+    )
+      return;
+    for (const capture of input.capture ?? []) {
+      captures.add(capture.name);
+      captures.add(`${step.id}.${capture.name}`);
+    }
+  }
+  throw new ContractError(
+    "INVALID_ARGUMENT",
+    "Integration proposals require at least two requests, a capture consumed by a later request, and a required business assertion over that downstream response",
+  );
 }
 export class ProposalsService {
   constructor(
@@ -101,7 +156,7 @@ export class ProposalsService {
     const typeInstruction =
       type === "auto"
         ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI.'
-        : `Every plan must have type "${type}" and runner "${planRunners[type]}".`;
+        : `Every plan must have type "${type}" and runner "${planRunners[type]}".${type === "integration" ? ' Build an HTTP workflow with at least two request steps: capture a value from an earlier response and use its "stepId.captureName" variableRef in a later request pathSegments, query, headers or body. Include a required deterministic business assertion referencing that later request through responseStepId. A single request, unused capture, or assertion only over the initial response is not an integration workflow.' : ""}`;
     const output = await this.model.complete<unknown>({
       projectId: input.projectId,
       purpose: "plan",
@@ -144,6 +199,8 @@ export class ProposalsService {
           ? "Generated proposals must be backend/http or frontend/playwright plans"
           : `Generated proposals must be ${type} plans using the ${planRunners[type]} runner`,
       );
+    if (type === "integration")
+      for (const { plan } of generated.proposals) validateIntegrationPlan(plan);
     if (
       generated.proposals.length !== requirements.length ||
       requirements.some(

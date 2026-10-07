@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
-import { type ArtifactManifest, type BundleMeta, parseAndValidate } from "@testmaster/contracts";
+import {
+  type ArtifactManifest,
+  type BundleMeta,
+  ContractError,
+  parseAndValidate,
+} from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import { ConfinedRoot, validateRelativePath } from "./path.js";
 import type { AttemptIds } from "./store.js";
@@ -61,6 +66,13 @@ export async function verifyBundle(
         await manifestFile.readFile(),
         16 * 1024 * 1024,
       );
+    } catch (error) {
+      if (
+        error instanceof ContractError &&
+        ["INVALID_ARGUMENT", "LIMIT_EXCEEDED"].includes(error.code)
+      )
+        throw new BundleIntegrityError(`Invalid bundle metadata: ${error.message}`);
+      throw error;
     } finally {
       await metaFile.close();
       await manifestFile.close();

@@ -234,7 +234,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
         const service = identity
           ? options.application.withIdentity(identity, request.id)
           : options.application;
-        if (Number(route.milestone.slice(1)) > 2)
+        if (!implementedMilestones.has(route.milestone))
           throw new ContractError(
             "CAPABILITY_UNAVAILABLE",
             "Capability is not implemented in this milestone",
@@ -242,7 +242,10 @@ export function createServer(options: ServerOptions): FastifyInstance {
           );
         if (route.scope !== "public") {
           const scope = route.scope === "upload token" ? "W" : route.scope.split(":").at(-1);
-          if (
+          // Named resource actions are never implied by W/X; the service evaluates them per resource.
+          if (namedActions.has(scope ?? "")) {
+            if (!identity) throw new ContractError("UNAUTHENTICATED", "Authentication is required");
+          } else if (
             !["R", "W", "X", "A"].includes(scope ?? "") ||
             !identity?.scopes.includes(scope as "R" | "W" | "X" | "A")
           )
@@ -452,11 +455,19 @@ export function createServer(options: ServerOptions): FastifyInstance {
             : await operation();
         if (data && typeof data === "object" && "version" in data)
           reply.header("ETag", `"${data.version}"`);
-        if (route.path === "/artifacts/{id}") {
+        if (route.method === "GET" && route.path === "/artifacts/{id}") {
           const artifact = data as ArtifactStream;
+          const filename = `artifact-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}.bin`;
           reply
             .header("ETag", `"${artifact.entry.sha256}"`)
             .header("Accept-Ranges", "bytes")
+            .header("Content-Disposition", `attachment; filename="${filename}"`)
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Cache-Control", "private, no-store")
+            .header(
+              "Content-Security-Policy",
+              "default-src 'none'; sandbox; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            )
             .type(artifact.entry.mimeType);
           if (execution.range) {
             const range = /^bytes=(\d+)-(\d+)$/.exec(execution.range);
@@ -507,6 +518,9 @@ export function createServer(options: ServerOptions): FastifyInstance {
   }) as FastifyInstance["listen"];
   return app;
 }
+/** Milestones whose routes are implemented locally; M4+ (App, schedules, server profiles) stay unavailable. */
+const implementedMilestones: ReadonlySet<string> = new Set(["M0", "M1", "M2", "M3"]);
+const namedActions: ReadonlySet<string> = new Set(["approve", "delete"]);
 const synchronousRoutes: Record<string, true> = Object.fromEntries(
   [
     "POST /projects",
@@ -530,6 +544,10 @@ const synchronousRoutes: Record<string, true> = Object.fromEntries(
     "PATCH /projects/{id}/requirements",
     "PATCH /proposals/{id}",
     "POST /discovery/{id}/cancel",
+    "POST /healing-proposals/{id}/reject",
+    "PUT /tests/{id}/quarantine",
+    "DELETE /tests/{id}/quarantine",
+    "DELETE /artifacts/{id}",
   ].map((key) => [key, true]),
 );
 function dispatch(
@@ -792,14 +810,18 @@ function dispatch(
       const scope = body.scope as string[];
       if (
         new Set(scope).size !== scope.length ||
-        scope.some((type) => type !== "frontend" && type !== "backend")
+        scope.some((type) => type !== "frontend" && type !== "backend" && type !== "integration") ||
+        (scope.includes("integration") && scope.length !== 1)
       )
         throw new ContractError(
           "INVALID_ARGUMENT",
-          "Proposal scope must select distinct frontend and/or backend types",
+          "Proposal scope must select integration alone or distinct frontend and/or backend types",
         );
       // Both types let the model choose per requirement; none keeps the backend default.
-      const type = scope.length === 2 ? "auto" : (scope[0] as "frontend" | "backend" | undefined);
+      const type =
+        scope.length === 2
+          ? "auto"
+          : (scope[0] as "frontend" | "backend" | "integration" | undefined);
       const refs = body.inputRefs as { sourceRevisionId?: string }[];
       const requirementIds = refs.length
         ? app.requirements
@@ -869,7 +891,13 @@ function dispatch(
         idempotencyKey: execution.key,
       });
     case "GET /usage":
-      return app.usage.get(query.projectId, query.since);
+      return app.usage.get({
+        ...(query.projectId ? { projectId: query.projectId } : {}),
+        ...(query.runId ? { runId: query.runId } : {}),
+        ...(query.model ? { model: query.model } : {}),
+        ...(query.since ? { since: query.since } : {}),
+        ...(query.until ? { until: query.until } : {}),
+      });
     case "POST /projects/{id}/budget":
       return app.usage.setBudget(id, body as { tokens: number });
     case "GET /revisions/{id}/code": {
@@ -885,6 +913,65 @@ function dispatch(
       return app.approvals.create(body as unknown as Parameters<typeof app.approvals.create>[0]);
     case "POST /approvals/{id}/revoke":
       return app.approvals.revoke(id);
+    case "GET /runs/{id}/analysis": {
+      const analysis = app.analysis.get(id);
+      if (!analysis) throw new ContractError("NOT_FOUND", "Analysis does not exist", { runId: id });
+      return analysis;
+    }
+    case "POST /runs/{id}/analysis":
+      return app.analysis.analyze(id, body as Parameters<typeof app.analysis.analyze>[1]);
+    case "POST /runs/{id}/healing-proposals":
+      return app.healing.propose(id, body as Parameters<typeof app.healing.propose>[1]);
+    case "GET /healing-proposals/{id}":
+      return app.healing.get(id);
+    case "POST /healing-proposals/{id}/approve":
+      return app.healing.approve(id, Number(body.expectedVersion));
+    case "POST /healing-proposals/{id}/reject":
+      return app.healing.reject(id, String(body.reason));
+    case "GET /tests/{id}/quarantine": {
+      const record = app.quarantine.get(id);
+      if (!record) throw new ContractError("NOT_FOUND", "Test is not quarantined", { testId: id });
+      return record;
+    }
+    case "PUT /tests/{id}/quarantine":
+      return app.quarantine.set(id, body as unknown as Parameters<typeof app.quarantine.set>[1]);
+    case "DELETE /tests/{id}/quarantine": {
+      const record = app.quarantine.get(id);
+      if (!record) throw new ContractError("NOT_FOUND", "Test is not quarantined", { testId: id });
+      app.quarantine.remove(id, version());
+      return record;
+    }
+    case "POST /run-comparisons":
+      return app.comparisons.runs(
+        String(body.leftRunId),
+        String(body.rightRunId),
+        body.page as Parameters<typeof app.comparisons.runs>[2],
+      );
+    case "POST /batch-comparisons":
+      return app.comparisons.batches(
+        String(body.leftBatchId),
+        String(body.rightBatchId),
+        body.page as Parameters<typeof app.comparisons.batches>[2],
+      );
+    case "POST /flake-studies":
+      return app.flake.study(body as unknown as Parameters<typeof app.flake.study>[0], {
+        idempotencyKey: execution.key,
+      });
+    case "GET /flake-studies/{id}":
+      return app.flake.report(
+        id,
+        query.includeStudyIds ? query.includeStudyIds.split(",").filter(Boolean) : undefined,
+      );
+    case "POST /execution-previews":
+      return app.selection.preview(body as unknown as Parameters<typeof app.selection.preview>[0]);
+    case "POST /selective-runs":
+      return app.selection.run(body as unknown as Parameters<typeof app.selection.run>[0], {
+        idempotencyKey: execution.key,
+      });
+    case "DELETE /artifacts/{id}":
+      return app.retention.requestDeletion(id);
+    case "GET /deletion-operations/{id}":
+      return app.retention.deletionStatus(id);
     default:
       throw new ContractError("CAPABILITY_UNAVAILABLE", "Application service is unavailable", {
         capability: route.path,

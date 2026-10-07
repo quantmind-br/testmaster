@@ -1,6 +1,11 @@
 import { ContractError, type ExecutablePlan, type PlanStep, validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
-import { preserveAssertions, selectAction, validateObservation } from "@testmaster/planner";
+import {
+  assertionsHash,
+  preserveAssertions,
+  selectAction,
+  validateObservation,
+} from "@testmaster/planner";
 import type { ResolvedConfig } from "../config.js";
 import { entity, requireEntity, type ServiceContext } from "../context.js";
 import { ModelService } from "./model.js";
@@ -108,6 +113,7 @@ export class AgentModeService {
             extensions: {
               "testmaster:agentRunId": runId,
               "testmaster:verificationRequired": true,
+              "testmaster:preservedAssertionsHash": assertionsHash(candidate),
               "testmaster:deterministicAssertions": candidate.steps
                 .filter((step) => step.kind === "assertion")
                 .map((step) => step.id),

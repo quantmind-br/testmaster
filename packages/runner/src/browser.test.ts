@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { Readable } from "node:stream";
 import { type PlanStep, type RunnerEvent, validate } from "@testmaster/contracts";
+import { semanticHash } from "@testmaster/domain";
 import type { Browser } from "playwright-core";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runBrowser } from "./browser.js";
@@ -24,6 +25,26 @@ class LocatorStub {
   constructor(readonly owner: PageStub) {}
   async count() {
     return this.countValue;
+  }
+  async evaluateAll(_callback: unknown, attributes?: unknown) {
+    if (attributes === undefined)
+      return { attached: this.countValue > 0, visible: this.countValue > 0 };
+    return {
+      cardinality: this.countValue,
+      candidates: [
+        {
+          role: "button",
+          name: "Submit canary",
+          tag: "button",
+          type: "",
+          attributes: { "data-testid": "submit" },
+          matched: this.countValue > 0,
+          visible: true,
+        },
+      ],
+      truncated: false,
+      origin: "http://fixture.test",
+    };
   }
   async elementHandle() {
     return { contentFrame: async () => this.frame, dispose: async () => undefined };
@@ -191,6 +212,35 @@ it("requires the supervisor proxy and never silently disables Chromium sandbox",
     }),
   );
   expect(closeBrowser).toHaveBeenCalled();
+});
+it("emits bounded hashed sanitized locator records on ordinary replay and failed actions", async () => {
+  const attempt = runtime([click]);
+  attempt.secrets.add("canary");
+  context.page.locator("submit").countValue = 2;
+  expect(await runBrowser(attempt)).toMatchObject({ outcome: "failed" });
+  for (const phase of ["before", "after"]) {
+    const artifact = artifacts.find(
+      (entry) => entry.path === `browser/steps/click-locator-0-${phase}.json`,
+    );
+    expect(artifact?.kind).toBe("locator-evidence");
+    const record = JSON.parse(artifact!.bytes.toString());
+    const { evidenceHash, ...payload } = record;
+    expect(record).toMatchObject({
+      stepId: "click",
+      phase,
+      cardinality: 2,
+      frameOrigin: "http://fixture.test",
+    });
+    expect(evidenceHash).toBe(semanticHash(payload));
+    expect(artifact!.bytes.toString()).not.toContain("canary");
+    expect(record.candidates[0].name).toBe("Submit [REDACTED]");
+  }
+  expect(events.find((event) => event.type === "step.finished")?.payload).toMatchObject({
+    evidencePaths: expect.arrayContaining([
+      "browser/steps/click-locator-0-before.json",
+      "browser/steps/click-locator-0-after.json",
+    ]),
+  });
 });
 it("fails ambiguous actions and skips the remaining required oracle", async () => {
   context.page.locator("submit").countValue = 2;

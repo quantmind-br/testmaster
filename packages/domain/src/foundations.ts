@@ -96,3 +96,79 @@ export function semanticHash(value: unknown, kind: "plan" | "config" | "json" = 
   }
   return sha256(canonicalJson(normalized));
 }
+export interface Proportion {
+  status: "measured" | "insufficientData";
+  successes: number;
+  n: number;
+  estimate: number | null;
+  lower: number | null;
+  upper: number | null;
+}
+export function wilson(successes: number, n: number): Proportion {
+  if (
+    !Number.isSafeInteger(n) ||
+    !Number.isSafeInteger(successes) ||
+    n < 0 ||
+    successes < 0 ||
+    successes > n
+  )
+    throw new RangeError("Expected integer counts with 0 <= successes <= n");
+  if (!n)
+    return { status: "insufficientData", successes, n, estimate: null, lower: null, upper: null };
+  const z = 1.96;
+  const p = successes / n;
+  const denominator = 1 + (z * z) / n;
+  const center = (p + (z * z) / (2 * n)) / denominator;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / denominator;
+  return {
+    status: "measured",
+    successes,
+    n,
+    estimate: p,
+    lower: Math.max(0, center - half),
+    upper: Math.min(1, center + half),
+  };
+}
+export interface FlakeCounts {
+  nPlanned: number;
+  nPass: number;
+  nFail: number;
+  nBlocked: number;
+  nCancelled: number;
+  nInconclusive: number;
+}
+export function flakeStatistics(counts: FlakeCounts) {
+  for (const value of Object.values(counts))
+    if (!Number.isSafeInteger(value) || value < 0)
+      throw new RangeError("Expected nonnegative integer counts");
+  const observed =
+    counts.nPass + counts.nFail + counts.nBlocked + counts.nCancelled + counts.nInconclusive;
+  if (observed > counts.nPlanned) throw new RangeError("Observed counts exceed planned samples");
+  const nValid = counts.nPass + counts.nFail;
+  const interval = wilson(counts.nFail, nValid);
+  const classification =
+    nValid < 2
+      ? ("insufficient_data" as const)
+      : counts.nPass && counts.nFail
+        ? ("suspected_flaky" as const)
+        : counts.nFail
+          ? ("deterministic_failure" as const)
+          : ("passing_observed" as const);
+  return {
+    counts: { ...counts, nValid, nInFlight: counts.nPlanned - observed },
+    failureRate: interval.estimate,
+    wilson95: nValid ? { low: interval.lower!, high: interval.upper! } : null,
+    zeroFailureUpper95: nValid && counts.nFail === 0 ? 1 - 0.05 ** (1 / nValid) : null,
+    classification,
+    limitations: [
+      ...(nValid < 2 ? ["Insufficient valid samples for classification"] : []),
+      ...(observed > nValid
+        ? ["Failure estimate is conditional on valid pass/fail observations"]
+        : []),
+      "Sample independence requires separate evidence; repeated observations can be correlated",
+      ...(classification === "suspected_flaky"
+        ? ["Independent intermittent-cause evidence is required for confirmed flakiness"]
+        : []),
+    ],
+  };
+}

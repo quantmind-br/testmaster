@@ -97,11 +97,11 @@ describe("CLI machine output and offline authoring", () => {
     expect(await readdir(root)).toEqual(["plan.json"]);
   });
   it("does not turn future capabilities into success even in dry-run", async () => {
-    const result = await invoke(["--json", "heal", "propose", "--dry-run"]);
+    const result = await invoke(["--json", "schedule", "create", "--dry-run"]);
     expect(result.exit).toBe(8);
     expect(result.document.error).toMatchObject({
       code: "CAPABILITY_UNAVAILABLE",
-      details: { capability: "healing", milestone: "M3" },
+      details: { capability: "schedules", milestone: "M4" },
     });
   });
   it("rejects inline secret argv without echoing the secret", async () => {

@@ -518,6 +518,57 @@ export class TestsService {
   }
 }
 
+/** Transactional CAS shared by authoring and verified healing; no authorization bypass. */
+export function promoteRevisionCas(
+  ctx: ServiceContext,
+  revision: Stored<TestRevision>,
+  current: Stored<TestCase>,
+  expectedVersion: number,
+): Stored<TestCase> {
+  if (revision.origin === "healed") {
+    const proposal = allEntities(ctx, "HealingProposal").find(
+      (value) => value.candidateRevisionId === revision.id,
+    );
+    if (
+      !proposal ||
+      proposal.status !== "approved" ||
+      !proposal.verificationRunId ||
+      current.activeRevisionId !== proposal.baseRevisionId
+    )
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Healing promotion requires approved verification and unchanged base",
+      );
+    const verification = requireEntity(ctx, "Run", String(proposal.verificationRunId));
+    const failed = requireEntity(ctx, "Run", String(proposal.failedRunId));
+    if (
+      verification.phase !== "completed" ||
+      verification.outcome !== "passed" ||
+      verification.gate !== "passed" ||
+      verification.revisionId !== revision.id ||
+      verification.origin !== "verification" ||
+      verification.mode !== "replay" ||
+      verification.environmentRevisionId !== failed.environmentRevisionId
+    )
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Healing promotion requires its exact passing verification",
+      );
+    const cell = failed.matrixCell as Record<string, unknown>;
+    if (proposal.approvalMode === "manual")
+      ctx.authorizeNamed(
+        "approve",
+        "HealingProposal",
+        current.projectId,
+        String(cell.environmentId),
+      );
+    else ctx.authorize("X", current.projectId);
+  } else ctx.authorize("W", current.projectId);
+  expected(current, expectedVersion);
+  const next = { ...current, activeRevisionId: revision.id, version: expectedVersion + 1 };
+  ctx.entities.update("TestCase", ctx.workspaceId, current.id, expectedVersion, next);
+  return next;
+}
 export class RevisionsService {
   constructor(readonly ctx: ServiceContext) {}
   create(testId: string, input: ExecutablePlan, parentId?: string): Stored<TestRevision> {
@@ -579,6 +630,17 @@ export class RevisionsService {
       active(project(this.ctx, current.projectId));
       active(current);
       expected(current, expectedVersion);
+      const healing = allEntities(this.ctx, "HealingProposal").find(
+        (proposal) => proposal.candidateRevisionId === id,
+      );
+      if (revision.origin === "healed" || healing) {
+        if (!healing || healing.status !== "verified" || current.activeRevisionId !== id)
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Healing candidates require bound passing verification and base CAS",
+          );
+        return current;
+      }
       if (
         (revision.extensions as Record<string, unknown> | undefined)?.[
           "testmaster:verificationRequired"
@@ -595,9 +657,7 @@ export class RevisionsService {
           "PRECONDITION_FAILED",
           "Generated candidate requires a passing deterministic replay before promotion",
         );
-      const next = { ...current, activeRevisionId: id, version: expectedVersion + 1 };
-      this.ctx.entities.update("TestCase", this.ctx.workspaceId, current.id, expectedVersion, next);
-      return next;
+      return promoteRevisionCas(this.ctx, revision, current, expectedVersion);
     });
   }
 }

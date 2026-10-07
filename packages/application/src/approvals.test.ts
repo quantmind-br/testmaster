@@ -146,7 +146,9 @@ describe("bound production approvals", () => {
       "POLICY_DENIED",
     );
     const plan = riskyPlan();
-    plan.name = "Changed request body";
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Missing request");
+    request.input.body = { kind: "json", value: { literal: { amount: 999 } } };
     const candidate = new RevisionsService(ctx).create(test.id, plan, run.revisionId);
     code(() => approvals.verify({ ...run, revisionId: candidate.id }, test, env), "POLICY_DENIED");
     const updated = new EnvironmentsService(ctx).update(
@@ -164,6 +166,47 @@ describe("bound production approvals", () => {
       "POLICY_DENIED",
     );
     expect(approvals.verify(run, test, env)).not.toBeNull();
+  });
+  it("refuses changed effective limits without consuming the approval", async () => {
+    const { approvals, input, run, test, env } = await setup();
+    const approval = approvals.create(input);
+    code(
+      () => approvals.verify({ ...run, matrixCell: { limits: { timeoutMs: 1 } } }, test, env),
+      "PRECONDITION_FAILED",
+    );
+    expect(approvals.get(approval.id).revokedAt).toBeNull();
+    expect(approvals.verify(run, test, env)?.id).toBe(approval.id);
+  });
+  it("refuses credential rotation after approval without consuming it", async () => {
+    const { ctx, approvals, input, run, test, env } = await setup();
+    const id = uuidV7IdGenerator.next("sec");
+    const secret = {
+      id,
+      workspaceId: ctx.workspaceId,
+      version: 1,
+      createdAt: new Date().toISOString(),
+      provider: "vault",
+      locator: "api",
+      secretVersion: 1,
+      allowedOrigins: ["https://example.com"],
+    };
+    ctx.entities.insert("SecretReference", secret);
+    const plan = riskyPlan();
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Missing request");
+    request.input.headers = { Authorization: { secretRef: id } };
+    const revision = new RevisionsService(ctx).create(test.id, plan, run.revisionId);
+    const approval = approvals.create({ ...input, revisionHash: String(revision.contentHash) });
+    ctx.entities.update("SecretReference", ctx.workspaceId, id, 1, {
+      ...secret,
+      version: 2,
+      secretVersion: 2,
+    });
+    code(
+      () => approvals.verify({ ...run, revisionId: revision.id }, test, env),
+      "PRECONDITION_FAILED",
+    );
+    expect(approvals.get(approval.id).revokedAt).toBeNull();
   });
   it("requires complete origin and action scopes and supports explicit revocation", async () => {
     const { approvals, run, test, env, input } = await setup();

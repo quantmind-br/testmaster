@@ -54,6 +54,30 @@ an AbortSignal and removes incomplete staging on failure/cancellation; nested ar
 rejected by both extension and magic, never recursively unpacked.
 
 
+## Private relocatable runtime distribution
+
+After building the CLI and freezing the runner image lock, run
+`node tools/dist/distribution/package.js --out NEW_PRIVATE_DIRECTORY`. The output contains
+`manifest.json`, a deterministic `runtime.tar.gz`, and ordered image archives under
+`images/<name>.tar.gz.part-0000` (each part is at most 1 GiB). The manifest records source
+commit, file hashes, production dependency/license inventory, image-lock hash and full/part
+archive hashes. Packaging saves both locked image IDs; it does not rebuild images.
+
+Distribute the manifest SHA-256 through a separate trusted pinned channel. Installation is
+`node tools/dist/distribution/install.js --manifest PATH --manifest-sha256 HEX --dest NEW_DIRECTORY`.
+The destination must not exist and is created with mode `0700`; installation rejects unsafe
+tar paths, escaping symlinks, hardlinks/devices, archive/hash mismatches and mismatched Docker
+image IDs. It executes no package lifecycle scripts. Node 24 and hardened Docker remain host
+prerequisites. The installer verifies all image archives before loading either image.
+
+The runtime preserves monorepo-relative lookups for contract schemas/OpenAPI, both SQL migration
+trees, image lock/seccomp profile, managed agent skill content and the runner harness. Source,
+tests, source maps, declarations, private configuration and historical results are not shipped.
+Dependency license inventory is not license approval; public distribution remains blocked while
+the repository is `UNLICENSED`. A clean extracted-runtime HTTP smoke is required separately from
+packaging; successful archive creation alone is not execution evidence.
+
+
 ## Conventions
 
 - Code, identifiers, comments and commit messages in English; Conventional Commits.
@@ -283,6 +307,24 @@ JSON pointer) next to its handle but cites only handles.
 selected generated revisions and preserves retained proposals. Edits are CAS and return a diff on
 conflict. J02/J03 live journeys record their exercised evidence in `validation/results/`.
 M3–M6 groups report their milestone rather than returning successful placeholders.
+
+M3 healing is an explicit separate workflow: `heal propose RUN [--deadline-ms N]`,
+`heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--wait]`, and
+`heal reject PROPOSAL --reason TEXT`. Proposals require a terminal failed declarative Run,
+an authorized structured-output provider and `execution_evidence` consent. Diagnosed product,
+contract or security failures abstain before model execution. Replacement patches cannot alter
+assertions (including nested frames), response predicates, dependencies, cleanup or time ceilings.
+Business-input changes require manual review; generic write permission does not grant approval.
+Approval admits a distinct strict replay verification. Only its passed outcome AND passed gate,
+plus an unchanged active base revision, promote the candidate. Original failures and evidence
+remain immutable; failed verification remains reviewable and never starts a healing loop.
+Automatic policy application additionally requires project extension
+`testmaster:healingPolicy: "apply"`, configured and frozen Run healing mode `apply`, matching
+policy hash, a non-production environment and uniquely proven locator/wait equivalence against
+a passing baseline. It records policy approval without a human reviewer. Missing evidence keeps
+the proposal manual. `test run --heal propose --wait` proposes only after observed failure;
+`CI=true` denies healing and retries. Controlled-provider journey results test these invariants,
+not live-model repair quality.
 
 `server start --port 7331` owns the foreground worker and publishes `/v1` plus `/mcp` only on
 `127.0.0.1`. The startup receipt reports the private token file, not its contents; `--print-token`

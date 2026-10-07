@@ -136,6 +136,120 @@
               "type": "null"
             }
           ]
+        },
+        "repositoryId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkoutSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "baseSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding": {
+          "anyOf": [
+            {
+              "const": "verified",
+              "type": "string"
+            },
+            {
+              "const": "unbound",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "runtimeIdentity": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "imageId",
+        "nodeVersion",
+        "playwrightVersion",
+        "browserName",
+        "browserVersion"
+      ],
+      "properties": {
+        "imageId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "nodeVersion": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "playwrightVersion": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "browserName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "browserVersion": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
@@ -231,6 +345,15 @@
         "minLength": 1,
         "maxLength": 200,
         "type": "string"
+      }
+    },
+    "inputFixtureHashes": {
+      "type": "object",
+      "patternProperties": {
+        "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
       }
     },
     "imageDigest": {

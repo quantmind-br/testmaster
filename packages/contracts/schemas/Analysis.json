@@ -5,12 +5,16 @@
     "id",
     "runId",
     "snapshotId",
+    "parentId",
+    "source",
+    "affectedRequirementIds",
     "facts",
     "hypotheses",
     "failureKind",
     "confidence",
     "modelCallId",
-    "limitations"
+    "limitations",
+    "recommendedAction"
   ],
   "properties": {
     "id": {
@@ -35,8 +39,45 @@
       "type": "string"
     },
     "snapshotId": {
-      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "anyOf": [
+        {
+          "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "pattern": "^ana_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "anyOf": [
+        {
+          "const": "rules",
+          "type": "string"
+        },
+        {
+          "const": "model",
+          "type": "string"
+        }
+      ]
+    },
+    "affectedRequirementIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
     },
     "facts": {
       "type": "array",
@@ -57,6 +98,18 @@
             "items": {
               "additionalProperties": false,
               "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ]
+              },
               "type": "object",
               "properties": {
                 "artifactId": {
@@ -95,6 +148,23 @@
                 "contentHash": {
                   "pattern": "^[0-9a-f]{64}$",
                   "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
                 }
               }
             }
@@ -124,6 +194,18 @@
             "items": {
               "additionalProperties": false,
               "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ]
+              },
               "type": "object",
               "properties": {
                 "artifactId": {
@@ -162,6 +244,23 @@
                 "contentHash": {
                   "pattern": "^[0-9a-f]{64}$",
                   "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
                 }
               }
             }
@@ -171,6 +270,18 @@
             "items": {
               "additionalProperties": false,
               "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ]
+              },
               "type": "object",
               "properties": {
                 "artifactId": {
@@ -209,6 +320,23 @@
                 "contentHash": {
                   "pattern": "^[0-9a-f]{64}$",
                   "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
                 }
               }
             }
@@ -284,12 +412,44 @@
       }
     },
     "recommendedAction": {
-      "maxLength": 8000,
-      "type": "string"
+      "anyOf": [
+        {
+          "const": "fix_product",
+          "type": "string"
+        },
+        {
+          "const": "fix_test",
+          "type": "string"
+        },
+        {
+          "const": "fix_environment",
+          "type": "string"
+        },
+        {
+          "const": "review_contract",
+          "type": "string"
+        },
+        {
+          "const": "collect_more_evidence",
+          "type": "string"
+        }
+      ]
     },
     "fixTarget": {
       "additionalProperties": false,
       "minProperties": 1,
+      "dependentRequired": {
+        "attemptId": [
+          "runId"
+        ],
+        "stepId": [
+          "runId",
+          "attemptId"
+        ],
+        "observationSeq": [
+          "runId"
+        ]
+      },
       "type": "object",
       "properties": {
         "artifactId": {
@@ -328,6 +488,23 @@
         "contentHash": {
           "pattern": "^[0-9a-f]{64}$",
           "type": "string"
+        },
+        "runId": {
+          "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "stepId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "observationSeq": {
+          "minimum": 0,
+          "type": "integer"
         }
       }
     },

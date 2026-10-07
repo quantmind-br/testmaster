@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Locator as LocatorSpec, type PlanStep, validate } from "@testmaster/contracts";
+import { semanticHash } from "@testmaster/domain";
 import {
   type Browser,
   type BrowserContext,
@@ -621,6 +622,218 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     }
     if (violation) throw violation;
   }
+  type LocatorTransition = {
+    elapsedMs: number;
+    attached: boolean;
+    visible: boolean;
+    hidden: boolean;
+  };
+  function stepLocators(step: PlanStep): LocatorSpec[] {
+    if (step.operation === "drag") return [step.input.source, step.input.destination];
+    if (step.operation === "download") return [step.input.trigger.input.locator];
+    return "locator" in step.input ? [step.input.locator] : [];
+  }
+  async function locatorEvidence(
+    step: PlanStep,
+    spec: LocatorSpec,
+    index: number,
+    phase: "before" | "after",
+    transitions: LocatorTransition[],
+    observationComplete = true,
+  ): Promise<void> {
+    try {
+      const selected = await locate(spec, 100);
+      const observed = await selected.evaluateAll(
+        (matches, testIdAttributes) => {
+          const doc = matches[0]?.ownerDocument ?? document;
+          const all: Element[] = [];
+          const walker = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_ELEMENT);
+          all.push(doc.documentElement);
+          while (all.length <= 100 && walker.nextNode()) all.push(walker.currentNode as Element);
+          const matched = new Set(matches);
+          const candidates = all.slice(0, 100).map((node) => {
+            const tag = node.tagName.toLowerCase();
+            const type = (node.getAttribute("type") ?? "").slice(0, 200);
+            const sensitive =
+              !!node.closest("[data-sensitive], [autocomplete*=password]") || type === "password";
+            const attributes: Record<string, string> = {};
+            if (!sensitive)
+              for (const key of [
+                "id",
+                "name",
+                "autocomplete",
+                "aria-label",
+                "aria-haspopup",
+                "placeholder",
+                "data-semantic",
+                ...testIdAttributes,
+              ]) {
+                if (key === "value" || /token|secret|password|authorization|cookie|^on/iu.test(key))
+                  continue;
+                const value = node.getAttribute(key);
+                if (value !== null && value.length <= 200) attributes[key] = value;
+              }
+            let role = (node.getAttribute("role") ?? "").slice(0, 200);
+            if (!role)
+              role =
+                tag === "button"
+                  ? "button"
+                  : tag === "a" && node.hasAttribute("href")
+                    ? "link"
+                    : tag === "select"
+                      ? "combobox"
+                      : tag === "textarea"
+                        ? "textbox"
+                        : tag === "input"
+                          ? type === "checkbox"
+                            ? "checkbox"
+                            : type === "radio"
+                              ? "radio"
+                              : ["button", "submit", "reset"].includes(type)
+                                ? "button"
+                                : type === "password"
+                                  ? ""
+                                  : "textbox"
+                          : "";
+            const sanitizedText = (element: Element) => {
+              const textWalker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+              let text = "";
+              let visited = 0;
+              while (visited++ < 100 && text.length < 200 && textWalker.nextNode()) {
+                const node = textWalker.currentNode;
+                if (
+                  !node.parentElement?.closest(
+                    "input,textarea,[data-sensitive],[autocomplete*=password],script,style",
+                  )
+                )
+                  text += node.textContent ?? "";
+              }
+              return text.slice(0, 200);
+            };
+            const labels = "labels" in node ? (node as HTMLInputElement).labels : null;
+            const labelled = (node.getAttribute("aria-labelledby") ?? "")
+              .slice(0, 200)
+              .split(/\s+/u)
+              .slice(0, 10)
+              .map((id) => doc.getElementById(id))
+              .filter((label) => label && !label.closest("[data-sensitive]"));
+            const name = sensitive
+              ? ""
+              : (node.getAttribute("aria-label") ??
+                (labelled.length
+                  ? labelled.map((label) => (label ? sanitizedText(label) : "")).join(" ")
+                  : labels?.length
+                    ? Array.from(labels)
+                        .slice(0, 10)
+                        .filter((label) => !label.closest("[data-sensitive]"))
+                        .map(sanitizedText)
+                        .join(" ")
+                    : ["button", "a", "option"].includes(tag)
+                      ? sanitizedText(node)
+                      : ""));
+            const style = getComputedStyle(node);
+            const rect = node.getBoundingClientRect();
+            const visible =
+              node.checkVisibility({ visibilityProperty: true }) &&
+              rect.width > 0 &&
+              rect.height > 0 &&
+              style.visibility !== "hidden" &&
+              style.visibility !== "collapse";
+            return {
+              role,
+              name: name.trim().replace(/\s+/gu, " ").slice(0, 200),
+              tag,
+              type,
+              attributes,
+              matched: matched.has(node as HTMLElement),
+              visible,
+            };
+          });
+          return {
+            cardinality: matches.length,
+            candidates,
+            truncated: all.length > 100 || testIdAttributes.length > 16,
+            origin: doc.location.origin,
+          };
+        },
+        (runtime.input.browser?.testIdAttributes ?? ["data-testid"]).slice(0, 17),
+      );
+      const candidates = observed.candidates.map((element) => {
+        const safe = {
+          ...element,
+          role: runtime.scrub(element.role),
+          name: runtime.scrub(element.name),
+          type: runtime.scrub(element.type),
+          attributes: Object.fromEntries(
+            Object.entries(element.attributes).map(([key, value]) => [key, runtime.scrub(value)]),
+          ),
+        };
+        const attributes = Object.fromEntries(
+          ["name", "autocomplete", "aria-haspopup", "data-semantic"]
+            .filter((key) => safe.attributes[key] !== undefined)
+            .map((key) => [key, safe.attributes[key]]),
+        );
+        return {
+          ...safe,
+          fingerprint: semanticHash({
+            role: safe.role,
+            name: safe.name,
+            tag: safe.tag,
+            type: safe.type,
+            attributes,
+          }),
+        };
+      });
+      const state =
+        step.operation === "waitFor" && "locator" in step.input
+          ? {
+              requested: step.input.state,
+              deadlineMs: Math.min(
+                step.input.deadlineMs,
+                step.timeoutMs ?? runtime.input.stepTimeoutMs ?? 30_000,
+              ),
+              transitions: transitions.slice(),
+            }
+          : null;
+      const payload = {
+        schemaVersion: "1.0.0",
+        stepId: step.id,
+        phase,
+        frameOrigin: runtime.scrub(observed.origin),
+        locator: JSON.parse(runtime.scrub(JSON.stringify(spec))) as LocatorSpec,
+        cardinality: observed.cardinality,
+        candidates,
+        truncated: observed.truncated || !observationComplete,
+        state,
+      };
+      const bytes = Buffer.from(
+        JSON.stringify({ ...payload, evidenceHash: semanticHash(payload) }),
+      );
+      if (bytes.byteLength > 262144)
+        throw new RuntimeError(
+          "artifact_limit_exceeded",
+          "Locator evidence byte limit",
+          "inconclusive",
+        );
+      await runtime.artifact(
+        `browser/steps/${step.id}-locator-${index}-${phase}.json`,
+        "locator-evidence",
+        "application/json",
+        bytes,
+      );
+    } catch (error) {
+      await runtime
+        .emit("log", {
+          level: "warn",
+          message: runtime
+            .scrub(
+              `Locator evidence unavailable: ${error instanceof Error ? error.message : String(error)}`,
+            )
+            .slice(0, 16384),
+        })
+        .catch(() => undefined);
+    }
+  }
   async function evidence(step: PlanStep, phase: "before" | "after"): Promise<void> {
     if (page.isClosed()) return;
     try {
@@ -815,10 +1028,75 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     activeMutationAllowed = (runtime.input.agent?.mutationActions ?? []).some(
       (action) => JSON.stringify({ ...action, id: selected.id }) === JSON.stringify(selected),
     );
+    const locators = stepLocators(selected);
+    const transitions: LocatorTransition[] = [];
+    let waitStarted = performance.now();
+    let sampling = false;
+    let sampler: Promise<void> | undefined;
+    let observationComplete = true;
+    const sample = async () => {
+      if (selected.operation !== "waitFor" || !("locator" in selected.input)) return;
+      try {
+        const locator = await locate(selected.input.locator, 100);
+        const state = await locator.evaluateAll((nodes) => ({
+          cardinality: nodes.length,
+          attached: nodes.length > 0,
+          visible: nodes.some((node) => {
+            const style = getComputedStyle(node);
+            const rect = node.getBoundingClientRect();
+            return (
+              node.checkVisibility({ visibilityProperty: true }) &&
+              style.visibility !== "hidden" &&
+              style.visibility !== "collapse" &&
+              rect.width > 0 &&
+              rect.height > 0
+            );
+          }),
+        }));
+        if (state.cardinality > 1) observationComplete = false;
+        const previous = transitions.at(-1);
+        if (
+          !previous ||
+          previous.attached !== state.attached ||
+          previous.visible !== state.visible
+        ) {
+          if (transitions.length >= 128) observationComplete = false;
+          else
+            transitions.push({
+              elapsedMs: Math.round(performance.now() - waitStarted),
+              attached: state.attached,
+              visible: state.visible,
+              hidden: !state.visible,
+            });
+        }
+      } catch {
+        observationComplete = false;
+      }
+    };
+    await sample();
+    for (const [index, locator] of locators.entries())
+      await locatorEvidence(selected, locator, index, "before", transitions, observationComplete);
     await evidence(selected, "before");
+    waitStarted = performance.now();
+    transitions.length = 0;
+    await sample();
+    if (selected.operation === "waitFor" && "locator" in selected.input) {
+      sampling = true;
+      sampler = (async () => {
+        while (sampling) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 50));
+          if (sampling) await sample();
+        }
+      })();
+    }
     try {
       await perform(selected);
     } finally {
+      sampling = false;
+      await sampler;
+      await sample();
+      for (const [index, locator] of locators.entries())
+        await locatorEvidence(selected, locator, index, "after", transitions, observationComplete);
       await evidence(selected, "after");
       activeAgentStep = undefined;
       activeMutationAllowed = false;

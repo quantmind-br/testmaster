@@ -1,3 +1,7 @@
+import { execFileSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { semanticHash } from "@testmaster/domain";
 import type { EntityDocument } from "@testmaster/persistence";
 import { expect, it } from "vitest";
@@ -5,6 +9,7 @@ import {
   type AdmissionSnapshot,
   admissionInputHash,
   reproduction,
+  resolveRepositoryProvenance,
   verifyAdmission,
 } from "./provenance.js";
 
@@ -31,6 +36,17 @@ it("refuses mutated admitted inputs and capabilities without changing replay deg
     seed: 12,
     policyHash: effectiveConfig.policyHash,
     limitations: ["mutable-external-target", "remote-model-snapshot-unavailable"],
+    repository: {
+      repositoryId: null,
+      commitSha: null,
+      checkoutSha: null,
+      baseSha: null,
+      dirtyHash: null,
+      deploymentId: null,
+      binding: "unbound",
+      limitations: ["repository-commit-unavailable"],
+    },
+    runtimeIdentity: null,
     inputHash: admissionInputHash(cell),
   } as AdmissionSnapshot;
   cell.admissionSnapshot = snapshot;
@@ -56,4 +72,63 @@ it("refuses mutated admitted inputs and capabilities without changing replay deg
     degree: "fresh-llm-regeneration",
     limitations: expect.arrayContaining(["remote-model-snapshot-unavailable"]),
   });
+});
+it("keeps absent repositories unbound and verifies checkout, dirty and ancestor claims against actual Git state", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-provenance-"));
+  try {
+    expect(resolveRepositoryProvenance(root, { commitSha: "a".repeat(40) })).toMatchObject({
+      binding: "unbound",
+      commitSha: null,
+      checkoutSha: null,
+    });
+    const git = (args: string[]) =>
+      execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], {
+        cwd: root,
+        encoding: "utf8",
+      });
+    git(["init", "--quiet"]);
+    git(["config", "user.email", "test@example.invalid"]);
+    git(["config", "user.name", "Test"]);
+    await writeFile(join(root, "fixture.txt"), "first\n");
+    git(["add", "fixture.txt"]);
+    git(["commit", "--quiet", "-m", "first"]);
+    const first = git(["rev-parse", "HEAD"]).trim();
+    const actual = resolveRepositoryProvenance(root);
+    expect(
+      resolveRepositoryProvenance(root, {
+        commitSha: first,
+        checkoutSha: first,
+        repositoryId: actual.repositoryId,
+        dirtyHash: actual.dirtyHash,
+      }),
+    ).toMatchObject({ binding: "verified", commitSha: first, checkoutSha: first });
+    expect(() => resolveRepositoryProvenance(root, { checkoutSha: "a".repeat(40) })).toThrow(
+      expect.objectContaining({ code: "PRECONDITION_FAILED" }),
+    );
+    await writeFile(join(root, "fixture.txt"), "second\n");
+    expect(resolveRepositoryProvenance(root).dirtyHash).not.toBe(actual.dirtyHash);
+    git(["add", "fixture.txt"]);
+    git(["commit", "--quiet", "-m", "second"]);
+    const second = git(["rev-parse", "HEAD"]).trim();
+    expect(
+      resolveRepositoryProvenance(root, { commitSha: first, checkoutSha: second }),
+    ).toMatchObject({
+      binding: "verified",
+      commitSha: first,
+      checkoutSha: second,
+      limitations: ["synthetic-merge-checkout-differs-from-assessed-head"],
+    });
+    expect(() => resolveRepositoryProvenance(root, { commitSha: "a".repeat(40) })).toThrow(
+      expect.objectContaining({ code: "PRECONDITION_FAILED" }),
+    );
+    await writeFile(join(root, ".gitattributes"), "fixture.txt filter=hostile\n");
+    git(["config", "filter.hostile.clean", "touch provenance-filter-escaped"]);
+    git(["config", "filter.hostile.process", "touch provenance-filter-escaped"]);
+    git(["config", "filter.hostile.required", "true"]);
+    await writeFile(join(root, "fixture.txt"), "dirty filter input\n");
+    expect(resolveRepositoryProvenance(root).dirtyHash).not.toBeNull();
+    expect(() => execFileSync("test", ["-e", join(root, "provenance-filter-escaped")])).toThrow();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

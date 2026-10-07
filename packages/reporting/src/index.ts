@@ -1,4 +1,5 @@
 import type {
+  Analysis,
   ArtifactManifest,
   Attempt,
   BatchRun,
@@ -13,7 +14,7 @@ import type {
 
 export { coverageMetrics, executionMetrics, ratioMetric } from "./metrics.js";
 
-export interface ReportRun {
+interface ReportRunCommon {
   run: Pick<
     Run,
     "id" | "workspaceId" | "testId" | "revisionId" | "environmentRevisionId" | "mode" | "matrixCell"
@@ -22,12 +23,11 @@ export interface ReportRun {
   title: string;
   projectId: string;
   environment: string;
-  snapshot: BundleMeta;
-  manifest: ArtifactManifest;
   steps: readonly StepResult[];
   attempts: readonly Attempt[];
   durationMs: number | null;
   timings?: RuntimeTiming;
+  analysis?: Analysis;
   reproduction?: {
     degree: "evidence-replay";
     executionDegree: "strict-execution-replay" | "fresh-llm-regeneration";
@@ -41,11 +41,32 @@ export interface ReportRun {
     currentEnvironmentRevisionId: string;
   };
 }
+export type ReportRun = ReportRunCommon &
+  (
+    | {
+        evidenceState: "committed";
+        snapshot: BundleMeta;
+        manifest: ArtifactManifest;
+        evidenceErrors?: never;
+      }
+    | {
+        evidenceState: "unavailable";
+        snapshot: null;
+        manifest: null;
+        evidenceErrors: readonly string[];
+      }
+  );
 export interface ReportSnapshot {
   schemaVersion: "1.0.0";
   committedAt: string;
   snapshotId: string;
   title: string;
+  provenance?: {
+    assessedSha: string | null;
+    checkoutSha: string | null;
+    binding: "verified" | "unbound";
+    targetBinding: "local-checkout" | "unbound";
+  };
   runs: readonly ReportRun[];
   batch?: BatchRun;
   coverage?: CoverageMetrics;
@@ -113,19 +134,25 @@ function validateSnapshot(snapshot: ReportSnapshot): void {
     seen.add(item.run.id);
     if (
       item.result.runId !== item.run.id ||
-      item.snapshot.runId !== item.run.id ||
-      item.manifest.runId !== item.run.id ||
-      item.snapshot.revisionId !== item.run.revisionId ||
-      item.manifest.revisionId !== item.run.revisionId ||
-      item.manifest.snapshotId !== item.snapshot.snapshotId ||
-      item.manifest.attemptId !== item.snapshot.attemptId
+      (item.evidenceState === "committed" &&
+        (item.snapshot.runId !== item.run.id ||
+          item.manifest.runId !== item.run.id ||
+          item.snapshot.revisionId !== item.run.revisionId ||
+          item.manifest.revisionId !== item.run.revisionId ||
+          item.manifest.snapshotId !== item.snapshot.snapshotId ||
+          item.manifest.attemptId !== item.snapshot.attemptId ||
+          item.snapshot.workspaceId !== item.run.workspaceId ||
+          item.manifest.workspaceId !== item.run.workspaceId))
     )
       throw new Error("Report snapshot binding mismatch");
     if (
-      item.snapshot.workspaceId !== item.run.workspaceId ||
-      item.manifest.workspaceId !== item.run.workspaceId
+      item.evidenceState === "unavailable" &&
+      (item.snapshot !== null ||
+        item.manifest !== null ||
+        !item.evidenceErrors.length ||
+        snapshot.completeness.state !== "partial")
     )
-      throw new Error("Report workspace binding mismatch");
+      throw new Error("Unavailable report evidence requires partial completeness and errors");
     if (item.durationMs !== null && (!Number.isFinite(item.durationMs) || item.durationMs < 0))
       throw new Error("Invalid report duration");
   }
@@ -141,6 +168,7 @@ function validateSnapshot(snapshot: ReportSnapshot): void {
     throw new Error("Invalid selection counts");
 }
 function missing(item: ReportRun): string[] {
+  if (item.evidenceState === "unavailable") return [...item.evidenceErrors];
   return item.manifest.entries
     .filter((entry) => entry.state !== "available")
     .map(
@@ -162,6 +190,9 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
     `Completeness: ${snapshot.completeness.state}`,
     `Selection: ${snapshot.selection.requested}; not dispatched: ${snapshot.selection.notDispatched.length}; excluded: ${snapshot.selection.excluded.length}`,
     ...snapshot.completeness.reasons.map((reason) => `- Incomplete: ${markdown(reason)}`),
+    ...(snapshot.provenance
+      ? [`Source binding: ${markdown(JSON.stringify(snapshot.provenance))}`]
+      : []),
     ...Object.entries(snapshot.coverage ?? {}).map(
       ([name, metric]) =>
         `Coverage ${name}: ${metric.denominatorState === "unknown" ? "unknown" : metric.value === null ? metric.state : `${metric.numerator}/${metric.denominator} (${(metric.value * 100).toFixed(2)}%)`}; ${metric.scope}`,
@@ -266,8 +297,8 @@ export function exportJunit(snapshot: ReportSnapshot): string {
       revisionId: item.run.revisionId,
       environment: item.environment,
       mode: item.run.mode,
-      snapshot: item.snapshot.snapshotId,
-      attemptId: item.snapshot.attemptId,
+      snapshot: item.snapshot?.snapshotId ?? "unavailable",
+      attemptId: item.snapshot?.attemptId ?? "unavailable",
       outcome: item.result.outcome ?? "nonterminal",
       businessOutcome: item.result.outcome ?? "nonterminal",
       firstAttemptOutcome: item.result.firstAttemptOutcome ?? "unknown",
@@ -340,7 +371,7 @@ export function exportAllure(snapshot: ReportSnapshot): Record<string, string> {
       ],
       parameters: [
         { name: "revisionId", value: item.run.revisionId },
-        { name: "snapshot", value: item.snapshot.snapshotId },
+        { name: "snapshot", value: item.snapshot?.snapshotId ?? "unavailable" },
         { name: "environment", value: item.environment },
         { name: "mode", value: item.run.mode },
         { name: "businessOutcome", value: item.result.outcome },

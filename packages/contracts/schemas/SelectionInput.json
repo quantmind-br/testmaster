@@ -1,0 +1,178 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "projectId",
+    "environmentId"
+  ],
+  "properties": {
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "environmentId": {
+      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "testIds": {
+      "maxItems": 500,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "runIds": {
+      "maxItems": 500,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "all": {
+      "type": "boolean"
+    },
+    "diff": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "base": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "head": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "workingTree": {
+          "type": "boolean"
+        }
+      }
+    },
+    "reuseFromRunIds": {
+      "maxItems": 100,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "skipDependencies": {
+      "type": "boolean"
+    },
+    "quarantinePolicy": {
+      "anyOf": [
+        {
+          "const": "exclude",
+          "type": "string"
+        },
+        {
+          "const": "strict",
+          "type": "string"
+        }
+      ]
+    },
+    "allowEmpty": {
+      "type": "boolean"
+    },
+    "emptyReason": {
+      "minLength": 1,
+      "maxLength": 2000,
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "commitSha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deploymentId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dirtyHash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repositoryId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkoutSha": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "baseSha": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "expectedSelectionHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "targetUrl": {
+      "format": "uri",
+      "maxLength": 2048,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SelectionInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

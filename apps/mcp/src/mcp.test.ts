@@ -10,7 +10,7 @@ import { mcpToolCatalog, validateAgainstSchema } from "@testmaster/contracts";
 import { expect, it } from "vitest";
 import { createMcpServer } from "./server.js";
 
-it("SDK handshake advertises contract schemas, records protocol and refuses M3", async () => {
+it("SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "tm-mcp-"));
   const cwd = join(temporary, "repo");
   await mkdir(cwd);
@@ -51,13 +51,13 @@ it("SDK handshake advertises contract schemas, records protocol and refuses M3",
       expect(capabilities.isError).not.toBe(true);
       expect(capabilities.structuredContent?.protocolVersion).toBe("2025-11-25");
       const runId = "run_019bf434-20c0-7000-8000-000000000001";
-      const denied = await client.callTool({
+      const missing = await client.callTool({
         name: "testmaster_compare_runs",
         arguments: { left: runId, right: runId },
       });
-      expect(denied.isError).toBe(true);
-      expect(JSON.parse(String((denied.content as { text: string }[])[0]?.text))).toMatchObject({
-        error: { code: "CAPABILITY_UNAVAILABLE", details: { milestone: "M3" } },
+      expect(missing.isError).toBe(true);
+      expect(JSON.parse(String((missing.content as { text: string }[])[0]?.text))).toMatchObject({
+        error: { code: "NOT_FOUND" },
       });
     } finally {
       await client.close();

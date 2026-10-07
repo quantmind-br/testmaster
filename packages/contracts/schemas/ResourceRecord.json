@@ -112,6 +112,18 @@
         {
           "additionalProperties": false,
           "minProperties": 1,
+          "dependentRequired": {
+            "attemptId": [
+              "runId"
+            ],
+            "stepId": [
+              "runId",
+              "attemptId"
+            ],
+            "observationSeq": [
+              "runId"
+            ]
+          },
           "type": "object",
           "properties": {
             "artifactId": {
@@ -150,6 +162,23 @@
             "contentHash": {
               "pattern": "^[0-9a-f]{64}$",
               "type": "string"
+            },
+            "runId": {
+              "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "attemptId": {
+              "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "observationSeq": {
+              "minimum": 0,
+              "type": "integer"
             }
           }
         },

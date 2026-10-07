@@ -1,4 +1,5 @@
 export * from "./agent/index.js";
+export * from "./agent/locator-evidence.js";
 export * from "./code/index.js";
 export * from "./code-export/index.js";
 export * from "./code-import/index.js";

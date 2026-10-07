@@ -84,7 +84,9 @@ export function executionMetrics(snapshot: ReportSnapshot): ExecutionMetrics {
   const firstFailed = count((item) => first(item) === "failed");
   const firstPassed = count((item) => first(item) === "passed");
   const closed = runs.filter(
-    (item) => item.result.phase === "completed" && item.manifest.entries.length > 0,
+    (item) =>
+      item.result.phase === "completed" &&
+      (item.evidenceState === "unavailable" || item.manifest.entries.length > 0),
   );
   const stale = count((item) => item.freshness?.state === "stale");
   const rates: ExecutionMetrics["rates"] = {};
@@ -147,8 +149,11 @@ export function executionMetrics(snapshot: ReportSnapshot): ExecutionMetrics {
   );
   add(
     "artifactCompletenessRate",
-    closed.filter((item) => item.manifest.entries.every((entry) => entry.state === "available"))
-      .length,
+    closed.filter(
+      (item) =>
+        item.evidenceState === "committed" &&
+        item.manifest.entries.every((entry) => entry.state === "available"),
+    ).length,
     closed.length,
     "N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views",
   );

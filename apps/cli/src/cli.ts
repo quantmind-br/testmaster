@@ -6,10 +6,12 @@ import { approvalCommands } from "./approvals.js";
 import { artifactCommands } from "./artifacts.js";
 import { auditCommands } from "./audit.js";
 import { backupCommands } from "./backups.js";
+import { ciCommands } from "./ci.js";
 import { contractCommands } from "./contracts.js";
 import { databaseCommands } from "./database.js";
 import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
+import { healingCommands } from "./heal.js";
 import { mcpCommands } from "./mcp.js";
 import { planCommands } from "./plans.js";
 import { projectCommands } from "./projects.js";
@@ -61,6 +63,7 @@ export function createCli(runtime: Runtime): Command {
   databaseCommands(program, runtime);
   approvalCommands(program, runtime);
   agentCommands(program, runtime);
+  healingCommands(program, runtime);
   sourceCommands(program, runtime);
   discoveryCommands(program, runtime);
   requirementCommands(program, runtime);
@@ -70,6 +73,7 @@ export function createCli(runtime: Runtime): Command {
   mcpCommands(program, runtime);
   serverCommands(program, runtime);
   resourceCommands(program, runtime);
+  ciCommands(program, runtime);
   unavailableCommands(program, runtime);
   return program;
 }

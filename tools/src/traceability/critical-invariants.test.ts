@@ -69,3 +69,43 @@ it("assertion invariance allows action change but refuses expected-value rewrite
     "cannot change deterministic assertions",
   );
 });
+it("recursive assertion invariance refuses frame relocation and changed response readiness status", () => {
+  const assertion = {
+    id: "business",
+    kind: "assertion",
+    operation: "assert",
+    description: "Persisted business value",
+    input: { locator: { by: "testId", value: "saved" } },
+    expectation: { predicate: "textEquals", value: { literal: "Saved" } },
+  };
+  const base = {
+    steps: [
+      {
+        id: "frame",
+        kind: "action",
+        operation: "frame",
+        input: { locator: { by: "testId", value: "embedded" }, childSteps: [assertion] },
+      },
+      {
+        id: "ready",
+        kind: "action",
+        operation: "waitFor",
+        input: { response: { url: "/save", status: 200 }, deadlineMs: 3000 },
+      },
+    ],
+  } as ExecutablePlan;
+  const moved = structuredClone(base);
+  const frame = moved.steps[0]!;
+  if (frame.operation !== "frame") throw new Error("Expected frame");
+  moved.steps.push(...frame.input.childSteps);
+  frame.input.childSteps = [];
+  expect(() => preserveAssertions(base, moved)).toThrow("cannot change deterministic assertions");
+  const statusChange = structuredClone(base),
+    wait = statusChange.steps[1]!;
+  if (wait.operation !== "waitFor" || !("response" in wait.input))
+    throw new Error("Expected response wait");
+  wait.input.response.status = 500;
+  expect(() => preserveAssertions(base, statusChange)).toThrow(
+    "cannot change deterministic assertions",
+  );
+});

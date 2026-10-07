@@ -1,0 +1,128 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "failureKind",
+    "hypotheses",
+    "recommendedAction",
+    "fixTargetHandle",
+    "limitations"
+  ],
+  "properties": {
+    "failureKind": {
+      "anyOf": [
+        {
+          "const": "product_bug",
+          "type": "string"
+        },
+        {
+          "const": "test_fragility",
+          "type": "string"
+        },
+        {
+          "const": "environment",
+          "type": "string"
+        },
+        {
+          "const": "contract_violation",
+          "type": "string"
+        },
+        {
+          "const": "security_policy",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "hypotheses": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "supports",
+          "contradicts",
+          "confidence"
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "supports": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "pattern": "^E[1-9][0-9]{0,5}$",
+              "type": "string"
+            }
+          },
+          "contradicts": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "pattern": "^E[1-9][0-9]{0,5}$",
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "minimum": 0,
+            "maximum": 1,
+            "type": "number"
+          }
+        }
+      }
+    },
+    "recommendedAction": {
+      "anyOf": [
+        {
+          "const": "fix_product",
+          "type": "string"
+        },
+        {
+          "const": "fix_test",
+          "type": "string"
+        },
+        {
+          "const": "fix_environment",
+          "type": "string"
+        },
+        {
+          "const": "review_contract",
+          "type": "string"
+        },
+        {
+          "const": "collect_more_evidence",
+          "type": "string"
+        }
+      ]
+    },
+    "fixTargetHandle": {
+      "anyOf": [
+        {
+          "pattern": "^E[1-9][0-9]{0,5}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "limitations": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AIAnalysisOutput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

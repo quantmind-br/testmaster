@@ -34,13 +34,21 @@ it("sets and reads independent token quota through the authenticated API and den
       payload: { tokens: 234 },
     });
     expect(accepted.statusCode, accepted.body).toBe(200);
-    expect(accepted.json().data.tokenBudget).toEqual({ limit: 234, used: 0, remaining: 234 });
+    expect(accepted.json().data.lifetimeBudget.tokenBudget).toEqual({
+      limit: 234,
+      used: 0,
+      remaining: 234,
+    });
     const read = await server.inject({
       url: `/v1/usage?projectId=${identity.projectId}`,
       headers: { authorization: `Bearer ${reader.token}` },
     });
     expect(read.statusCode).toBe(200);
-    expect(read.json().data.tokenBudget).toEqual({ limit: 234, used: 0, remaining: 234 });
+    expect(read.json().data.lifetimeBudget.tokenBudget).toEqual({
+      limit: 234,
+      used: 0,
+      remaining: 234,
+    });
     const invalid = await server.inject({
       method: "POST",
       url: `/v1/projects/${identity.projectId}/budget`,

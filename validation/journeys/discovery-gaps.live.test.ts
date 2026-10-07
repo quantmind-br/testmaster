@@ -59,7 +59,7 @@ it("expected feature matrix distinguishes full partial and login-unreachable; se
           status: "unreachable",
           errors: ["login_required"],
         });
-        const beforeCalls = app.usage.get(projectId).calls.length;
+        const beforeCalls = app.usage.get({ projectId }).calls.length;
         const retry = await app.explore.start({
           projectId,
           environmentId: env.id,
@@ -71,7 +71,7 @@ it("expected feature matrix distinguishes full partial and login-unreachable; se
         });
         expect(retry.id).not.toBe(original.id);
         expect(app.explore.get(original.id)).toEqual(original);
-        expect(app.usage.get(projectId).calls.length - beforeCalls).toBe(1);
+        expect(app.usage.get({ projectId }).calls.length - beforeCalls).toBe(1);
         const retried = items(retry.perFeatureResults);
         for (const id of [login, partial, cart])
           expect(retried.find((r) => r.featureId === id)).toEqual(
@@ -237,7 +237,7 @@ it("live model receives each malicious channel without acquiring process network
         session.oracles.push({
           name: "injection-channel-boundaries",
           channels: channels.map((channel) => channel.channel),
-          modelCalls: app.usage.get(projectId).calls.length,
+          modelCalls: app.usage.get({ projectId }).calls.length,
         });
       } finally {
         app.close();

@@ -180,7 +180,9 @@ export const RunRequest = Obj({
       deploymentId: Type.Optional(Type.Union([Name, Type.Null()])),
       dirtyHash: Type.Optional(Type.Union([ContentDigest, Type.Null()])),
       repositoryId: Type.Optional(Type.Union([Name, Type.Null()])),
-      checkoutSha: Type.Optional(Type.Union([Type.String({ pattern: "^[0-9a-f]{40}$" }), Type.Null()])),
+      checkoutSha: Type.Optional(
+        Type.Union([Type.String({ pattern: "^[0-9a-f]{40}$" }), Type.Null()]),
+      ),
       baseSha: Type.Optional(Type.Union([Type.String({ pattern: "^[0-9a-f]{40}$" }), Type.Null()])),
     }),
   ),

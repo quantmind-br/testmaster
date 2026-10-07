@@ -6,6 +6,7 @@ import { semanticHash } from "@testmaster/domain";
 import {
   AuditRepository,
   type BackupManifest,
+  EntityRepository,
   OutboxRepository,
   PersistenceDatabase,
 } from "@testmaster/persistence";
@@ -49,6 +50,16 @@ export class BackupsService {
           backupId,
           expiresAt,
         );
+      for (const fixture of this.ctx.database.all(
+        "SELECT id FROM fixture_inputs WHERE workspace_id=?",
+        this.ctx.workspaceId,
+      )) {
+        this.ctx.database.run(
+          "INSERT INTO operational_state(key,value) VALUES(?,?)",
+          `retention:fixture-backup:${this.ctx.workspaceId}:${fixture.id}:${backupId}`,
+          expiresAt,
+        );
+      }
     });
     try {
       const vault = this.ctx.database.get(
@@ -84,9 +95,37 @@ export class BackupsService {
         "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%'",
       ),
     });
+    result.database.withTx(() => {
+      const restored = new EntityRepository(result.database);
+      for (const row of this.ctx.database.all<{ data_json: string }>(
+        "SELECT data_json FROM deletion_operations WHERE workspace_id=?",
+        this.ctx.workspaceId,
+      )) {
+        const operation = JSON.parse(row.data_json);
+        const previous = restored.get("DeletionOperation", this.ctx.workspaceId, operation.id);
+        if (!previous) restored.insert("DeletionOperation", operation);
+        else if (Number(previous.version) < Number(operation.version)) {
+          restored.update(
+            "DeletionOperation",
+            this.ctx.workspaceId,
+            operation.id,
+            Number(previous.version),
+            { ...operation, version: Number(previous.version) + 1 },
+          );
+        }
+      }
+    });
     try {
       try {
         await rename(join(destination, "evidence", "runs"), join(destination, "runs"));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      try {
+        await rename(
+          join(destination, "evidence", "fixture-inputs"),
+          join(destination, "fixture-inputs"),
+        );
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }

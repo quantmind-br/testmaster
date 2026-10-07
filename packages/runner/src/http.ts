@@ -248,9 +248,13 @@ export async function readAuthorizedArtifact(
     artifact.sizeBytes > limit
   )
     deny("Artifact size exceeds request limit");
-  const parts = artifact.path.split("/");
+  const containerRoot = "/run/testmaster/input/";
+  const relativePath = artifact.path.startsWith(containerRoot)
+    ? artifact.path.slice(containerRoot.length)
+    : artifact.path;
+  const parts = relativePath.split("/");
   if (
-    !artifact.path ||
+    !relativePath ||
     // biome-ignore lint/suspicious/noControlCharactersInRegex: Artifact paths reject every ASCII control.
     /[\u0000-\u001f\\:]/u.test(artifact.path) ||
     parts.some((part) => !part || part === "." || part === "..")

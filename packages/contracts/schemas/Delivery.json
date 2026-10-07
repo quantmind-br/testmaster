@@ -8,7 +8,15 @@
     "payloadHash",
     "attempts",
     "nextAttemptAt",
-    "state"
+    "state",
+    "checkName",
+    "subjectSha",
+    "reportHash",
+    "batchId",
+    "checkStatus",
+    "conclusion",
+    "externalId",
+    "lastError"
   ],
   "properties": {
     "id": {
@@ -70,6 +78,99 @@
         {
           "const": "dead_letter",
           "type": "string"
+        }
+      ]
+    },
+    "checkName": {
+      "anyOf": [
+        {
+          "const": "TestMaster / result",
+          "type": "string"
+        },
+        {
+          "const": "TestMaster / required-gate",
+          "type": "string"
+        }
+      ]
+    },
+    "subjectSha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "reportHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "batchId": {
+      "anyOf": [
+        {
+          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "checkStatus": {
+      "anyOf": [
+        {
+          "const": "in_progress",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "type": "string"
+        }
+      ]
+    },
+    "conclusion": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "success",
+              "type": "string"
+            },
+            {
+              "const": "failure",
+              "type": "string"
+            },
+            {
+              "const": "neutral",
+              "type": "string"
+            },
+            {
+              "const": "cancelled",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "externalId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lastError": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
         }
       ]
     },

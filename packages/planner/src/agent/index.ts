@@ -1,4 +1,5 @@
 import { ContractError, type ExecutablePlan, type PlanStep, validate } from "@testmaster/contracts";
+import { semanticHash } from "@testmaster/domain";
 
 export interface BrowserObservation {
   url: string;
@@ -62,10 +63,24 @@ export function selectAction(
     throw new ContractError("INVALID_ARGUMENT", "Model selected a nonexistent observed action");
   return { ...action, id: stepId };
 }
+/** Ordered protected predicates, bound to the frame in which they are evaluated. */
+function protectedAssertions(plan: ExecutablePlan): unknown[] {
+  const protectedFields: unknown[] = [];
+  const visit = (steps: readonly PlanStep[], frames: readonly string[]) => {
+    for (const step of steps) {
+      if (step.kind === "assertion") protectedFields.push({ frames, assertion: step });
+      else if (step.operation === "waitFor" && "response" in step.input)
+        protectedFields.push({ frames, responseWait: step });
+      else if (step.operation === "frame") visit(step.input.childSteps, [...frames, step.id]);
+    }
+  };
+  visit(plan.steps, []);
+  return protectedFields;
+}
+export function assertionsHash(plan: ExecutablePlan): string {
+  return semanticHash(protectedAssertions(plan));
+}
 export function preserveAssertions(base: ExecutablePlan, candidate: ExecutablePlan): void {
-  if (
-    JSON.stringify(base.steps.filter((step) => step.kind === "assertion")) !==
-    JSON.stringify(candidate.steps.filter((step) => step.kind === "assertion"))
-  )
+  if (assertionsHash(base) !== assertionsHash(candidate))
     throw new ContractError("POLICY_DENIED", "Agent cannot change deterministic assertions");
 }

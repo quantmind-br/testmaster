@@ -12,6 +12,7 @@ import {
 import { semanticHash } from "@testmaster/domain";
 import { type EntityDocument, OutboxRepository } from "@testmaster/persistence";
 import { authoringTransaction } from "./authoring.js";
+import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 
 type Stored<T> = T & EntityDocument;
@@ -85,7 +86,10 @@ export function planRiskActions(plan: ExecutablePlan): Array<{ stepId: string; r
 }
 
 export class ApprovalsService {
-  constructor(readonly ctx: ServiceContext) {}
+  constructor(
+    readonly ctx: ServiceContext,
+    readonly config?: ResolvedConfig,
+  ) {}
   private projectId(environmentRevisionId: string): string {
     requireEntity(this.ctx, "EnvironmentRevision", environmentRevisionId);
     const row = this.ctx.database.get(
@@ -95,6 +99,55 @@ export class ApprovalsService {
     );
     if (!row) throw new ContractError("NOT_FOUND", "Approval environment does not exist");
     return String(row.project_id);
+  }
+  private executionBinding(
+    revision: Stored<TestRevision>,
+    environment: Stored<EnvironmentRevision>,
+    limits?: unknown,
+  ) {
+    const references = new Set<string>();
+    const collect = (value: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value)) {
+        if (key === "secretRef" && typeof child === "string") references.add(child);
+        else collect(child);
+      }
+    };
+    collect(revision.plan);
+    collect(environment.variables);
+    const authProfiles = environment.authProfileRefs.map((id) =>
+      requireEntity(this.ctx, "AuthProfile", id),
+    );
+    for (const profile of authProfiles)
+      for (const id of profile.secretRefs as string[]) references.add(id);
+    const credentials = [...references].sort().map((id) => {
+      const secret = requireEntity(this.ctx, "SecretReference", id);
+      return {
+        id,
+        secretVersion: secret.secretVersion,
+        allowedOrigins: secret.allowedOrigins,
+        revokedAt: secret.revokedAt ?? null,
+        metadataHash: semanticHash(secret),
+      };
+    });
+    const effectiveLimits = { ...this.config?.effectiveConfig.config.execution } as Record<
+      string,
+      unknown
+    >;
+    delete effectiveLimits.executor;
+    delete effectiveLimits.mode;
+    delete effectiveLimits.concurrency;
+    for (const [key, value] of Object.entries(this.config?.profilePolicy.limits ?? {}))
+      if (typeof value === "number" && typeof effectiveLimits[key] === "number")
+        effectiveLimits[key] = Math.min(value, effectiveLimits[key] as number);
+    return {
+      candidateDigest: revision.contentHash,
+      environmentId: environment.id,
+      origins: [...environment.targetOrigins].sort(),
+      credentials,
+      privilegeHash: semanticHash(authProfiles),
+      limits: limits ?? effectiveLimits,
+    };
   }
   create(input: ApprovalInput): Stored<Approval> {
     this.ctx.authorize("W");
@@ -179,6 +232,8 @@ export class ApprovalsService {
         },
       );
       let resourceDigestValid = false;
+      let bindingRevision = revision;
+      let bindingLimits: unknown;
       if (value.actionSet.length === 1 && value.actionSet[0]?.startsWith("cleanup:")) {
         const resourceId = value.actionSet[0].slice("cleanup:".length);
         const resource = requireEntity(this.ctx, "ResourceRecord", resourceId);
@@ -192,6 +247,12 @@ export class ApprovalsService {
           String(run.environmentRevisionId),
         );
         const cell = run.matrixCell as Record<string, unknown>;
+        bindingRevision = requireEntity(
+          this.ctx,
+          "TestRevision",
+          String(run.revisionId),
+        ) as Stored<TestRevision>;
+        bindingLimits = cell.limits;
         const cleanup = resource.cleanupPlan as { declaration?: unknown };
         const digest = semanticHash({
           resourceId,
@@ -213,6 +274,18 @@ export class ApprovalsService {
       if (!revision && !resourceDigestValid)
         throw new ContractError("NOT_FOUND", "Approval digest does not belong to this project");
       this.ctx.entities.insert("Approval", value);
+      if (bindingRevision) {
+        const environment = requireEntity(
+          this.ctx,
+          "EnvironmentRevision",
+          input.environmentRevisionId,
+        ) as Stored<EnvironmentRevision>;
+        this.ctx.database.run(
+          "INSERT INTO operational_state(key,value) VALUES(?,?)",
+          `approval:binding:${this.ctx.workspaceId}:${value.id}`,
+          JSON.stringify(this.executionBinding(bindingRevision, environment, bindingLimits)),
+        );
+      }
       this.audit("approval.created", value.id, null, semanticHash(value));
       return value;
     });
@@ -258,6 +331,8 @@ export class ApprovalsService {
   verify(
     run: Pick<Run, "testId" | "revisionId" | "environmentRevisionId" | "gatePolicy"> & {
       actorId?: string;
+      origin?: Run["origin"];
+      matrixCell?: Run["matrixCell"];
     },
     test: TestCase,
     env: EnvironmentRevision,
@@ -269,7 +344,45 @@ export class ApprovalsService {
       policyHash: string;
     },
   ): Stored<Approval> | null {
-    this.ctx.authorize("X", test.projectId);
+    const cell =
+      run.matrixCell && typeof run.matrixCell === "object"
+        ? (run.matrixCell as Record<string, unknown>)
+        : {};
+    const healing =
+      run.origin === "verification" && typeof cell.healingProposalId === "string"
+        ? requireEntity(this.ctx, "HealingProposal", cell.healingProposalId)
+        : null;
+    if (healing) {
+      const failed = requireEntity(this.ctx, "Run", String(healing.failedRunId));
+      const policy = run.gatePolicy as Record<string, unknown>;
+      if (
+        healing.status !== "approved" ||
+        healing.testId !== run.testId ||
+        healing.candidateRevisionId !== run.revisionId ||
+        failed.environmentRevisionId !== env.id ||
+        healing.policyHash !== policy.policyHash
+      )
+        throw new ContractError("POLICY_DENIED", "Healing verification binding changed");
+      const row = this.ctx.database.get(
+        "SELECT environment_id FROM environment_revisions WHERE workspace_id=? AND id=?",
+        this.ctx.workspaceId,
+        env.id,
+      );
+      if (healing.approvalMode === "policy") {
+        if (env.production || healing.reviewerId !== null)
+          throw new ContractError("POLICY_DENIED", "Policy verification is not authorized");
+        this.ctx.authorize("X", test.projectId);
+      } else {
+        if (healing.reviewerId !== this.ctx.principalId)
+          throw new ContractError("FORBIDDEN", "Verification reviewer does not match actor");
+        this.ctx.authorizeNamed(
+          "approve",
+          "HealingProposal",
+          test.projectId,
+          String(row?.environment_id),
+        );
+      }
+    } else this.ctx.authorize("X", test.projectId);
     return authoringTransaction(this.ctx, () => {
       const storedTest = requireEntity(this.ctx, "TestCase", test.id) as Stored<TestCase>;
       if (storedTest.projectId !== test.projectId || run.testId !== test.id)
@@ -312,6 +425,26 @@ export class ApprovalsService {
             "POLICY_DENIED",
             "Manual compensation requires resource-bound approval",
             { reasonCode: "approval_required" },
+          );
+        const binding = this.ctx.database.get(
+          "SELECT value FROM operational_state WHERE key=?",
+          `approval:binding:${this.ctx.workspaceId}:${approval.id}`,
+        );
+        if (
+          !binding ||
+          semanticHash(JSON.parse(String(binding.value))) !==
+            semanticHash(
+              this.executionBinding(
+                revision,
+                environment,
+                (run.matrixCell as Record<string, unknown> | undefined)?.limits,
+              ),
+            )
+        )
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Cleanup approval execution binding changed",
+            { reasonCode: "binding_mismatch" },
           );
         const reviewer = requireEntity(this.ctx, "Principal", approval.reviewerId);
         if (reviewer.kind !== "human" || reviewer.disabledAt)
@@ -404,6 +537,19 @@ export class ApprovalsService {
       if (reviewer.kind !== "human" || reviewer.disabledAt)
         throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled", {
           reasonCode: "approval_required",
+        });
+      const binding = this.ctx.database.get(
+        "SELECT value FROM operational_state WHERE key=?",
+        `approval:binding:${this.ctx.workspaceId}:${approval.id}`,
+      );
+      const cell = run.matrixCell as Record<string, unknown> | undefined;
+      if (
+        !binding ||
+        semanticHash(JSON.parse(String(binding.value))) !==
+          semanticHash(this.executionBinding(revision, environment, cell?.limits))
+      )
+        throw new ContractError("PRECONDITION_FAILED", "Approval execution binding changed", {
+          reasonCode: "binding_mismatch",
         });
       this.audit("approval.verified", approval.id, null, revision.contentHash);
       const consumed = {

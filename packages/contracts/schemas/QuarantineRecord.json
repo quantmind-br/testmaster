@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "testId",
+    "owner",
+    "reason",
+    "expiresAt",
+    "createdAt",
+    "version"
+  ],
+  "properties": {
+    "testId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "owner": {
+      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 2000,
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:QuarantineRecord",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

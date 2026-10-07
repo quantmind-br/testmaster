@@ -28,18 +28,27 @@ import {
 import type { ImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
+import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import {
   type AdmissionSnapshot,
   admissionInputHash,
   admissionSnapshot,
   verifyAdmission,
 } from "./provenance.js";
+import { runtimeIdentity } from "./runtime-identity.js";
 import { clockDomain, timingBoundary } from "./timing.js";
 
 export interface AdmissionOptions {
   wait?: boolean;
   idempotencyKey?: string;
   unsafeLocal?: boolean;
+  selection?: {
+    snapshot: Record<string, unknown>;
+    reuseFromRunIds: string[];
+    skipDependencies: boolean;
+    revalidate(): Promise<void>;
+    validate(): void;
+  };
 }
 export interface RunHost {
   config: ResolvedConfig;
@@ -48,12 +57,14 @@ export interface RunHost {
   verifyEvidence(id: string): Promise<void>;
   liveWorker(): boolean;
   verifyApproval(run: EntityDocument, test: EntityDocument, env: EntityDocument): void;
+  analysisStatus?(runId: string): Run["analysisStatus"];
 }
 export type OwnedReceipt = RunReceipt & { ownership: "worker" | "ephemeral" };
 export type ResolvedDependency = DependencyBinding & {
   producerRunId: string;
   producerRevisionId: string;
   producerEnvironmentRevisionId: string;
+  reuse?: ReuseBinding;
 };
 export function captureDeclarations(plan: ExecutablePlan) {
   const captures: { stepId: string; name: string; valueType: string; sensitive: boolean }[] = [];
@@ -80,7 +91,10 @@ export class RunsService {
     const run = requireEntity(this.ctx, "Run", id);
     const test = requireEntity(this.ctx, "TestCase", String(run.testId));
     this.ctx.authorize("R", String(test.projectId));
-    return run as Run & EntityDocument;
+    return {
+      ...run,
+      ...(this.host.analysisStatus ? { analysisStatus: this.host.analysisStatus(id) } : {}),
+    } as Run & EntityDocument;
   }
   list(): (Run & EntityDocument)[] {
     this.ctx.authorize("R");
@@ -117,12 +131,31 @@ export class RunsService {
       .map((row) => JSON.parse(String(row.data_json)) as EntityDocument);
   }
   prepare(request: RunRequest, batchId: string | null = null): EntityDocument {
+    return this.prepareAuthorized(request, batchId, (projectId) =>
+      this.ctx.authorize("X", projectId),
+    );
+  }
+  /** Pure admission preparation: never consumes a one-use execution approval. */
+  resolve(request: RunRequest, batchId: string | null = null): EntityDocument {
+    return this.prepareAuthorized(
+      request,
+      batchId,
+      (projectId) => this.ctx.authorize("R", projectId),
+      false,
+    );
+  }
+  private prepareAuthorized(
+    request: RunRequest,
+    batchId: string | null,
+    authority: (projectId?: string) => void,
+    consumeApproval = true,
+  ): EntityDocument {
     validate("RunRequest", request);
-    this.ctx.authorize("X");
+    authority();
     if (request.mode && !["replay", "agent"].includes(request.mode))
       throw new ContractError("INVALID_ARGUMENT", "Invalid execution mode");
     const test = requireEntity(this.ctx, "TestCase", request.testId);
-    this.ctx.authorize("X", String(test.projectId));
+    authority(String(test.projectId));
     if (test.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Test is archived");
     const revision = requireEntity(
       this.ctx,
@@ -237,6 +270,14 @@ export class RunsService {
       this.host.config,
       executor === "process" ? null : this.host.admittedImages(),
       request.seed ?? 0,
+      request.provenance,
+      executor === "process"
+        ? null
+        : runtimeIdentity(
+            this.host.admittedImages()?.[
+              revision.runnerKind === "python" ? "testmaster-runner-python" : "testmaster-runner"
+            ]?.imageId,
+          ),
     );
     const run = entity(this.ctx, "run", {
       testId: test.id,
@@ -246,11 +287,19 @@ export class RunsService {
       matrixCell: {
         correlationId: this.ctx.correlationId ?? randomUUID(),
         environmentId: environment.id,
+        ...(request.repetitionIndex !== undefined
+          ? { repetitionIndex: request.repetitionIndex }
+          : {}),
         environmentName: environment.name,
         planHash: revision.contentHash,
         baseUrl,
         effectiveConfig: structuredClone(this.host.config.effectiveConfig),
         limits,
+        healingPolicy: request.healingPolicy ?? "off",
+        ...(request.origin === "verification" &&
+        request.extensions?.["testmaster:healingProposalId"]
+          ? { healingProposalId: request.extensions["testmaster:healingProposalId"] }
+          : {}),
         seed: request.seed ?? 0,
         ownership,
         maxConcurrency,
@@ -276,10 +325,18 @@ export class RunsService {
       cleanupOutcome: "not_required",
       analysisStatus: "not_requested",
     });
-    this.host.verifyApproval(run, test, env);
+    if (consumeApproval) this.host.verifyApproval(run, test, env);
     return run;
   }
-  prepareClosure(selection: readonly RunRequest[], batchId: string) {
+  prepareClosure(
+    selection: readonly RunRequest[],
+    batchId: string | null,
+    options: {
+      pure?: boolean;
+      reuseFromRunIds?: readonly string[];
+      skipDependencies?: boolean;
+    } = {},
+  ) {
     const prepared = new Map<string, EntityDocument>();
     const requests = new Map<string, RunRequest>();
     const nodes = new Map<string, DagNode>();
@@ -290,7 +347,7 @@ export class RunsService {
         environmentRevisionId: run.environmentRevisionId,
       });
     const add = (request: RunRequest): string => {
-      const candidate = this.prepare(request, batchId);
+      const candidate = this.resolve(request, batchId);
       const key = keyOf(request, candidate);
       if (!prepared.has(key)) {
         prepared.set(key, candidate);
@@ -312,12 +369,48 @@ export class RunsService {
         dependencies,
       });
       const bindings: ResolvedDependency[] = [];
-      for (const binding of plan?.dependsOn ?? []) {
+      for (const declaredBinding of plan?.dependsOn ?? []) {
+        const revisions = request.extensions?.["testmaster:dependencyRevisions"] as
+          | Record<string, string>
+          | undefined;
+        if (
+          declaredBinding.producerRevisionId &&
+          revisions?.[declaredBinding.producerTestId] &&
+          declaredBinding.producerRevisionId !== revisions[declaredBinding.producerTestId]
+        )
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Frozen producer revision conflicts with declared binding",
+            { reasonCode: "upstream_failed" },
+          );
+        const binding = {
+          ...declaredBinding,
+          ...(revisions?.[declaredBinding.producerTestId]
+            ? { producerRevisionId: revisions[declaredBinding.producerTestId] }
+            : {}),
+        };
         if (!binding.required) continue;
         if (binding.permittedEnvironment !== request.environmentId)
           throw new ContractError(
             "PRECONDITION_FAILED",
             "Dependency environment is not permitted",
+            { reasonCode: "upstream_failed" },
+          );
+        const reuse = resolveReuse(this.ctx, run, binding, options.reuseFromRunIds ?? []);
+        if (reuse) {
+          bindings.push({
+            ...binding,
+            producerRunId: reuse.producerRunId,
+            producerRevisionId: reuse.producerRevisionId,
+            producerEnvironmentRevisionId: reuse.producerEnvironmentRevisionId,
+            reuse,
+          });
+          continue;
+        }
+        if (options.skipDependencies)
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Dependency has no valid explicit fixture reuse",
             { reasonCode: "upstream_failed" },
           );
         const matches = [...prepared.entries()].filter(([, producer]) => {
@@ -327,6 +420,7 @@ export class RunsService {
             producer.testId === binding.producerTestId &&
             (!binding.producerRevisionId || producer.revisionId === binding.producerRevisionId) &&
             cell.environmentId === binding.permittedEnvironment &&
+            cell.repetitionIndex === request.repetitionIndex &&
             (!expectedCell ||
               Object.entries(expectedCell).every(
                 ([field, value]) => semanticHash(cell[field] ?? null) === semanticHash(value),
@@ -342,7 +436,9 @@ export class RunsService {
           add({
             ...request,
             testId: binding.producerTestId,
-            ...(binding.producerRevisionId ? { revisionId: binding.producerRevisionId } : {}),
+            revisionId:
+              binding.producerRevisionId ??
+              String(requireEntity(this.ctx, "TestCase", binding.producerTestId).activeRevisionId),
             environmentId: binding.permittedEnvironment,
           });
         const producer = prepared.get(producerKey)!;
@@ -364,6 +460,10 @@ export class RunsService {
         const captures = captureDeclarations(producerPlan).filter(
           (capture) => capture.name === binding.outputName,
         );
+        if (!captures.length)
+          throw new ContractError("PRECONDITION_FAILED", "Producer output is not declared", {
+            reasonCode: "upstream_failed",
+          });
         if (captures.length > 1)
           throw new ContractError("PRECONDITION_FAILED", "Ambiguous producer output", {
             reasonCode: "ambiguous_producer",
@@ -398,6 +498,16 @@ export class RunsService {
       (node) => prepared.get(node.id)!,
     );
     const requestedIds = new Set(requestedKeys.map((key) => prepared.get(key)!.id));
+    if (!options.pure)
+      for (const run of ordered) {
+        const test = requireEntity(this.ctx, "TestCase", String(run.testId));
+        this.ctx.authorize("X", String(test.projectId));
+        this.host.verifyApproval(
+          run,
+          test,
+          requireEntity(this.ctx, "EnvironmentRevision", String(run.environmentRevisionId)),
+        );
+      }
     return { ordered, requestedIds };
   }
   expandRunIds(ids: readonly string[]): string[] {
@@ -478,6 +588,182 @@ export class RunsService {
     );
     return receipt;
   }
+  /** Only the approved proposal can supply the revision and frozen execution identity. */
+  async admitHealingVerification(proposalId: string): Promise<OwnedReceipt> {
+    const proposal = requireEntity(this.ctx, "HealingProposal", proposalId);
+    const failed = this.get(String(proposal.failedRunId));
+    const test = requireEntity(this.ctx, "TestCase", failed.testId);
+    const cell = failed.matrixCell as Record<string, unknown>;
+    const environmentId = String(cell.environmentId);
+    const approvalExtensions = proposal.extensions as Record<string, unknown> | undefined;
+    if (approvalExtensions?.["testmaster:approvalActorId"] !== this.ctx.principalId)
+      throw new ContractError(
+        "FORBIDDEN",
+        "Verification dispatch requires its authenticated approval actor",
+      );
+    const authorizeVerification = () => {
+      if (proposal.approvalMode === "policy") {
+        const env = requireEntity(this.ctx, "EnvironmentRevision", failed.environmentRevisionId);
+        const frozen = cell.effectiveConfig as ResolvedConfig["effectiveConfig"];
+        const project = requireEntity(this.ctx, "Project", String(test.projectId));
+        const projectExtensions = project.extensions as Record<string, unknown> | undefined;
+        if (projectExtensions?.["testmaster:healingPolicy"] !== "apply")
+          throw new ContractError(
+            "POLICY_DENIED",
+            "Project policy no longer authorizes automatic healing",
+          );
+        if (
+          env.production ||
+          cell.healingPolicy !== "apply" ||
+          frozen.config.healing?.mode !== "apply" ||
+          this.host.config.effectiveConfig.config.healing?.mode !== "apply"
+        )
+          throw new ContractError("POLICY_DENIED", "Policy healing verification is not authorized");
+        this.ctx.authorize("X", String(test.projectId));
+      } else
+        this.ctx.authorizeNamed(
+          "approve",
+          "HealingProposal",
+          String(test.projectId),
+          environmentId,
+        );
+    };
+    authorizeVerification();
+    if (proposal.status !== "approved")
+      throw new ContractError("PRECONDITION_FAILED", "Healing proposal is not approved");
+    if (proposal.verificationRunId)
+      throw new ContractError("PRECONDITION_FAILED", "Healing verification is already admitted");
+    if (proposal.policyHash !== this.host.config.effectiveConfig.policyHash)
+      throw new ContractError("REVISION_CONFLICT", "Healing policy changed");
+    const environment = requireEntity(this.ctx, "Environment", environmentId);
+    if (environment.activeRevisionId !== failed.environmentRevisionId)
+      throw new ContractError("REVISION_CONFLICT", "Frozen healing environment changed");
+    if (semanticHash(cell.effectiveConfig) !== semanticHash(this.host.config.effectiveConfig))
+      throw new ContractError(
+        "REVISION_CONFLICT",
+        "Frozen healing execution configuration changed",
+      );
+    await this.host.preflight(false, String(cell.executor ?? "docker"));
+    return this.ctx.database.withTx(() => {
+      const current = requireEntity(this.ctx, "HealingProposal", proposalId);
+      if (current.version !== proposal.version || current.verificationRunId)
+        throw new ContractError("REVISION_CONFLICT", "Healing proposal changed during admission");
+      const request: RunRequest = {
+        testId: failed.testId,
+        revisionId: String(proposal.candidateRevisionId),
+        environmentId,
+        mode: "replay",
+        healingPolicy: "off",
+        origin: "verification",
+        seed: Number(cell.seed ?? 0),
+        limits: { ...(cell.limits as RunRequest["limits"]), maxAttempts: 1 },
+        extensions: {
+          "testmaster:targetUrl": String(cell.baseUrl),
+          "testmaster:executor": String(cell.executor ?? "docker"),
+          "testmaster:healingProposalId": proposalId,
+          "testmaster:dependencyRevisions": Object.fromEntries(
+            ((cell.dependencyBindings ?? []) as ResolvedDependency[]).map((binding) => [
+              binding.producerTestId,
+              binding.producerRevisionId,
+            ]),
+          ),
+        },
+      };
+      const candidate = requireEntity(
+        this.ctx,
+        "TestRevision",
+        String(proposal.candidateRevisionId),
+      );
+      const candidatePlan = validate<ExecutablePlan>("ExecutablePlan", candidate.plan);
+      let receipt: OwnedReceipt;
+      if ((candidatePlan.dependsOn ?? []).some((binding) => binding.required)) {
+        const batchId = entity(this.ctx, "bat", {}).id;
+        const closure = this.prepareClosure([request], batchId, { pure: true });
+        const root = closure.ordered.find((member) => closure.requestedIds.has(member.id))!;
+        if (root.environmentRevisionId !== failed.environmentRevisionId)
+          throw new ContractError("REVISION_CONFLICT", "Frozen healing environment changed");
+        this.host.verifyApproval(
+          root,
+          test,
+          requireEntity(this.ctx, "EnvironmentRevision", String(root.environmentRevisionId)),
+        );
+        for (const member of closure.ordered) {
+          if (member.id === root.id) continue;
+          const producer = requireEntity(this.ctx, "TestCase", String(member.testId));
+          const producerEnv = requireEntity(
+            this.ctx,
+            "EnvironmentRevision",
+            String(member.environmentRevisionId),
+          );
+          const original = ((cell.dependencyBindings ?? []) as ResolvedDependency[]).find(
+            (binding) =>
+              binding.producerTestId === member.testId &&
+              binding.producerRevisionId === member.revisionId,
+          );
+          if (
+            !original ||
+            producer.projectId !== test.projectId ||
+            member.environmentRevisionId !== original.producerEnvironmentRevisionId
+          )
+            throw new ContractError(
+              "PRECONDITION_FAILED",
+              "Healing dependencies must retain their frozen revision and environment",
+            );
+          authorizeVerification();
+          if (producerEnv.production) this.host.verifyApproval(member, producer, producerEnv);
+        }
+        this.ctx.entities.insert(
+          "BatchRun",
+          entity(this.ctx, "bat", {
+            id: batchId,
+            selectionSnapshot: {
+              selection: [request],
+              hash: semanticHash(request),
+              requestedRunIds: [root.id],
+            },
+            requestedCount: 1,
+            memberRuns: closure.ordered.map((member) => member.id),
+            rejectedMembers: [],
+            commit: null,
+            aggregate: {
+              counts: {
+                passed: 0,
+                failed: 0,
+                blocked: 0,
+                cancelled: 0,
+                inconclusive: 0,
+                inFlight: 1,
+              },
+              gate: "pending",
+            },
+          }),
+        );
+        let rootReceipt: OwnedReceipt | undefined;
+        for (const member of closure.ordered) {
+          const admitted = this.insert(member, `healing:${proposalId}`);
+          if (member.id === root.id) rootReceipt = admitted;
+        }
+        receipt = rootReceipt!;
+      } else {
+        const run = this.prepareAuthorized(request, null, authorizeVerification);
+        if (run.environmentRevisionId !== failed.environmentRevisionId)
+          throw new ContractError("REVISION_CONFLICT", "Frozen healing environment changed");
+        receipt = this.insert(run, `healing:${proposalId}`);
+      }
+      this.ctx.entities.update(
+        "HealingProposal",
+        this.ctx.workspaceId,
+        proposalId,
+        Number(current.version),
+        {
+          ...current,
+          verificationRunId: receipt.runId,
+          version: Number(current.version) + 1,
+        },
+      );
+      return receipt;
+    });
+  }
   async admit(request: RunRequest, options: AdmissionOptions = {}): Promise<OwnedReceipt> {
     this.ctx.authorize("X");
     if (!options.wait && !this.host.liveWorker())
@@ -541,7 +827,19 @@ export class RunsService {
   cancel(id: string): { runId: string; result: "requested" | "already_terminal"; status: string } {
     const run = this.get(id);
     const test = requireEntity(this.ctx, "TestCase", run.testId);
-    this.ctx.authorize("X", String(test.projectId));
+    const cell = run.matrixCell as Record<string, unknown>;
+    const proposal =
+      run.origin === "verification" && typeof cell.healingProposalId === "string"
+        ? requireEntity(this.ctx, "HealingProposal", cell.healingProposalId)
+        : null;
+    if (proposal?.approvalMode === "manual" && proposal.verificationRunId === id)
+      this.ctx.authorizeNamed(
+        "approve",
+        "HealingProposal",
+        String(test.projectId),
+        String(cell.environmentId),
+      );
+    else this.ctx.authorize("X", String(test.projectId));
     const cancel = () => {
       const current = this.get(id);
       if (current.phase === "completed")
@@ -770,6 +1068,7 @@ export class BatchesService {
         securityFailure = error;
       }
     }
+    await options.selection?.revalidate();
     const key = options.idempotencyKey ?? randomUUID();
     return new IdempotencyRepository(this.ctx.database).execute(
       {
@@ -779,14 +1078,16 @@ export class BatchesService {
         key,
         body: request,
       },
-      () => this.insertPrepared(request, key, securityFailure),
+      () => this.insertPrepared(request, key, securityFailure, options.selection),
     ).receipt;
   }
   insertPrepared(
     request: BatchRequest,
     key: string,
     securityFailure?: ContractError,
+    selectionOptions?: AdmissionOptions["selection"],
   ): BatchReceipt {
+    selectionOptions?.validate();
     const batchId = entity(this.ctx, "bat", {}).id;
     const rejected: { memberKey: string; reasonCode: "upstream_failed" }[] = [];
     const rejections: {
@@ -802,7 +1103,7 @@ export class BatchesService {
     if (request.partialDispatch) {
       selection = uniqueSelection.filter((member, index) => {
         try {
-          this.runs.prepareClosure([member], batchId);
+          this.runs.prepareClosure([member], batchId, { pure: true });
           return true;
         } catch (error) {
           if (
@@ -822,7 +1123,19 @@ export class BatchesService {
         }
       });
     }
-    const { ordered, requestedIds } = this.runs.prepareClosure(selection, batchId);
+    const { ordered, requestedIds } = this.runs.prepareClosure(
+      selection,
+      batchId,
+      selectionOptions,
+    );
+    let flakePredecessor: string | null = null;
+    if (selection.some((member) => member.extensions?.["testmaster:flakeStudy"] === true)) {
+      for (const run of ordered) {
+        const cell = run.matrixCell as Record<string, unknown>;
+        cell.flakePredecessorRunId = flakePredecessor;
+        flakePredecessor = run.id;
+      }
+    }
     const counts = {
       passed: 0,
       failed: 0,
@@ -839,6 +1152,17 @@ export class BatchesService {
       version: 1,
       selectionSnapshot: {
         ...request,
+        ...(selectionOptions
+          ? {
+              selective: selectionOptions.snapshot,
+              reuseBindings: ordered.flatMap((run) =>
+                (
+                  (run.matrixCell as Record<string, unknown>)
+                    .dependencyBindings as ResolvedDependency[]
+                ).flatMap((binding) => (binding.reuse ? [binding.reuse] : [])),
+              ),
+            }
+          : {}),
         duplicates: request.selection.length - requestedIds.size - rejected.length,
         hash: semanticHash(request),
         rejections,

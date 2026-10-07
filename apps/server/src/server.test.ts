@@ -214,9 +214,9 @@ it("guards MCP with the same token and Origin and registers disabled milestones"
     (await f.app.inject({ method: "POST", url: "/mcp", headers: f.headers, payload: {} }))
       .statusCode,
   ).toBe(200);
-  const disabled = await f.mutate("POST", "/v1/run-comparisons", {});
+  const disabled = await f.mutate("POST", "/v1/workspaces", {});
   expect(disabled.statusCode).toBe(422);
-  expect(disabled.json().error.details.milestone).toBe("M3");
+  expect(disabled.json().error.details.milestone).toBe("M4");
   expect(() => createServer({ application: f.application, host: "0.0.0.0" })).toThrowError(
     "127.0.0.1",
   );

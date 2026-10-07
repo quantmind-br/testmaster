@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "reason",
+    "expiresAt"
+  ],
+  "properties": {
+    "reason": {
+      "minLength": 1,
+      "maxLength": 2000,
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:QuarantineInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

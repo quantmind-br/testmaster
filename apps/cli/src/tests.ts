@@ -1,8 +1,10 @@
 import { scaffoldPlan } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
+import { batchExitCode, exitCodeForGate, exitCodeForRun } from "@testmaster/domain";
 import { importCode as validateCode } from "@testmaster/planner";
 import type { Command } from "commander";
 import { codeCommands, codeFormat, importCode } from "./ai-execution.js";
+import { environmentId } from "./execution.js";
 import { revisionCommands } from "./revisions.js";
 import {
   collect,
@@ -12,9 +14,9 @@ import {
   required,
   string,
   strings,
-  unavailable,
   version,
 } from "./runtime.js";
+import { selectionCommands } from "./selection.js";
 import { testExecutionCommands } from "./test-execution.js";
 
 function metadata(options: Options) {
@@ -157,11 +159,83 @@ export function testCommands(program: Command, runtime: Runtime): void {
     }),
   );
   runtime.bind(
-    group.command("flaky [id]").allowUnknownOption().allowExcessArguments(),
-    () => unavailable("flake-study"),
-    () => unavailable("flake-study"),
+    group
+      .command("flaky <id>")
+      .requiredOption("--runs <count>", "Fresh strict samples (2–100)", integer)
+      .requiredOption("--env <name>")
+      .option("--seed <integer>", "Fixed sample seed", (value) => {
+        const seed = Number(value);
+        if (!Number.isSafeInteger(seed))
+          throw new ContractError("INVALID_ARGUMENT", "Seed must be an integer");
+        return seed;
+      })
+      .option("--include-study <id>", "Compatible prior study (repeatable)", collect),
+    async (rt, args, options) => {
+      const app = await rt.app();
+      const test = app.tests.get(String(args[0]));
+      const receipt = await app.flake.study(
+        {
+          testRevision: String(test.activeRevisionId),
+          environment: await environmentId(rt, options, test.projectId),
+          n: Number(options.runs),
+          seed: Number(options.seed ?? 0),
+        },
+        { wait: true, signal: rt.controller.signal },
+      );
+      const report = app.flake.report(receipt.batchId, strings(options, "includeStudy"));
+      const batch = app.batches.get(receipt.batchId);
+      const aggregate = batch.aggregate as {
+        gate: "pending" | "passed" | "failed" | "not_applicable";
+      };
+      const codes = report.runIds.map((id) => {
+        const run = app.runs.get(id);
+        const completed = app.runs.events(id).find((event) => event.type === "run.completed");
+        const payload = completed?.payload as { reasonCode?: string } | undefined;
+        return exitCodeForRun({
+          gate: run.gate,
+          outcome: run.outcome,
+          reasonCode: payload?.reasonCode,
+        });
+      });
+      return {
+        data: { receipt, report },
+        exit: batchExitCode([...codes, exitCodeForGate(aggregate.gate)]),
+      };
+    },
   );
+  runtime.bind(
+    group
+      .command("quarantine <id>")
+      .requiredOption("--reason <text>")
+      .requiredOption("--expires-at <utc>")
+      .option("--expected-version <version>", "Current quarantine version", integer),
+    async (rt, args, options) => ({
+      data: (await rt.app()).quarantine.set(String(args[0]), {
+        reason: required(options, "reason"),
+        expiresAt: required(options, "expiresAt"),
+        ...(typeof options.expectedVersion === "number"
+          ? { expectedVersion: options.expectedVersion }
+          : {}),
+      }),
+    }),
+  );
+  runtime.bind(
+    group
+      .command("unquarantine <id>")
+      .option("--expected-version <version>", "Current quarantine version", integer),
+    async (rt, args, options) => {
+      (await rt.app()).quarantine.remove(
+        String(args[0]),
+        typeof options.expectedVersion === "number" ? options.expectedVersion : undefined,
+      );
+      return { data: { testId: String(args[0]), quarantined: false } };
+    },
+  );
+  runtime.bind(group.command("quarantine-list"), async (rt, _args, options) => ({
+    data: (await rt.app()).quarantine.list(await rt.project(options)),
+  }));
   revisionCommands(group, runtime);
   testExecutionCommands(group, runtime);
+  selectionCommands(group, runtime);
   codeCommands(group, runtime);
 }

@@ -4,9 +4,10 @@ import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Proportion } from "@testmaster/domain";
 import { checks, startShop } from "../../../evals/fixture.mjs";
 import { assertFrozenFiles, assertRegistrationUnchanged, committedRegistration } from "./freeze.js";
-import type { Pair, Proportion, Replay, TrialError, TrialScoreInput } from "./scoring.js";
+import type { Pair, Replay, TrialError, TrialScoreInput } from "./scoring.js";
 import { scoreTrial, summarize } from "./scoring.js";
 
 type Json = Record<string, unknown>;

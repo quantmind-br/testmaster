@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { Application } from "@testmaster/application";
 import { type ExecutablePlan, type PlanStep, validate } from "@testmaster/contracts";
-import { uuidV7IdGenerator } from "@testmaster/domain";
+import { semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { startShop } from "@testmaster/reference-shop";
 import { expect, it } from "vitest";
 import { FileEvidenceStore } from "../../packages/evidence/src/index.js";
@@ -227,6 +227,7 @@ it("captures real frame, popup, upload/download, hook/wait and opt-in evidence c
         "dom",
         "screenshot",
         "console",
+        "locator-evidence",
         "network",
         "download",
         "restrictedRaw.trace",
@@ -239,6 +240,48 @@ it("captures real frame, popup, upload/download, hook/wait and opt-in evidence c
           ),
           kind,
         ).toBe(true);
+      for (const step of steps) {
+        const locatorCount =
+          step.operation === "drag"
+            ? 2
+            : step.operation === "download" || "locator" in step.input
+              ? 1
+              : 0;
+        for (let index = 0; index < locatorCount; index++)
+          for (const phase of ["before", "after"]) {
+            const path = `browser/steps/${step.id}-locator-${index}-${phase}.json`;
+            const bytes = await run.read(path);
+            const record = JSON.parse(bytes.toString());
+            const { evidenceHash, ...payload } = record;
+            expect(record).toMatchObject({ schemaVersion: "1.0.0", stepId: step.id, phase });
+            expect(evidenceHash).toBe(semanticHash(payload));
+            expect(record.candidates.length).toBeLessThanOrEqual(100);
+            expect(bytes.toString()).not.toContain("correct-password");
+            for (const candidate of record.candidates) {
+              expect(candidate.attributes).not.toHaveProperty("value");
+              expect(
+                Object.keys(candidate.attributes).some((key) =>
+                  /token|secret|password|authorization|cookie|^on/iu.test(key),
+                ),
+              ).toBe(false);
+              if (candidate.type === "password") {
+                expect(candidate.attributes).toEqual({});
+                expect(candidate.name).toBe("");
+              }
+            }
+          }
+      }
+      const nestedLocator = JSON.parse(
+        (await run.read("browser/steps/confirm-delivery-locator-0-before.json")).toString(),
+      );
+      expect(nestedLocator.cardinality).toBe(1);
+      const waitLocator = JSON.parse(
+        (await run.read("browser/steps/ready-locator-0-after.json")).toString(),
+      );
+      expect(waitLocator.state.requested).toBe("visible");
+      expect(
+        waitLocator.state.transitions.some((state: { visible: boolean }) => state.visible),
+      ).toBe(true);
       expect(
         manifest.entries.some(
           (entry: { kind: string; state: string }) =>

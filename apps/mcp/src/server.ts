@@ -107,6 +107,7 @@ export class TestMasterMcp {
                   "testmaster_generate_plan",
                   "testmaster_generate_tests",
                   "testmaster_analyze_code",
+                  "testmaster_propose_healing",
                 ].includes(tool.name)
               ? "X"
               : "W";
@@ -482,7 +483,6 @@ export class TestMasterMcp {
         };
       }
       case "testmaster_generate_plan":
-        if (args.type === "integration") unavailable("integration-planning", "M3");
         return app.proposals.generate({
           projectId: String(args.projectId),
           sourceSnapshotId: String(args.sourceSnapshotId),
@@ -584,6 +584,21 @@ export class TestMasterMcp {
         await task;
         return app.explore.get(jobId);
       }
+      case "testmaster_compare_runs":
+        return app.comparisons.runs(String(args.left), String(args.right), {
+          ...(typeof args.cursor === "string" ? { cursor: args.cursor } : {}),
+          ...(typeof args.limit === "number" ? { limit: args.limit } : {}),
+        });
+      case "testmaster_propose_healing": {
+        const budget = object(args.budget ?? {});
+        return app.healing.propose(String(args.failedRunId), {
+          ...(typeof budget.deadlineMs === "number"
+            ? { budget: { deadlineMs: budget.deadlineMs } }
+            : {}),
+        });
+      }
+      case "testmaster_approve_healing":
+        return app.healing.approve(String(args.proposalId), Number(args.expectedVersion));
       default:
         unavailable(name);
     }

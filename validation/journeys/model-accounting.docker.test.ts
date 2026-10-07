@@ -155,7 +155,10 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
           expect(items(manifest.entries).some((entry) => entry.state === "available")).toBe(true);
           const usage = await session.command(["usage", "--project", text(identity.projectId)]);
           expect(object(usage.tokens)).toMatchObject({ inputTokens: 20, outputTokens: 10 });
-          expect(object(usage.tokenBudget)).toMatchObject({ used: 30, remaining: 0 });
+          expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({
+            used: 30,
+            remaining: 0,
+          });
           expect(usage.unknownCostCalls).toBe(1);
           expect(Number(usage.runtimeMs)).toBeGreaterThan(0);
           expect(Number(usage.storageBytes)).toBeGreaterThan(0);
@@ -167,7 +170,7 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
             runId,
             outcome: run.outcome,
             modelCalls: completions,
-            tokenBudget: usage.tokenBudget,
+            tokenBudget: object(usage.lifetimeBudget).tokenBudget,
             runtimeMs: usage.runtimeMs,
             storageBytes: usage.storageBytes,
             integrity: evidence.integrity ?? "verified-by-bundle-reader",

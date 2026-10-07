@@ -47,6 +47,62 @@ testmaster test rerun "$TEST_ID" --wait --output json
 - Secrets are references: `testmaster secret set API_TOKEN --from-env API_TOKEN` (or `--file`); values never
   go on argv and are released to the sandbox only on demand.
 
+
+For upload steps or HTTP artifact request bodies, import a project-scoped immutable input first:
+
+```bash
+testmaster artifact import-fixture ./profile.bin --mime-type application/octet-stream --name profile --output json
+```
+
+Use the returned `art_...` ID in `upload.input.artifactRefs` or a request body's `artifactRef`.
+Import requires project write permission and rejects inputs larger than the lesser of the effective
+body/artifact limits (defaults: 10 MiB/64 MiB). Storage is content-addressed with private file permissions.
+Dispatch admits only same-project, non-revoked fixtures whose bytes match their frozen hash, and
+records `inputFixtureHashes` in admission and sealed execution provenance. Upload/download/frame
+permissions and ordered popup aliases come only from the frozen plan, not the presence of a fixture.
+Fixtures use the same named deletion command and immediate tombstone revocation as run artifacts;
+physical removal waits for active runs, legal/shared-reference/backup holds. Imported inputs are not
+execution evidence and never appear as fabricated Run/Attempt artifacts.
+
+`testmaster run analyze "$RUN_ID" --output json` persists a factual diagnosis of a terminal Run
+without a model request. It uses the frozen revision and persisted execution evidence, preserves
+the original outcome/gate, and abstains when evidence cannot establish a cause. Missing bundles
+are disclosed with a null snapshot rather than manufactured evidence. A successful analysis
+command exits 0 even when the analyzed Run failed.
+
+Optional enrichment is explicit: grant the provider the `execution_evidence` data class, then use
+`testmaster run analyze "$RUN_ID" --model --deadline-ms 180000`. Only sanitized execution summaries
+and bounded measurements cross that boundary, not raw trace/video or sensitive captures. Model
+refusal/failure retains the factual predecessor and records a limitation in a separate immutable
+analysis. Identical requests reuse their stored receipt; interrupted paid calls are not reissued.
+
+Reports preserve execution outcomes even when evidence is missing, expired or fails integrity:
+the affected member has `evidenceState: "unavailable"`, null snapshot/manifest and explicit
+`evidenceErrors`; report completeness becomes partial and cannot approve a strict CI gate.
+Latest diagnosis is enrichment, never a replacement verdict. Applications exporting multiple
+formats should capture `reports.snapshot(id)` once and pass it to `reports.exportCaptured`.
+CI exports use `artifacts.exportSanitized(runId, outDir)`: restricted raw entries are omitted
+with source snapshot/hash provenance, not relabelled as redacted. Original bundles are immutable.
+HTTP artifact downloads are attachment-only, private/no-store, nosniff and sandboxed.
+
+```bash
+testmaster artifact delete "$ARTIFACT_ID" --confirm "$ARTIFACT_ID"
+testmaster artifact deletion-status "$DELETION_ID"
+testmaster usage --run "$RUN_ID" --model qwen3.8-flash --since 2026-01-01T00:00:00Z --until 2026-12-31T23:59:59Z --out usage.json
+```
+
+Deletion immediately revokes reads, including Range and previously prepared streams. Physical
+collection stays pending under active execution, legal, shared-reference or backup holds; worker
+maintenance resumes it. Restore reapplies tombstones and deletion operations before admission
+can be reviewed. Old backup bytes are not promised immediate erasure. Deletion needs the named
+`artifacts:delete` authority, not ordinary read/raw permission.
+Usage filters apply to immutable model-call totals; lifetime project reservations/budgets remain
+separately labelled `lifetimeBudget`. Unknown tokens/costs stay unknown; money is grouped by
+currency and scale. Reasoning/cache are disclosed components, not extra input/output charges.
+Production approvals additionally freeze current credential metadata/privilege and effective
+execution limits; rotation, changed limits/body/target or replay of a consumed approval refuses
+execution rather than silently broadening authorization.
+
 ## Model-assisted path (experimental)
 
 Model providers are declared only in the user profile `~/.config/testmaster/profiles.json`, allowed by the
@@ -99,6 +155,26 @@ testmaster usage                                           # model calls, tokens
 ```
 
 Exact flags: `testmaster <group> <command> --help`.
+
+## Selective reruns and read-only preview
+
+```bash
+testmaster test rerun "$TEST_ID" --preview --env local
+testmaster test rerun "$RUN_ID" --wait --env local       # preserves the Run's revision
+testmaster test rerun --diff --base HEAD~1 --head HEAD --preview --env local
+testmaster test rerun --working-tree --wait --env local
+testmaster test rerun "$CONSUMER_ID" --reuse-from-run "$PRODUCER_RUN_ID" --skip-dependencies --wait --env local
+```
+
+Producer closure is the default (`--chain` is explicit documentation of that default).
+Preview performs no execution or admission writes and never consumes an approval or
+exposes fixture values. Unmapped changes conservatively select all active tests.
+Execution rejects an empty selection unless both `--allow-empty` and a nonempty
+`--empty-reason` are supplied; an authorized empty batch is not a passed gate.
+Active quarantine excludes directly selected tests, but required producers remain
+in the closure. Explicit fixture reuse requires the exact passing producer revision,
+environment/origin, compatible output/taint, unexpired output and live owned resources;
+these checks run again before release. `--skip-dependencies` refuses incomplete reuse.
 
 ## Code export and import
 

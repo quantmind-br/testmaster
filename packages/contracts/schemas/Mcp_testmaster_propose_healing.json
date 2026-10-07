@@ -2,8 +2,7 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
-    "failedRunId",
-    "budget"
+    "failedRunId"
   ],
   "properties": {
     "failedRunId": {
@@ -11,68 +10,18 @@
       "type": "string"
     },
     "budget": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "deadlineMs": {
+          "minimum": 1,
+          "maximum": 180000,
+          "type": "integer"
         }
-      ]
+      }
     }
   },
-  "$defs": {
-    "T0": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
-        }
-      ]
-    }
-  },
+  "$defs": {},
   "$id": "urn:testmaster:Mcp_testmaster_propose_healing",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

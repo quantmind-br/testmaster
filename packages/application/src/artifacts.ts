@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import {
   type ArtifactManifest,
   type Attempt,
+  type BundleMeta,
   ContractError,
   type RunResult,
   type RuntimeTiming,
@@ -10,7 +11,14 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
-import { deriveFailedOnly, streamBundleArtifact, verifyBundle } from "@testmaster/evidence";
+import {
+  BundleIntegrityError,
+  ConfinedRoot,
+  deriveFailedOnly,
+  streamBundleArtifact,
+  UnsafePathError,
+  verifyBundle,
+} from "@testmaster/evidence";
 import {
   executionMetrics,
   exportAllure,
@@ -21,12 +29,43 @@ import {
   type ReportRun,
   type ReportSnapshot,
 } from "@testmaster/reporting";
+import type { AnalysisService } from "./ai/analysis.js";
 import { auditedOperation, auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 import { reportCoverage } from "./coverage.js";
+import {
+  type FixtureImportInput,
+  type FixtureImportReceipt,
+  importFixtureInput,
+} from "./input-fixtures.js";
 import type { RunsService } from "./runs.js";
 import { sumTimings } from "./timing.js";
+export class EvidenceUnavailableError extends ContractError {
+  constructor(
+    readonly reason: "missing" | "expired",
+    runId: string,
+  ) {
+    super("PRECONDITION_FAILED", `Run evidence is ${reason}`, { runId, reason });
+  }
+}
+export function isEvidenceUnavailable(
+  error: unknown,
+): error is EvidenceUnavailableError | BundleIntegrityError {
+  return error instanceof EvidenceUnavailableError || error instanceof BundleIntegrityError;
+}
+export interface EvidenceBundle {
+  bundleDir: string;
+  sourceBundleDir?: string;
+  manifest: ArtifactManifest;
+  meta: BundleMeta;
+}
+export interface SanitizedExport {
+  manifestPath: string;
+  omitted: { relativePath: string; reason: string }[];
+  sourceSnapshotId: string;
+  sourceManifestHash: string;
+}
 export interface ArtifactStream {
   entry: ArtifactManifest["entries"][number];
   stream: AsyncIterable<Uint8Array>;
@@ -37,6 +76,22 @@ export class ArtifactsService {
     readonly config: ResolvedConfig,
     readonly runs: RunsService,
   ) {}
+  importFixtureInput(input: FixtureImportInput): Promise<FixtureImportReceipt> {
+    return importFixtureInput(this.ctx, this.config, input);
+  }
+  private assertReadable(artifactId: string): void {
+    const artifact = requireEntity(this.ctx, "Artifact", artifactId);
+    const run = this.runs.get(String(artifact.runId));
+    this.ctx.authorize("R", String(requireEntity(this.ctx, "TestCase", run.testId).projectId));
+    if (
+      artifact.state === "expired" ||
+      this.ctx.database.get(
+        "SELECT 1 FROM operational_state WHERE key=?",
+        `retention:artifact:${this.ctx.workspaceId}:${artifactId}`,
+      )
+    )
+      throw new ContractError("NOT_FOUND", "Artifact access revoked");
+  }
   private authorizeRaw(runId: string, explicit: boolean, approvalId?: string): void {
     try {
       if (!explicit)
@@ -86,7 +141,7 @@ export class ArtifactsService {
       allowRestrictedRaw?: boolean;
       approvalId?: string;
     } = {},
-  ) {
+  ): Promise<EvidenceBundle> {
     if (options.out)
       return auditedOperation(this.ctx, "artifact.export", runId, () =>
         this.getBundle(runId, options),
@@ -102,7 +157,7 @@ export class ArtifactsService {
       allowRestrictedRaw?: boolean;
       approvalId?: string;
     } = {},
-  ) {
+  ): Promise<EvidenceBundle> {
     const run = this.runs.get(runId);
     this.ctx.authorize("R", String(requireEntity(this.ctx, "TestCase", run.testId).projectId));
     const row = this.ctx.database.get(
@@ -112,8 +167,7 @@ export class ArtifactsService {
       options.attemptId ?? null,
       options.attemptId ?? null,
     );
-    if (!row)
-      throw new ContractError("PRECONDITION_FAILED", "Run has no committed evidence", { runId });
+    if (!row) throw new EvidenceUnavailableError("missing", runId);
     const attemptId = String(row.attempt_id);
     const bundleDir = join(this.config.dataDir, "runs", this.ctx.workspaceId, runId, attemptId);
     const bundle = await verifyBundle(bundleDir, {
@@ -130,6 +184,15 @@ export class ArtifactsService {
           row.id,
         )
         .map((artifact) => String(artifact.id)),
+    }).catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT")
+        throw new EvidenceUnavailableError("missing", runId);
+      if (
+        error instanceof UnsafePathError ||
+        ["ELOOP", "ENOTDIR"].includes((error as NodeJS.ErrnoException)?.code ?? "")
+      )
+        throw new BundleIntegrityError("Evidence path confinement failed");
+      throw error;
     });
     let manifest = bundle.manifest;
     if (options.failedOnly) {
@@ -154,14 +217,17 @@ export class ArtifactsService {
       await mkdir(out, { recursive: true, mode: 0o700 });
       for (const entry of manifest.entries) {
         if (entry.state !== "available") continue;
+        this.assertReadable(entry.artifactId);
         const path = join(out, entry.relativePath);
         await mkdir(dirname(path), { recursive: true, mode: 0o700 });
         const file = await open(path, "wx", 0o600);
         try {
           for await (const chunk of streamBundleArtifact(bundle, entry.relativePath, {
             allowRestrictedRaw: options.allowRestrictedRaw ?? false,
-          }))
+          })) {
+            this.assertReadable(entry.artifactId);
             await file.write(chunk);
+          }
         } finally {
           await file.close();
         }
@@ -177,6 +243,75 @@ export class ArtifactsService {
       return { bundleDir: out, sourceBundleDir: bundleDir, manifest, meta: bundle.meta };
     }
     return { bundleDir, manifest, meta: bundle.meta };
+  }
+  async exportSanitized(runId: string, outDir: string): Promise<SanitizedExport> {
+    const bundle = await this.get(runId);
+    const unavailable = bundle.manifest.entries.filter((entry) => entry.state !== "available");
+    if (unavailable.length)
+      throw new BundleIntegrityError(
+        `Required evidence unavailable: ${unavailable.map((entry) => entry.relativePath).join(", ")}`,
+      );
+    const out = resolve(this.config.cwd, outDir);
+    if (out === bundle.bundleDir || out.startsWith(`${bundle.bundleDir}/`))
+      throw new ContractError("INVALID_ARGUMENT", "Export cannot overwrite committed evidence");
+    await mkdir(dirname(out), { recursive: true, mode: 0o700 });
+    const parent = new ConfinedRoot(dirname(out));
+    const name = out.slice(dirname(out).length + 1);
+    let root: ConfinedRoot | undefined;
+    try {
+      parent.mkdirExclusive(name);
+      root = parent.openDirectory(name);
+      const omitted = bundle.manifest.entries
+        .filter((entry) => entry.redactionStatus === "restrictedRaw")
+        .map((entry) => ({
+          relativePath: entry.relativePath,
+          reason: "restricted_raw_export_policy",
+        }));
+      const manifest = {
+        ...bundle.manifest,
+        exportPolicy: "sanitized",
+        sourceSnapshotId: bundle.meta.snapshotId,
+        sourceManifestHash: bundle.meta.manifestHash,
+        entries: bundle.manifest.entries.map((entry) =>
+          entry.redactionStatus === "restrictedRaw"
+            ? { ...entry, state: "omitted", omissionReason: "restricted_raw_export_policy" }
+            : entry,
+        ),
+      };
+      for (const entry of bundle.manifest.entries) {
+        if (entry.redactionStatus === "restrictedRaw") continue;
+        this.assertReadable(entry.artifactId);
+        const file = await root.openFile(entry.relativePath, true);
+        try {
+          for await (const chunk of streamBundleArtifact(
+            { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
+            entry.relativePath,
+          )) {
+            this.assertReadable(entry.artifactId);
+            await file.write(chunk);
+          }
+        } finally {
+          await file.close();
+        }
+      }
+      const file = await root.openFile("manifest.json", true);
+      try {
+        await file.writeFile(JSON.stringify(manifest, null, 2));
+        await file.sync();
+      } finally {
+        await file.close();
+      }
+      await root.sync();
+      return {
+        manifestPath: join(out, "manifest.json"),
+        omitted,
+        sourceSnapshotId: bundle.meta.snapshotId,
+        sourceManifestHash: bundle.meta.manifestHash,
+      };
+    } finally {
+      root?.close();
+      parent.close();
+    }
   }
   async read(
     runId: string,
@@ -203,6 +338,7 @@ export class ArtifactsService {
     }
     if (offset > entry.sizeBytes)
       throw new ContractError("INVALID_ARGUMENT", "Artifact offset exceeds its size");
+    this.assertReadable(entry.artifactId);
     const bytes = Buffer.alloc(Math.min(maxBytes, entry.sizeBytes - offset));
     let position = 0;
     let written = 0;
@@ -210,6 +346,7 @@ export class ArtifactsService {
       { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
       relativePath,
     )) {
+      this.assertReadable(entry.artifactId);
       const start = Math.max(0, offset - position);
       const count = Math.min(chunk.length - start, bytes.length - written);
       if (count > 0) {
@@ -256,13 +393,37 @@ export class ArtifactsService {
     )
       throw new ContractError("INVALID_ARGUMENT", "Invalid artifact range");
     const relativePath = entry.relativePath;
+    const ctx = this.ctx;
+    const runs = this.runs;
     async function* chunks() {
+      const current = requireEntity(ctx, "Artifact", artifactId);
+      runs.get(String(attempt.runId));
+      ctx.authorize(
+        "R",
+        String(requireEntity(ctx, "TestCase", runs.get(String(attempt.runId)).testId).projectId),
+      );
+      if (
+        current.state === "expired" ||
+        ctx.database.get(
+          "SELECT 1 FROM operational_state WHERE key=?",
+          `retention:artifact:${ctx.workspaceId}:${artifactId}`,
+        )
+      )
+        throw new ContractError("NOT_FOUND", "Artifact access revoked");
       let position = 0;
       for await (const chunk of streamBundleArtifact(
         { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
         relativePath,
         { allowRestrictedRaw: options.allowRestrictedRaw === true },
       )) {
+        if (
+          requireEntity(ctx, "Artifact", artifactId).state === "expired" ||
+          ctx.database.get(
+            "SELECT 1 FROM operational_state WHERE key=?",
+            `retention:artifact:${ctx.workspaceId}:${artifactId}`,
+          )
+        )
+          throw new ContractError("NOT_FOUND", "Artifact access revoked");
         const from = Math.max(0, start - position);
         const to = Math.min(chunk.length, end + 1 - position);
         if (to > from) yield chunk.subarray(from, to);
@@ -279,6 +440,7 @@ export class ReportsService {
     readonly config: ResolvedConfig,
     readonly runs: RunsService,
     readonly artifacts: ArtifactsService,
+    readonly analysis?: Pick<AnalysisService, "get">,
   ) {}
   async snapshot(id: string): Promise<ReportSnapshot> {
     this.ctx.authorize("R");
@@ -302,7 +464,15 @@ export class ReportsService {
       if (test.activeRevisionId !== run.revisionId) freshnessReasons.push("test_revision_changed");
       if (environment.activeRevisionId !== run.environmentRevisionId)
         freshnessReasons.push("environment_revision_changed");
-      const evidence = await this.artifacts.get(runId);
+      this.ctx.authorize("R", String(test.projectId));
+      let evidence: EvidenceBundle | null = null;
+      const evidenceErrors: string[] = [];
+      try {
+        evidence = await this.artifacts.get(runId);
+      } catch (error) {
+        if (!isEvidenceUnavailable(error)) throw error;
+        evidenceErrors.push(`${error.code}: ${error.message}`);
+      }
       const attempts = this.ctx.database
         .all(
           "SELECT id FROM attempts WHERE workspace_id=? AND run_id=? ORDER BY number",
@@ -335,15 +505,27 @@ export class ReportsService {
           return validate<RuntimeTiming>("RuntimeTiming", payload.timing);
         });
       const timings = sumTimings(recordedTimings);
+      const analysis = this.analysis?.get(runId);
       entries.push({
         run,
         result,
         title: String(test.name),
         projectId: String(test.projectId),
         environment: String((run.matrixCell as Record<string, unknown>).environmentName),
-        snapshot: evidence.meta,
-        manifest: evidence.manifest,
-        ...(evidence.manifest.reproduction
+        ...(evidence
+          ? {
+              evidenceState: "committed" as const,
+              snapshot: evidence.meta,
+              manifest: evidence.manifest,
+            }
+          : {
+              evidenceState: "unavailable" as const,
+              snapshot: null,
+              manifest: null,
+              evidenceErrors,
+            }),
+        ...(analysis ? { analysis } : {}),
+        ...(evidence?.manifest.reproduction
           ? {
               reproduction: {
                 degree: "evidence-replay" as const,
@@ -368,15 +550,19 @@ export class ReportsService {
       });
     }
     const missing = entries.flatMap((entry) =>
-      entry.manifest.entries
-        .filter((a) => a.state !== "available")
-        .map((a) => a.omissionReason ?? a.state),
+      entry.evidenceState === "unavailable"
+        ? [...entry.evidenceErrors]
+        : entry.manifest.entries
+            .filter((a) => a.state !== "available")
+            .map((a) => a.omissionReason ?? a.state),
     );
-    const snapshotId = entries[0]?.snapshot.snapshotId ?? id;
+    const snapshotId =
+      entries[0]?.snapshot?.snapshotId ??
+      `report:${semanticHash(entries.map((entry) => ({ runId: entry.run.id, result: entry.result, errors: entry.evidenceErrors })))}`;
     const selection = batch?.selectionSnapshot as Record<string, unknown> | undefined;
     const snapshot: ReportSnapshot = {
       schemaVersion: "1.0.0",
-      committedAt: entries[0]?.snapshot.committedAt ?? new Date().toISOString(),
+      committedAt: entries[0]?.snapshot?.committedAt ?? new Date().toISOString(),
       snapshotId,
       title: batch ? "Batch report" : (entries[0]?.title ?? "Empty selection"),
       runs: entries,
@@ -413,16 +599,21 @@ export class ReportsService {
     format: "json" | "markdown" | "html" | "junit" | "allure",
     out?: string,
   ) {
-    return auditedOperation(this.ctx, "report.export", id, () =>
-      this.exportSnapshot(id, format, out),
-    );
+    return auditedOperation(this.ctx, "report.export", id, async () => {
+      const snapshot = await this.snapshot(id);
+      return this.exportCaptured(snapshot, format, out);
+    });
   }
-  private async exportSnapshot(
-    id: string,
+  async exportCaptured(
+    snapshot: ReportSnapshot,
     format: "json" | "markdown" | "html" | "junit" | "allure",
     out?: string,
   ) {
-    const snapshot = await this.snapshot(id);
+    this.ctx.authorize("R");
+    for (const entry of snapshot.runs) {
+      const run = this.runs.get(entry.run.id);
+      this.ctx.authorize("R", String(requireEntity(this.ctx, "TestCase", run.testId).projectId));
+    }
     let content: string | Record<string, string>;
     switch (format) {
       case "json":
@@ -453,8 +644,18 @@ export class ReportsService {
         for (const [name, value] of Object.entries(content))
           await writeFile(join(path, name), value, { mode: 0o600 });
       }
-      return { runId: id, format, out: path, snapshotId: snapshot.snapshotId };
+      return {
+        runId: snapshot.batch?.id ?? snapshot.runs[0]?.run.id ?? null,
+        format,
+        out: path,
+        snapshotId: snapshot.snapshotId,
+      };
     }
-    return { runId: id, format, content, snapshotId: snapshot.snapshotId };
+    return {
+      runId: snapshot.batch?.id ?? snapshot.runs[0]?.run.id ?? null,
+      format,
+      content,
+      snapshotId: snapshot.snapshotId,
+    };
   }
 }

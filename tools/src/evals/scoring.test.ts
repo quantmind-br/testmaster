@@ -1,11 +1,6 @@
+import { wilson } from "@testmaster/domain";
 import { describe, expect, it } from "vitest";
-import {
-  classifyExclusion,
-  scoreTrial,
-  summarize,
-  type TrialScoreInput,
-  wilson,
-} from "./scoring.js";
+import { classifyExclusion, scoreTrial, summarize, type TrialScoreInput } from "./scoring.js";
 
 function trial(): TrialScoreInput {
   return {

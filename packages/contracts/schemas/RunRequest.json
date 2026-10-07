@@ -173,8 +173,47 @@
               "type": "null"
             }
           ]
+        },
+        "repositoryId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkoutSha": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "baseSha": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
+    },
+    "repetitionIndex": {
+      "minimum": 0,
+      "maximum": 99,
+      "type": "integer"
     },
     "extensions": {
       "additionalProperties": false,

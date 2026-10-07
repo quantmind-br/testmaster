@@ -540,6 +540,19 @@ it("rejects secret queries, header injection, unsafe URLs and artifacts before I
   await expect(readAuthorizedArtifact(runtime, "art")).rejects.toMatchObject({
     reasonCode: "security_precondition_failed",
   });
+  for (const path of [
+    "/etc/passwd",
+    "/run/testmaster/input/../escape",
+    "/run/testmaster/input//escape",
+    "/run/testmaster/input-other/file",
+  ]) {
+    const scoped = fixture(base, {
+      artifacts: { art: { path, mimeType: "text/plain", sizeBytes: 1 } },
+    });
+    await expect(readAuthorizedArtifact(scoped.runtime, "art")).rejects.toMatchObject({
+      reasonCode: "security_precondition_failed",
+    });
+  }
   expect(jsonPointerValue({ "a/b": { "~key": null } }, "/a~1b/~0key")).toBeNull();
   expect(() => jsonPointerValue({}, "/absent")).toThrow();
 });

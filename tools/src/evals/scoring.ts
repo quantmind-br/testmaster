@@ -1,36 +1,4 @@
-export interface Proportion {
-  status: "measured" | "insufficientData";
-  successes: number;
-  n: number;
-  estimate: number | null;
-  lower: number | null;
-  upper: number | null;
-}
-export function wilson(successes: number, n: number): Proportion {
-  if (
-    !Number.isSafeInteger(n) ||
-    !Number.isSafeInteger(successes) ||
-    n < 0 ||
-    successes < 0 ||
-    successes > n
-  )
-    throw new RangeError("Expected integer counts with 0 <= successes <= n");
-  if (!n)
-    return { status: "insufficientData", successes, n, estimate: null, lower: null, upper: null };
-  const z = 1.96;
-  const p = successes / n;
-  const denominator = 1 + (z * z) / n;
-  const center = (p + (z * z) / (2 * n)) / denominator;
-  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / denominator;
-  return {
-    status: "measured",
-    successes,
-    n,
-    estimate: p,
-    lower: Math.max(0, center - half),
-    upper: Math.min(1, center + half),
-  };
-}
+import { wilson } from "@testmaster/domain";
 export const exclusionCodes = [
   "oracle_error",
   "oracle_mismatch",

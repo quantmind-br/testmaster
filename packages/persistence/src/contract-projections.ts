@@ -121,9 +121,7 @@ export function generatedConstraintMigrations(
   const rules = projectionRules().filter(
     (rule) =>
       scalarPredicate(rule.schema, rule.column) !== "1=1" &&
-      (selected
-        ? (selected as readonly string[]).includes(rule.table)
-        : !later.has(rule.table)),
+      (selected ? (selected as readonly string[]).includes(rule.table) : !later.has(rule.table)),
   );
   const grouped = new Map<string, ScalarRule[]>();
   for (const rule of rules) {

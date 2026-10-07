@@ -32,7 +32,7 @@ export function planCommands(program: Command, runtime: Runtime): void {
         new Option(
           "--type <type>",
           "Plan type; auto lets the model choose per requirement",
-        ).choices(["frontend", "backend", "auto"]),
+        ).choices(["frontend", "backend", "integration", "auto"]),
       )
       .option("--requirement <id>", "Requirement (repeatable)", collect)
       .option("--provider <id>")

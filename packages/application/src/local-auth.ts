@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, validate } from "@testmaster/contracts";
 import type { Application, AuthorizationIdentity, PermissionGrant } from "./application.js";
 import { auditSecurity } from "./audit.js";
 import type { Scope } from "./context.js";
@@ -35,7 +35,7 @@ export function authenticateLocalToken(app: Application, token: string): Authori
     throw new ContractError("UNAUTHENTICATED", "Local capability token is invalid or expired");
   const view = app.withIdentity(record.identity);
   view.context.authorize("R");
-  return record.identity;
+  return { ...record.identity, expiresAt: record.expiresAt };
 }
 export async function issueLocalToken(
   app: Application,
@@ -51,6 +51,12 @@ export async function issueLocalToken(
   const scopes = options.scopes ?? ["R", "W", "X", "A"];
   if (scopes.some((scope) => !["R", "W", "X", "A"].includes(scope)) || !scopes.includes("R"))
     throw new ContractError("INVALID_ARGUMENT", "Local token scopes must include read");
+  for (const scope of scopes) app.context.authorize(scope);
+  const expiresAt = options.expiresAt ?? new Date(Date.now() + 30 * 86400000).toISOString();
+  if (!Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now())
+    throw new ContractError("INVALID_ARGUMENT", "Token expiry must be in the future");
+  if (app.identity?.expiresAt && Date.parse(expiresAt) > Date.parse(app.identity.expiresAt))
+    throw new ContractError("FORBIDDEN", "Delegated token cannot outlive issuer token");
   const membership = app.database.get(
     "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
     app.context.workspaceId,
@@ -71,6 +77,64 @@ export async function issueLocalToken(
           },
         ]
       : []);
+  for (const grant of grants) {
+    validate("PermissionGrant", grant);
+    if (
+      grant.grantedBy !== app.context.principalId ||
+      grant.deny ||
+      (grant.expiresAt !== null &&
+        (!Number.isFinite(Date.parse(grant.expiresAt)) ||
+          Date.parse(grant.expiresAt) <= Date.now() ||
+          Date.parse(grant.expiresAt) > Date.parse(expiresAt)))
+    )
+      throw new ContractError(
+        "FORBIDDEN",
+        "Requested grant exceeds token lifetime or issuer authority",
+      );
+    if (app.identity) {
+      const issuerGrants = app.identity.grants ?? [];
+      const contains = (outer: string[], inner: string[]) =>
+        !outer.length || (inner.length > 0 && inner.every((id) => outer.includes(id)));
+      const denied = issuerGrants.some(
+        (held) =>
+          held.deny &&
+          (held.resourceType === "*" || held.resourceType === grant.resourceType) &&
+          held.actions.some((action) => grant.actions.includes(action)) &&
+          (!held.projectIds.length ||
+            !grant.projectIds.length ||
+            held.projectIds.some((id) => grant.projectIds.includes(id))) &&
+          (!held.environmentIds.length ||
+            !grant.environmentIds.length ||
+            held.environmentIds.some((id) => grant.environmentIds.includes(id))),
+      );
+      const held = issuerGrants.find(
+        (held) =>
+          !held.deny &&
+          (held.resourceType === "*" || held.resourceType === grant.resourceType) &&
+          grant.actions.every((action) => held.actions.includes(action)) &&
+          contains(held.projectIds, grant.projectIds) &&
+          contains(held.environmentIds, grant.environmentIds) &&
+          (held.expiresAt === null ||
+            (grant.expiresAt !== null &&
+              Date.parse(grant.expiresAt) <= Date.parse(held.expiresAt))),
+      );
+      if (denied || !held)
+        throw new ContractError("FORBIDDEN", "Requested grants exceed current issuer grants");
+    } else {
+      if (!["org_owner", "org_admin"].includes(role))
+        throw new ContractError(
+          "FORBIDDEN",
+          "Only current administrators may delegate unbounded grants",
+        );
+      for (const projectId of grant.projectIds) app.context.authorize("A", projectId);
+      for (const environmentId of grant.environmentIds) {
+        const environment = app.environments.get(environmentId);
+        app.context.authorize("A", environment.projectId);
+        if (grant.projectIds.length && !grant.projectIds.includes(environment.projectId))
+          throw new ContractError("FORBIDDEN", "Grant environment is outside requested projects");
+      }
+    }
+  }
   const tokenPath =
     options.tokenPath ?? join(app.config.home, ".local", "share", "testmaster", "server.token");
   const directory = await privateDirectory(dirname(tokenPath));
@@ -115,11 +179,10 @@ export async function issueLocalToken(
     const identity: AuthorizationIdentity = {
       principalId: app.context.principalId,
       scopes,
+      expiresAt,
       ...(options.grants !== undefined || grants.length ? { grants } : {}),
     };
-    const expiresAt = options.expiresAt ?? new Date(Date.now() + 30 * 86400000).toISOString();
-    if (!Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now())
-      throw new ContractError("INVALID_ARGUMENT", "Token expiry must be in the future");
+    // The validated lifetime above also bounds every delegated grant.
     const file = await open(
       path,
       constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,

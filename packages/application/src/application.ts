@@ -22,11 +22,13 @@ import {
 } from "@testmaster/sandbox";
 import { AgentSkillsService } from "./agent-skills/service.js";
 import { AgentModeService } from "./ai/agent-mode.js";
+import { AnalysisService } from "./ai/analysis.js";
 import { CodeExportService } from "./ai/code-export.js";
 import { CodeGenerationService } from "./ai/code-generation.js";
 import { CodeImportService } from "./ai/code-import.js";
 import { DiscoveryService } from "./ai/discovery.js";
 import { ExploreService } from "./ai/explore.js";
+import { HealingService } from "./ai/healing.js";
 import { ModelService } from "./ai/model.js";
 import { ProposalsService } from "./ai/proposals.js";
 import { RequirementsService } from "./ai/requirements.js";
@@ -42,13 +44,20 @@ import {
   TestsService,
 } from "./authoring.js";
 import { BackupsService } from "./backups.js";
+import { CiService } from "./ci.js";
+import { ComparisonsService } from "./comparisons.js";
 import { type ResolveConfigOptions, type ResolvedConfig, resolveConfig } from "./config.js";
 import { entity, type Scope, type ServiceContext } from "./context.js";
+import { DeliveryService } from "./delivery.js";
+import { FlakeService } from "./flake.js";
 import { correlationId } from "./observability.js";
+import { QuarantineService } from "./quarantine.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
+import { measureRuntimeIdentities } from "./runtime-identity.js";
 import { SecretsService } from "./secrets.js";
+import { SelectionService } from "./selection.js";
 import { WorkerService } from "./worker.js";
 
 export interface PermissionGrant {
@@ -64,6 +73,8 @@ export interface AuthorizationIdentity {
   principalId: string;
   scopes: Scope[];
   grants?: PermissionGrant[];
+  /** Capability-token ceiling carried across delegation; absent for local session identities. */
+  expiresAt?: string;
 }
 export interface ApplicationOptions extends ResolveConfigOptions {
   identity?: AuthorizationIdentity;
@@ -81,11 +92,18 @@ export class Application {
   readonly secrets: SecretsService;
   readonly runs: RunsService;
   readonly batches: BatchesService;
+  readonly comparisons: ComparisonsService;
+  readonly flake: FlakeService;
+  readonly quarantine: QuarantineService;
   readonly worker: WorkerService;
   readonly artifacts: ArtifactsService;
   readonly reports: ReportsService;
+  readonly ci: CiService;
+  readonly delivery: DeliveryService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
+  readonly analysis: AnalysisService;
+  readonly healing: HealingService;
   readonly uploads: UploadsService;
   readonly sources: SourcesService;
   readonly discovery: DiscoveryService;
@@ -99,6 +117,7 @@ export class Application {
   readonly codeGeneration: CodeGenerationService;
   readonly resources: ResourcesService;
   readonly audit: AuditService;
+  readonly selection: SelectionService;
   readonly seccompPath = fileURLToPath(
     new URL("../../../containers/seccomp_profile.json", import.meta.url),
   );
@@ -158,7 +177,7 @@ export class Application {
     this.environments = new EnvironmentsService(this.context);
     this.tests = new TestsService(this.context);
     this.revisions = new RevisionsService(this.context);
-    this.approvals = new ApprovalsService(this.context);
+    this.approvals = new ApprovalsService(this.context, config);
     this.secrets = new SecretsService(this.context, config);
     this.runs = new RunsService(this.context, {
       config,
@@ -168,6 +187,7 @@ export class Application {
       },
       preflight: (unsafe, executor) => this.preflight(unsafe, executor),
       liveWorker: () => this.worker.live(),
+      analysisStatus: (runId) => this.analysis.analysisStatus(runId),
       verifyApproval: (run, test, env) =>
         this.approvals.verify(
           run as unknown as Run,
@@ -184,13 +204,42 @@ export class Application {
       secrets: this.secrets,
       runs: this.runs,
       retention: this.retention,
+      analysis: { settlePending: () => this.analysis.settlePending() },
+      healing: { settlePending: () => this.healing.settlePending() },
       ...(this.dockerCommand ? { dockerCommand: this.dockerCommand } : {}),
     });
+    this.comparisons = new ComparisonsService(this.context, this.runs, this.batches);
+    this.flake = new FlakeService(this.context, this.runs, this.batches, this.worker);
+    this.quarantine = new QuarantineService(this.context);
+    this.selection = new SelectionService(this.context, this.runs, this.batches, this.quarantine);
     this.artifacts = new ArtifactsService(this.context, config, this.runs);
-    this.reports = new ReportsService(this.context, config, this.runs, this.artifacts);
     this.backups = new BackupsService(this.context, config, this.secrets);
     this.agentSkills = new AgentSkillsService(this.context, config.cwd);
     this.model = new ModelService(this.context, config);
+    this.analysis = new AnalysisService(this.context, this.model, this.artifacts);
+    this.healing = new HealingService(
+      this.context,
+      this.model,
+      this.runs,
+      this.artifacts,
+      this.analysis,
+    );
+    this.reports = new ReportsService(
+      this.context,
+      config,
+      this.runs,
+      this.artifacts,
+      this.analysis,
+    );
+    this.ci = new CiService(
+      this.selection,
+      this.batches,
+      this.runs,
+      this.worker,
+      this.reports,
+      this.artifacts,
+    );
+    this.delivery = new DeliveryService(this.context);
     this.uploads = new UploadsService(this.context, config);
     this.sources = new SourcesService(this.context, config, this.uploads);
     this.discovery = new DiscoveryService(this.context, config, this.sources);
@@ -517,7 +566,8 @@ export class Application {
         diagnostics: docker.diagnostics,
       });
     try {
-      await this.images();
+      const images = await this.images();
+      await measureRuntimeIdentities(images, this.seccompPath);
     } catch {
       throw new ContractError("POLICY_DENIED", "Runner image lock or seccomp verification failed", {
         reasonCode: "security_precondition_failed",

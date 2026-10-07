@@ -11,6 +11,7 @@ function run(
   retried = false,
 ): ReportRun {
   return {
+    evidenceState: "committed",
     run: { id, mode: "replay", matrixCell: {} },
     result: {
       phase: "completed",

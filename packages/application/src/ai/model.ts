@@ -11,12 +11,12 @@ import { requireEntity, type ServiceContext } from "../context.js";
 
 export const promptVersions = {
   normalize: "normalize-3-evidence-handles",
-  plan: "plan-3-auto-type",
+  plan: "plan-4-integration-workflow",
   resolve_action: "resolve-action-1",
   generate_code: "generate-code-1",
   summarize: "summarize-1",
   classify: "classify-1",
-  analyze: "analyze-1",
+  analyze: "analyze-2-execution-handles",
   heal: "heal-1",
 } as const;
 export interface ModelInput {
@@ -61,7 +61,15 @@ export class ModelService {
     if (
       !dataClasses.length ||
       dataClasses.some(
-        (value) => !["documents", "code_summary", "dom", "requirements", "plans"].includes(value),
+        (value) =>
+          ![
+            "documents",
+            "code_summary",
+            "dom",
+            "requirements",
+            "plans",
+            "execution_evidence",
+          ].includes(value),
       )
     )
       throw new ContractError("INVALID_ARGUMENT", "Explicit supported data classes are required");

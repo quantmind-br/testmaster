@@ -26,6 +26,7 @@ function snapshot(empty = false): ReportSnapshot {
       ? []
       : [
           {
+            evidenceState: "committed",
             run: {
               id: runId,
               workspaceId,
@@ -157,16 +158,38 @@ describe("snapshot reporters", () => {
   it("refuses mixed snapshots", () => {
     const input = snapshot();
     const run = input.runs[0];
-    if (!run) throw new Error("Fixture missing");
+    if (!run || run.evidenceState !== "committed") throw new Error("Fixture missing");
     run.manifest.snapshotId = uuidV7IdGenerator.next("snp");
     expect(() => exportJson(input)).toThrow("binding mismatch");
   });
 });
 
+it("exports honest partial evidence while retaining original failure in every format", () => {
+  const input = snapshot();
+  const original = input.runs[0];
+  if (!original) throw new Error("Missing fixture");
+  input.runs = [
+    {
+      ...original,
+      evidenceState: "unavailable",
+      snapshot: null,
+      manifest: null,
+      evidenceErrors: ["committed bundle missing"],
+      result: { ...original.result, outcome: "failed", gate: "failed" },
+    },
+  ];
+  input.completeness = { state: "partial", reasons: ["committed bundle missing"] };
+  expect(JSON.parse(exportJson(input)).runs[0].result.outcome).toBe("failed");
+  expect(exportMarkdown(input)).toContain("committed bundle missing");
+  expect(exportHtml(input)).toContain("committed bundle missing");
+  expect(exportJunit(input)).toContain('name="snapshot" value="unavailable"');
+  expect(Object.values(exportAllure(input)).join("\n")).toContain("failed");
+});
+
 it("bounds large JUnit output and exposes truncation without losing the gate", () => {
   const input = snapshot();
   const run = input.runs[0];
-  if (!run) throw new Error("Missing fixture");
+  if (!run || run.evidenceState !== "committed") throw new Error("Missing fixture");
   run.steps = [{ observed: { text: "<hostile>&".repeat(200000) } }] as unknown as typeof run.steps;
   const output = exportJunit(input);
   expect(XMLValidator.validate(output)).toBe(true);

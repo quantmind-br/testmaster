@@ -1,0 +1,250 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "batchId",
+    "studyIds",
+    "testId",
+    "revisionId",
+    "environmentRevisionId",
+    "identityHash",
+    "window",
+    "counts",
+    "failureRate",
+    "wilson95",
+    "zeroFailureUpper95",
+    "classification",
+    "runIds",
+    "limitations",
+    "incompatible"
+  ],
+  "properties": {
+    "batchId": {
+      "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "studyIds": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "testId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "revisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "environmentRevisionId": {
+      "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "identityHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "window": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "counts": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "nPlanned",
+        "nPass",
+        "nFail",
+        "nBlocked",
+        "nCancelled",
+        "nInconclusive",
+        "nValid",
+        "nInFlight"
+      ],
+      "properties": {
+        "nPlanned": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nPass": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nFail": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nBlocked": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nCancelled": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nInconclusive": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nValid": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nInFlight": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "failureRate": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "wilson95": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "low",
+            "high"
+          ],
+          "properties": {
+            "low": {
+              "minimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            "high": {
+              "minimum": 0,
+              "maximum": 1,
+              "type": "number"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "zeroFailureUpper95": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "classification": {
+      "anyOf": [
+        {
+          "const": "insufficient_data",
+          "type": "string"
+        },
+        {
+          "const": "passing_observed",
+          "type": "string"
+        },
+        {
+          "const": "deterministic_failure",
+          "type": "string"
+        },
+        {
+          "const": "suspected_flaky",
+          "type": "string"
+        },
+        {
+          "const": "confirmed_flaky",
+          "type": "string"
+        }
+      ]
+    },
+    "runIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    },
+    "incompatible": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "batchId",
+          "reasons"
+        ],
+        "properties": {
+          "batchId": {
+            "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:FlakeStudyReport",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

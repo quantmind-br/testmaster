@@ -87,9 +87,9 @@ it("kills non-equivalent revision redaction and assertion mutations in isolated 
         "dir",
       );
     const healthy = await run();
-    expect(healthy.output).toContain("3 passed");
+    expect(healthy.output).toContain("4 passed");
     expect(healthy.code).toBe(0);
-    observations.push({ control: "healthy implementation", passed: true, tests: 3 });
+    observations.push({ control: "healthy implementation", passed: true, tests: 4 });
     for (const mutation of mutations) {
       const path = join(temporary, mutation.path);
       const original = await readFile(path, "utf8");

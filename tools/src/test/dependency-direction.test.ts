@@ -61,6 +61,14 @@ async function sources(path: string): Promise<string[]> {
   }
   return files;
 }
+/**
+ * Files that load the application only from a hash-verified installed runtime archive, never
+ * from the workspace graph. Only their dynamic `import()` expressions may be non-literal.
+ */
+const verifiedRuntimeLoaders = new Set([
+  "tools/src/github-action/main.ts",
+  "tools/src/github-action/publisher.ts",
+]);
 function importSpecifiers(source: string, filename: string): string[] {
   const tree = parse(source, {
     sourceType: "unambiguous",
@@ -95,8 +103,10 @@ function importSpecifiers(source: string, filename: string): string[] {
     }
     if (specifier) {
       const literal = specifier as Record<string, unknown>;
-      if (literal.type !== "StringLiteral" || typeof literal.value !== "string")
+      if (literal.type !== "StringLiteral" || typeof literal.value !== "string") {
+        if (type === "ImportExpression" && verifiedRuntimeLoaders.has(filename)) continue;
         throw new Error(`${filename}: non-literal module loading cannot be checked`);
+      }
       imports.push(literal.value);
     }
     for (const [key, value] of Object.entries(record)) {

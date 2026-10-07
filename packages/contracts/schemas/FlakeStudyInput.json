@@ -17,11 +17,21 @@
       "type": "string"
     },
     "n": {
-      "minimum": 1,
+      "minimum": 2,
+      "maximum": 100,
       "type": "integer"
     },
     "seed": {
       "type": "integer"
+    },
+    "includeStudyIds": {
+      "maxItems": 20,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
     }
   },
   "$defs": {},

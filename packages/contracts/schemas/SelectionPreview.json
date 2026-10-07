@@ -1,0 +1,492 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "selectionHash",
+    "mode",
+    "requested",
+    "expanded",
+    "excluded",
+    "producerBindings",
+    "effects",
+    "resources",
+    "uncertainEffects",
+    "approvalsRequired",
+    "refusals",
+    "diff",
+    "provenance",
+    "empty"
+  ],
+  "properties": {
+    "selectionHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "const": "tests",
+          "type": "string"
+        },
+        {
+          "const": "runs",
+          "type": "string"
+        },
+        {
+          "const": "diff",
+          "type": "string"
+        },
+        {
+          "const": "all",
+          "type": "string"
+        }
+      ]
+    },
+    "requested": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "revisionId",
+          "reason"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "revisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "expanded": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "revisionId",
+          "consumers"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "revisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "consumers": {
+            "type": "array",
+            "items": {
+              "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "excluded": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "reason",
+          "owner",
+          "detail",
+          "expiresAt"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "const": "quarantined",
+                "type": "string"
+              },
+              {
+                "const": "unaffected",
+                "type": "string"
+              },
+              {
+                "const": "archived",
+                "type": "string"
+              },
+              {
+                "const": "reused",
+                "type": "string"
+              },
+              {
+                "const": "no_revision",
+                "type": "string"
+              }
+            ]
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "producerBindings": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "consumerTestId",
+          "producerTestId",
+          "outputName",
+          "source",
+          "producerRunId"
+        ],
+        "properties": {
+          "consumerTestId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "producerTestId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "outputName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "const": "execute",
+                "type": "string"
+              },
+              {
+                "const": "reuse",
+                "type": "string"
+              }
+            ]
+          },
+          "producerRunId": {
+            "anyOf": [
+              {
+                "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "stepId",
+          "origin",
+          "method",
+          "risk"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "stepId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "const": "read",
+                "type": "string"
+              },
+              {
+                "const": "write",
+                "type": "string"
+              },
+              {
+                "const": "destructive",
+                "type": "string"
+              },
+              {
+                "const": "securityProbe",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "stepId",
+          "resourceType",
+          "cleanupDeclared"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "stepId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "resourceType": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "cleanupDeclared": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "uncertainEffects": {
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    },
+    "approvalsRequired": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "actions"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "refusals": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "testId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "code": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "diff": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "changedPaths",
+            "unmappedPaths",
+            "conservative"
+          ],
+          "properties": {
+            "changedPaths": {
+              "type": "array",
+              "items": {
+                "maxLength": 4096,
+                "type": "string"
+              }
+            },
+            "unmappedPaths": {
+              "type": "array",
+              "items": {
+                "maxLength": 4096,
+                "type": "string"
+              }
+            },
+            "conservative": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "commitSha",
+        "checkoutSha",
+        "dirtyHash",
+        "binding"
+      ],
+      "properties": {
+        "commitSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkoutSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dirtyHash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding": {
+          "anyOf": [
+            {
+              "const": "verified",
+              "type": "string"
+            },
+            {
+              "const": "unbound",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "empty": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SelectionPreview",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

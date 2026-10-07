@@ -248,6 +248,19 @@ export class PersistenceDatabase {
           "SELECT workspace_id,id,run_id,attempt_id,snapshot_id,storage_key,hash,bytes,state FROM artifacts ORDER BY workspace_id,id",
         )
         .all();
+      if (
+        snapshot
+          .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='fixture_inputs'")
+          .get()
+      ) {
+        refs.push(
+          ...snapshot
+            .prepare(
+              "SELECT workspace_id,id,NULL AS run_id,NULL AS attempt_id,NULL AS snapshot_id,storage_key,content_hash AS hash,size_bytes AS bytes,CASE WHEN EXISTS(SELECT 1 FROM operational_state d WHERE d.key='retention:artifact:' || f.workspace_id || ':' || f.id OR d.key='retention:deletion:' || f.workspace_id || ':' || f.id) THEN 'expired' ELSE 'available' END AS state FROM fixture_inputs f ORDER BY workspace_id,id",
+            )
+            .all(),
+        );
+      }
       databaseVersion = Number(
         snapshot.prepare("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations").get()
           ?.version,
@@ -340,6 +353,7 @@ export class PersistenceDatabase {
         const id = String(ref.id);
         if (index.missingObjects.includes(id)) continue;
         const relativePath = `evidence/${String(ref.storage_key)}`;
+        if (files.some((file) => file.relativePath === relativePath)) continue;
         files.push({ relativePath, sizeBytes: Number(ref.bytes), sha256: String(ref.hash) });
       }
     const manifest = validate<BackupManifest>("BackupManifest", {

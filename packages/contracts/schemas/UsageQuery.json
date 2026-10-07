@@ -1,0 +1,32 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "since": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "until": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:UsageQuery",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

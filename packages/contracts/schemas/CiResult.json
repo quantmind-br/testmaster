@@ -1,0 +1,425 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kind",
+    "batchId",
+    "gate",
+    "exitCode",
+    "counts",
+    "provenance",
+    "selection",
+    "outputs",
+    "bundles",
+    "reportHash",
+    "error"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "batch",
+          "type": "string"
+        },
+        {
+          "const": "empty",
+          "type": "string"
+        },
+        {
+          "const": "admission_rejected",
+          "type": "string"
+        }
+      ]
+    },
+    "batchId": {
+      "anyOf": [
+        {
+          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gate": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "passed",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "not_applicable",
+          "type": "string"
+        }
+      ]
+    },
+    "exitCode": {
+      "minimum": 0,
+      "maximum": 255,
+      "type": "integer"
+    },
+    "counts": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "passed",
+            "failed",
+            "blocked",
+            "cancelled",
+            "inconclusive",
+            "inFlight"
+          ],
+          "properties": {
+            "passed": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "failed": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "blocked": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "cancelled": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "inconclusive": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "inFlight": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "assessedSha",
+        "checkoutSha",
+        "binding",
+        "targetBinding"
+      ],
+      "properties": {
+        "assessedSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkoutSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding": {
+          "anyOf": [
+            {
+              "const": "verified",
+              "type": "string"
+            },
+            {
+              "const": "unbound",
+              "type": "string"
+            }
+          ]
+        },
+        "targetBinding": {
+          "anyOf": [
+            {
+              "const": "local-checkout",
+              "type": "string"
+            },
+            {
+              "const": "unbound",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "selection": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "requested",
+        "excluded",
+        "emptyReason",
+        "quarantinePolicy"
+      ],
+      "properties": {
+        "requested": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "testId",
+              "reason",
+              "owner",
+              "expiresAt"
+            ],
+            "properties": {
+              "testId": {
+                "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "reason": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "owner": {
+                "anyOf": [
+                  {
+                    "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expiresAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "emptyReason": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quarantinePolicy": {
+          "anyOf": [
+            {
+              "const": "exclude",
+              "type": "string"
+            },
+            {
+              "const": "strict",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "outputs": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "report",
+        "junit",
+        "summary",
+        "bundleIndex"
+      ],
+      "properties": {
+        "report": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "junit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bundleIndex": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "bundles": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runId",
+          "state",
+          "path",
+          "error"
+        ],
+        "properties": {
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "exported",
+                "type": "string"
+              },
+              {
+                "const": "missing",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              }
+            ]
+          },
+          "path": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "reportHash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "error": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "message": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:CiResult",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

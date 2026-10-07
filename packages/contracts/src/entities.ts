@@ -538,6 +538,7 @@ export const ExecutionSnapshot = Obj({
   limits: ExecutionLimits,
   secretRefs: Type.Array(Obj({ id: id("sec"), version: Version, hash: ContentDigest })),
   requiredArtifacts: names,
+  inputFixtureHashes: Type.Optional(Type.Record(id("art"), ContentDigest)),
   imageDigest: Type.Optional(Name),
   browserVersion: Type.Optional(Name),
   dependenciesLockHash: Type.Optional(ContentDigest),

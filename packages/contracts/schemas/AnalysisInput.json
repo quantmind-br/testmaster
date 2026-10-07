@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "boolean"
+    },
+    "budget": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "deadlineMs": {
+          "minimum": 1,
+          "maximum": 180000,
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AnalysisInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

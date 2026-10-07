@@ -43,7 +43,7 @@ afterEach(async () => {
 });
 
 async function fixture(
-  options: { completed?: boolean; retentionDays?: number } = {},
+  options: { completed?: boolean; retentionDays?: number; restricted?: boolean } = {},
 ): Promise<RetentionFixture> {
   const root = await fs.mkdtemp(join(tmpdir(), "tm-retention-"));
   roots.push(root);
@@ -123,6 +123,7 @@ async function fixture(
     relativePath: "evidence/result.txt",
     kind: "dom",
     mimeType: "text/plain",
+    ...(options.restricted ? { sensitivity: "restricted" as const } : {}),
   });
   await writer.write(Buffer.from("retained evidence"));
   const entry = await writer.end();
@@ -171,6 +172,63 @@ async function fixture(
     key: `retention:artifact:${ctx.workspaceId}:${artifactId}`,
   };
 }
+
+it("reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors", async () => {
+  const f = await fixture();
+  await fs.rm(join(f.committed.bundleDir, "meta.json"));
+  const snapshot = await f.app.reports.snapshot(f.runId);
+  expect(snapshot.completeness.state).toBe("partial");
+  expect(snapshot.runs[0]).toMatchObject({
+    evidenceState: "unavailable",
+    snapshot: null,
+    manifest: null,
+    result: { outcome: "passed", gate: "passed" },
+  });
+  expect(snapshot.runs[0]?.evidenceErrors).toEqual([expect.stringContaining("missing")]);
+  vi.spyOn(f.app.artifacts, "get").mockRejectedValue(new Error("programming failure"));
+  await expect(f.app.reports.snapshot(f.runId)).rejects.toThrow("programming failure");
+});
+it("sanitized export omits restricted raw bytes and retains source seal provenance", async () => {
+  const f = await fixture({ restricted: true });
+  const before = await fs.readFile(join(f.committed.bundleDir, "manifest.json"));
+  const out = join(roots[roots.length - 1]!, "sanitized");
+  const result = await f.app.artifacts.exportSanitized(f.runId, out);
+  const manifest = JSON.parse(await fs.readFile(result.manifestPath, "utf8"));
+  expect(manifest).toMatchObject({
+    exportPolicy: "sanitized",
+    sourceSnapshotId: f.ids.snapshotId,
+    sourceManifestHash: f.committed.manifestSha256,
+  });
+  expect(manifest.entries[0]).toMatchObject({
+    state: "omitted",
+    redactionStatus: "restrictedRaw",
+    omissionReason: "restricted_raw_export_policy",
+  });
+  expect(result.omitted).toEqual([
+    { relativePath: "evidence/result.txt", reason: "restricted_raw_export_policy" },
+  ]);
+  await expect(fs.access(join(out, "evidence/result.txt"))).rejects.toBeDefined();
+  expect(await fs.readFile(join(f.committed.bundleDir, "manifest.json"))).toEqual(before);
+});
+it("deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold", async () => {
+  const f = await fixture();
+  const stream = await f.app.artifacts.stream(f.artifactId);
+  const key = `retention:legal-hold:${f.ctx.workspaceId}:${f.artifactId}`;
+  f.ctx.database.run("INSERT INTO operational_state(key,value) VALUES(?,'active')", key);
+  const operation = f.service.requestDeletion(f.artifactId);
+  expect(f.service.requestDeletion(f.artifactId).id).toBe(operation.id);
+  expect(operation).toMatchObject({ physicalState: "pending", backupHolds: [key] });
+  await expect(stream.stream[Symbol.asyncIterator]().next()).rejects.toMatchObject({
+    code: "NOT_FOUND",
+  });
+  await expect(f.app.artifacts.stream(f.artifactId)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  expect(await f.service.maintenance()).toMatchObject({ removed: [] });
+  expect(f.service.deletionStatus(operation.id).physicalState).toBe("pending");
+  f.ctx.database.run("DELETE FROM operational_state WHERE key=?", key);
+  await f.service.maintenance();
+  expect(f.service.deletionStatus(operation.id).physicalState).toBe("completed");
+  await expect(fs.access(f.file)).rejects.toBeDefined();
+});
 function record(f: RetentionFixture) {
   return JSON.parse(
     String(f.ctx.database.get("SELECT value FROM operational_state WHERE key=?", f.key)?.value),
