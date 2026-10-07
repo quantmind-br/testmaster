@@ -8,6 +8,7 @@ export interface PublishEnvelopeInput {
   envelopePath: string;
   repository: string;
   sha: string;
+  checkoutSha: string;
   token: string;
   runnerTemp: string;
   expectedReportHash: string;
@@ -31,7 +32,8 @@ export async function publishEnvelope(input: PublishEnvelopeInput) {
   const envelope = await validateCiEnvelope(input.envelopePath);
   if (
     envelope.result.reportHash !== input.expectedReportHash ||
-    envelope.result.provenance.assessedSha !== input.sha
+    envelope.result.provenance.assessedSha !== input.sha ||
+    envelope.result.provenance.checkoutSha !== input.checkoutSha
   )
     throw new ContractError(
       "POLICY_DENIED",

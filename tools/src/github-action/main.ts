@@ -138,6 +138,7 @@ export async function runAction(env: NodeJS.ProcessEnv = process.env): Promise<n
       envelopePath: join(output, "report.json"),
       repository: env.GITHUB_REPOSITORY!,
       sha: inputs.commitSha,
+      checkoutSha: inputs.checkoutSha,
       token: inputs.githubToken!,
       runnerTemp: env.RUNNER_TEMP,
       expectedReportHash: result.reportHash!,

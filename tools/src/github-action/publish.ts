@@ -49,6 +49,7 @@ export async function runPublisher(env: NodeJS.ProcessEnv = process.env): Promis
     envelopePath,
     repository: env.GITHUB_REPOSITORY!,
     sha: env.TESTMASTER_ASSESSED_SHA!,
+    checkoutSha: env.TESTMASTER_CHECKOUT_SHA!,
     token: env.GITHUB_TOKEN!,
     runnerTemp: cwd,
     expectedReportHash: env.TESTMASTER_REPORT_HASH!,

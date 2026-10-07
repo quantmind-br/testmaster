@@ -59,8 +59,10 @@ export async function downloadEnvelope(input: DownloadEnvelopeInput): Promise<st
   );
   if (!runResponse.ok) throw new ActionInputError("UNAVAILABLE", "Workflow identity lookup failed");
   const run = (await runResponse.json()) as Record<string, unknown>;
+  // A pull_request run executes the synthetic merge checkout while GitHub records the PR head as
+  // the run's head_sha; the published check targets that assessed head, never the merge commit.
   if (
-    run.head_sha !== input.checkoutSha ||
+    run.head_sha !== input.assessedSha ||
     !["workflow_dispatch", "pull_request"].includes(String(run.event))
   )
     throw new ActionInputError(
@@ -114,7 +116,7 @@ export async function downloadEnvelope(input: DownloadEnvelopeInput): Promise<st
     artifact.expired ||
     artifact.name !== `testmaster-ci-${input.executionJobId}` ||
     String(artifact.workflow_run?.id) !== input.workflowRunId ||
-    artifact.workflow_run?.head_sha !== input.checkoutSha ||
+    artifact.workflow_run?.head_sha !== input.assessedSha ||
     artifact.digest !== `sha256:${input.archiveSha256}`
   )
     throw new ActionInputError(
