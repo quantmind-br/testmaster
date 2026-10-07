@@ -180,6 +180,8 @@ const assertion: PlanStep = {
   description: "Assert",
   input: { locator: { by: "testId", value: "message" } },
   expectation: { predicate: "textEquals", value: { literal: "saved" } },
+  // Value predicates poll until the step deadline; keep failing cases fast.
+  timeoutMs: 300,
 };
 beforeEach(() => {
   vi.stubEnv("TESTMASTER_EGRESS_PROXY", "http://127.0.0.1:3128");
@@ -411,6 +413,23 @@ it("fails a real negative oracle instead of claiming screenshot capture means su
     outcome: "failed",
     reasonCode: "assertion_mismatch",
   });
+});
+it("waits for an eventually consistent value within the step deadline but fails on a stale one", async () => {
+  const message = context.page.locator("message");
+  // The product renders the value after a few observations (e.g. an async toast).
+  let reads = 0;
+  vi.spyOn(message, "innerText").mockImplementation(async () => (++reads < 3 ? "" : "saved"));
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({ outcome: "passed" });
+  expect(reads).toBe(3);
+  vi.spyOn(message, "innerText").mockImplementation(async () => "");
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(
+    events.findLast((event) => event.type === "step.finished" && event.payload.stepId === "assert")
+      ?.payload,
+  ).toMatchObject({ observed: "", expected: "saved" });
 });
 it("blocks unauthorized uploads before touching filesystem or target inputs", async () => {
   const upload: PlanStep = {

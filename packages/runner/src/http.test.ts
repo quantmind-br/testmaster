@@ -220,6 +220,48 @@ it("evaluates header/count/schema expectations against named snapshot schemas", 
     assertResponse(runtime, response, { predicate: "countEquals", value: 1 }, "/items"),
   ).rejects.toMatchObject({ reasonCode: "assertion_mismatch" });
 });
+it("fails assertions whose JSON target is absent from a complete response", async () => {
+  const base = await serve((_req, res) => res.end('{"items":[],"product":{"price":125}}'));
+  const { engine, runtime } = fixture(base);
+  await engine.perform(requestStep("read", []));
+  const response = responseOf(engine, "read");
+  for (const [expectation, pointer] of [
+    [{ predicate: "jsonEquals", value: { literal: 1250 } }, "/items/0/totalCents"],
+    [{ predicate: "jsonEquals", value: { literal: null } }, "/product/priceCents"],
+    [{ predicate: "countEquals", value: 0 }, "/orders"],
+  ] as const)
+    await expect(
+      assertResponse(
+        runtime,
+        response,
+        expectation as Parameters<typeof assertResponse>[2],
+        pointer,
+      ),
+    ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
+});
+
+it("keeps a target the egress proxy could not reach inconclusive with its socket error code", async () => {
+  const proxy = createServer((_req, res) => {
+    res.writeHead(502, { "x-testmaster-upstream-failure": "ECONNREFUSED", connection: "close" });
+    res.end();
+  });
+  servers.push(proxy);
+  await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+  const address = proxy.address();
+  if (!address || typeof address === "string") throw new Error("Missing proxy fixture address");
+  vi.stubEnv("TESTMASTER_EGRESS_PROXY", `http://127.0.0.1:${address.port}`);
+  const { runtime, events } = fixture("http://127.0.0.1:9", {
+    plan: plan([requestStep("health", [])]),
+  });
+  expect(await runHttp(runtime)).toMatchObject({
+    outcome: "inconclusive",
+    reasonCode: "insufficient_evidence",
+  });
+  expect(
+    events.find((event) => event.type === "step.finished" && event.payload.stepId === "health")
+      ?.payload,
+  ).toMatchObject({ status: "inconclusive", error: { code: "ECONNREFUSED" } });
+});
 
 it("sends typed sensitive captures only over trusted IPC and keeps artifacts redacted", async () => {
   const base = await serve((_req, res) => {

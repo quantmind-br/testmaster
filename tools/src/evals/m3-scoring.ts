@@ -41,7 +41,8 @@ export interface M3Ledger {
     conservativeCharge: number;
     costs: { currency: string; scale: number; amount: string }[];
   };
-  errors: { phase: string; code: string; messageHash: string }[];
+  /** `detail` is bounded diagnostic text with provider key and canary values removed. */
+  errors: { phase: string; code: string; messageHash: string; detail?: string }[];
   records: Record<string, unknown>;
 }
 export interface PlannedCase {

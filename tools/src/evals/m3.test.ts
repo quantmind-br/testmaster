@@ -2,9 +2,10 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { resolveConfig } from "@testmaster/application";
 import { afterEach, expect, it } from "vitest";
 import type { M3Registration } from "./m3.js";
-import { applyExactPatches, assertNotStarted, checkM3, freezeM3 } from "./m3.js";
+import { applyExactPatches, assertNotStarted, checkM3, freezeM3, writeEvalProfile } from "./m3.js";
 
 const temporary: string[] = [];
 afterEach(async () => {
@@ -88,4 +89,20 @@ it("refuses hand-populated control booleans without retained run/step/oracle evi
     }),
   );
   await expect(freezeM3(root, path, control)).rejects.toThrow("evidence-backed controls");
+});
+it("writes the registered provider as a profile the product configuration accepts", async () => {
+  const { r } = await fixtureCopy();
+  const home = await mkdtemp(join(tmpdir(), "tm-m3-profile-"));
+  temporary.push(home);
+  await writeEvalProfile(home, r.provider);
+  const config = await resolveConfig({ cwd: home, home, env: { HOME: home } });
+  expect(config.modelProviders).toMatchObject([
+    {
+      id: r.provider.id,
+      baseUrl: r.provider.baseUrl,
+      apiKeyEnv: r.provider.apiKeyEnv,
+      models: [{ id: r.provider.model, reasoningEffort: "medium" }],
+    },
+  ]);
+  expect(config.profilePolicy.allowedModelProviders).toEqual([r.provider.id]);
 });

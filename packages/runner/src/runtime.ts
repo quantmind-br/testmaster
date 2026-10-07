@@ -47,6 +47,8 @@ export class RuntimeError extends Error {
     readonly reasonCode: string,
     message: string,
     readonly outcome: "failed" | "blocked" | "inconclusive" = "blocked",
+    /** Low-level cause (e.g. a socket error code) retained as the step error code. */
+    readonly diagnosticCode?: string,
   ) {
     super(message);
   }
@@ -187,7 +189,12 @@ export class Runtime {
           status: outcome,
           reasonCode: reason,
           error: {
-            code: error instanceof Error ? error.name : "Error",
+            code:
+              error instanceof RuntimeError && error.diagnosticCode
+                ? error.diagnosticCode
+                : error instanceof Error
+                  ? error.name
+                  : "Error",
             message: this.scrub(error instanceof Error ? error.message : String(error)).slice(
               0,
               8000,

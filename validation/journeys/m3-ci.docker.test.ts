@@ -504,6 +504,10 @@ describe("M3 strict CI execution", () => {
         work = undefined;
         const run = app.runs.get(receipt.allMembers[0]!);
         expect(run).toMatchObject({ outcome: "blocked", gate: "failed" });
+        // Revocation after admission is a credential cause, not missing evidence.
+        expect(
+          app.runs.events(run.id).find((event) => event.type === "run.execution_error")?.payload,
+        ).toMatchObject({ reasonCode: "credential_revoked", error: "POLICY_DENIED" });
         expect(target.hits()).toBe(hits);
         const snapshot = await app.reports.snapshot(receipt.batchId);
         expect(snapshot.runs[0]?.result).toMatchObject({ outcome: "blocked", gate: "failed" });
@@ -517,6 +521,37 @@ describe("M3 strict CI execution", () => {
         });
       } finally {
         await work?.catch(() => {});
+        app?.close();
+        await target.close();
+      }
+    });
+  }, 180000);
+  it("records a collection limit as artifact_limit_exceeded and fails the gate", async () => {
+    await journey("m3-ci-collection-limit", async (session) => {
+      const target = await controlledShop();
+      let app: Application | undefined;
+      try {
+        const identity = await session.init(target.url);
+        app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
+        const test = app.tests.create({ projectId: text(identity.projectId), plan: healthPlan() });
+        const receipt = await app.runs.admit(
+          {
+            testId: test.id,
+            environmentId: text(identity.environmentId),
+            // Smaller than the controller-side container/egress logs written after the runner.
+            limits: { artifactBytes: 1024, attemptArtifactBytes: 2048 },
+            mode: "replay",
+          },
+          { wait: true },
+        );
+        await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
+        const run = app.runs.get(receipt.runId);
+        expect(run.gate).toBe("failed");
+        expect(
+          app.runs.events(run.id).find((event) => event.type === "run.execution_error")?.payload,
+        ).toMatchObject({ reasonCode: "artifact_limit_exceeded" });
+        session.oracles.push({ check: "collectionLimit", runId: run.id, gate: run.gate });
+      } finally {
         app?.close();
         await target.close();
       }

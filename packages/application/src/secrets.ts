@@ -737,7 +737,10 @@ export class SecretsService {
     this.ctx.authorize("X");
     const reference = this.lookup(id);
     origins(reference.allowedOrigins);
-    if (reference.revokedAt) throw new ContractError("POLICY_DENIED", "Secret is revoked");
+    if (reference.revokedAt)
+      throw new ContractError("POLICY_DENIED", "Secret is revoked", {
+        reasonCode: "credential_revoked",
+      });
     if (!reference.allowedOrigins.length)
       throw new ContractError("POLICY_DENIED", "Secret has no authorized target origins");
     const revoked = async (): Promise<boolean> => {
@@ -758,7 +761,9 @@ export class SecretsService {
       resolve: () =>
         auditedOperation(this.ctx, "secret.resolve", reference.id, async () => {
           if (await revoked())
-            throw new ContractError("POLICY_DENIED", "Secret version is revoked");
+            throw new ContractError("POLICY_DENIED", "Secret version is revoked", {
+              reasonCode: "credential_revoked",
+            });
           let value: string;
           if (reference.provider === "ephemeral") {
             const memory = this.ephemeral.get(`${reference.id}:${reference.secretVersion}`);
@@ -781,7 +786,9 @@ export class SecretsService {
           else throw unavailable();
           validateValue(value);
           if (await revoked())
-            throw new ContractError("POLICY_DENIED", "Secret version is revoked");
+            throw new ContractError("POLICY_DENIED", "Secret version is revoked", {
+              reasonCode: "credential_revoked",
+            });
           return value;
         }),
     };

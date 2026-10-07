@@ -24,6 +24,7 @@ import {
 } from "@testmaster/domain";
 import {
   collectGarbage,
+  EvidenceQuotaError,
   FileEvidenceStore,
   findOrphanStaging,
   verifyBundle,
@@ -1119,9 +1120,12 @@ export class WorkerService {
               reasonCode:
                 error instanceof PolicyDenied
                   ? "security_precondition_failed"
-                  : error instanceof ContractError
-                    ? (error.details.reasonCode ?? "insufficient_evidence")
-                    : "insufficient_evidence",
+                  : error instanceof EvidenceQuotaError
+                    ? // Collection exceeded the configured artifact limits (spec 11).
+                      "artifact_limit_exceeded"
+                    : error instanceof ContractError
+                      ? (error.details.reasonCode ?? "insufficient_evidence")
+                      : "insufficient_evidence",
               ...(error instanceof ContractError ? { details: error.details } : {}),
               error: error instanceof ContractError ? error.code : "INTERNAL",
               ...(error &&

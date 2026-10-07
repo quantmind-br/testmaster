@@ -1,8 +1,10 @@
 /// <reference lib="dom" />
+
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { type Locator as LocatorSpec, type PlanStep, validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import {
@@ -317,45 +319,65 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       return;
     }
     await unique(locator, timeout);
-    let observed: unknown;
-    let expected: unknown;
-    switch (expectation.predicate) {
-      case "visible":
-        await locator.waitFor({ state: "visible", timeout });
-        return;
-      case "enabled":
-        observed = await locator.isEnabled({ timeout });
-        expected = true;
-        break;
-      case "textEquals":
-        observed = await locator.innerText({ timeout });
-        expected = await stringValue(expectation.value);
-        break;
-      case "textContains": {
-        const text = await locator.innerText({ timeout });
-        const part = await stringValue(expectation.value);
-        if (text.includes(part)) return;
-        observed = text;
-        expected = part;
-        break;
-      }
-      case "valueEquals":
-        observed = await locator.inputValue({ timeout });
-        expected = await stringValue(expectation.value);
-        break;
-      default:
-        throw new RuntimeError(
-          "unsupported_capability",
-          `Predicate ${expectation.predicate} requires an HTTP response`,
-        );
+    if (expectation.predicate === "visible") {
+      await locator.waitFor({ state: "visible", timeout });
+      return;
     }
-    runtime.recordComparison(observed, expected);
-    if (observed !== expected)
-      throw new RuntimeError(
-        "assertion_mismatch",
-        runtime.scrub(`Expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)}`),
-        "failed",
-      );
+    // Eventual consistency (spec 06): poll the predicate until it holds or the step deadline
+    // expires, instead of judging a single sample; the last observation is retained.
+    const deadline = performance.now() + timeout;
+    for (let checks = 1; ; checks++) {
+      const remaining = Math.max(1, Math.floor(deadline - performance.now()));
+      let observed: unknown;
+      let expected: unknown;
+      let holds: boolean;
+      switch (expectation.predicate) {
+        case "enabled":
+          observed = await locator.isEnabled({ timeout: remaining });
+          expected = true;
+          holds = observed === true;
+          break;
+        case "textEquals":
+          observed = await locator.innerText({ timeout: remaining });
+          expected = await stringValue(expectation.value);
+          holds = observed === expected;
+          break;
+        case "textContains": {
+          const text = await locator.innerText({ timeout: remaining });
+          const part = await stringValue(expectation.value);
+          observed = text;
+          expected = part;
+          holds = text.includes(part);
+          if (holds) return;
+          break;
+        }
+        case "valueEquals":
+          observed = await locator.inputValue({ timeout: remaining });
+          expected = await stringValue(expectation.value);
+          holds = observed === expected;
+          break;
+        default:
+          throw new RuntimeError(
+            "unsupported_capability",
+            `Predicate ${expectation.predicate} requires an HTTP response`,
+          );
+      }
+      if (holds) {
+        runtime.recordComparison(observed, expected);
+        return;
+      }
+      if (performance.now() >= deadline) {
+        runtime.recordComparison(observed, expected);
+        throw new RuntimeError(
+          "assertion_mismatch",
+          runtime.scrub(
+            `Expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)} after ${checks} checks`,
+          ),
+          "failed",
+        );
+      }
+      await delay(Math.min(100, Math.max(1, deadline - performance.now())));
+    }
   }
   async function saveDownload(download: Download, outputName: string): Promise<void> {
     if (

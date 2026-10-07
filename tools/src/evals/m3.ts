@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Application, entity } from "@testmaster/application";
 import type { ExecutablePlan, HealingProposal, Requirement } from "@testmaster/contracts";
-import { validate } from "@testmaster/contracts";
+import { defaults, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { assertionsHash } from "@testmaster/planner";
 import * as fixture from "../../../evals/m3/fixture.mjs";
@@ -84,6 +84,20 @@ interface Round {
   pending: { caseId: string; reservation: number } | null;
 }
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+/**
+ * Retained error evidence: a hash of the raw message plus bounded diagnostic text with every
+ * forbidden value (provider key, canary) removed, so failures stay diagnosable without leaks.
+ */
+function errorRecord(error: unknown, forbidden: readonly string[]) {
+  const raw = String(error);
+  const code =
+    error && typeof error === "object" && "code" in error && typeof error.code === "string"
+      ? `${error.code}: `
+      : "";
+  let detail = `${code}${error instanceof Error ? error.message : raw}`;
+  for (const value of forbidden) if (value) detail = detail.replaceAll(value, "[REDACTED]");
+  return { messageHash: hash(raw), detail: detail.slice(0, 500) };
+}
 function confined(root: string, path: string) {
   const rel = relative(resolve(root), resolve(root, path));
   if (isAbsolute(path) || rel === ".." || rel.startsWith("../"))
@@ -214,7 +228,7 @@ interface ControlRun {
   revisionId: string;
   outcome: string | null;
   gate: string;
-  steps: { id: string; status: string; reasonCode: string | null }[];
+  steps: { id: string; status: string; reasonCode: string | null; errorCode?: string | null }[];
   reasonCodes: string[];
   snapshotCount: number;
   imageIds: string[];
@@ -234,7 +248,7 @@ interface ControlEvidence {
   semanticPlan: ExecutablePlan | null;
   uploadArtifactId: string | null;
   modelCalls: number;
-  errors: string[];
+  errors: { messageHash: string; detail: string }[];
 }
 interface ControlsManifest {
   schemaVersion: string;
@@ -258,6 +272,7 @@ function captureControl(app: Application, runId: string, plan: ExecutablePlan): 
       id: String(row.planStepId),
       status: String(row.status),
       reasonCode: row.reasonCode ? String(row.reasonCode) : null,
+      errorCode: (row.error as { code?: string } | null)?.code ?? null,
     })),
     reasonCodes: app.runs.events(runId).flatMap((row) => {
       const payload = row.payload as Record<string, unknown>;
@@ -318,9 +333,9 @@ function assessControl(item: Case, e: ControlEvidence) {
   if (item.id === "m3-env-02")
     return (
       e.transformed.outcome !== "passed" &&
-      e.transformed.reasonCodes
-        .concat(e.transformed.steps.flatMap((step) => (step.reasonCode ? [step.reasonCode] : [])))
-        .some((code) => /network|transport|request|environment/.test(code))
+      e.transformed.steps.some((step) =>
+        ["ECONNREFUSED", "ENOTFOUND", "EHOSTUNREACH", "ENETUNREACH"].includes(step.errorCode ?? ""),
+      )
     );
   if (item.id === "m3-env-03")
     return (
@@ -435,7 +450,10 @@ export async function controlsM3(root: string, path: string, outDir: string) {
           );
           bytes = bytes.replaceAll("@UPLOAD_ARTIFACT@", e.uploadArtifactId);
         }
-        bytes = bytes.replaceAll("@MISSING_CREDENTIAL@", uuidV7IdGenerator.next("sec"));
+        const credential = bytes.includes("@MISSING_CREDENTIAL@")
+          ? await bindMissingCredential(app, new URL(shop.url).origin)
+          : null;
+        if (credential) bytes = bytes.replaceAll("@MISSING_CREDENTIAL@", credential.id);
         plan = validate<ExecutablePlan>("ExecutablePlan", JSON.parse(bytes));
         e.boundPlan = plan;
         const test = app.tests.create({ projectId: s.projectId, plan });
@@ -462,6 +480,7 @@ export async function controlsM3(root: string, path: string, outDir: string) {
           s.environmentId,
           test.activeRevisionId!,
           item.id === "m3-env-03" ? bindCollectionFailure().limits : undefined,
+          credential?.remove,
         );
         e.transformed = captureControl(app, transformed.id, plan);
         if (
@@ -488,10 +507,15 @@ export async function controlsM3(root: string, path: string, outDir: string) {
               const locator = step.input.locator;
               if (locator.by === "testId" && hookChanges[item.id]?.[locator.value])
                 locator.value = hookChanges[item.id]![locator.value]!;
+              // Mirror the product patch: only buttons whose accessible name was renamed change.
+              const roleChanges: Record<string, Record<string, string>> = {
+                "m3-drift-07": { Checkout: "Place order" },
+                "m3-drift-08": { "Sign in": "Authenticate" },
+              };
               if (step.operation === "click" && locator.by === "role") {
                 const role = locator as typeof locator & { name?: string };
-                if (item.id === "m3-drift-07") role.name = "Place order";
-                if (item.id === "m3-drift-08") role.name = "Authenticate";
+                const renamed = role.name && roleChanges[item.id]?.[role.name];
+                if (renamed) role.name = renamed;
               }
               if (locator.by === "css") locator.value = locator.value.replaceAll(" > ", " ");
             }
@@ -523,7 +547,7 @@ export async function controlsM3(root: string, path: string, outDir: string) {
         }
         e.status = assessControl(item, e) ? "passed" : "blocked";
       } catch (error) {
-        e.errors.push(hash(String(error)));
+        e.errors.push(errorRecord(error, [process.env[r.provider.apiKeyEnv] ?? ""]));
       } finally {
         if (app) {
           e.modelCalls = Number(
@@ -668,9 +692,47 @@ export async function bindUploadFixture(
 }
 export function bindCollectionFailure() {
   return {
-    artifacts: { trace: "on", video: "on" },
+    artifacts: { trace: "on", video: "on", retentionDays: defaults.artifactRetentionDays },
     limits: { artifactBytes: 1024, attemptArtifactBytes: 2048 },
   };
+}
+/** Operator-owned profile/policy for the isolated evaluation home, in the schema the CLI accepts. */
+export async function writeEvalProfile(home: string, provider: M3Registration["provider"]) {
+  await mkdir(join(home, ".config/testmaster"), { recursive: true });
+  await writeFile(
+    join(home, ".config/testmaster/profiles.json"),
+    JSON.stringify({
+      defaultProfile: "eval",
+      profiles: {
+        eval: {
+          modelProviders: [
+            {
+              id: provider.id,
+              kind: provider.kind,
+              baseUrl: provider.baseUrl,
+              apiKeyEnv: provider.apiKeyEnv,
+              models: [
+                {
+                  id: provider.model,
+                  reasoningEffort: "medium",
+                  capabilities: {
+                    structuredJson: true,
+                    toolCalls: true,
+                    contextTokens: 128000,
+                    maxOutputTokens: 8192,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }),
+  );
+  await writeFile(
+    join(home, ".config/testmaster/policy.json"),
+    JSON.stringify({ allowedModelProviders: [provider.id] }),
+  );
 }
 async function setup(
   root: string,
@@ -709,37 +771,7 @@ async function setup(
     env.TESTMASTER_OFFLINE = "false";
     env[r.provider.apiKeyEnv] = "model-free-provider-guard";
   }
-  await writeFile(
-    join(home, ".config/testmaster/profiles.json"),
-    JSON.stringify({
-      defaultProfile: "eval",
-      profiles: {
-        eval: {
-          modelProviders: [
-            {
-              ...r.provider,
-              models: [
-                {
-                  id: r.provider.model,
-                  reasoningEffort: "medium",
-                  capabilities: {
-                    structuredJson: true,
-                    toolCalls: true,
-                    contextTokens: 128000,
-                    maxOutputTokens: 8192,
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      },
-    }),
-  );
-  await writeFile(
-    join(home, ".config/testmaster/policy.json"),
-    JSON.stringify({ allowedModelProviders: [r.provider.id] }),
-  );
+  await writeEvalProfile(home, r.provider);
   await new Promise<void>((accept, reject) => {
     const child = spawn(
       process.execPath,
@@ -755,13 +787,23 @@ async function setup(
         "--output",
         "json",
       ],
-      { cwd, env, stdio: ["ignore", "ignore", "pipe"] },
+      { cwd, env, stdio: ["ignore", "pipe", "pipe"] },
     );
+    let stdout = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout = (stdout + chunk.toString()).slice(0, 8192);
+    });
     child.stderr.resume();
     child.on("error", reject);
-    child.on("exit", (code) =>
-      code === 0 ? accept() : reject(new Error("Isolated CLI initialization failed")),
-    );
+    child.on("close", (code) => {
+      if (code === 0) return accept();
+      let reason = `exit ${String(code)}`;
+      try {
+        const failure = JSON.parse(stdout).error as { code: string; message: string };
+        reason = `${failure.code}: ${failure.message}`;
+      } catch {}
+      reject(new Error(`Isolated CLI initialization failed (${reason})`));
+    });
   });
   const configPath = join(cwd, "testmaster.config.json");
   const config = JSON.parse(await readFile(configPath, "utf8"));
@@ -804,12 +846,29 @@ async function setup(
     temporary,
   };
 }
+/**
+ * A real credential authorized for the target at admission and removed by the operator before
+ * the attempt executes: the Run must be blocked without sending the target request.
+ */
+export async function bindMissingCredential(app: Application, origin: string) {
+  const secret = await app.secrets.set(`m3-missing-${randomUUID()}`, randomUUID(), {
+    ephemeral: true,
+    allowedOrigins: [origin],
+  });
+  return {
+    id: secret.id,
+    remove: async () => {
+      await app.secrets.remove(secret.id);
+    },
+  };
+}
 async function replay(
   app: Application,
   testId: string,
   environmentId: string,
   revisionId?: string,
   limits?: { artifactBytes: number; attemptArtifactBytes: number },
+  beforeExecution?: () => Promise<void>,
 ) {
   const receipt = await app.runs.admit(
     {
@@ -822,6 +881,7 @@ async function replay(
     },
     { wait: true },
   );
+  await beforeExecution?.();
   await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
   return app.runs.get(receipt.runId);
 }
@@ -949,12 +1009,13 @@ export async function runM3(root: string, commit: string, path: string) {
         );
         Object.assign(plan, JSON.parse(serialized.replaceAll("@UPLOAD_ARTIFACT@", id)));
       }
-      if (serialized.includes("@MISSING_CREDENTIAL@"))
+      const credential = serialized.includes("@MISSING_CREDENTIAL@")
+        ? await bindMissingCredential(app, new URL(shop.url).origin)
+        : null;
+      if (credential)
         Object.assign(
           plan,
-          JSON.parse(
-            JSON.stringify(plan).replaceAll("@MISSING_CREDENTIAL@", uuidV7IdGenerator.next("sec")),
-          ),
+          JSON.parse(JSON.stringify(plan).replaceAll("@MISSING_CREDENTIAL@", credential.id)),
         );
       const test = app.tests.create({ projectId: setupResult.projectId, plan });
       const baseRevisionId = test.activeRevisionId!;
@@ -1214,6 +1275,7 @@ export async function runM3(root: string, commit: string, path: string) {
         setupResult.environmentId,
         baseRevisionId,
         item.id === "m3-env-03" ? bindCollectionFailure().limits : undefined,
+        credential?.remove,
       );
       ledger.records.transformed = {
         runId: transformed.id,
@@ -1268,7 +1330,7 @@ export async function runM3(root: string, commit: string, path: string) {
             messageHash: hash(JSON.stringify(diagnosis.limitations)),
           });
       } catch (error) {
-        ledger.errors.push({ phase, code: "diagnosis_error", messageHash: hash(String(error)) });
+        ledger.errors.push({ phase, code: "diagnosis_error", ...errorRecord(error, forbidden) });
       }
       ledger.diagnosis = {
         failureKind: diagnosis.failureKind,
@@ -1423,7 +1485,7 @@ export async function runM3(root: string, commit: string, path: string) {
           : message.includes("terminal_rewrite")
             ? "terminal_rewrite"
             : "pipeline_error",
-        messageHash: hash(message),
+        ...errorRecord(error, forbidden),
       });
       if (
         /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted/.test(

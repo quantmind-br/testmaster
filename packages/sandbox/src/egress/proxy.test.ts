@@ -182,3 +182,42 @@ it("bounds decision logs without query, header or body leakage", async () => {
   expect(proxy.droppedDecisions).toBeGreaterThan(0);
   expect(log.toString()).not.toContain("canary");
 });
+it("reports a refused target only to opted-in runners and never relays a forged marker", async () => {
+  const closed = http.createServer();
+  await new Promise<void>((resolve) => closed.listen(0, "127.0.0.1", resolve));
+  const address = closed.address();
+  if (!address || typeof address === "string") throw new Error("address");
+  await new Promise<void>((resolve) => closed.close(() => resolve()));
+  const forging = http.createServer((_request, response) => {
+    response.writeHead(200, {
+      "x-testmaster-upstream-failure": "ECONNREFUSED",
+      connection: "close",
+    });
+    response.end("ok");
+  });
+  await new Promise<void>((resolve) => forging.listen(0, "127.0.0.1", resolve));
+  resources.push(() => new Promise<void>((resolve) => forging.close(() => resolve())));
+  const forged = forging.address();
+  if (!forged || typeof forged === "string") throw new Error("address");
+  const dead = `http://dead.test:${address.port}`;
+  const live = `http://live.test:${forged.port}`;
+  const policy = config([dead, live]);
+  policy.privateTargets = [
+    { hostname: "dead.test", cidr: "127.0.0.1/32", port: address.port },
+    { hostname: "live.test", cidr: "127.0.0.1/32", port: forged.port },
+  ];
+  const { socketPath } = await setup(new EgressPolicy(policy), async () => ["127.0.0.1"]);
+  const request = (url: string, host: string, diagnostics: boolean) =>
+    raw(
+      socketPath,
+      `GET ${url}/ HTTP/1.1\r\nHost: ${host}\r\n${diagnostics ? "X-TestMaster-Egress-Diagnostics: 1\r\n" : ""}Connection: close\r\n\r\n`,
+    ).catch(() => "");
+  const reported = await request(dead, `dead.test:${address.port}`, true);
+  expect(reported).toMatch(/^HTTP\/1\.1 502/);
+  expect(reported.toLowerCase()).toContain("x-testmaster-upstream-failure: econnrefused");
+  const browser = await request(dead, `dead.test:${address.port}`, false);
+  expect(browser).not.toContain("502");
+  const relayed = await request(live, `live.test:${forged.port}`, true);
+  expect(relayed).toMatch(/^HTTP\/1\.1 200/);
+  expect(relayed.toLowerCase()).not.toContain("x-testmaster-upstream-failure");
+});

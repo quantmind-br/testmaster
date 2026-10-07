@@ -13,6 +13,10 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { type Dispatcher, ProxyAgent, request } from "undici";
 import { type RunnerResult, type Runtime, RuntimeError } from "./runtime.js";
 
+/** Shared with the sandbox egress proxy (packages/sandbox/src/egress/proxy.ts). */
+const EGRESS_DIAGNOSTICS_HEADER = "x-testmaster-egress-diagnostics";
+const UPSTREAM_FAILURE_HEADER = "x-testmaster-upstream-failure";
+
 type RequestInput = Extract<PlanStep, { operation: "request" }>["input"];
 type ResourceState =
   | "planned"
@@ -155,6 +159,24 @@ function responseJson(response: HttpResponse): unknown {
     throw new RuntimeError("assertion_mismatch", "Response is not valid JSON", "failed");
   }
 }
+/**
+ * A complete, valid JSON response that lacks the asserted target contradicts the expectation
+ * (e.g. a renamed field or a missing record): it is an observation, not missing evidence.
+ * Captures keep treating an absent target as insufficient evidence.
+ */
+function assertedJsonValue(
+  response: HttpResponse,
+  pointer: string | undefined,
+): { present: boolean; value: unknown } {
+  const json = responseJson(response);
+  try {
+    return { present: true, value: jsonPointerValue(json, pointer ?? "") };
+  } catch (error) {
+    if (error instanceof RuntimeError && error.reasonCode === "insufficient_evidence")
+      return { present: false, value: null };
+    throw error;
+  }
+}
 export async function assertResponse(
   runtime: Runtime,
   response: HttpResponse,
@@ -175,13 +197,15 @@ export async function assertResponse(
       expected = await runtime.resolve(expectation.value);
       matches = isDeepStrictEqual(observed, expected);
       break;
-    case "jsonEquals":
-      observed = jsonPointerValue(responseJson(response), pointer ?? "");
+    case "jsonEquals": {
+      const target = assertedJsonValue(response, pointer);
+      observed = target.value;
       expected = await runtime.resolve(expectation.value);
-      matches = isDeepStrictEqual(observed, expected);
+      matches = target.present && isDeepStrictEqual(observed, expected);
       break;
+    }
     case "countEquals": {
-      const value = jsonPointerValue(responseJson(response), pointer ?? "");
+      const { value } = assertedJsonValue(response, pointer);
       observed = Array.isArray(value) ? value.length : value;
       expected = expectation.value;
       matches = Array.isArray(value) && value.length === expectation.value;
@@ -201,13 +225,12 @@ export async function assertResponse(
         );
       if (!schema || typeof schema !== "object" || Array.isArray(schema))
         deny("Invalid source schema");
-      observed = jsonPointerValue(responseJson(response), pointer ?? "");
+      const target = assertedJsonValue(response, pointer);
+      observed = target.value;
       expected = schema;
       try {
-        validateAgainstSchema(
-          schema as Record<string, unknown>,
-          jsonPointerValue(responseJson(response), pointer ?? ""),
-        );
+        if (!target.present) throw new Error("Asserted JSON target is absent");
+        validateAgainstSchema(schema as Record<string, unknown>, target.value);
         matches = true;
       } catch (error) {
         if (error instanceof RuntimeError) throw error;
@@ -531,7 +554,7 @@ export class HttpEngine {
         sent = true;
         const incoming = await request(url.href, {
           method,
-          headers,
+          headers: { ...headers, [EGRESS_DIAGNOSTICS_HEADER]: "1" },
           ...(body === undefined ? {} : { body }),
           dispatcher,
           signal: deadline,
@@ -542,6 +565,19 @@ export class HttpEngine {
         for (const [name, value] of Object.entries(incoming.headers))
           if (value !== undefined)
             responseHeaders[name.toLowerCase()] = Array.isArray(value) ? value.join(", ") : value;
+        const upstreamFailure = responseHeaders[UPSTREAM_FAILURE_HEADER];
+        if (upstreamFailure !== undefined) {
+          // Only the egress proxy can emit this marker (it strips it from target responses):
+          // the target was never reached, so no response exists to evaluate.
+          // dump() discards the (empty) proxy body; destroy() would emit an unhandled AbortError.
+          await incoming.body.dump().catch(() => undefined);
+          throw new RuntimeError(
+            "insufficient_evidence",
+            "Egress proxy could not connect to the target",
+            "inconclusive",
+            /^E[A-Z]+$/.test(upstreamFailure) ? upstreamFailure : undefined,
+          );
+        }
         const chunks: Uint8Array[] = [];
         let bytes = 0;
         try {

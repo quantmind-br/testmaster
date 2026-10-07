@@ -26,6 +26,14 @@ export interface EgressDecision {
   reason: string;
   pinnedIp?: string;
 }
+/**
+ * The trusted HTTP runner opts in with DIAGNOSTICS_HEADER; for such requests a connection
+ * failure to the target is answered by the proxy itself with UPSTREAM_FAILURE_HEADER carrying the
+ * socket error code. Neither header crosses the proxy towards/from the target, so a target cannot
+ * forge the marker. Clients that do not opt in (browsers) keep the closed-connection behavior.
+ */
+export const DIAGNOSTICS_HEADER = "x-testmaster-egress-diagnostics";
+export const UPSTREAM_FAILURE_HEADER = "x-testmaster-upstream-failure";
 function boundedStream(limit: number): Transform {
   let bytes = 0;
   return new Transform({
@@ -148,6 +156,8 @@ export class EgressProxy {
         connection: "close",
       };
       delete headers["proxy-connection"];
+      const diagnostics = request.headers[DIAGNOSTICS_HEADER] === "1";
+      delete headers[DIAGNOSTICS_HEADER];
       const upstream = http.request(
         {
           hostname: target.pinnedIp,
@@ -161,6 +171,7 @@ export class EgressProxy {
           const safeHeaders = { ...incoming.headers };
           delete safeHeaders.connection;
           delete safeHeaders["proxy-authenticate"];
+          delete safeHeaders[UPSTREAM_FAILURE_HEADER];
           response.writeHead(incoming.statusCode ?? 502, safeHeaders);
           const limiter = boundedStream(this.options.maxBodyBytes ?? 10 * 1024 * 1024);
           limiter.on("error", () => {
@@ -175,8 +186,16 @@ export class EgressProxy {
       upstream.setTimeout(this.options.requestTimeoutMs ?? 30000, () =>
         upstream.destroy(new Error("request_timeout")),
       );
-      // A gateway transport failure is not an HTTP response from the target.
-      upstream.on("error", () => response.destroy());
+      // A gateway transport failure is not an HTTP response from the target. Opted-in runners
+      // receive the socket error code out of band; every other client sees the connection close.
+      upstream.on("error", (error: NodeJS.ErrnoException) => {
+        const code =
+          typeof error.code === "string" && /^E[A-Z]+$/.test(error.code) ? error.code : null;
+        if (diagnostics && code && !response.headersSent) {
+          response.writeHead(502, { connection: "close", [UPSTREAM_FAILURE_HEADER]: code });
+          response.end();
+        } else response.destroy();
+      });
       request.on("aborted", () => upstream.destroy());
       response.on("close", () => upstream.destroy());
       const limiter = boundedStream(this.options.maxBodyBytes ?? 10 * 1024 * 1024);
