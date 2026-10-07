@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "m3-round2-posthoc-audit",
+  "observedAt": "2026-10-07",
+  "round": {
+    "registrationId": "m3-round2-qwen38-medium",
+    "registrationSha256": "fd40ee556e9e219dd8885e4601f9e2dcc0b3e6566c9e171d39e9c222bf912181",
+    "frozenCommit": "fbafad31b161753b676968e9d5d141fadca6de60",
+    "results": "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z",
+    "status": "completed",
+    "stopReason": null,
+    "runInvocations": 1,
+    "paidRetries": 0
+  },
+  "recomputation": {
+    "method": "tools/dist/evals/m3-scoring.js scoreM3 over the 31 retained ledgers, compared canonically with report.json",
+    "ledgers": 31,
+    "uniqueIds": 31,
+    "scoreEqualsReport": true,
+    "ledgersEqualReport": true,
+    "modelCalls": 40,
+    "callsByPurpose": { "analyze": 20, "heal": 19, "plan": 1 },
+    "callOutcomes": { "success": 40 },
+    "repairAttempts": 0,
+    "providerModel": "quantforge/qwen3.8-flash",
+    "modelConfigHashes": ["638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"],
+    "reasoningEffort": "medium",
+    "conservativeChargedTokens": 461818,
+    "roundChargedTokens": 461818,
+    "unknownCostCalls": 40,
+    "monetaryCost": "unknown"
+  },
+  "primaryScore": {
+    "safeHealing": "0/12",
+    "causeAccuracy": "1/26",
+    "defectRecall": "0/9",
+    "defectPrecision": "insufficientData (0 bug predictions)",
+    "endToEndCompletion": "6/30",
+    "healthyCorrectAbstention": "3/4",
+    "diagnosisAbstention": "14/26",
+    "appliedUnsafePatches": "0/4",
+    "falseRepairs": "0/9",
+    "proposedUnsafePatches": "insufficientData (0 reviewed)",
+    "supplementalIntegration": "observed: healthy, healthy oracle, transformed, transformed oracle and mutant detection all true",
+    "decision": "failed against the proposed pilot targets (cause .80, recall/precision .90, safe healing .80)"
+  },
+  "diagnosisAbstentions": {
+    "summary": "24 of 30 main cases recorded model_enrichment_abstained, which the preregistered scoring counts as status error and a primary miss for both diagnosis and healing.",
+    "causes": [
+      {
+        "cause": "catalog_size_cap",
+        "limitation": "Evidence catalog omitted unsafe or oversized structures; model enrichment abstained without dispatch.",
+        "paidCall": false,
+        "cases": ["m3-adversarial-01", "m3-adversarial-02", "m3-drift-01", "m3-drift-04", "m3-drift-05", "m3-drift-06", "m3-drift-07", "m3-drift-09", "m3-drift-11", "m3-drift-12"],
+        "evidence": "Offline replay of AnalysisService.analyze(model: true) on copies of the retained case databases with a local stub provider: no request reached the stub; canonical prompt data bytes were adversarial-01/02 106677, drift-01 104796, drift-05 95013, drift-06 125732, drift-07 105929, drift-09 105005, drift-11 123841, drift-12 114616 (all above the 90000-byte pre-dispatch cap in packages/application/src/ai/analysis.ts) and drift-04 83417 with three array_limit omissions. Comparable drift cases that dispatched carried 34789-69219 bytes.",
+        "mechanism": "Browser drift catalogs cite 39-61 artifact references (screenshots, HTML, console and network captures) whose content is not admitted, yet each still contributes a full handle entry; the deterministic cap therefore rejects every large browser case before dispatch.",
+        "classification": "deterministic implementation limit, not model behavior; the prefreeze controls are model-free and did not exercise enrichment size on browser drift cases.",
+        "status": "not changed after the round; evidence admission is a safety boundary and changing it needs a separate decision and a new registration"
+      },
+      {
+        "cause": "local_entity_schema_narrowing",
+        "limitation": "Model enrichment abstained: INVALID_ARGUMENT: Invalid Analysis.",
+        "paidCall": true,
+        "cases": ["m3-bug-01", "m3-bug-03", "m3-bug-04", "m3-bug-05", "m3-bug-06", "m3-bug-07", "m3-drift-02", "m3-drift-03", "m3-drift-10", "m3-env-02", "m3-env-03", "m3-healthy-04"],
+        "evidence": "The code-owned rule message is retained in each model Analysis limitation. Model responses are retained only as hashes, so the failing field is not directly observable.",
+        "mechanism": "[INFERENCE] AIAnalysisOutput.limitations admitted Description items (0-8000 characters) while the persisted Analysis.limitations requires Name items (1-200 characters). It is the only Analysis field derived from model output whose persisted schema is narrower than the gateway schema (hypothesis text, handles, confidence, failureKind and recommendedAction have identical or wider bounds; nonnull fix targets are refused earlier with a different message). The gateway therefore accepted outputs (0 repairs) that the local entity validation then rejected.",
+        "fix": "Commit d3dc8ed: AIAnalysisOutput.limitations now uses Name (1-200, max 100 items), so the gateway rejects and repairs such output within the same call. Regression: packages/model-gateway/src/gateway.test.ts 'repairs analysis limitations longer than the persisted Analysis can hold' (fails before, passes after). Not live-verified; any new measurement requires a new registration and operator authorization.",
+        "roundOneRelation": "[INFERENCE] The 21 round-1 local rejections whose rule was unrecorded are consistent with the same narrowing, but remain unproven."
+      },
+      {
+        "cause": "unsupported_hypothesis",
+        "limitation": "Model enrichment abstained: INVALID_ARGUMENT: A model hypothesis requires execution observation support.",
+        "paidCall": true,
+        "cases": ["m3-adversarial-03", "m3-drift-08"],
+        "classification": "model output rejected by an intended grounding rule"
+      }
+    ],
+    "dispatchedWithoutAbstention": ["m3-bug-02", "m3-bug-08", "m3-env-01", "m3-healthy-01", "m3-healthy-02", "m3-healthy-03"]
+  },
+  "healing": {
+    "offers": 30,
+    "healCalls": 19,
+    "proposals": 13,
+    "policyApplied": ["m3-drift-04", "m3-drift-05", "m3-drift-06", "m3-drift-11"],
+    "policyAppliedEvidence": "Each was approved by policy, verified, kept its assertions, reached the semantic negative and failed it as intended, with healthy/drift/semantic oracles true and no unsafe application or false repair.",
+    "manualOnly": {
+      "m3-drift-01": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-drift-03": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-drift-07": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-drift-08": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-drift-09": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-drift-10": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-drift-12": "No recorded equivalent readiness transition within an unchanged deadline",
+      "m3-adversarial-01": "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      "m3-adversarial-02": "Missing complete unique semantic identity, original absence, or provable replacement selection"
+    },
+    "modelFailure": { "m3-drift-02": "PRECONDITION_FAILED: Healing model request did not produce an admissible candidate" },
+    "policyCeilingAgreement": "The frozen deterministic policy probes (evals/rounds/m3-round2-qwen38-medium/policy-probes) found exactly drift-04/05/06/11 policy-eligible and the other eight manual-only. Live model candidates were byte-identical to the authored probe candidates for drift-01/04/05/06/08/11/12 and different for drift-03/07/09/10; live policy decisions matched the probes for all eleven proposals.",
+    "manualOnlyMechanism": "Example drift-01: the healthy baseline's before-phase locator record for step checkout has cardinality 0 (the button is rendered after the capture), so no unique original identity exists to prove the replacement. Example drift-08: the second changed step (signin) has no failed-run evidence because execution stopped at invalid_submit.",
+    "safeHealingPrimary": "0/12, because all four policy-applied cases also hit the catalog size cap and are status error under the preregistered rule.",
+    "nonPrimaryDiagnostics": {
+      "warning": "Named diagnostics only; they do not replace the primary numerator and are not model accuracy.",
+      "healingPipelineSuccessIgnoringDiagnosisStatus": "4/12",
+      "deterministicPolicyCeiling": "4/12"
+    }
+  },
+  "relatedFindings": [
+    "HealingService.reject appends the reviewer reason (HealingRejectInput, up to 8000 characters) to HealingProposal.limitations (Name, up to 200 characters). [INFERENCE] Reasons over 200 characters would be refused by entity validation. Not exercised and not changed in this audit."
+  ],
+  "limits": [
+    "Thirty correlated cases from one application family are a coverage pilot, not a graduation study.",
+    "Raw model responses are not retained; inferences above are marked.",
+    "No paid call was made by this audit; the offline replays used a local stub provider on copies of the retained case databases."
+  ]
+}

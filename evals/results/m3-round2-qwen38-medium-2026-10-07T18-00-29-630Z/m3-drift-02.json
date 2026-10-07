@@ -1,0 +1,377 @@
+{
+  "id": "m3-drift-02",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "data-testid=\"email\"",
+      "after": "data-testid=\"login-email\""
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "e8faca9ae99911fc4fa88ba4f92eddd3a94c187e54172b30ba5fcf69336a17b3"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "no-password-validation",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-02",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid_open",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "invalid_open",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "invalid_email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "invalid_password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": ""
+          }
+        }
+      },
+      {
+        "id": "invalid_submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "invalid_submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "invalid_login_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "invalid_login_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password-error"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Password is required"
+          }
+        }
+      },
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "e8faca9ae99911fc4fa88ba4f92eddd3a94c187e54172b30ba5fcf69336a17b3"
+  },
+  "transformationSourceDigest": "3cac13cf663aa70b004e4d81a7df550baa20754c96e72608e4e127b524a9c463",
+  "expectedFailingStepIds": [
+    "invalid_email"
+  ],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 28433,
+    "outputTokens": 4645,
+    "reasoningTokens": 3119,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 33078,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "f70e2e00877003b59929aab1359eec272970ad6e8fadd45335aca972c66d01bd"
+    },
+    {
+      "phase": "healing",
+      "code": "healing_model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "PRECONDITION_FAILED: Healing model request did not produce an admissible candidate"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-pGEZAz",
+    "baseRevision": {
+      "id": "rev_01a11790-9db0-7230-8a0f-fb5da8306688",
+      "protectedHash": "3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6"
+    },
+    "healthy": {
+      "runId": "run_01a11790-9de8-710e-ba6c-f322306c9fbe",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a11790-a3cf-77ea-a357-a47037386ae5",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a11791-1e05-7238-ac60-e31a4c81c94b",
+      "hash": "3ce8875e72700a096986da400ad1da329563a2fceca2bd7cef1b0b0b7b58d4af",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a11791-c1d8-7598-a351-82e460733e65",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "dfc83c1a6dd3f4f7988c9f524a1fde26eb333e8a95cc300cfc4f81c4ff1c9fa1",
+        "responseHash": "c11d862c04b9443651e8310bfbbad34a12e7497b961af2f856225c2016827b3f",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 17532,
+          "outputTokens": 2594,
+          "reasoningTokens": 1469
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a11792-6734-70fc-9bff-047ccfcd050c",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "6f7d003747cf1d099909df0306affde558ec2f392dc29e5a5d5f5b223615cfe4",
+        "responseHash": "32233a1ee60852018f79f9d52573187c875f16f44c3ec9ae283e6d9d27bf567b",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10901,
+          "outputTokens": 2051,
+          "reasoningTokens": 1650
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a11791-c1d9-73b3-aaab-408695825410",
+      "hash": "0a9e098b3a68e757d3f8ec36524ca625056347048c2afb77a3f89bb3ed49af2d"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "semantic_invalid",
+      "jobId": "job_01a11791-c1e4-755a-b9f5-08394fa11d48",
+      "modelCallId": "mdl_01a11792-6734-70fc-9bff-047ccfcd050c",
+      "job": {
+        "state": "completed",
+        "result": {
+          "detail": "semantic_invalid",
+          "evidenceHashes": [
+            "7e13e9aa471e0cde3ca87d233b968137eac6d7d21f1a9d28d48517a244c23b2a",
+            "bfc429fe8a743d9b7d78f1b09de47cf7eb0cf87cbb8d3eacbf9d813bf55dda38",
+            "df5b5dec92084fc4c1ed503b80106ea16a7638e30210a997bba1e4c1bcae9fbc",
+            "c4ec68cd40f48dc6bcdc0826b26b84128193ccdb04cdd2fa248d1083be9479ed",
+            "399939d663028a62d2c292d413132cd5c4dfe955265498c630445c0a9bc2d627",
+            "d6f4cab90f606a7f50e1ca73eb7909fb0cdf86f26cf31b162d87c5a35090f64f",
+            "345694aaf853804169a77536fefd923449d8f3079c6fe0e0ae272e0e829b2ced",
+            "0498ee882c13421a0a31d1720620ea9ab3d6ee682ba0eb566342bafb870d02ec",
+            "26aacc60c716b18c8d4e4f565f6545a9408f40803473fb11aad0359fd46e8e78",
+            "42afc5d357e74f1853f63ac9baf19066dc2d0d879bacfdf40c711a58e7eeabc3",
+            "5a6edcf0d25b52876dcbd657357fe0b1b4a2a33ce73b14867e724dca989f8565",
+            "2e5a409617de0faba08a7ee4f0a7a8144496df8d30bf92651ef406e46fce797d",
+            "1fc0aebf8a21b605b414776af4c512e995cf898e4fdb46fd36b16973fadf2302",
+            "6273bdbc8322ec4d59a0e9f10517b4d2e0afaa7dce31d399326080ca00b5f95d",
+            "9128c28b16b62ad5225fbefdd41713d7b0af4d2ea56a7c92cbad292284d47f92",
+            "7eaabf6f7700b479b7a71943658b1f01a52c075886b90c019502a128a167f092",
+            "b33bcfee7b6b9efe9111541b901e47a193fe441b22ccb2b941da263b48a8030d",
+            "f8f5b4e54218ba08cb1e89ce641e935a9b9e581b92ff490520b442617c723b05",
+            "dc961459b9005b7677ec1cd752bfa776370399b8d73e854b51641082496523f2",
+            "6316f03e74f1eaa4c3abeb49febfb8ce5d706da2c118a7f48ffe542a30a364f5",
+            "8e9ec0aef2e0d2e350544930f7cf1f0adfcffd8dc4f64d5a1ddac81fdf53b823",
+            "813b20ca80895f9d5d37fa9360cb406911503e70291a15df5f040e239551ca07",
+            "848f6b8fe9394e2d73fe7db4cbb8acc300331bc91fd26b46b59414e11ed69579",
+            "ea5d724f552deb4cb4627f35baa80d75e31c188b29242b178652aa0184c2d5af",
+            "17ece93765959a63fcd42f5dbb15c23d47cce076e708f6db025579e18eb7379b",
+            "f6421cdb99833042372e47aa5a039e51446bbd3da7aefda72329eb76c3863d07",
+            "8272975ab92f69d280f5d83de693e3fb57fca3e2773def000a5b05c3ca5533b1",
+            "b619580979b95c3a99832c84f7a439efa07a0535f445688eaea9d558ceca6504",
+            "861724375ab8aecbf3dceefc9c7d1d5240cc48aa3412fb2cd4e4d73d0851dbb5",
+            "e7b5dbc018cdc4098249ce315217051ddd031e9da4e6b2464c98f122b65a4314",
+            "86caf4ee43dc48e72630b528a283808920d7b7f768857fca6bb383d25e2a496b",
+            "ecc7513e2d1657781ca0f7723cdc9660a8776fd02bfc8973b5b39577c35efa2a",
+            "5146e9120de283f3a1994597393628279bd5edffda29f08fa889a92f2dcb28fe",
+            "c1125b30506aa25f608425f4dd2a241544814440f1b960c6917094639e97c227",
+            "c487bcd42285366e203865c60dd980c42f002c4eee195d1c81828d4712d762dd",
+            "b5596e5e662522be57a15db4e3c9e1c1afc3f986c43344b186fc7cdf898e9c68",
+            "65a80b7e56c0f2d5a85e01e07a0bfb1f9d3e06a72916062885a382384429d2ff",
+            "8598f888c54b0f48bcd4f5b8cd3f70adc339c5b262cfb8e45800dc7b31a5b3af",
+            "e83d45d7b132bd7e4d241f91307cdd3157fce16e1383c597b0800215f387b87b",
+            "09dbfb83032e119b2bef200520b982a11dc73038a1649445f6d15923838cac70"
+          ],
+          "modelCallId": "mdl_01a11792-6734-70fc-9bff-047ccfcd050c",
+          "phase": "semantic",
+          "reason": "model_failure",
+          "refused": true
+        }
+      }
+    }
+  }
+}

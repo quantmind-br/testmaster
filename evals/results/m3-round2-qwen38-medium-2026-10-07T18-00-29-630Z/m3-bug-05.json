@@ -1,0 +1,219 @@
+{
+  "id": "m3-bug-05",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "orders-auth-bypass",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"orders-auth-bypass\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "5cda5c29f84bc1f47bb1279b451ca1c32a90b7cbf9936463a6ada7252b45d7d4",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "ordersAuthorization",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-05",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "unauthorized",
+        "kind": "action",
+        "operation": "request",
+        "description": "unauthorized",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "unauthorized"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "5cda5c29f84bc1f47bb1279b451ca1c32a90b7cbf9936463a6ada7252b45d7d4",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "aea46d254d996bbb578a1573a0c315b9bc19b7c9a2ba5d3581c9726eb0766490",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 5797,
+    "outputTokens": 3216,
+    "reasoningTokens": 2339,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 9013,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "b696eb1994085753dc39b3a480f752f7b75aa38f8a8f4d19d8f112b21400ec89"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-gSz4zv",
+    "baseRevision": {
+      "id": "rev_01a1178b-6e90-740a-bac0-0e99323549e3",
+      "protectedHash": "aada3accfcc7dc3250c915c934ee4668e03d9d02afc4d07c8f65b5298e877df4"
+    },
+    "healthy": {
+      "runId": "run_01a1178b-6ec7-7045-80ee-5476d5b8c24f",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a1178b-71f1-7553-9b80-779a93fcb082",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a1178b-7545-702c-afe1-90f0145ce134",
+      "hash": "4a1aac59aaefc9fa55e9bd07cf551f21a64994362cd0089a09ad75952f91d41e",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a1178b-e0f2-7749-99d5-e39f07235009",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "5bf16606e8c8768c4ba373f7d3930f52a52387b8d14707ae461222b789971778",
+        "responseHash": "f15d24d7a8c16140d7e8fdb32de7d92381b8f667924503f04c371683e8ff9422",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 4314,
+          "outputTokens": 1851,
+          "reasoningTokens": 1157
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a1178c-5528-709e-90ff-876182eed877",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "c98f446ee0bbd7472db855406d9a4817f1f3b73a97969e58a81ab58bc0ae2207",
+        "responseHash": "c89f8160dbdc278bc7570f1d4dc5b6284e80f87c53fb609904b2e9db7f9e9441",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 1483,
+          "outputTokens": 1365,
+          "reasoningTokens": 1182
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a1178b-e0f3-722d-bace-97dd9abca4cc",
+      "hash": "ccd4878912f8948657e78709eda29b244c9066b819eadbecb338fa6d06ede780"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_abstained",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a1178b-e0fb-71c2-ab5a-decdf9daa1e3",
+      "modelCallId": "mdl_01a1178c-5528-709e-90ff-876182eed877",
+      "job": {
+        "state": "completed",
+        "result": {
+          "evidenceHashes": [
+            "804e1f7a60729a8098d8b5cf4aafa738ab55aa2e0db47676a7366a3a1947876b",
+            "1fe4c577eb376a79977dcbf5452abd6d970cbe024dac2f3ff95e5d761905881f",
+            "3d466690562dcb353b55999fd3c118138b9a8d88f0c80c6857fc4efd7b6032fc",
+            "450a65d5ec747805c62e6e722f9ed8f6ef3e30c7d40a57517c6c9af045e85a07",
+            "01bb3e9d2251490abadf8065aa307b9d18df52f08a5f8ea732029578ff2609f4"
+          ],
+          "modelCallId": "mdl_01a1178c-5528-709e-90ff-876182eed877",
+          "reason": "model_abstained",
+          "refused": true
+        }
+      }
+    }
+  }
+}

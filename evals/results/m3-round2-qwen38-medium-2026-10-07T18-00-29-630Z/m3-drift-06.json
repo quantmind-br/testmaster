@@ -1,0 +1,326 @@
+{
+  "id": "m3-drift-06",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "data-testid=\"profile-download\"",
+      "after": "data-testid=\"profile-file-download\""
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "6ffc15c28470455b7350118799e94d20eecc552186662e87f86320c7f45f8c5b"
+  },
+  "oracle": "profileBytes",
+  "semanticNegative": "profile-corrupted-download",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-06",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "profile",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "profile",
+        "required": true,
+        "input": {
+          "path": "/profile"
+        }
+      },
+      {
+        "id": "upload",
+        "kind": "action",
+        "operation": "upload",
+        "description": "upload",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "profile-upload"
+          },
+          "artifactRefs": [
+            "@UPLOAD_ARTIFACT@"
+          ]
+        }
+      },
+      {
+        "id": "uploaded",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "uploaded",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "upload-size"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "23"
+          }
+        }
+      },
+      {
+        "id": "download",
+        "kind": "action",
+        "operation": "download",
+        "description": "download",
+        "required": true,
+        "input": {
+          "trigger": {
+            "operation": "click",
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "profile-download"
+              }
+            }
+          },
+          "outputName": "profile.bin"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "Require exact original profile bytes",
+        "required": true,
+        "input": {
+          "outputName": "profile.bin"
+        },
+        "expectation": {
+          "predicate": "downloadMatches",
+          "outputName": "profile.bin",
+          "sha256": "d770d3d74413c6864689484c0989c9c49f390256af8d8924418500604d96235d",
+          "sizeBytes": 23
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "d817b1655e07b01fcfd1a8ec2a60c24ae69cc29a9d4acb7497c775915f1edc81",
+    "shop.html": "6ffc15c28470455b7350118799e94d20eecc552186662e87f86320c7f45f8c5b"
+  },
+  "transformationSourceDigest": "377fb084fad384c4b00bcd7f026c45b72bff89b5740faef6b1790d0dd6b9835f",
+  "expectedFailingStepIds": [
+    "download"
+  ],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true
+  },
+  "usage": {
+    "inputTokens": 11582,
+    "outputTokens": 746,
+    "reasoningTokens": 550,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 12328,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "37664b3b7703159a782384d0089eed8b92b534764330064d1ce6b30f0f3f116f"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-xB1b74",
+    "baseRevision": {
+      "id": "rev_01a11796-58e8-77b0-959f-d9675b58e0c9",
+      "protectedHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93"
+    },
+    "healthy": {
+      "runId": "run_01a11796-5933-721d-bfaa-69327edbf019",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a11796-5f34-71c8-b11e-f15ea74d611e",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a11796-db12-7231-906b-58184d72a517",
+      "hash": "0256e566b0f5ac934b2e2d9cfceccc5a960b47d5a321637e5def42820222cda4",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a11797-21ee-76af-8200-076bb77e7430",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "07515b9f02a24abf17ebb905321b45b47ede75d7a35831c3b8da84f2f72b5e63",
+        "responseHash": "a652856cd7e883be2179532f0ae78bf00fb8e247005d0ac22d7dfb8894b16b98",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 3072,
+          "inputTokens": 11582,
+          "outputTokens": 746,
+          "reasoningTokens": 550
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a11796-dd2a-7372-bb94-7c636893b705",
+      "hash": "c57f9ddc4b952628d14b60e554b3428c838d8710e0ac2f1016f2b80dfcc7f7ba"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a11796-58e8-77b0-959f-d9675b58e0c9",
+      "candidateRevisionId": "rev_01a11797-224f-767b-841a-8ba1512cf7a2",
+      "baseHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+      "candidateHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a11797-224e-72d1-9fba-49d1df3e1dcb",
+      "hash": "46db016c273377af3e1c21ac7cec07aea1160a6e8ccd0f97d9cbce1d86d159bd",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a11796-58e8-77b0-959f-d9675b58e0c9",
+      "candidateRevisionId": "rev_01a11797-224f-767b-841a-8ba1512cf7a2",
+      "baseHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+      "candidateHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a11797-28a6-72d3-a709-e98b524e708e",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  }
+}

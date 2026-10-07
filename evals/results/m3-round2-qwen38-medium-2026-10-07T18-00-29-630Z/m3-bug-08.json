@@ -1,0 +1,352 @@
+{
+  "id": "m3-bug-08",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "idempotency-ignored",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"idempotency-ignored\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "84dd4121615d99bfa801adbb3b3de5040279e1b773eaf237b74ef5c4daca2e6b",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "orderIdempotency",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-08",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": "correct-password"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-m3-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "cart",
+        "kind": "action",
+        "operation": "request",
+        "description": "cart",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "cart"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "productId": "p1",
+                "quantity": 3
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "order",
+        "kind": "action",
+        "operation": "request",
+        "description": "order",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "idempotency-key": {
+              "literal": "m3-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "repeat",
+        "kind": "action",
+        "operation": "request",
+        "description": "order",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "idempotency-key": {
+              "literal": "m3-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "orders",
+        "kind": "action",
+        "operation": "request",
+        "description": "orders",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "repeat"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "84dd4121615d99bfa801adbb3b3de5040279e1b773eaf237b74ef5c4daca2e6b",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "972550b4c395bf971c9e14fa77b8f2a08246d6ac4c7868cbe438fc33814b7ed0",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 19241,
+    "outputTokens": 3364,
+    "reasoningTokens": 2633,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 22605,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-zzhoFS",
+    "baseRevision": {
+      "id": "rev_01a1178d-b36b-74de-b6d9-8e373fa1bbd4",
+      "protectedHash": "d8158ba7a506823971758785b5a62bfeb7d947acdc8a623691847db15a0a2cb1"
+    },
+    "healthy": {
+      "runId": "run_01a1178d-b3ab-7075-974d-03035d7cb035",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a1178d-b7a1-7744-8f10-61ae8e04a3d5",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a1178d-baf8-70f3-bc4e-f614113d09f1",
+      "hash": "f74feefb71a4dbcf58ca9284a843338139f2d1769303339a43c9bde39a8512f8",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a1178e-514e-7431-b2f0-2897ccb90903",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "948e321b6f5e60bd4090d3df7dbaec0a2300a6dff2b40f8b7a89a3cc79cbdaed",
+        "responseHash": "994295b6f78dbb422ea5e6742972c7cd6906ce957615a5ddb2fb7ce4eb5c4620",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 9117,
+          "outputTokens": 2303,
+          "reasoningTokens": 1744
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a1178e-b38f-72c1-8ede-1bab5dc813ca",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "89382ca761b536a42be2865c8ed38f1e0d3699796654f28e792323d6cfbfa3bd",
+        "responseHash": "bb2337dd30179e5e9fe07d4190627d6e6a368f9f16bc798456b86b2a85b0e48d",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 6144,
+          "inputTokens": 10124,
+          "outputTokens": 1061,
+          "reasoningTokens": 889
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a1178e-514f-7727-92a7-bc416cc221ed",
+      "hash": "9fb5ea9e20db03590056680a0a98fbc5a853348e06d0c1de065ffc64b7aaa3d2"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_abstained",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a1178e-515a-76c3-b874-8b982cf71d40",
+      "modelCallId": "mdl_01a1178e-b38f-72c1-8ede-1bab5dc813ca",
+      "job": {
+        "state": "completed",
+        "result": {
+          "evidenceHashes": [
+            "05e216fdf5b343d78a8cc393a3cfc11124a41436550bb06c692796192e80215e",
+            "fae43e461eee34ee2033a26aeb6d6b9e9f3b7051193149ffb7ddb4917d77b8b9",
+            "ab31e35f3cb38b4ad7dbab9c8ec35de6c6c9ad9ca9f858b24b7d90c762b80fb7",
+            "de649d8f8297e4cd32a93c9cf7321816c119876e4fb1c9daff8bbfcd797505c5"
+          ],
+          "modelCallId": "mdl_01a1178e-b38f-72c1-8ede-1bab5dc813ca",
+          "reason": "model_abstained",
+          "refused": true
+        }
+      }
+    }
+  }
+}

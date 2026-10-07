@@ -1,0 +1,220 @@
+{
+  "id": "m3-bug-06",
+  "group": "bug",
+  "expectedFailureKind": "contract_violation",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "schema-field-renamed",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"schema-field-renamed\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "5bd5b41288322b0f7469005ff1d6455df79fdc79d22d5cb94ed51981a11fe633",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "productSchema",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "products",
+        "kind": "action",
+        "operation": "request",
+        "description": "products",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "products",
+          "jsonPointer": "/items/0/priceCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 1005
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "5bd5b41288322b0f7469005ff1d6455df79fdc79d22d5cb94ed51981a11fe633",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "a5c0c64c64cbc888100006c389190990d5b87a2e6c0ef840c433c100933de62b",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 5780,
+    "outputTokens": 2597,
+    "reasoningTokens": 1833,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 8377,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "b696eb1994085753dc39b3a480f752f7b75aa38f8a8f4d19d8f112b21400ec89"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-g030ow",
+    "baseRevision": {
+      "id": "rev_01a1178c-5672-7664-b689-3647fff436a3",
+      "protectedHash": "aa4c0097facba5890f37db6a29f7e859340cd538abd32b7834c0f2a1ee72b3ea"
+    },
+    "healthy": {
+      "runId": "run_01a1178c-56ac-72d0-ad28-f096b10eaf4f",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a1178c-59d7-7101-a134-0bae89e622ae",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a1178c-5cc9-762d-9e8e-ca97fb07271f",
+      "hash": "13ca2f9bd88578fc8eeaa4ee1e033c41e050f52aa73c970259e58749ae669c28",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a1178c-cd84-772a-bbf1-a248b0d41971",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "ff8ddf678416ab63332c9aad6ccf5f9672996b31b66b5ed546a35ef228d8ef61",
+        "responseHash": "f781c20a9652f011e8e511890cc523dbdf44c174d4f1fd452d82d24d8f24e150",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 4283,
+          "outputTokens": 1631,
+          "reasoningTokens": 1069
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a1178d-1d46-767d-8c4e-a4668be4d39f",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "5fe4e3bb5a8197e95e19be3c80973f1030b06f1ff33edf5d1ccacdb6934e3e72",
+        "responseHash": "4da2f56def081c753b91069d3996442ce84d282ac750327a80f9b0c1aaa0f51e",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 1497,
+          "outputTokens": 966,
+          "reasoningTokens": 764
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a1178c-cd85-746b-99f2-e9b5ac9a2011",
+      "hash": "2773e9881c053a5d0bac354481994d7fb1380a17e1783bcd7b127f54bdc27fdd"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_abstained",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a1178c-cd8e-77e3-8f3d-10cca3c9c6dc",
+      "modelCallId": "mdl_01a1178d-1d46-767d-8c4e-a4668be4d39f",
+      "job": {
+        "state": "completed",
+        "result": {
+          "evidenceHashes": [
+            "40196c694376cfca12dda8eaca46fdfa6bbe5787fe12ab4696cd33c0f6b63bb8",
+            "a24f78f3327d5f60e8cac334b5c23204a1a01b6231a0b8557eb5980c7e53bd59",
+            "107ee5eefce5f081a8a4c7b3a98dfa12760f23e3117d56196a5f074719ea3a73",
+            "7997a42aae489e6a992604022c50844d7c434493848b7a4814785517c554d62d",
+            "c0b7d9f8e873c843ced9c425432f08b16d9f04ce0f9130646a919220621d8499"
+          ],
+          "modelCallId": "mdl_01a1178d-1d46-767d-8c4e-a4668be4d39f",
+          "reason": "model_abstained",
+          "refused": true
+        }
+      }
+    }
+  }
+}
