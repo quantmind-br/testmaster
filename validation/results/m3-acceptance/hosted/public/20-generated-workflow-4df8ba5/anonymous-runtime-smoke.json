@@ -1,0 +1,91 @@
+{
+    "schemaVersion": "1.0.0",
+    "release": "https://github.com/quantmind-br/testmaster/releases/tag/runtime-4df8ba5",
+    "manifestSha256": "3d79df4e6676d51816401bc5cc6edb86b5b1977473dc60f94f423e3a74c91f2d",
+    "action": "quantmind-br/testmaster@fc5e7eb9af9d008af8ba2b3e04ed97fafcba7990",
+    "environment": "env -i, PATH=/usr/bin:/bin, fresh HOME/data, anonymous curl downloads, no workspace node_modules",
+    "results": [
+        {
+            "control": "healthy",
+            "exit": 0,
+            "detail": {
+                "gate": "passed",
+                "counts": {
+                    "passed": 1,
+                    "failed": 0,
+                    "blocked": 0,
+                    "cancelled": 0,
+                    "inconclusive": 0,
+                    "inFlight": 0
+                },
+                "reportHash": "d318b956d01381f82801af64230f709e64eec88d1ee5385e4ea43c9450667627",
+                "junitFailures": 0,
+                "files": [
+                    ".ci-owner",
+                    "bundle-index.json",
+                    "bundles",
+                    "completion.json",
+                    "junit.xml",
+                    "report.json",
+                    "summary.md"
+                ]
+            }
+        },
+        {
+            "control": "semantic-defect",
+            "exit": 1,
+            "detail": {
+                "gate": "failed",
+                "counts": {
+                    "passed": 0,
+                    "failed": 1,
+                    "blocked": 0,
+                    "cancelled": 0,
+                    "inconclusive": 0,
+                    "inFlight": 0
+                },
+                "reportHash": "fd1aa875d5df466524098b188e6fb6eda51b550d76419b2f0d974f9fa2779dcc",
+                "junitFailures": 1,
+                "files": [
+                    ".ci-owner",
+                    "bundle-index.json",
+                    "bundles",
+                    "completion.json",
+                    "junit.xml",
+                    "report.json",
+                    "summary.md"
+                ]
+            }
+        },
+        {
+            "control": "cleanup-data-removed",
+            "exit": 0,
+            "detail": true
+        },
+        {
+            "control": "tampered-runtime-archive",
+            "exit": 1,
+            "detail": "Error: Runtime archive hash mismatch\n"
+        },
+        {
+            "control": "tampered-image-part",
+            "exit": 1,
+            "detail": "Error: Image part hash mismatch\n"
+        },
+        {
+            "control": "wrong-manifest-pin",
+            "exit": 1,
+            "detail": "Error: Manifest hash mismatch\n"
+        },
+        {
+            "control": "manifest-without-license",
+            "exit": 1,
+            "detail": "Error: Required license asset missing: LICENSE\n"
+        },
+        {
+            "control": "manifest-without-migration",
+            "exit": 1,
+            "detail": "Error: Runtime file inventory mismatch\n"
+        }
+    ]
+}
