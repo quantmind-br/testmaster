@@ -26,8 +26,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-`;
+THE SOFTWARE.`;
 const sourceUrl = "https://files.pythonhosted.org/packages/certifi-2026.7.22.tar.gz";
 function audit() {
   return {
@@ -172,6 +171,56 @@ describe("exact Python source acquisition", () => {
         await expect(
           readFile(join(cache, "python/certifi/2026.7.22/certifi-2026.7.22.tar.gz.partial")),
         ).rejects.toMatchObject({ code: "ENOENT" });
+      } finally {
+        await rm(cache, { recursive: true, force: true });
+      }
+    },
+  );
+  it.each(["tag", "source"])(
+    "rejects changed Python Playwright %s rather than substituting a wheel for source",
+    async (failure) => {
+      const cache = await mkdtemp(join(tmpdir(), "testmaster-python-playwright-source-"));
+      const commit = "8cb967b3e4199bef5ce38e1cf34df1bf79cb8a8d";
+      const component = "library:playwright@1.63.0:1284";
+      const fetcher = vi.fn(async (url: string) => {
+        if (url.startsWith("https://pypi.org/"))
+          return Response.json({ info: { name: "playwright", version: "1.63.0" }, urls: [] });
+        if (url.startsWith("https://api.github.com/"))
+          return Response.json({
+            ref: "refs/tags/v1.63.0",
+            object: { type: "commit", sha: failure === "tag" ? "0".repeat(40) : commit },
+          });
+        return new Response("tampered archive");
+      });
+      vi.stubGlobal("fetch", fetcher);
+      try {
+        const result = await acquirePythonSources(
+          {
+            obligations: [{ component }],
+            imageEvidence: { image: { python: [{ name: "playwright", version: "1.63.0" }] } },
+          },
+          cache,
+        );
+        expect(result.coverage).toEqual({});
+        expect(result.residuals).toEqual([
+          expect.objectContaining({
+            component,
+            code: "PYTHON_SOURCE_UNAVAILABLE",
+            detail: expect.stringContaining(
+              failure === "tag" ? "release tag differs" : "digest/size mismatch",
+            ),
+          }),
+        ]);
+        expect(result.files.some((file) => file.path.endsWith(".tar.gz"))).toBe(false);
+        const urls = fetcher.mock.calls.map(([url]) => url);
+        expect(urls).toContain(
+          "https://api.github.com/repos/microsoft/playwright-python/git/ref/tags/v1.63.0",
+        );
+        if (failure === "source")
+          expect(urls).toContain(
+            `https://codeload.github.com/microsoft/playwright-python/tar.gz/${commit}`,
+          );
+        else expect(urls.some((url) => url.startsWith("https://codeload.github.com/"))).toBe(false);
       } finally {
         await rm(cache, { recursive: true, force: true });
       }

@@ -35,6 +35,7 @@ export interface SourcesIndex {
   schemaVersion: "1.0.0";
   auditHash: string;
   sourceCommit?: string;
+  sourceTree?: SourceFile;
   files: SourceFile[];
   coverage: Record<string, string[]>;
   residuals: SourceResidual[];
@@ -205,19 +206,43 @@ export async function downloadSource(
     offset = 0;
   }
   const response = await fetch(url, {
+    headers: { "Accept-Encoding": "identity", ...(offset ? { Range: `bytes=${offset}-` } : {}) },
     signal: AbortSignal.timeout(1800000),
-    ...(offset ? { headers: { Range: `bytes=${offset}-` } } : {}),
   });
   if (!response.ok || !response.body)
     throw new SourceBundleError(
       "SOURCE_UNAVAILABLE",
       `Source download HTTP ${response.status}: ${url}`,
     );
-  if (response.status !== 206) offset = 0;
-  await pipeline(
-    Readable.from(response.body),
-    createWriteStream(partial, { flags: offset ? "a" : "w", mode: 0o600 }),
-  );
+  if (
+    response.headers.get("content-encoding") &&
+    response.headers.get("content-encoding") !== "identity"
+  ) {
+    // Fetch transparently decodes Content-Encoding; source checksums cover the original gzip bytes.
+    await response.body.cancel();
+    await rm(partial, { force: true });
+    await exec(
+      "curl",
+      [
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--max-time",
+        "1800",
+        "--output",
+        partial,
+        url,
+      ],
+      { timeout: 1805000, maxBuffer: 1024 * 1024 },
+    );
+  } else {
+    if (response.status !== 206) offset = 0;
+    await pipeline(
+      Readable.from(response.body),
+      createWriteStream(partial, { flags: offset ? "a" : "w", mode: 0o600 }),
+    );
+  }
   const digest = await digestFile(partial);
   if (expected && (digest.sha256 !== expected.sha256 || digest.size !== expected.size)) {
     await rm(partial, { force: true });
@@ -398,6 +423,21 @@ export async function verifySourcesIndex(
     if (digest.sha256 !== file.sha256 || digest.size !== file.size)
       throw new SourceBundleError("SOURCE_HASH_MISMATCH", "Bundled source differs from index");
   }
+  if (
+    index.sourceTree &&
+    (!paths.has(index.sourceTree.path) ||
+      index.sourceTree.url !== `git:${index.sourceCommit}` ||
+      !index.files.some(
+        (file) =>
+          file.path === index.sourceTree!.path &&
+          file.sha256 === index.sourceTree!.sha256 &&
+          file.size === index.sourceTree!.size,
+      ))
+  )
+    throw new SourceBundleError(
+      "SOURCE_INDEX_INCOMPLETE",
+      "Committed source tree digest not covered by source index",
+    );
   for (const item of audit.obligations) {
     if (
       !item.blockedReason &&
@@ -460,6 +500,7 @@ export async function buildSources(
         "SOURCE_METADATA_INVALID",
         "Debian component lacks source identity",
       );
+    if (name === "nodejs" && /nodesource/u.test(version)) continue;
     const key = `${name}@${version}`;
     const item = unique.get(key) ?? { name, version, components: [] as string[] };
     item.components.push(component["bom-ref"]);
@@ -516,6 +557,18 @@ export async function buildSources(
     Object.assign(coverage, acquired.coverage);
     residuals.push(...acquired.residuals);
   }
+  const nodeComponent = audit.obligations.find((item) =>
+    item.component.startsWith("application:node@"),
+  );
+  if (nodeComponent && coverage[nodeComponent.component]?.length) {
+    for (const component of bom.components.filter((item) =>
+      item["bom-ref"].startsWith("library:nodejs@"),
+    )) {
+      const props = Object.fromEntries(component.properties.map((p) => [p.name, p.value]));
+      if (props.sourcePackage === "nodejs" && /nodesource/u.test(props.sourceVersion ?? ""))
+        coverage[component["bom-ref"]] = [...coverage[nodeComponent.component]!];
+    }
+  }
   const root = resolve(new URL("../../../", import.meta.url).pathname);
   const { stdout } = await exec("git", ["rev-parse", sourceCommitOverride ?? "HEAD"], {
     cwd: root,
@@ -538,11 +591,12 @@ export async function buildSources(
     ],
     { cwd: root },
   );
-  files.push({
+  const sourceTree: SourceFile = {
     path: sourcePath,
     url: `git:${sourceCommit}`,
     ...(await digestFile(join(cache, sourcePath))),
-  });
+  };
+  files.push(sourceTree);
   for (const obligation of audit.obligations.filter((item) =>
     item.component.startsWith("application:ffmpeg-"),
   ))
@@ -575,7 +629,7 @@ export async function buildSources(
   await rm(archivePath, { force: true });
   const archive = await writeDeterministicArchive(
     cache,
-    uniqueFiles.map((file) => file.path),
+    uniqueFiles.filter((file) => file.path !== sourceTree.path).map((file) => file.path),
     archivePath,
   );
   // Split uses exclusive paths: a completed prior bundle is retained instead of overwritten.
@@ -613,6 +667,7 @@ export async function buildSources(
     schemaVersion: "1.0.0",
     auditHash,
     sourceCommit,
+    sourceTree,
     files: uniqueFiles,
     coverage,
     residuals,
@@ -632,11 +687,60 @@ export async function buildSources(
   );
   return { cache, index };
 }
+export async function rebindSources(
+  auditPath: string,
+  cache: string,
+  sourceCommit: string,
+): Promise<SourcesIndex> {
+  if (!/^[a-f0-9]{40}$/u.test(sourceCommit))
+    throw new SourceBundleError("SOURCE_METADATA_INVALID", "Source commit requires full SHA");
+  const bytes = await readFile(auditPath);
+  const index = JSON.parse(
+    await readFile(join(cache, "sources-index.json"), "utf8"),
+  ) as SourcesIndex;
+  if (index.auditHash !== sha256(bytes) || !index.sourceTree)
+    throw new SourceBundleError(
+      "SOURCE_INDEX_INCOMPLETE",
+      "Source index audit/tree binding unavailable for cheap rebind",
+    );
+  const root = resolve(new URL("../../../", import.meta.url).pathname);
+  const path = `testmaster-source-${sourceCommit}.tar`;
+  await exec(
+    "git",
+    [
+      "archive",
+      "--format=tar",
+      `--output=${join(cache, path)}`,
+      sourceCommit,
+      "containers/ffmpeg",
+      "python",
+      "LICENSE",
+      "NOTICE",
+    ],
+    { cwd: root },
+  );
+  const sourceTree = { path, url: `git:${sourceCommit}`, ...(await digestFile(join(cache, path))) };
+  const old = index.sourceTree.path;
+  index.files = index.files.filter((file) => file.path !== old);
+  index.files.push(sourceTree);
+  for (const component of Object.keys(index.coverage))
+    index.coverage[component] = index.coverage[component]!.map((file) =>
+      file === old ? path : file,
+    );
+  index.sourceTree = sourceTree;
+  index.sourceCommit = sourceCommit;
+  await writeFile(join(cache, "sources-index.json"), JSON.stringify(index, null, 2) + "\n", {
+    mode: 0o600,
+  });
+  return index;
+}
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   const args = process.argv.slice(2);
   const auditPath = args.shift();
   let cache: string | undefined;
   let sourceCommit: string | undefined;
+  const rebind = args.at(-1) === "--rebind";
+  if (rebind) args.pop();
   for (let n = 0; n < args.length; n += 2) {
     const value = args[n + 1];
     if (!value || !["--cache", "--source-commit"].includes(args[n]!))
@@ -647,6 +751,20 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
   }
   if (!auditPath)
     throw new Error("Usage: sources.js AUDIT_JSON [--cache DIR] [--source-commit SHA]");
-  const result = await buildSources(resolve(auditPath), cache, sourceCommit);
-  if (result.index.residuals.length) process.exitCode = 1;
+  if (rebind) {
+    if (!cache || !sourceCommit) throw new Error("Rebind requires --cache and --source-commit");
+    const index = await rebindSources(resolve(auditPath), resolve(cache), sourceCommit);
+    console.log(
+      JSON.stringify({
+        cache,
+        files: index.files.length,
+        parts: index.archive.parts.length,
+        residuals: index.residuals.length,
+      }),
+    );
+    if (index.residuals.length) process.exitCode = 1;
+  } else {
+    const result = await buildSources(resolve(auditPath), cache, sourceCommit);
+    if (result.index.residuals.length) process.exitCode = 1;
+  }
 }

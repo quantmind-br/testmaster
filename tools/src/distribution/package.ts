@@ -400,6 +400,12 @@ export async function packageRuntime(
         throw new Error("Corresponding-source archive part hash mismatch");
       await copyFile(join(sourceCache, part.path), join(out, "sources", basename(part.path)));
     }
+    if (!sourcesIndex.sourceTree)
+      throw new Error("Committed recipe/license source tree asset missing");
+    await copyFile(
+      join(sourceCache, sourcesIndex.sourceTree.path),
+      join(out, "sources", basename(sourcesIndex.sourceTree.path)),
+    );
     await copyTree(join(out, "licenses"), join(stage, "licenses"), "dependency");
     for (const file of sourcesIndex.files) {
       if (
@@ -442,6 +448,7 @@ export async function packageRuntime(
       imageLockHash: sha256(lockBytes),
       sourcesIndexHash: sha256(sourcesBytes),
       sourcesArchive: sourcesIndex.archive,
+      sourcesTree: sourcesIndex.sourceTree,
       images,
     };
     const manifestBytes = JSON.stringify(manifest, null, 2) + "\n";

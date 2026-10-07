@@ -96,6 +96,12 @@ const README_URL = "https://raw.githubusercontent.com/jsumners/abstract-logging/
 const NOTICE_URL = "https://jsumners.mit-license.org/license.txt";
 // Exact upstream notice snapshot; the site uses the current copyright year.
 const NOTICE_SHA256 = "af15a41ce02371f77476b7a201e036c0ae6c5d6d2a233b4e5f0fd5fca123457e";
+// The exact Python release is wheel-only on PyPI; upstream tag v1.63.0 resolves here.
+const PLAYWRIGHT_PYTHON_COMMIT = "8cb967b3e4199bef5ce38e1cf34df1bf79cb8a8d";
+const PLAYWRIGHT_PYTHON_SOURCE_SHA256 =
+  "4570ad4866f713a55394587b0ea1e249281072fea9aafed7a4e24f23b6cc6bcf";
+const PLAYWRIGHT_PYTHON_LICENSE_SHA256 =
+  "7fab1461b41970ff376f1c9303a637076bfaaeb71cd12dd3a1c44aaf59a1a2b9";
 
 export async function acquirePythonSources(
   audit: unknown,
@@ -212,6 +218,44 @@ export async function acquirePythonSources(
         throw new Error("PyPI release identity differs from the locked image distribution");
       }
       const sdists = release.urls.filter((file) => file.packagetype === "sdist");
+      if (!sdists.length && pkg.name === "playwright" && pkg.version === "1.63.0") {
+        const tag = await acquire(
+          `${prefix}/upstream-tag.json`,
+          "https://api.github.com/repos/microsoft/playwright-python/git/ref/tags/v1.63.0",
+        );
+        const identity: unknown = JSON.parse(await readFile(join(cache, tag.path), "utf8"));
+        if (
+          !identity ||
+          typeof identity !== "object" ||
+          !("ref" in identity) ||
+          identity.ref !== "refs/tags/v1.63.0" ||
+          !("object" in identity) ||
+          !identity.object ||
+          typeof identity.object !== "object" ||
+          !("type" in identity.object) ||
+          identity.object.type !== "commit" ||
+          !("sha" in identity.object) ||
+          identity.object.sha !== PLAYWRIGHT_PYTHON_COMMIT
+        ) {
+          throw new Error(
+            "Python Playwright upstream release tag differs from the verified immutable source commit",
+          );
+        }
+        const source = await acquire(
+          `${prefix}/playwright-python-${PLAYWRIGHT_PYTHON_COMMIT}.tar.gz`,
+          `https://codeload.github.com/microsoft/playwright-python/tar.gz/${PLAYWRIGHT_PYTHON_COMMIT}`,
+          { sha256: PLAYWRIGHT_PYTHON_SOURCE_SHA256 },
+        );
+        const license = await acquire(
+          `${prefix}/LICENSE`,
+          `https://raw.githubusercontent.com/microsoft/playwright-python/${PLAYWRIGHT_PYTHON_COMMIT}/LICENSE`,
+          { sha256: PLAYWRIGHT_PYTHON_LICENSE_SHA256 },
+        );
+        // The wheel's embedded Node/core driver is covered separately by the parent bundles.
+        for (const component of pkg.components)
+          coverage[component] = [metadata.path, tag.path, source.path, license.path];
+        continue;
+      }
       if (!sdists.length)
         throw new Error(
           "Exact PyPI release has no source distribution; a wheel is not corresponding source",

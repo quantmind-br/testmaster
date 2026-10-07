@@ -93,6 +93,14 @@ export function verifyManifest(bytes: Buffer, expectedSha256: string): Distribut
     )
       throw new Error("Invalid corresponding-source provenance");
     for (const part of value.sourcesArchive.parts) safeArchivePath(part.path);
+    if (value.sourcesTree !== undefined) {
+      if (
+        !validDigest(value.sourcesTree, MAX_PART_SIZE) ||
+        typeof value.sourcesTree.path !== "string"
+      )
+        throw new Error("Invalid committed source tree provenance");
+      safeArchivePath(value.sourcesTree.path);
+    }
     if (
       !value.files.some(
         (file) =>

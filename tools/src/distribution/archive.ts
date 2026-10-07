@@ -24,6 +24,7 @@ export interface DistributionManifest {
   imageLockHash: string;
   sourcesIndexHash?: string;
   sourcesArchive?: ArchiveDigest & { parts: (ArchiveDigest & { path: string })[] };
+  sourcesTree?: FileDigest;
   images: { name: string; imageId: string; archive: ArchiveDigest & { parts: ArchiveDigest[] } }[];
 }
 export const LICENSE_ASSETS = ["LICENSE", "NOTICE", "containers/NOTICE"] as const;
