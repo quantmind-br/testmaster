@@ -2248,8 +2248,8 @@
         "validation/results/quickstart-m1.md"
       ],
       "code": ["apps/cli/src/runtime.ts", "apps/cli/src/runs.ts", "apps/cli/src/reports.ts"],
-      "note": "Local CLI and M3 generic strict CI exercise canonical JSON/JUnit/exits, cancellation and empty/nonpass controls. The pinned Action propagated them on GitHub-hosted runners in a public disposable repository; private-repository propagation remains unverified.",
-      "blockedReason": "External: hosted propagation observed on a public disposable GitHub repository (validation/results/m3-acceptance/hosted/public/acceptance.json: exits 0/1/5/7/143 and frozen gates published unchanged); private-repository acceptance and fork pull_request token isolation on GitHub remain unexercised."
+      "note": "Local CLI and M3 generic strict CI exercise canonical JSON/JUnit/exits, cancellation and empty/nonpass controls. The pinned Action propagated them on GitHub-hosted runners in a public disposable repository, including with the public Apache-2.0 runtime-4df8ba5 and its generated workflow. Private-repository acceptance is superseded by the public-only operator decision.",
+      "blockedReason": "External: hosted propagation observed on a public disposable GitHub repository (validation/results/m3-acceptance/hosted/public/acceptance.json and 21-controls-4df8ba5/acceptance.json: exits 0/1/5/143, input injection and SHA mismatch refused, frozen gates published unchanged); fork pull_request token isolation needs a second authorized GitHub identity and remains unexercised."
     },
     {
       "id": "INT-006",
@@ -4978,6 +4978,8 @@
         "packages/application/src/ai/healing.test.ts",
         "validation/results/m3-round1-posthoc-audit.json",
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
+        "validation/results/m3-round2-posthoc-audit.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
@@ -4985,7 +4987,7 @@
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts"
       ],
-      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -5666,8 +5668,8 @@
         "fixtures/reference-shop/oracle/index.js",
         "evals/corpus/manifest.json"
       ],
-      "note": "Corpus license UNLICENSED/pending maintainer decision; independent label review/reviewer fields pending.",
-      "blockedReason": "Corpus license UNLICENSED/pending maintainer decision; independent label review/reviewer fields pending."
+      "note": "Current corpus metadata is Apache-2.0 for original TestMaster fixtures and labels (ADR-010); third-party materials keep their own terms and SOURCES.md stays provenance, not permission. Independent label review/reviewer fields remain pending.",
+      "blockedReason": "Independent label review/reviewer fields pending; no independently reviewed benchmark claim."
     },
     {
       "id": "M0-05",
@@ -6857,10 +6859,12 @@
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-unit-complete-03/output.log",
         "validation/results/m3-round1-posthoc-audit.json",
-        "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json"
+        "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
+        "validation/results/m3-round2-posthoc-audit.json"
       ],
       "code": ["packages/application/src/ai/analysis.ts"],
-      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
@@ -6950,6 +6954,8 @@
         "packages/application/src/ai/healing.test.ts",
         "validation/results/m3-round1-posthoc-audit.json",
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
+        "validation/results/m3-round2-posthoc-audit.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
@@ -6958,7 +6964,7 @@
         "packages/application/src/ai/healing-patch.ts",
         "packages/planner/src/agent/index.ts"
       ],
-      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -7313,7 +7319,9 @@
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
-        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json"
       ],
       "code": [
         "packages/application/src/ci.ts",
@@ -7356,7 +7364,7 @@
           }
         ]
       },
-      "blockedReason": "Historical public hosted pinned Action/checks, old-A/new-B and branch protection acceptance is retained, but it does not certify changed release bytes. New public Apache-2.0 runtime/Action/onboarding acceptance is pending. Actual cross-owner fork token isolation requires a second authorized GitHub identity; permission-removal acceptance remains unavailable. Private-repository acceptance is superseded by the public-only operator decision."
+      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Actual cross-owner fork token isolation requires a second authorized GitHub identity and is unexercised. Private-repository acceptance is superseded by the public-only operator decision."
     },
     {
       "id": "M3-06",
@@ -7365,7 +7373,7 @@
       "milestone": "M3",
       "ownerRole": "Quality",
       "status": "implemented",
-      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; new implementation-bound round-2 controls/policy probes and paid results are pending. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Pilot point targets and holdout/review graduation are separate decisions.",
+      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; implementation-bound round-2 controls (31 passed, zero model calls) and policy probes (12 recorded decisions, 24 local-provider and 0 remote requests) were frozen at fbafad3 before the single paid round, whose results and post-hoc audit are retained. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Pilot point targets and holdout/review graduation are separate decisions.",
       "scenario": [
         "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
         "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
@@ -7392,9 +7400,13 @@
         "tools/src/evals/m3-scoring.test.ts",
         "validation/results/m3-round1-posthoc-audit.json",
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
+        "validation/results/m3-round2-posthoc-audit.json",
+        "evals/rounds/m3-round2-qwen38-medium/controls/manifest.json",
+        "evals/rounds/m3-round2-qwen38-medium/policy-probes/manifest.json",
         "tools/src/traceability/m3-mutations.test.ts",
         "validation/results/m3-critical-mutations.json",
-        "validation/results/m3-acceptance/001-mutm3-4/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-mutations-final-01/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-evaluator-unit-final/output.log",
         "evals/rounds/m3-round1-qwen38-medium/controls/manifest.json"
       ],
@@ -7605,7 +7617,7 @@
           }
         ]
       },
-      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality."
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality."
     },
     {
       "id": "M4-01",
@@ -8463,15 +8475,28 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "blocked",
+      "status": "implemented",
       "scenario": [],
       "oracle": [
         "Public distribution requires maintainer-selected compatible license plus release SBOM/license/provenance inventory."
       ],
-      "evidence": ["docs/adr/010-license.md", "containers/NOTICE"],
-      "code": ["docs/adr/010-license.md", "pnpm-lock.yaml", "containers/NOTICE"],
-      "note": "Publication blocked: maintainer license decision is explicitly pending, manifests UNLICENSED; no complete release SBOM/license inventory found.",
-      "blockedReason": "Publication blocked: maintainer license decision is explicitly pending, manifests UNLICENSED; no complete release SBOM/license inventory found."
+      "evidence": [
+        "LICENSE",
+        "NOTICE",
+        "docs/adr/010-license.md",
+        "containers/NOTICE",
+        "SOURCES.md"
+      ],
+      "code": [
+        "docs/adr/010-license.md",
+        "pnpm-lock.yaml",
+        "containers/NOTICE",
+        "tools/src/distribution/licenses.ts",
+        "tools/src/distribution/sources.ts",
+        "tools/src/distribution/package.ts"
+      ],
+      "note": "Original TestMaster code is Apache-2.0 (ADR-010). Every packaged release ships a CycloneDX SBOM, per-component obligations, upstream notices, release notes and a hash-bound corresponding-source index; the experimental public prerelease runtime-4df8ba5 (https://github.com/quantmind-br/testmaster/releases/tag/runtime-4df8ba5, source 4df8ba5e4ebdb243050853bbdd8bf66956b9cb7d) publishes them with 1267 source files in 7 parts and zero residual source obligations. Installation refuses a manifest without the original LICENSE or with unbound source provenance.",
+      "blockedReason": "No copied proprietary code/prompts rests on the documented clean-room process (SOURCES.md, ADR-010) without independent audit; SBOM/license inventory is an automated audit, not legal review."
     },
     {
       "id": "NFR-012",
@@ -11972,7 +11997,9 @@
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
-        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json"
       ],
       "code": [
         "packages/application/src/ci.ts",
@@ -12015,7 +12042,7 @@
           }
         ]
       },
-      "blockedReason": "Historical public hosted pinned Action/checks, old-A/new-B and branch protection acceptance is retained, but it does not certify changed release bytes. New public Apache-2.0 runtime/Action/onboarding acceptance is pending. Actual cross-owner fork token isolation requires a second authorized GitHub identity; permission-removal acceptance remains unavailable. Private-repository acceptance is superseded by the public-only operator decision."
+      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Actual cross-owner fork token isolation requires a second authorized GitHub identity and is unexercised. Private-repository acceptance is superseded by the public-only operator decision."
     },
     {
       "id": "REQ-033",
@@ -14564,8 +14591,8 @@
         "packages/sandbox/src/images/lock.ts",
         "tools/ci/check.sh"
       ],
-      "note": "Release SBOM/license inventory/scans/build provenance/signatures/advisory/revocation workflow and tampered-installer acceptance missing; no public release claim.",
-      "blockedReason": "Release SBOM/license inventory/scans/build provenance/signatures/advisory/revocation workflow and tampered-installer acceptance missing; no public release claim."
+      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, and tampered/wrong-pin/missing-license installer refusals exercised on the anonymously downloaded public prerelease runtime-4df8ba5.",
+      "blockedReason": "Release signatures, security advisory and revocation workflow are not implemented; no GA release claim."
     },
     {
       "id": "SEC-046",
@@ -14573,13 +14600,26 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M0",
       "ownerRole": "Security",
-      "status": "blocked",
+      "status": "implemented",
       "scenario": [],
       "oracle": ["Public-source provenance and license decision required before public release."],
-      "evidence": ["docs/adr/010-license.md", "SOURCES.md", "REPORT.md", "containers/NOTICE"],
-      "code": ["docs/adr/010-license.md", "SOURCES.md", "REPORT.md", "containers/NOTICE"],
-      "note": "Maintainer license decision and complete transitive license review remain pending; project manifests intentionally private/UNLICENSED. Clean-room process documented, not independently audited.",
-      "blockedReason": "Maintainer license decision and complete transitive license review remain pending; project manifests intentionally private/UNLICENSED. Clean-room process documented, not independently audited."
+      "evidence": [
+        "LICENSE",
+        "NOTICE",
+        "docs/adr/010-license.md",
+        "SOURCES.md",
+        "REPORT.md",
+        "containers/NOTICE"
+      ],
+      "code": [
+        "docs/adr/010-license.md",
+        "SOURCES.md",
+        "REPORT.md",
+        "containers/NOTICE",
+        "tools/src/distribution/licenses.ts"
+      ],
+      "note": "License decision recorded before release: Apache-2.0 for original work (ADR-010); a transitive audit of the shipped Node, Python, browser and OS image graph records each component's license, notices and covered-source obligations without relicensing third-party components. Clean-room process documented.",
+      "blockedReason": "Clean-room process and dependency license review are not independently audited; automated obligations are not legal review."
     },
     {
       "id": "SEC-047",
@@ -16193,8 +16233,8 @@
       ],
       "evidence": ["evals/corpus/manifest.json", "fixtures/reference-shop/src/shop.test.ts"],
       "code": ["evals/corpus/manifest.json", "fixtures/reference-shop/oracle/index.js"],
-      "note": "Independent label review empty/pending and redistribution license UNLICENSED/pending; no independently reviewed licensed benchmark claim.",
-      "blockedReason": "Independent label review empty/pending and redistribution license UNLICENSED/pending; no independently reviewed licensed benchmark claim."
+      "note": "Corpus versioned with Apache-2.0 metadata for original fixtures/labels (ADR-010). Independent label review empty/pending; no independently reviewed licensed benchmark claim.",
+      "blockedReason": "Independent label review empty/pending; no independently reviewed benchmark claim."
     },
     {
       "id": "VAL-015",
@@ -16598,20 +16638,20 @@
       "milestone": "M3",
       "ownerRole": "Quality",
       "status": "verified",
-      "note": "Verified retained deterministic mutation-inventory reporting, not model quality or independent safety sign-off. Inventory observed n=11, killed=10, equivalent=m3-masked-comparison, survivors=[], invalid=[]; equivalent rationale is scoped to the pure replacement implementation. Changed implementation needs fresh critical-mutation acceptance before round-2 admission.",
+      "note": "Verified retained deterministic mutation-inventory reporting, not model quality or independent safety sign-off. Inventory re-observed on the final implementation (2026-10-07T18:43:50Z): n=13, killed=12 (including m3-analysis-source-target and m3-license-asset), equivalent=m3-masked-comparison, survivors=[], invalid=[]; equivalent rationale is scoped to the pure replacement implementation.",
       "scenario": [
         "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
         "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
         "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
       ],
       "oracle": [
-        "Independent source-isolated subprocess healthy baseline passes 13 targeted controls. Eleven exact source mutations retain identities, source diffs, targeted test names, failure excerpts and rationales: 10 killed, 1 explicitly equivalent, zero survivors and invalid mutants. Setup/import failures are invalid rather than kills."
+        "Independent source-isolated subprocess healthy baseline passes the targeted controls. Thirteen exact source mutations retain identities, source diffs, targeted test names, failure excerpts and rationales: 12 killed, 1 explicitly equivalent, zero survivors and invalid mutants. Setup/import failures are invalid rather than kills."
       ],
       "evidence": [
         "tools/src/evals/m3-scoring.test.ts",
         "tools/src/traceability/m3-mutations.test.ts",
         "validation/results/m3-critical-mutations.json",
-        "validation/results/m3-acceptance/001-mutm3-4/output.log"
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-mutations-final-01/output.log"
       ],
       "code": ["tools/src/evals/m3-scoring.ts", "tools/src/traceability/m3-mutations.test.ts"],
       "coverage": {
@@ -18528,7 +18568,7 @@
         "interval": null,
         "n": 0,
         "decision": "blocked",
-        "reason": "Maintainer license decision, independent reviews and normative rootless reference are unavailable; no public-release or parity claim."
+        "reason": "Apache-2.0 for original work is decided (ADR-010) and experimental public prereleases with SBOM, obligations and corresponding sources exist (latest runtime-4df8ba5), but independent security/human benchmark review, release signatures/advisory workflow and the normative rootless reference are unavailable, and the M3 model pilot failed twice; no GA, public-release quality or parity claim."
       },
       {
         "area": "model-pipeline-round3-qwen38",
@@ -18579,6 +18619,16 @@
         "n": 12,
         "decision": "failed",
         "reason": "M3 round 1 (frozen b173a64, evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 1/9, precision 1/2; healthy correct abstention 4/4; 1 proposal, 0 applied, 0 unsafe applied, 0/9 false repairs; completion 7/30. Post-hoc audit validation/results/m3-round1-posthoc-audit.json: 9 healing requests exceeded admitted input before transport and 21 schema-valid diagnoses were rejected locally with an unrecorded rule (both fixed afterwards, not live-verified); reported proposed-unsafe 1/1 is an evaluator normalization artefact (stored assertions identical). 40 calls, 292988 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
+      },
+      {
+        "area": "model-loop-m3-round2-qwen38-medium",
+        "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; 12/12 gives a Wilson lower bound of about 0.758. Coverage pilot of one correlated family; independent label review, family holdout and safety sign-off before any graduation",
+        "approvedTarget": null,
+        "observation": 0,
+        "interval": [0, 0.2425007574992425],
+        "n": 12,
+        "decision": "failed",
+        "reason": "M3 round 2, the single authorized run (frozen fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 0/9, precision insufficient data; healthy correct abstention 3/4; completion 6/30; 13 proposals, 4 policy-applied and verified, 0 unsafe applied, 0/9 false repairs; supplemental integration observed. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 24/30 diagnoses abstained (10 before dispatch at the 90000-byte catalog cap, 12 rejected by the analysis limitations schema narrowing fixed in d3dc8ed and not live-verified, 2 by the observation-support rule); the 4 verified healings equal the deterministic policy-probe ceiling but score as misses because their diagnoses abstained. 40 calls, 461818 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
       }
     ]
   }

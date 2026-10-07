@@ -641,3 +641,12 @@ records the evaluator and prompt defects corrected since. Its registration prose
 Wilson lower bound >=0.8 at n=12, which even 12/12 (lower bound about 0.758) cannot reach; it is
 kept verbatim as history, not used as a reachable pilot gate.
 
+Round 2 (`fbafad3`, `evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/`), the single
+authorized run, also failed: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe
+applications, 461818 conservative tokens, unknown money. `validation/results/m3-round2-posthoc-audit.json`
+recomputes the score from the ledgers and explains the abstentions: browser drift catalogs that
+cite dozens of non-admitted artifacts exceed the 90000-byte pre-dispatch cap, and model
+`limitations` longer than an `Analysis` name were rejected locally until `d3dc8ed` bound the
+gateway schema to the persisted one. The four verified policy healings match the frozen policy
+probes exactly; they count as misses because their diagnoses abstained.
+

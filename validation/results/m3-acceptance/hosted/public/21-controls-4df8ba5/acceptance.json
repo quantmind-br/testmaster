@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "hosted-control-matrix-acceptance",
+  "observedAt": "2026-10-07",
+  "repository": "quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a",
+  "visibility": "public",
+  "runners": "GitHub-hosted ubuntu-24.04",
+  "workflow": ".github/workflows/acceptance-controls.yml (workflow_dispatch on main 0de31a6825743e8ccd09125d1c7b9895b0345932)",
+  "trustedAction": "quantmind-br/testmaster@fc5e7eb9af9d008af8ba2b3e04ed97fafcba7990",
+  "runtime": {
+    "release": "https://github.com/quantmind-br/testmaster/releases/tag/runtime-4df8ba5",
+    "sourceCommit": "4df8ba5e4ebdb243050853bbdd8bf66956b9cb7d",
+    "manifestSha256": "3d79df4e6676d51816401bc5cc6edb86b5b1977473dc60f94f423e3a74c91f2d"
+  },
+  "controls": [
+    {
+      "scenario": "selected",
+      "runId": 37666205496,
+      "conclusion": "success",
+      "gate": "passed",
+      "exitCode": 0,
+      "binding": "verified",
+      "reportHash": "828ee8f9295cb992ce3d9f04d657c0d321ea0073f86bba73e6a6b7e3a68fff2a",
+      "checks": { "TestMaster / result": "success", "TestMaster / required-gate": "success" }
+    },
+    {
+      "scenario": "empty",
+      "runId": 37666213793,
+      "conclusion": "failure",
+      "gate": "failed",
+      "exitCode": 5,
+      "binding": "unbound",
+      "error": "INVALID_ARGUMENT: Select exactly one of testIds, runIds, diff or all",
+      "reportHash": "ee55ae6e374201c4f18d33c33090bed85ce57b88e9fa895889021f0b7fa7653f",
+      "checks": { "TestMaster / result": "failure", "TestMaster / required-gate": "failure" }
+    },
+    {
+      "scenario": "authorized-empty",
+      "runId": 37666221913,
+      "conclusion": "success",
+      "gate": "not_applicable",
+      "exitCode": 0,
+      "binding": "unbound",
+      "reportHash": "1182d9d93eb8c9de1f056e21b924efa5922953709a67898c7cf48c600653fe01",
+      "checks": { "TestMaster / result": "neutral", "TestMaster / required-gate": "failure" }
+    },
+    {
+      "scenario": "cancel (dispatched without cancellation)",
+      "runId": 37666229549,
+      "conclusion": "failure",
+      "gate": "failed",
+      "exitCode": 1,
+      "binding": "verified",
+      "note": "The slow plan ran to completion without a cancel request and was inconclusive (insufficient_evidence, stopped_after_failure); it is not a cancellation control.",
+      "reportHash": "08e210606a5f6651da9a767402e9bf93ca80bace4ed7392f810495dbb1a1e444",
+      "checks": { "TestMaster / result": "failure", "TestMaster / required-gate": "failure" }
+    },
+    {
+      "scenario": "cancel",
+      "runId": 37667591378,
+      "conclusion": "cancelled",
+      "gate": "failed",
+      "exitCode": 143,
+      "binding": "verified",
+      "note": "gh run cancel while the strict CI step was in progress; the envelope was still uploaded and the always() publisher published a failed gate.",
+      "reportHash": "d752b3621ab9be7f2757d46fd5c51584cc4d7cfbffd2e68f936dff0d7d293f09",
+      "checks": { "TestMaster / result": "failure", "TestMaster / required-gate": "failure" }
+    },
+    {
+      "scenario": "injection",
+      "runId": 37666237767,
+      "conclusion": "failure",
+      "failedStep": "execute: TestMaster strict CI",
+      "error": "INVALID_ARGUMENT: test-ids contains malformed or duplicate IDs",
+      "publication": "skipped (no envelope)"
+    },
+    {
+      "scenario": "sha-mismatch",
+      "runId": 37666245848,
+      "conclusion": "failure",
+      "failedStep": "execute: TestMaster strict CI",
+      "error": "POLICY_DENIED: Action SHA context does not match checkout",
+      "publication": "skipped (no envelope)"
+    },
+    {
+      "scenario": "publisher-readonly",
+      "runId": 37666253713,
+      "conclusion": "failure",
+      "gate": "passed",
+      "exitCode": 0,
+      "failedStep": "publish-readonly: Publish frozen result (exit 7)",
+      "reportHash": "4addfe3efc41e7df85f9617a2d08ebccec171467feed5df6b17348e5f24051eb",
+      "publication": "none: no check run carries this report hash (check-runs.json), so a publisher without checks: write fails closed"
+    }
+  ],
+  "evidence": {
+    "envelopes": "<scenario>/testmaster-ci-<jobId>/ (report.json, junit.xml, summary.md, completion.json, bundle-index.json)",
+    "runs": "<scenario>/run.json",
+    "checkRuns": "check-runs.json (every check on the shared main SHA; checks created by different dispatches attach to one suite)"
+  },
+  "limits": [
+    "Runs share one main commit, so check runs from all dispatches appear on the same SHA; mapping uses report hashes.",
+    "Same-repository controls only; cross-owner fork token isolation needs a second authorized GitHub identity.",
+    "Synthetic no-model fixture; not model-quality evidence."
+  ]
+}

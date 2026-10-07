@@ -1,0 +1,993 @@
+{
+  "schemaVersion": "1.0.0",
+  "result": {
+    "schemaVersion": "1.0.0",
+    "kind": "batch",
+    "batchId": "bat_01a117a6-5bbd-73b0-b7d5-31dff4cc3cdd",
+    "gate": "failed",
+    "exitCode": 143,
+    "counts": {
+      "passed": 0,
+      "failed": 0,
+      "blocked": 0,
+      "cancelled": 0,
+      "inconclusive": 1,
+      "inFlight": 0
+    },
+    "provenance": {
+      "assessedSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+      "checkoutSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+      "binding": "verified",
+      "targetBinding": "local-checkout"
+    },
+    "selection": {
+      "requested": 1,
+      "excluded": [],
+      "emptyReason": null,
+      "quarantinePolicy": "exclude"
+    },
+    "outputs": {
+      "report": "/home/runner/work/_temp/testmaster-action-cdxYmE/output/report.json",
+      "junit": "/home/runner/work/_temp/testmaster-action-cdxYmE/output/junit.xml",
+      "summary": "/home/runner/work/_temp/testmaster-action-cdxYmE/output/summary.md",
+      "bundleIndex": "/home/runner/work/_temp/testmaster-action-cdxYmE/output/bundle-index.json"
+    },
+    "bundles": [
+      {
+        "runId": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+        "state": "exported",
+        "path": "/home/runner/work/_temp/testmaster-action-cdxYmE/output/bundles/run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+        "error": null
+      }
+    ],
+    "reportHash": "d752b3621ab9be7f2757d46fd5c51584cc4d7cfbffd2e68f936dff0d7d293f09",
+    "error": {
+      "code": "UNAVAILABLE",
+      "message": "CI interrupted"
+    }
+  },
+  "report": {
+    "schemaVersion": "1.0.0",
+    "committedAt": "2026-10-07T18:36:06.550Z",
+    "snapshotId": "snp_01a117a6-5cac-7559-bdf6-1d6586112d21",
+    "title": "Batch report",
+    "runs": [
+      {
+        "run": {
+          "analysisStatus": "not_requested",
+          "batchId": "bat_01a117a6-5bbd-73b0-b7d5-31dff4cc3cdd",
+          "cleanupOutcome": "not_required",
+          "createdAt": "2026-10-07T18:35:40.887Z",
+          "environmentRevisionId": "evr_01a117a5-ee03-7351-9c50-3774e591bec6",
+          "gate": "failed",
+          "gatePolicy": {
+            "cleanupRequired": false,
+            "executor": "docker",
+            "ownership": "ephemeral",
+            "policyHash": "35f20871cae8a02f68ddafb1cf76853a57f6ff28014e07eab3f2a3b83da1fdd2",
+            "policySatisfied": true,
+            "requiredDependenciesPassed": true,
+            "requiredEvidenceComplete": true
+          },
+          "id": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+          "matrixCell": {
+            "admissionSnapshot": {
+              "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+              "buildInputsHash": "a6d71e921b8c9f49e01291f268b0736ddd31844b02f9254a8ea7ac6b103c0ed9",
+              "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+              "configuredModelHash": null,
+              "dependenciesLockHash": null,
+              "environmentHash": "fc2cb244a50a06768012c5d1c349b0a57030179a9c0ebbb1e866d92b5cc81217",
+              "generationModel": null,
+              "generationModelCallId": null,
+              "images": {
+                "testmaster-runner": {
+                  "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                  "buildInputsHash": "a6d71e921b8c9f49e01291f268b0736ddd31844b02f9254a8ea7ac6b103c0ed9",
+                  "imageId": "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+                  "seccomp": {
+                    "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                    "engineVersion": "29.8.1",
+                    "inputs": {
+                      "engineDefault": {
+                        "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                        "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                      },
+                      "originalDefault": {
+                        "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                        "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                      },
+                      "playwright": {
+                        "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                        "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                      }
+                    },
+                    "profileModuleVersion": "v0.2.3",
+                    "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                  }
+                },
+                "testmaster-runner-python": {
+                  "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                  "buildInputsHash": "792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a",
+                  "imageId": "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577",
+                  "seccomp": {
+                    "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                    "engineVersion": "29.8.1",
+                    "inputs": {
+                      "engineDefault": {
+                        "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                        "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                      },
+                      "originalDefault": {
+                        "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                        "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                      },
+                      "playwright": {
+                        "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                        "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                      }
+                    },
+                    "profileModuleVersion": "v0.2.3",
+                    "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                  }
+                }
+              },
+              "inputFixtureHashes": {},
+              "inputHash": "82b22cf89f62aa79d8a121d5eea07d5cfe7cae14bc8737d7b1c6f1ea3f1f16b2",
+              "limitations": [
+                "mutable-external-target",
+                "mutable-external-payload",
+                "browser-platform-rendering",
+                "source-binding-unavailable",
+                "source-dependency-lock-unavailable"
+              ],
+              "modelConfigHash": null,
+              "modelProviders": [],
+              "policyHash": "35f20871cae8a02f68ddafb1cf76853a57f6ff28014e07eab3f2a3b83da1fdd2",
+              "profilePolicy": {
+                "allowCiHealing": false,
+                "allowUpload": false,
+                "allowedModelProviders": [],
+                "limits": {
+                  "attemptTimeoutMs": 900000,
+                  "executionTimeoutMs": 7200000,
+                  "maxAttempts": 2
+                },
+                "offline": true,
+                "projectId": "prj_01a117a5-edfc-7252-801b-45ba78254606",
+                "security": {
+                  "allowUnsafeProcessExecution": false
+                }
+              },
+              "repository": {
+                "baseSha": null,
+                "binding": "verified",
+                "checkoutSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+                "commitSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+                "deploymentId": null,
+                "dirtyHash": null,
+                "limitations": [],
+                "repositoryId": "github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a"
+              },
+              "requiredCapabilities": [
+                "http"
+              ],
+              "revisionHash": "62b9ae9bd7cffc0ff5292b2d696f2b04471adc9cedb7c20da485fe8efa94767f",
+              "runnerImageDigest": "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+              "runtimeIdentity": {
+                "browserName": "chromium",
+                "browserVersion": "153.0.8010.12",
+                "imageId": "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+                "nodeVersion": "v24.20.0",
+                "playwrightVersion": "1.63.0"
+              },
+              "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+              "seed": 0,
+              "sourceRevisions": []
+            },
+            "admissionSnapshotHash": "90d98cedc065da73ed5b67a76ab66c8dfe0b85c2d031b68e4173b4ec4195f2f6",
+            "baseUrl": "http://127.0.0.1:18080",
+            "correlationId": "cli_c01bb7b3-0f46-4db0-831b-91a679de698d",
+            "dependencyBindings": [],
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "off",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 300000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 2,
+                  "executionTimeoutMs": 1800000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 2,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 30000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 30000
+                },
+                "healing": {
+                  "mode": "off"
+                },
+                "project": {
+                  "id": "prj_01a117a5-edfc-7252-801b-45ba78254606",
+                  "name": "acceptance"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "project",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "environment",
+                "project.id": "environment",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "35f20871cae8a02f68ddafb1cf76853a57f6ff28014e07eab3f2a3b83da1fdd2"
+            },
+            "environmentId": "env_01a117a5-ee03-7351-9c50-3b0c3e359eb9",
+            "environmentName": "local",
+            "executor": "docker",
+            "healingPolicy": "off",
+            "limits": {
+              "analysisGraceMs": 60000,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "attemptTimeoutMs": 300000,
+              "bodyBytes": 10485760,
+              "collectionGraceMs": 60000,
+              "executionTimeoutMs": 1800000,
+              "logBytes": 10485760,
+              "maxAttempts": 1,
+              "networkRequestTimeoutMs": 30000,
+              "preparationTimeoutMs": 120000,
+              "stepTimeoutMs": 30000
+            },
+            "maxConcurrency": 2,
+            "ownership": "ephemeral",
+            "planHash": "62b9ae9bd7cffc0ff5292b2d696f2b04471adc9cedb7c20da485fe8efa94767f",
+            "seed": 0
+          },
+          "mode": "replay",
+          "origin": "cli",
+          "outcome": "inconclusive",
+          "phase": "completed",
+          "revisionId": "rev_01a117a5-f36b-76cb-9298-595f9fab652b",
+          "status": "inconclusive",
+          "testId": "tst_01a117a5-f361-743f-a78f-a954bdb19273",
+          "version": 2,
+          "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+        },
+        "result": {
+          "runId": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+          "phase": "completed",
+          "outcome": "inconclusive",
+          "status": "inconclusive",
+          "gate": "failed",
+          "cleanupOutcome": "not_required",
+          "analysisStatus": "not_requested",
+          "passedOnRetry": false,
+          "firstAttemptOutcome": "inconclusive",
+          "reasonCode": "insufficient_evidence"
+        },
+        "title": "slow-health",
+        "projectId": "prj_01a117a5-edfc-7252-801b-45ba78254606",
+        "environment": "local",
+        "evidenceState": "committed",
+        "snapshot": {
+          "attemptId": "att_01a117a6-5c91-7469-a5a6-9dce2822dc4b",
+          "committedAt": "2026-10-07T18:36:06.550Z",
+          "manifestHash": "3f09a2a817a1fe7436819871a9b379f119d4927a980fe7c5b3667dd41a111c04",
+          "redactionPolicyHash": "3a0b4db97def93d99c1d1813337e6fc8f5066c0be93bab4e3e93ebfed1ea5745",
+          "revisionId": "rev_01a117a5-f36b-76cb-9298-595f9fab652b",
+          "runId": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a117a6-5cac-7559-bdf6-1d6586112d21",
+          "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+        },
+        "manifest": {
+          "attemptId": "att_01a117a6-5c91-7469-a5a6-9dce2822dc4b",
+          "entries": [
+            {
+              "artifactId": "art_01a117a6-c005-73c8-b2ce-623716467167",
+              "kind": "log",
+              "mimeType": "text/plain",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/container.log",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a117a6-c008-7614-9878-5230bcac0bc4",
+              "kind": "protocol",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/protocol.json",
+              "sha256": "39f55fd02742439a7b11de32c14d2a76c04825aaf81476df04bf42e57ff529d0",
+              "sizeBytes": 72,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a117a6-c009-707f-b8af-5e48b8a9b982",
+              "kind": "snapshot",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "snapshot/runtime.json",
+              "sha256": "f0c56c5c92d30e2e40ef76720fb95cf92a35a60fc1b0bfe4cec5ec514810edce",
+              "sizeBytes": 11707,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a117a6-c00b-733b-af2d-de2c68fc0ef8",
+              "kind": "network",
+              "mimeType": "application/x-ndjson",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/egress.ndjson",
+              "sha256": "f31cfdfa414032614fdb9afcb4e40445f3cf8391652f0c94a0edaae1e7ad2d77",
+              "sizeBytes": 97,
+              "state": "available"
+            }
+          ],
+          "executionSnapshot": {
+            "baseUrl": "http://127.0.0.1:18080",
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "a6d71e921b8c9f49e01291f268b0736ddd31844b02f9254a8ea7ac6b103c0ed9",
+            "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+            "configuredModelHash": null,
+            "controllerVersion": "1.0.0",
+            "correlationId": "cli_c01bb7b3-0f46-4db0-831b-91a679de698d",
+            "dependenciesLockHash": null,
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "off",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 300000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 2,
+                  "executionTimeoutMs": 1800000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 2,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 30000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 30000
+                },
+                "healing": {
+                  "mode": "off"
+                },
+                "project": {
+                  "id": "prj_01a117a5-edfc-7252-801b-45ba78254606",
+                  "name": "acceptance"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "project",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "environment",
+                "project.id": "environment",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "35f20871cae8a02f68ddafb1cf76853a57f6ff28014e07eab3f2a3b83da1fdd2"
+            },
+            "environment": {
+              "authProfileRefs": [],
+              "createdAt": "2026-10-07T18:35:12.771Z",
+              "id": "evr_01a117a5-ee03-7351-9c50-3774e591bec6",
+              "locale": "en-US",
+              "networkProfile": "local-loopback",
+              "production": false,
+              "targetOrigins": [
+                "http://127.0.0.1:18080"
+              ],
+              "timezone": "UTC",
+              "variables": {},
+              "version": 1,
+              "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+            },
+            "environmentHash": "fc2cb244a50a06768012c5d1c349b0a57030179a9c0ebbb1e866d92b5cc81217",
+            "environmentRevisionId": "evr_01a117a5-ee03-7351-9c50-3774e591bec6",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "hostArchitecture": "x64",
+            "hostPlatform": "linux",
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "a6d71e921b8c9f49e01291f268b0736ddd31844b02f9254a8ea7ac6b103c0ed9",
+                "imageId": "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a",
+                "imageId": "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "82b22cf89f62aa79d8a121d5eea07d5cfe7cae14bc8737d7b1c6f1ea3f1f16b2",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [],
+            "originalRunId": null,
+            "policyHash": "35f20871cae8a02f68ddafb1cf76853a57f6ff28014e07eab3f2a3b83da1fdd2",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": true,
+              "projectId": "prj_01a117a5-edfc-7252-801b-45ba78254606",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "provenance": {
+              "baseSha": null,
+              "binding": "verified",
+              "checkoutSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+              "commitSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+              "deploymentId": null,
+              "dirtyHash": null,
+              "repositoryId": "github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a"
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "verified",
+              "checkoutSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+              "commitSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [],
+              "repositoryId": "github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a"
+            },
+            "requiredCapabilities": [
+              "http"
+            ],
+            "revisionHash": "62b9ae9bd7cffc0ff5292b2d696f2b04471adc9cedb7c20da485fe8efa94767f",
+            "revisionId": "rev_01a117a5-f36b-76cb-9298-595f9fab652b",
+            "runId": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+            "runnerImageDigest": "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:7ba01dcbf585a228d770207de0207f4de3e61fe543bb4c5df5adb822efb75c64",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "sealedAt": "2026-10-07T18:35:41.166Z",
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "secretRefs": [],
+            "seed": 0,
+            "sourceRevisions": [],
+            "workerId": null
+          },
+          "reproduction": {
+            "degree": "strict-execution-replay",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ]
+          },
+          "revisionId": "rev_01a117a5-f36b-76cb-9298-595f9fab652b",
+          "runId": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a117a6-5cac-7559-bdf6-1d6586112d21",
+          "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+        },
+        "reproduction": {
+          "degree": "evidence-replay",
+          "executionDegree": "strict-execution-replay",
+          "limitations": [
+            "mutable-external-target",
+            "mutable-external-payload",
+            "browser-platform-rendering",
+            "source-binding-unavailable",
+            "source-dependency-lock-unavailable"
+          ]
+        },
+        "steps": [
+          {
+            "attemptId": "att_01a117a6-5c91-7469-a5a6-9dce2822dc4b",
+            "createdAt": "2026-10-07T18:36:06.418Z",
+            "durationMs": 24118,
+            "error": {
+              "code": "Error",
+              "message": "HTTP transport did not produce a complete usable response"
+            },
+            "evidenceRefs": [],
+            "expected": null,
+            "id": "stp_01a117a6-bf92-72ab-be1e-ceca21c16385",
+            "index": 0,
+            "observed": null,
+            "planStepId": "get-health",
+            "reasonCode": "user_cancelled",
+            "status": "cancelled",
+            "version": 1,
+            "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+          },
+          {
+            "attemptId": "att_01a117a6-5c91-7469-a5a6-9dce2822dc4b",
+            "createdAt": "2026-10-07T18:36:06.436Z",
+            "durationMs": 0,
+            "error": null,
+            "evidenceRefs": [],
+            "expected": null,
+            "id": "stp_01a117a6-bfa4-732a-b5a1-605838a0d853",
+            "index": 1,
+            "observed": null,
+            "planStepId": "check-status",
+            "reasonCode": "cancelled_before_step",
+            "status": "skipped",
+            "version": 1,
+            "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+          },
+          {
+            "attemptId": "att_01a117a6-5c91-7469-a5a6-9dce2822dc4b",
+            "createdAt": "2026-10-07T18:36:06.439Z",
+            "durationMs": 0,
+            "error": null,
+            "evidenceRefs": [],
+            "expected": null,
+            "id": "stp_01a117a6-bfa7-75ff-b93f-7a2a8afa1bbb",
+            "index": 2,
+            "observed": null,
+            "planStepId": "check-health",
+            "reasonCode": "cancelled_before_step",
+            "status": "skipped",
+            "version": 1,
+            "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266"
+          }
+        ],
+        "attempts": [
+          {
+            "endedAt": "2026-10-07T18:36:06.577Z",
+            "id": "att_01a117a6-5c91-7469-a5a6-9dce2822dc4b",
+            "number": 1,
+            "outcome": "inconclusive",
+            "phase": "completed",
+            "runId": "run_01a117a6-5bd7-749a-af78-e7e1497f7b62",
+            "seed": 0,
+            "startedAt": "2026-10-07T18:35:41.072Z",
+            "workerId": null,
+            "workspaceId": "ws_01a117a5-ede0-704a-9d20-3585ec635266",
+            "version": 1,
+            "createdAt": "2026-10-07T18:35:41.081Z"
+          }
+        ],
+        "freshness": {
+          "state": "current",
+          "reasons": [],
+          "currentRevisionId": "rev_01a117a5-f36b-76cb-9298-595f9fab652b",
+          "currentEnvironmentRevisionId": "evr_01a117a5-ee03-7351-9c50-3774e591bec6"
+        },
+        "timings": {
+          "source": "monotonic",
+          "clockDomain": "27aaf76e-eaf1-4376-b69a-876c4058e6b1",
+          "boundaries": [
+            {
+              "monotonicMs": 228675.67542,
+              "occurredAt": "2026-10-07T18:35:40.921Z",
+              "phase": "queued"
+            },
+            {
+              "monotonicMs": 228839.976985,
+              "occurredAt": "2026-10-07T18:35:41.086Z",
+              "phase": "preparing"
+            },
+            {
+              "monotonicMs": 230140.216375,
+              "occurredAt": "2026-10-07T18:35:42.386Z",
+              "phase": "running"
+            },
+            {
+              "monotonicMs": 254310.683196,
+              "occurredAt": "2026-10-07T18:36:06.556Z",
+              "phase": "collecting"
+            },
+            {
+              "monotonicMs": 254329.82884,
+              "occurredAt": "2026-10-07T18:36:06.575Z",
+              "phase": "completed"
+            }
+          ],
+          "queueDuration": 164.30156499997247,
+          "preparationDuration": 1300.2393900000025,
+          "executionDuration": 24170.46682100001,
+          "collectionDuration": 19.145644000003813,
+          "analysisDuration": null,
+          "wallClockDuration": 25654.153419999988,
+          "analysisStatus": "not_requested"
+        },
+        "durationMs": 24170.46682100001
+      }
+    ],
+    "selection": {
+      "requested": 1,
+      "requestedRunIds": [
+        "run_01a117a6-5bd7-749a-af78-e7e1497f7b62"
+      ],
+      "duplicates": 0,
+      "notDispatched": [],
+      "excluded": [],
+      "allowEmpty": false
+    },
+    "completeness": {
+      "state": "partial",
+      "reasons": [
+        "ci-wait-interrupted"
+      ]
+    },
+    "executionMetrics": {
+      "counts": {
+        "requested": 1,
+        "accepted": 1,
+        "notDispatched": 0,
+        "expanded": 0,
+        "allMembers": 1,
+        "executed": 1,
+        "attempts": 1,
+        "retried": 0,
+        "duplicates": 0,
+        "excluded": 0,
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "cancelled": 0,
+        "inconclusive": 1,
+        "nonterminal": 0
+      },
+      "rates": {
+        "selectionCompletionRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 0,
+          "definition": "(N_passed + N_failed) / N_selected",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "strictPassRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 0,
+          "definition": "N_firstAttemptPassed under strict/no-heal / N_selected",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "terminalPassRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 0,
+          "definition": "N_passed / N_selected",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "blockedRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 0,
+          "definition": "N_blocked / N_selected",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "inconclusiveRate": {
+          "numerator": 1,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 1,
+          "definition": "N_inconclusive / N_selected",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "gatePassRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 0,
+          "definition": "N_requiredRunsWithGatePassed / N_selected",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "retryRecoveryRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "denominatorState": "known",
+          "state": "notApplicable",
+          "value": null,
+          "definition": "N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried (internal infrastructure retries only)",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "diagnosticRetryPassRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "denominatorState": "known",
+          "state": "notApplicable",
+          "value": null,
+          "definition": "N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "firstAttemptFailureRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "denominatorState": "known",
+          "state": "notApplicable",
+          "value": null,
+          "definition": "N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "artifactCompletenessRate": {
+          "numerator": 1,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 1,
+          "definition": "N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "staleEvidenceRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "denominatorState": "known",
+          "state": "available",
+          "value": 0,
+          "definition": "N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)",
+          "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+        },
+        "requirementMappingCoverage": {
+          "numerator": 0,
+          "denominator": null,
+          "denominatorState": "unknown",
+          "state": "insufficientData",
+          "value": null,
+          "definition": "Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)",
+          "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+        },
+        "endpointContractCoverage": {
+          "numerator": 0,
+          "denominator": null,
+          "denominatorState": "unknown",
+          "state": "insufficientData",
+          "value": null,
+          "definition": "Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs",
+          "scope": "Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions"
+        },
+        "verifiedRequirementCoverage": {
+          "numerator": 0,
+          "denominator": null,
+          "denominatorState": "unknown",
+          "state": "insufficientData",
+          "value": null,
+          "definition": "N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces",
+          "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+        }
+      },
+      "exclusions": {
+        "firstAttemptNonPassOrFail": 1,
+        "expandedDependencies": 0,
+        "authorizedExcluded": 0,
+        "duplicateSelections": 0
+      },
+      "blockedReasons": {},
+      "retryPolicy": "Pinned execution limits; attempts never increase selected denominator; assertion failure remains failed after diagnostic pass"
+    },
+    "coverage": {
+      "requirement": {
+        "numerator": 0,
+        "denominator": null,
+        "denominatorState": "unknown",
+        "state": "insufficientData",
+        "value": null,
+        "definition": "Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)",
+        "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+      },
+      "route": {
+        "numerator": 0,
+        "denominator": null,
+        "denominatorState": "unknown",
+        "state": "insufficientData",
+        "value": null,
+        "definition": "Distinct observed routes / declared in-scope routes",
+        "scope": "Observed navigation; discovery is partial and total application route inventory is unknown"
+      },
+      "operation": {
+        "numerator": 0,
+        "denominator": null,
+        "denominatorState": "unknown",
+        "state": "insufficientData",
+        "value": null,
+        "definition": "Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs",
+        "scope": "Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions"
+      },
+      "code": {
+        "numerator": 0,
+        "denominator": null,
+        "denominatorState": "unknown",
+        "state": "insufficientData",
+        "value": null,
+        "definition": "Instrumented covered code units / declared instrumented code units; never inferred from navigation",
+        "scope": "No code instrumentation supplied"
+      },
+      "execution": {
+        "numerator": 0,
+        "denominator": 1,
+        "denominatorState": "known",
+        "state": "available",
+        "value": 0,
+        "definition": "Requested cells with passed or failed outcome / frozen requested cells",
+        "scope": "Frozen requested selection; dependency expansion excluded"
+      }
+    },
+    "provenance": {
+      "assessedSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+      "checkoutSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+      "binding": "verified",
+      "targetBinding": "local-checkout"
+    }
+  }
+}
