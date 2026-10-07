@@ -54,41 +54,77 @@ an AbortSignal and removes incomplete staging on failure/cancellation; nested ar
 rejected by both extension and magic, never recursively unpacked.
 
 
-## Private relocatable runtime distribution
+## Relocatable runtime distribution
 
-After building the CLI and freezing the runner image lock, run
-`node tools/dist/distribution/package.js --out NEW_PRIVATE_DIRECTORY`. The output contains
-`manifest.json`, a deterministic `runtime.tar.gz`, and ordered image archives under
-`images/<name>.tar.gz.part-0000` (each part is at most 1 GiB). The manifest records source
-commit, file hashes, production dependency/license inventory, image-lock hash and full/part
-archive hashes. Packaging saves both locked image IDs; it does not rebuild images.
+Release packaging runs from a clean worktree of the committed release (dirty or untracked
+sources are refused) after building the CLI and freezing the runner image lock:
+
+1. `node tools/dist/distribution/licenses.js ROOT NEW_AUDIT_DIRECTORY` audits the shipped graph
+   offline (staged Node production/optional/peer packages, every dpkg package and Python
+   distribution in both locked images, browser revisions, ffmpeg and bundled Node) and writes a
+   CycloneDX `sbom.cdx.json`, `obligations.json` and `release-notes.txt`. Flags quote retained
+   copyright text; they are not a certified per-binary license selection.
+2. `node tools/dist/distribution/sources.js AUDIT/obligations.json [--cache DIR] [--source-commit SHA]`
+   builds the corresponding-source bundle in a resumable cache outside the repository: exact
+   Ubuntu source packages (every file verified against its `.dsc`), the Playwright browser patch
+   trees with exact upstream Firefox/WebKit sources and Chromium's `third_party/ffmpeg`, the
+   FFmpeg/libvpx/zlib tarballs of `containers/ffmpeg/`, the Node source tarball, and a
+   `git archive` of the TestMaster source commit. Output is ≤1 GiB tar parts plus
+   `sources-index.json`; unresolved items stay typed residuals.
+3. `node tools/dist/distribution/package.js --out NEW_DIRECTORY --sources-index INDEX` writes
+   `manifest.json`, a deterministic `runtime.tar.gz`, ordered image archive parts
+   (`images/<name>.tar.gz.part-0000`, each ≤1 GiB) and the source parts. It refuses image
+   redistribution unless the index is bound to the identical audit and covers every source and
+   notice obligation. The manifest records source commit, file hashes (including `LICENSE`,
+   `NOTICE`, `containers/NOTICE` and upstream notices), image-lock hash, sources-index hash and
+   full/part archive hashes. Packaging saves both locked image IDs; it does not rebuild images.
+
+Playwright's own ffmpeg build recipe is not public, so both images build FFmpeg 7.0.1 from
+`containers/ffmpeg/build.sh` (LGPL configuration, SHA-256 pinned tarballs, provenance at
+`/ms-playwright/ffmpeg-1011/TESTMASTER_FFMPEG_BUILD.json`) and are flattened so the replaced
+vendor binary is absent from every layer. Apache-2.0 does not relicense Ubuntu, browser or
+library components; their notices and source obligations travel with the release.
 
 Distribute the manifest SHA-256 through a separate trusted pinned channel. Installation is
 `node tools/dist/distribution/install.js --manifest PATH --manifest-sha256 HEX --dest NEW_DIRECTORY`.
 The destination must not exist and is created with mode `0700`; installation rejects unsafe
-tar paths, escaping symlinks, hardlinks/devices, archive/hash mismatches and mismatched Docker
-image IDs. It executes no package lifecycle scripts. Node 24 and hardened Docker remain host
-prerequisites. The installer verifies all image archives before loading either image.
+tar paths, escaping symlinks, hardlinks/devices, archive/hash mismatches, missing license assets
+and mismatched Docker image IDs. It executes no package lifecycle scripts. Node 24 and hardened
+Docker remain host prerequisites. The installer verifies all image archives before loading either image.
 Locked image IDs are the IDs reported by Docker's containerd image store (`docker info`
 driver type `io.containerd.snapshotter.v1`, the default for new Docker 29 installations); the
 classic store assigns other IDs to the same archive, so installation fails with `No such image`.
-GitHub's `ubuntu-24.04` runner (Docker 28.0.4) uses the classic store: the acceptance workflow
+GitHub's `ubuntu-24.04` runner (Docker 28.0.4) uses the classic store: the generated workflow
 enables `features.containerd-snapshotter` in `/etc/docker/daemon.json` and restarts Docker
 before installing.
 
 The runtime preserves monorepo-relative lookups for contract schemas/OpenAPI, both SQL migration
 trees, image lock/seccomp profile, managed agent skill content and the runner harness. Source,
 tests, source maps, declarations, private configuration and historical results are not shipped.
-Dependency license inventory is not license approval; public distribution remains blocked while
-the repository is `UNLICENSED`. A clean extracted-runtime HTTP smoke is required separately from
-packaging; successful archive creation alone is not execution evidence.
+A clean extracted-runtime HTTP smoke is required separately from packaging; successful archive
+creation alone is not execution evidence.
+
+The GitHub Action is published from a dedicated distribution commit built by
+`node tools/dist/distribution/action-dist.js CLEAN_SOURCE_ROOT NEW_OUTPUT_DIRECTORY` (builtin-only
+module closure, licenses, hashed `source-commit` provenance; no development `node_modules`).
+Workflows pin the full distribution commit SHA and the runtime manifest SHA-256; tags are
+discovery labels only. `testmaster ci init github --action-ref SHA --setup-script PATH
+--runtime-repo OWNER/REPO --runtime-tag TAG --runtime-assets JSON --runtime-manifest-sha256 HEX`
+generates the complete workflow: a fork guard before any download, a `contents: read` execute job
+(credentials not persisted, containerd image store, anonymous hash-verified downloads, runtime
+install, the repository's declared setup script, strict CI, upload of only the sanitized
+envelope bound to run/job/SHA) and a separate `checks: write` publisher that runs trusted pinned
+code in clean state and never executes PR code or loads execution state. It reports the
+informational `TestMaster / result` and the required `TestMaster / required-gate` checks; only
+passed, provenance-bound, complete evidence approves. `examples/github/` is the maintained example.
 
 
 ## Conventions
 
 - Code, identifiers, comments and commit messages in English; Conventional Commits.
 - One logical change per commit; every commit builds and passes `pnpm build && pnpm lint && pnpm test`.
-- All manifests are `"private": true`, `"license": "UNLICENSED"` until the maintainer picks a license.
+- Original TestMaster code and synthetic fixtures are Apache-2.0 (`LICENSE`, `NOTICE`, ADR-010);
+  manifests keep `"private": true` only to prevent accidental registry publication.
 - Field names, enums, reason codes and error codes are copied verbatim from `specs/`.
 - Disabled features return `CAPABILITY_UNAVAILABLE` with `details: {capability, milestone}`; never a
   stub that reports success.
@@ -304,8 +340,8 @@ Requirements preserve conflicting source refs; reviewers adjudicate conflicts an
 selected requirements. Generated executable proposals need typed nontrivial assertions and grounded
 refs, and must match the requested `--type` (`backend` → `http`, `frontend` → `playwright`;
 absent means `backend`). `--type auto` (MCP `type: "auto"`, REST `scope: ["frontend","backend"]`)
-lets the model choose per requirement but still requires one of those two pairs; integration
-planning stays unavailable until M3. Any other plan rejects the batch. The evaluator generates
+lets the model choose per requirement but still requires one of those two pairs; `--type integration`
+requests `integration` plans. Any other plan rejects the batch. The evaluator generates
 with `auto` so UI-only requirements are not forced into invented HTTP endpoints, as observed in
 Round 6. Generation sees each requirement's evidence locators (path,
 JSON pointer) next to its handle but cites only handles.
@@ -314,13 +350,43 @@ selected generated revisions and preserves retained proposals. Edits are CAS and
 conflict. J02/J03 live journeys record their exercised evidence in `validation/results/`.
 M3–M6 groups report their milestone rather than returning successful placeholders.
 
+M3 diagnosis is separate from terminal execution: `run analyze RUN` retains an immutable
+factual predecessor; `run analyze RUN --model --deadline-ms N` requests optional enrichment.
+A timeout, unavailable capture, or rejected enrichment returns a partial diagnosis and cannot
+rewrite the Run outcome, gate, Attempts, or artifacts. Identical requests reuse their retained
+receipt rather than issuing another model call; unknown usage keeps its conservative charge.
+The model catalog carries bounded sanitized frozen predicates and expected/observed structures,
+scoped verified evidence hashes, contrary passed steps, and verified locator observations.
+Status/timeout alone does not prove a product cause; absent JSON is not an approved schema violation.
+`run analyze RUN --model --discovery DISCOVERY` (REST analysis body `discoveryId`) additionally
+requires `code_summary` consent and the same workspace/project, repository, assessed commit and
+dirty identity frozen at Run admission. Only manifest-verified summary paths/symbols are offered;
+no working-tree source bytes or private absolute paths are transmitted. `fixTarget` binds the exact
+CodeSnapshot/path/hash as a proposed inspection location, not source causality or edit permission.
+Unbound Runs disclose the missing source binding. The controlled-provider OPS-014 Docker journey
+tests timeout/idempotency/accounting and positive/negative source bindings; it is deterministic
+acceptance, not evidence of live-model diagnostic quality.
+
 M3 healing is an explicit separate workflow: `heal propose RUN [--deadline-ms N]`,
 `heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--wait]`, and
 `heal reject PROPOSAL --reason TEXT`. Proposals require a terminal failed declarative Run,
 an authorized structured-output provider and `execution_evidence` consent. Diagnosed product,
 contract or security failures abstain before model execution. The healing prompt carries the
-sanitized plan, factual statements cited by `E` handles, and locator evidence only for steps that
-did not pass; evidence content hashes stay local. A model enrichment rejected by local validation
+sanitized plan, factual statements cited by `E` handles, locator evidence only for steps that
+did not pass (candidate lists bounded with their original count and truncation flag) and, per
+step, the exact `allowedReplacements` derived from the same contract `applyHealingPatch` admits:
+`/input/locator` (locator actions/frame), `/input/trigger/input/locator` (download),
+`/input/source` and `/input/destination` (drag, manual-only), `/input/state` (locator wait), and
+manual-only business inputs (`/input/value`, `/input/values`, `/input/path`, `/input/pathSegments`,
+`/input/query`, `/input/headers`, `/input/body`). Only present fields are offered; whole-plan
+pointers, locator leaves, added optional fields, assertions and predicates are refused. Evidence
+that cannot fit 80000 bytes after scrubbing is refused (`evidence_too_large`) before dispatch.
+The model answers `AIHealingOutput`: `{kind:"patch", patch}` or `{kind:"abstain", reason,
+evidenceHandles}`; handles are resolved in both branches. An abstention completes the auxiliary
+job with `model_abstained` (`PRECONDITION_FAILED`, `jobId`, `modelCallId`), creates no candidate,
+proposal or verification and is not regenerated. Invalid model output is
+`PRECONDITION_FAILED` `model_failure` with a code-owned `detail`; model text is never persisted
+as a diagnostic. Evidence content hashes stay local. A model diagnosis enrichment rejected by local validation
 keeps the factual diagnosis and records `Model enrichment abstained: <code>: <rule>.` as a
 limitation. Replacement patches cannot alter
 assertions (including nested frames), response predicates, dependencies, cleanup or time ceilings.
@@ -369,7 +435,7 @@ five-minute expiry. Run SSE uses signed `Last-Event-ID` cursors and 15-second he
 slow clients disconnect and reattach instead of dropping terminal events. Upload byte streams
 use `application/octet-stream` and `X-Upload-Token` in addition to the bearer installation token;
 only explicit completion after exact size/hash verification permits ingestion. OpenAPI is served
-at `/v1/openapi.json`. M3+ routes return `CAPABILITY_UNAVAILABLE` with their milestone. Manual
+at `/v1/openapi.json`. M4+ routes return `CAPABILITY_UNAVAILABLE` with their milestone. Manual
 resource compensation is available through `resource get` (approval binding), `approval create`,
 and `resource cleanup --approval ID --expected-version N --idempotency-key KEY`. It replays only
 the recorded compensation inside a fresh hardened sandbox with the original environment policy,
@@ -537,4 +603,32 @@ and the fixture-authored agent/candidate journey passed. Local acceptance is fai
 completion. `validation/results/m2-round4-qwen38-medium/closure.json` records stages, usage,
 single-execution captures and residual blockers. VAL-038/039 verify measurement integrity only;
 human review, family holdout, graduation, security/license and public-release obligations remain.
+
+### M3 diagnosis/healing evaluation
+
+`tools/dist/evals/m3.js` runs one preregistered round per directory
+`evals/rounds/<id>/preregistration.json`; the registration `id` must equal `<id>`, and a
+registration whose `started.json` marker or `evals/results/<id>-*` directory exists is refused.
+Sequence: `check REG` (zero model and Docker calls), `controls REG NEW_DIR` (real healthy,
+transformed, candidate, semantic-negative and oracle replays with zero remote model traffic),
+`policy-probes REG NEW_DIR` (the 12 drift cases through the real HealingService with a controlled
+local provider: policy eligibility or manual-only reasons; deterministic acceptance, not model
+quality), `freeze REG CONTROLS_MANIFEST POLICY_PROBES_MANIFEST`, commit, then exactly one
+`run FULL_COMMIT REG`. Controls and probes record the implementation/input manifest before they
+execute; freeze rejects artifacts produced under different implementation, schema, prompt, image
+or corpus bytes. `settle RESULTS_DIR` reconciles accounting only and never dispatches a call.
+The start marker is created exclusively, so two controllers cannot both start a round.
+Assertions are compared against the persisted normalized base revision; main-case
+`stages.healthyOracle` comes from the independent oracle; integration stages are supplemental.
+Replays pass an explicit healing policy (`apply` only for the policy trial, `off` for strict
+controls and verification). Deterministic refusals, `model_abstained` and model failures stay
+distinct in ledgers; abstentions and errors are primary misses. Primary denominators stay 12
+drift / 26 nonhealthy / 30 main / 4 healthy / 9 true-bug offers; enrichment errors are misses
+even when the factual fallback matched.
+
+Round 1 (`b173a64`, `evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/`) failed:
+safe healing 0/12, cause accuracy 1/26; `validation/results/m3-round1-posthoc-audit.json`
+records the evaluator and prompt defects corrected since. Its registration prose asks for a
+Wilson lower bound >=0.8 at n=12, which even 12/12 (lower bound about 0.758) cannot reach; it is
+kept verbatim as history, not used as a reachable pilot gate.
 
