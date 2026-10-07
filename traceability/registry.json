@@ -2033,7 +2033,10 @@
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
-        "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
+        "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
+        "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification",
+        "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+        "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
       ],
       "oracle": [
         "Real controlled-provider Chromium policy application repairs only unique equivalent selector/observed readiness; strict separate verification promotes after pass. Independent price/permission target mutants fail required business assertions and healing refuses semantic_failure; wrong button/unproved wait stay manual without target effects; original failure rows/manifests remain immutable."
@@ -2045,7 +2048,9 @@
         "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-wait.json",
         "validation/journeys/m3-healing.docker.test.ts",
         "packages/application/src/ai/healing.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
@@ -2057,14 +2062,17 @@
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
-          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification"
         ],
         "negative": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
-          "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
+          "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
+          "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+          "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
         ],
         "criticalAssertions": [
           {
@@ -2110,6 +2118,22 @@
           {
             "path": "packages/application/src/ai/healing.test.ts",
             "assertion": "expect(() => applyHealingPatch(base, patch(\"response_wait\", path, 201))).toThrow(ContractError);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.revisions.list(f.test.id)).toEqual(revisions);\n  expect(f.app.runs.list()).toEqual(runs);\n  expect(f.app.context.database.get(\"SELECT COUNT(*) AS n FROM healing_proposals\")?.n).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.complete).toHaveBeenCalledTimes(1);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(JSON.stringify(job)).not.toContain(\"model-content-canary\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);"
           }
         ]
       }
@@ -2128,7 +2152,10 @@
       "oracle": [
         "Passing verification promotes exactly its bound candidate; a concurrent active revision wins CAS and remains active while the proposal remains reviewable."
       ],
-      "evidence": ["packages/application/src/ai/healing.test.ts"],
+      "evidence": [
+        "packages/application/src/ai/healing.test.ts",
+        "validation/results/m3-acceptance/001-unit-final/output.log"
+      ],
       "code": ["packages/application/src/ai/healing.ts", "packages/application/src/authoring.ts"],
       "coverage": {
         "positive": [
@@ -2289,7 +2316,10 @@
       "oracle": [
         "Typed Action inputs reject shell IDs/credential URLs/SHA mismatch/free commands/unpinned manifest; CLI child environment strips write and provider tokens."
       ],
-      "evidence": ["tools/src/github-action/inputs.test.ts"],
+      "evidence": [
+        "tools/src/github-action/inputs.test.ts",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+      ],
       "code": ["tools/src/github-action/inputs.ts", "tools/src/github-action/index.ts"],
       "coverage": {
         "positive": [
@@ -2307,10 +2337,14 @@
           {
             "path": "tools/src/github-action/inputs.test.ts",
             "assertion": "expect(Object.values(env)).not.toContain(\"github-secret\");"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
           }
         ]
       },
-      "blockedReason": "External: hosted pinned Action acceptance and branch protection ran on a public disposable repository (validation/results/m3-acceptance/hosted/public/acceptance.json); fork pull_request token isolation needs a second GitHub account and was not exercised; minimum permissions were not probed by removal."
+      "blockedReason": "Historical hosted public pinned Action and branch-protection acceptance is retained; changed public release and minimum-permission-removal controls remain pending. Actual cross-owner fork token isolation requires a second authorized GitHub identity and is not simulated by same-repository branches."
     },
     {
       "id": "INT-008",
@@ -3730,7 +3764,10 @@
       "scenario": [
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
         "packages/application/src/ai/healing.test.ts::healing seals nested assertions, response status predicates and enclosing frame identity",
-        "packages/application/src/ai/healing.test.ts::failed verification returns to reviewable without another candidate and leaves historical failure immutable"
+        "packages/application/src/ai/healing.test.ts::failed verification returns to reviewable without another candidate and leaves historical failure immutable",
+        "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification",
+        "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+        "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
       ],
       "oracle": [
         "Original Run/Attempt JSON and sealed manifest remain equal after verified healing; semantic-mutant business assertion fails. Recursive frame assertion removal/relocation and changed response status are refused; failed verification never promotes."
@@ -3738,17 +3775,22 @@
       "evidence": [
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
         "validation/journeys/m3-healing.docker.test.ts",
-        "packages/application/src/ai/healing.test.ts"
+        "packages/application/src/ai/healing.test.ts",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
       "code": ["packages/application/src/ai/healing.ts", "packages/planner/src/agent/index.ts"],
       "coverage": {
         "positive": [
-          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification"
         ],
         "negative": [
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
           "packages/application/src/ai/healing.test.ts::healing seals nested assertions, response status predicates and enclosing frame identity",
-          "packages/application/src/ai/healing.test.ts::failed verification returns to reviewable without another candidate and leaves historical failure immutable"
+          "packages/application/src/ai/healing.test.ts::failed verification returns to reviewable without another candidate and leaves historical failure immutable",
+          "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+          "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
         ],
         "criticalAssertions": [
           {
@@ -3770,6 +3812,22 @@
           {
             "path": "packages/application/src/ai/healing.test.ts",
             "assertion": "expect(semanticHash(f.app.runs.get(f.failed.id))).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.revisions.list(f.test.id)).toEqual(revisions);\n  expect(f.app.runs.list()).toEqual(runs);\n  expect(f.app.context.database.get(\"SELECT COUNT(*) AS n FROM healing_proposals\")?.n).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.complete).toHaveBeenCalledTimes(1);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(JSON.stringify(job)).not.toContain(\"model-content-canary\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);"
           }
         ]
       }
@@ -4242,7 +4300,10 @@
       "oracle": [
         "Local frozen-SHA publisher refuses newer SHA and cannot approve unbound/empty/nonpass snapshots."
       ],
-      "evidence": ["packages/application/src/delivery.test.ts"],
+      "evidence": [
+        "packages/application/src/delivery.test.ts",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+      ],
       "code": ["packages/application/src/delivery.ts", "packages/application/src/provenance.ts"],
       "coverage": {
         "positive": [
@@ -4899,7 +4960,10 @@
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
         "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
-        "packages/application/src/ai/healing.test.ts::business input replacements require manual review and retain all protected plan content"
+        "packages/application/src/ai/healing.test.ts::business input replacements require manual review and retain all protected plan content",
+        "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification",
+        "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+        "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
       ],
       "oracle": [
         "Real controlled-provider Chromium policy application repairs only unique equivalent selector/observed readiness; strict separate verification promotes after pass. Independent price/permission target mutants fail required business assertions and healing refuses semantic_failure; wrong button/unproved wait stay manual without target effects; original failure rows/manifests remain immutable."
@@ -4911,26 +4975,33 @@
         "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-wait.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
         "validation/journeys/m3-healing.docker.test.ts",
-        "packages/application/src/ai/healing.test.ts"
+        "packages/application/src/ai/healing.test.ts",
+        "validation/results/m3-round1-posthoc-audit.json",
+        "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts"
       ],
-      "blockedReason": "External: paid preregistered closed-loop diagnosis/healing pilot and independent quality/safety review have not run; deterministic controlled-provider policy selector/wait and price/permission controls do not establish live-model quality.",
+      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
-          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification"
         ],
         "negative": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
-          "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields"
+          "packages/application/src/ai/healing.test.ts::healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
+          "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+          "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
         ],
         "criticalAssertions": [
           {
@@ -4976,6 +5047,22 @@
           {
             "path": "packages/application/src/ai/healing.test.ts",
             "assertion": "expect(applied.manualOnly).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.revisions.list(f.test.id)).toEqual(revisions);\n  expect(f.app.runs.list()).toEqual(runs);\n  expect(f.app.context.database.get(\"SELECT COUNT(*) AS n FROM healing_proposals\")?.n).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.complete).toHaveBeenCalledTimes(1);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(JSON.stringify(job)).not.toContain(\"model-content-canary\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);"
           }
         ]
       }
@@ -5118,7 +5205,8 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
+      "note": "Strict replay boundary: literal same-Run assertion failure followed by diagnostic retry-pass is not an offered worker path (assertion/passed-step retry is refused); strict CI always has maxAttempts=1. Retained real separate non-CI diagnostic pass leaves strict failure/JSON/JUnit immutable, pre-action infrastructure recovery occurs only outside strict CI, and collecting deadline exports partial nonpass evidence.",
       "scenario": [
         "validation/journeys/m3-ci-acceptance.docker.test.ts::exports the first assertion failure in strict JSON and JUnit even when a separate diagnostic replay passes",
         "validation/journeys/m3-ci-acceptance.docker.test.ts::recovers a real pre-action container crash only outside strict CI and retains both recovery and strict nonpass evidence",
@@ -5214,8 +5302,7 @@
             "assertion": "expect(exportJunit(input)).toContain('name=\"snapshot\" value=\"unavailable\"');"
           }
         ]
-      },
-      "blockedReason": "Internal policy boundary: literal same-Run assertion failure followed by diagnostic retry-pass is not an offered worker path (assertion/passed-step retry is refused); strict CI always has maxAttempts=1. Retained real separate non-CI diagnostic pass leaves strict failure/JSON/JUnit immutable, pre-action infrastructure recovery occurs only outside strict CI, and collecting deadline exports partial nonpass evidence."
+      }
     },
     {
       "id": "J12",
@@ -5240,7 +5327,8 @@
         "packages/application/src/delivery.test.ts",
         "validation/journeys/m3-ci.docker.test.ts",
         "tools/src/github-action/inputs.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
@@ -5251,7 +5339,8 @@
         "positive": [
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
-          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
@@ -5271,6 +5360,10 @@
           {
             "path": "packages/application/src/delivery.test.ts",
             "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"failure\");"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
           }
         ]
       },
@@ -6743,26 +6836,43 @@
       "milestone": "M3",
       "ownerRole": "Core",
       "status": "implemented",
+      "note": "Factual rules, bounded structured execution catalog, optional frozen discovery/source handles and immutable auxiliary-job behavior are implemented with deterministic positive/negative controls. Grounded source locations are proposed inspection targets, not proof of source causality.",
       "scenario": [
         "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
         "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
         "packages/application/src/ai/analysis.test.ts::missing bundle preserves null snapshot with a disclosed evidence limitation",
-        "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests"
+        "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+        "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding",
+        "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch"
       ],
       "oracle": [
-        "Persisted step reference resolves exact canonical hash; rules abstain on HTTP 500 and disclose missing bundle; model failure preserves immutable factual predecessor and terminal Run."
+        "Persisted step reference resolves exact canonical hash; rules abstain on HTTP 500 and disclose missing bundle; model failure preserves immutable factual predecessor and terminal Run.",
+        "Controlled local provider holds a real passed Docker Run analysis beyond 100 ms; repeat returns the same receipt without dispatch, terminal Run/Attempt bytes and manifest remain unchanged and reservations settle. Frozen authorized source handle resolves exact snapshot/path/hash; wrong project and altered summary fail before another request."
       ],
-      "evidence": ["packages/application/src/ai/analysis.test.ts"],
+      "evidence": [
+        "packages/application/src/ai/analysis.test.ts",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/created/validation/results/m3-analysis-deadline-source.json",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-unit-complete-03/output.log",
+        "validation/results/m3-round1-posthoc-audit.json",
+        "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json"
+      ],
       "code": ["packages/application/src/ai/analysis.ts"],
-      "blockedReason": "External: paid preregistered diagnosis pilot and independent label review not executed; deterministic rules/provider-failure tests do not establish model cause accuracy or grounded model fix-target quality.",
+      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
-          "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash"
+          "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+          "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding"
         ],
         "negative": [
           "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
           "packages/application/src/ai/analysis.test.ts::missing bundle preserves null snapshot with a disclosed evidence limitation",
-          "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests"
+          "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+          "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch"
         ],
         "criticalAssertions": [
           {
@@ -6776,6 +6886,34 @@
           {
             "path": "packages/application/src/ai/analysis.test.ts",
             "assertion": "expect(f.db.get(\"SELECT data_json FROM analyses WHERE id=?\", factual.id)?.data_json).toBe(before);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(run).toMatchObject({ outcome: \"passed\", gate: \"passed\" });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(repeated.id).toBe(partial.id);\n      expect(requests).toBe(afterFirst);\n      expect(failureRows(app, run.id)).toEqual(rows);\n      expect((await app.artifacts.get(run.id)).manifest).toEqual(manifest);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(\n        app.database.get(\"SELECT COUNT(*) AS n FROM budget_reservations WHERE state='reserved'\")?.n,\n      ).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(grounded.fixTarget).toMatchObject({\n        codeSnapshotId: discovery.codeSnapshot.id,\n        relativePath: \"price.ts\",\n        contentHash: discovery.summary.fileRefs.find((ref) => ref.path === \"price.ts\")!.contentHash,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "await expect(\n        app.analysis.analyze(run.id, { model: true, discoveryId: discovery.job.id }),\n      ).rejects.toMatchObject({ code: \"INVALID_ARGUMENT\" });\n      expect(requests).toBe(beforeNegative);"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(result.fixTarget).toEqual({\n    codeSnapshotId: f.detail.codeSnapshot.id,\n    relativePath: \"src/price.ts\",\n    contentHash: \"b\".repeat(64),\n  });"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(f.complete).not.toHaveBeenCalled();"
           }
         ]
       }
@@ -6787,13 +6925,17 @@
       "milestone": "M3",
       "ownerRole": "AI",
       "status": "implemented",
+      "note": "Exact present-field step-relative replacement contract and evidence-backed abstention are implemented. Insufficient semantic-equivalence proof remains manual-only; no human approvals or stochastic success are inferred from controlled-provider acceptance.",
       "scenario": [
         "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
         "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict",
-        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification",
+        "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification",
+        "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+        "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
       ],
       "oracle": [
         "Real controlled-provider Chromium policy application repairs only unique equivalent selector/observed readiness; strict separate verification promotes after pass. Independent price/permission target mutants fail required business assertions and healing refuses semantic_failure; wrong button/unproved wait stay manual without target effects; original failure rows/manifests remain immutable."
@@ -6805,20 +6947,25 @@
         "validation/results/m3-acceptance/001-healing-gaps-3/created/validation/results/m3-healing-policy-wait.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
         "validation/journeys/m3-healing.docker.test.ts",
-        "packages/application/src/ai/healing.test.ts"
+        "packages/application/src/ai/healing.test.ts",
+        "validation/results/m3-round1-posthoc-audit.json",
+        "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts",
         "packages/planner/src/agent/index.ts"
       ],
-      "blockedReason": "External: paid preregistered healing pilot and independent quality/safety review not executed; deterministic controlled-provider policy-safe application and semantic-defect refusals do not establish live-model quality.",
+      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
-          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification"
         ],
         "negative": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -6826,7 +6973,9 @@
           "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 autoapplies observed hidden readiness within the original wait ceiling but not an unobserved state",
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
           "packages/application/src/ai/healing.test.ts::healing reconciliation CAS preserves concurrent author edits and reports revision conflict",
-          "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+          "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification",
+          "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+          "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
         ],
         "criticalAssertions": [
           {
@@ -6868,6 +7017,22 @@
           {
             "path": "packages/application/src/ai/healing.test.ts",
             "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(concurrent.id);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.revisions.list(f.test.id)).toEqual(revisions);\n  expect(f.app.runs.list()).toEqual(runs);\n  expect(f.app.context.database.get(\"SELECT COUNT(*) AS n FROM healing_proposals\")?.n).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.complete).toHaveBeenCalledTimes(1);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(JSON.stringify(job)).not.toContain(\"model-content-canary\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);"
           }
         ]
       }
@@ -7147,7 +7312,8 @@
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-toast-without-persist.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json"
       ],
       "code": [
         "packages/application/src/ci.ts",
@@ -7157,7 +7323,8 @@
       ],
       "coverage": {
         "positive": [
-          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
         ],
         "negative": [
           "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
@@ -7182,10 +7349,14 @@
           {
             "path": "tools/src/github-action/inputs.test.ts",
             "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
           }
         ]
       },
-      "blockedReason": "External: pinned Action installation/execution, SHA-bound checks, required-gate and old-A/new-B ran only on a public disposable repository (validation/results/m3-acceptance/hosted/public/acceptance.json); private-repository acceptance, fork token isolation on GitHub and public immutable distribution (UNLICENSED) remain unproven."
+      "blockedReason": "Historical public hosted pinned Action/checks, old-A/new-B and branch protection acceptance is retained, but it does not certify changed release bytes. New public Apache-2.0 runtime/Action/onboarding acceptance is pending. Actual cross-owner fork token isolation requires a second authorized GitHub identity; permission-removal acceptance remains unavailable. Private-repository acceptance is superseded by the public-only operator decision."
     },
     {
       "id": "M3-06",
@@ -7194,25 +7365,70 @@
       "milestone": "M3",
       "ownerRole": "Quality",
       "status": "implemented",
+      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; new implementation-bound round-2 controls/policy probes and paid results are pending. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Pilot point targets and holdout/review graduation are separate decisions.",
       "scenario": [
         "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
         "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
         "tools/src/evals/m3.test.ts::refuses hand-populated control booleans without retained run/step/oracle evidence",
-        "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing"
+        "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
+        "tools/src/evals/m3.test.ts::accepts a new exact round identity and confines it to its registration directory",
+        "tools/src/evals/m3.test.ts::admits only one concurrent controller and permanently refuses its start marker",
+        "tools/src/evals/m3.test.ts::compares stored normalized assertion bytes and detects an actual predicate mutation",
+        "tools/src/evals/m3.test.ts::retains typed refusals without confusing safe abstention with model failure",
+        "tools/src/evals/m3.test.ts::binds implementation before controls and rejects stale hashes or missing catalogs",
+        "tools/src/evals/m3.test.ts::rotates the same integration secret across authenticated targets without widening its origin",
+        "tools/src/evals/m3.test.ts::requires comparable frozen apply baselines and real service proposals for policy probes",
+        "tools/src/evals/m3.test.ts::settles interrupted reserved calls without dispatch or releasing unknown charges",
+        "tools/src/evals/m3-scoring.test.ts::keeps enrichment errors as primary misses even when factual fallback matches",
+        "tools/src/evals/m3-scoring.test.ts::separates supplemental stages and preserves false, missing and unstarted observations",
+        "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
       ],
       "oracle": [
-        "Offline preregistration fixes 30 main cases/one integration trial and budgets with zero model/Docker calls; errors/unstarted retain denominators and unsafe patch excludes success. Hand-populated freeze controls refuse."
+        "Offline preregistration fixes 30 main cases/one integration trial and budgets with zero model/Docker calls; errors/unstarted retain denominators and unsafe patch excludes success. Hand-populated freeze controls refuse.",
+        "Real product revision storage proves normalized default timeout does not count as assertion mutation while a changed predicate does. Start marker admits exactly one concurrent controller, stale control implementation hashes refuse, same integration secret rotates without origin widening, and scorer keeps 26/12 primary denominators with supplemental integration stages separate."
       ],
-      "evidence": ["tools/src/evals/m3.test.ts", "tools/src/evals/m3-scoring.test.ts"],
+      "evidence": [
+        "tools/src/evals/m3.test.ts",
+        "tools/src/evals/m3-scoring.test.ts",
+        "validation/results/m3-round1-posthoc-audit.json",
+        "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
+        "tools/src/traceability/m3-mutations.test.ts",
+        "validation/results/m3-critical-mutations.json",
+        "validation/results/m3-acceptance/001-mutm3-4/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-evaluator-unit-final/output.log",
+        "evals/rounds/m3-round1-qwen38-medium/controls/manifest.json"
+      ],
       "code": ["tools/src/evals/m3.ts", "tools/src/evals/m3-scoring.ts"],
       "coverage": {
         "positive": [
           "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
-          "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations"
+          "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
+          "tools/src/evals/m3.test.ts::accepts a new exact round identity and confines it to its registration directory",
+          "tools/src/evals/m3.test.ts::admits only one concurrent controller and permanently refuses its start marker",
+          "tools/src/evals/m3.test.ts::compares stored normalized assertion bytes and detects an actual predicate mutation",
+          "tools/src/evals/m3.test.ts::retains typed refusals without confusing safe abstention with model failure",
+          "tools/src/evals/m3.test.ts::binds implementation before controls and rejects stale hashes or missing catalogs",
+          "tools/src/evals/m3.test.ts::rotates the same integration secret across authenticated targets without widening its origin",
+          "tools/src/evals/m3.test.ts::requires comparable frozen apply baselines and real service proposals for policy probes",
+          "tools/src/evals/m3.test.ts::settles interrupted reserved calls without dispatch or releasing unknown charges",
+          "tools/src/evals/m3-scoring.test.ts::keeps enrichment errors as primary misses even when factual fallback matches",
+          "tools/src/evals/m3-scoring.test.ts::separates supplemental stages and preserves false, missing and unstarted observations",
+          "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
         ],
         "negative": [
           "tools/src/evals/m3.test.ts::refuses hand-populated control booleans without retained run/step/oracle evidence",
-          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing"
+          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
+          "tools/src/evals/m3.test.ts::accepts a new exact round identity and confines it to its registration directory",
+          "tools/src/evals/m3.test.ts::admits only one concurrent controller and permanently refuses its start marker",
+          "tools/src/evals/m3.test.ts::compares stored normalized assertion bytes and detects an actual predicate mutation",
+          "tools/src/evals/m3.test.ts::retains typed refusals without confusing safe abstention with model failure",
+          "tools/src/evals/m3.test.ts::binds implementation before controls and rejects stale hashes or missing catalogs",
+          "tools/src/evals/m3.test.ts::rotates the same integration secret across authenticated targets without widening its origin",
+          "tools/src/evals/m3.test.ts::requires comparable frozen apply baselines and real service proposals for policy probes",
+          "tools/src/evals/m3.test.ts::settles interrupted reserved calls without dispatch or releasing unknown charges",
+          "tools/src/evals/m3-scoring.test.ts::keeps enrichment errors as primary misses even when factual fallback matches",
+          "tools/src/evals/m3-scoring.test.ts::separates supplemental stages and preserves false, missing and unstarted observations",
+          "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
         ],
         "criticalAssertions": [
           {
@@ -7226,10 +7442,170 @@
           {
             "path": "tools/src/evals/m3-scoring.test.ts",
             "assertion": "expect(score.safeHealingSuccessRate).toMatchObject({ successes: 0, n: 12, estimate: 0 });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect((await checkM3(root, path)).modelCalls).toBe(0);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(() => assertRegistrationIdentity(id, path)).toThrow(\"identity/path\");"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(() => assertRegistrationIdentity(r.id, \"evals/rounds/other/preregistration.json\")).toThrow(\n    \"identity/path\",\n  );"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(attempts.filter((row) => row.status === \"fulfilled\")).toHaveLength(1);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(attempts.filter((row) => row.status === \"rejected\")).toHaveLength(1);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "await expect(assertNotStarted(root, r.id)).rejects.toThrow(\"already started\");"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(comparison).toMatchObject({\n      baseRevisionId: base.id,\n      candidateRevisionId: candidate.id,\n      preserved: true,\n    });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(base.plan!.steps.find((step) => step.kind === \"assertion\")!.timeoutMs).toBe(30000);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(compareProtectedAssertions(base.id, base.plan!, candidate.id, changed).preserved).toBe(\n      false,\n    );"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(deterministic).toMatchObject({\n    failed: false,\n    modelAbstained: false,\n    record: { reason: \"semantic_failure\", jobId: \"job_bound\" },\n  });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(\n    healingRefusal(\n      new ContractError(\"PRECONDITION_FAILED\", \"Healing abstained\", {\n        reason: \"model_abstained\",\n        modelCallId: \"call_bound\",\n      }),\n      [],\n    ),\n  ).toMatchObject({ failed: false, modelAbstained: true });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(\n    healingRefusal(\n      new ContractError(\"PRECONDITION_FAILED\", \"Healing failed\", {\n        reason: \"model_failure\",\n        detail: \"INVALID_ARGUMENT secret\",\n      }),\n      [\"secret\"],\n    ),\n  ).toMatchObject({ failed: true, record: { detail: \"INVALID_ARGUMENT [REDACTED]\" } });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(() => healingRefusal(new ContractError(\"UNAVAILABLE\", \"Transport failed\"), [])).toThrow(\n    \"Transport failed\",\n  );"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(Object.keys(manifest.files)).toEqual(\n    expect.arrayContaining([\n      \"packages/application/src/ai/discovery.ts\",\n      \"packages/application/src/ai/healing-patch.ts\",\n      \"packages/planner/src/agent/locator-evidence.ts\",\n      \"packages/contracts/src/primitives.ts\",\n      \"packages/contracts/schemas/AIAnalysisOutput.json\",\n      \"packages/persistence/migrations/sqlite/0008_fixture_inputs.sql\",\n    ]),\n  );"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(() => assertImplementationBinding(manifest, manifest)).not.toThrow();"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(() => assertImplementationBinding(manifest, { ...manifest, hash: \"changed\" })).toThrow(\n    \"changed after\",\n  );"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(() => assertImplementationBinding(manifest, undefined)).toThrow(\"changed after\");"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(second.token).toBe(\"mutant-token\");"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(second.secret.id).toBe(first.secret.id);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(second.secret.secretVersion).toBe(first.secret.secretVersion + 1);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(second.secret.allowedOrigins).toEqual([url]);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "await expect(authenticateIntegrationTarget(app, url, first.secret.id)).rejects.toThrow(\n      \"authentication failed\",\n    );"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(app.secrets.get(first.secret.id).secretVersion).toBe(second.secret.secretVersion);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(assessPolicyProbe(evidence)).toBe(true);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(assessPolicyProbe({ ...evidence, refusal: { reason: \"model_failure\" } })).toBe(false);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(\n    assessPolicyProbe({\n      ...evidence,\n      transformed: { ...evidence.transformed, healingPolicy: \"off\" },\n    }),\n  ).toBe(false);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(\n    assessPolicyProbe({\n      ...evidence,\n      transformed: { ...evidence.transformed, admissionHash: \"different-runtime\" },\n    }),\n  ).toBe(false);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(assessPolicyProbe({ ...evidence, modelCalls: 1 })).toBe(false);"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(round).toMatchObject({\n    status: \"settled\",\n    chargedTokens: 649152,\n    logicalCommands: 1,\n    pending: { reservation: 649152 },\n  });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(ledger).toMatchObject({\n    status: \"error\",\n    usage: { conservativeCharge: 649152 },\n    errors: [{ code: \"unknown_paid_completion\" }],\n  });"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "await expect(settleM3(root, directory)).rejects.toThrow(\"Only interrupted\");"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.diagnosisCauseAccuracy).toMatchObject({ successes: 0, n: 26 });"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.defectRecall).toMatchObject({ successes: 0, n: 9 });"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.proposedUnsafePatches.status).toBe(\"insufficientData\");"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.stages.healthyOracle).toMatchObject({ successes: 1, n: 30 });"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.stages.integrationOnly).toBeUndefined();"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.stageObservations.healthyOracle).toEqual({\n      passed: 1,\n      failed: 1,\n      missing: 1,\n      unstarted: 27,\n    });"
+          },
+          {
+            "path": "tools/src/evals/m3-scoring.test.ts",
+            "assertion": "expect(score.supplementalIntegration).toEqual([\n      { id: integration.id, status: \"observed\", stages: integration.stages },\n    ]);"
+          },
+          {
+            "path": "tools/src/traceability/m3-mutations.test.ts",
+            "assertion": "expect(healthy.code, healthy.output).toBe(0);\n    expect(healthy.setupFailure, healthy.output).toBe(false);\n    expect(healthy.passedTests).toBe(healthyTestCount);\n    expect(observations).toHaveLength(mutations.length);"
+          },
+          {
+            "path": "tools/src/traceability/m3-mutations.test.ts",
+            "assertion": "expect(\n        [\"killed\", \"equivalent\"],\n        `${row.id}: ${row.outcome}\\n${row.failureExcerpt ?? \"\"}`,\n      ).toContain(row.outcome);"
           }
         ]
       },
-      "blockedReason": "External: paid frozen closed-loop round, independent label/family holdout/safety review and measured diagnosis/healing thresholds are not executed. Internal: real 30-case pre-freeze healthy/negative/oracle controls and critical mutation execution ledger are not retained; offline harness checks are not observed model quality."
+      "blockedReason": "Round 1 was executed and failed (cause accuracy 1/26, safe healing 0/12); its immutable report and post-hoc audit are retained. Round 2 for the corrected implementation is pending; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality."
     },
     {
       "id": "M4-01",
@@ -8737,24 +9113,81 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+          "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding"
+        ],
+        "negative": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+          "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch",
+          "validation/journeys/runtime-control.docker.test.ts::OPS-014 global deadline refuses the next target step and retains partial evidence"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(run).toMatchObject({ outcome: \"passed\", gate: \"passed\" });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(repeated.id).toBe(partial.id);\n      expect(requests).toBe(afterFirst);\n      expect(failureRows(app, run.id)).toEqual(rows);\n      expect((await app.artifacts.get(run.id)).manifest).toEqual(manifest);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(\n        app.database.get(\"SELECT COUNT(*) AS n FROM budget_reservations WHERE state='reserved'\")?.n,\n      ).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(grounded.fixTarget).toMatchObject({\n        codeSnapshotId: discovery.codeSnapshot.id,\n        relativePath: \"price.ts\",\n        contentHash: discovery.summary.fileRefs.find((ref) => ref.path === \"price.ts\")!.contentHash,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "await expect(\n        app.analysis.analyze(run.id, { model: true, discoveryId: discovery.job.id }),\n      ).rejects.toMatchObject({ code: \"INVALID_ARGUMENT\" });\n      expect(requests).toBe(beforeNegative);"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(result.fixTarget).toEqual({\n    codeSnapshotId: f.detail.codeSnapshot.id,\n    relativePath: \"src/price.ts\",\n    contentHash: \"b\".repeat(64),\n  });"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(f.complete).not.toHaveBeenCalled();"
+          },
+          {
+            "path": "validation/journeys/runtime-control.docker.test.ts",
+            "assertion": "expect(run.outcome).not.toBe(\"passed\");\n      expect(target.hits()).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/runtime-control.docker.test.ts",
+            "assertion": "expect(bundle.manifest.entries.length).toBeGreaterThan(0);"
+          }
+        ]
+      },
       "scenario": [
-        "validation/journeys/runtime-control.docker.test.ts::OPS-014 global deadline refuses the next target step and retains partial evidence"
+        "validation/journeys/runtime-control.docker.test.ts::OPS-014 global deadline refuses the next target step and retains partial evidence",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+        "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding",
+        "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch"
       ],
       "oracle": [
-        "Run deadline narrows Attempt deadline across retries; held first request receives exactly one target hit and later target step never starts; partial evidence remains readable."
+        "Run deadline narrows Attempt deadline across retries; held first request receives exactly one target hit and later target step never starts; partial evidence remains readable.",
+        "Controlled local provider holds a real passed Docker Run analysis beyond 100 ms; repeat returns the same receipt without dispatch, terminal Run/Attempt bytes and manifest remain unchanged and reservations settle. Frozen authorized source handle resolves exact snapshot/path/hash; wrong project and altered summary fail before another request."
       ],
       "evidence": [
         "validation/results/runtime-global-deadline.json",
-        "validation/journeys/runtime-control.docker.test.ts"
+        "validation/journeys/runtime-control.docker.test.ts",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/created/validation/results/m3-analysis-deadline-source.json",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-unit-complete-03/output.log",
+        "packages/application/src/ai/analysis.test.ts"
       ],
       "code": [
         "packages/application/src/worker.ts",
         "packages/runner/src/runtime.ts",
         "packages/contracts/src/registries.ts"
       ],
-      "note": "Global/attempt deadline controls remain exercised. M3 analysis implements immutable factual predecessor plus model failure/unknown-usage settlement; missing model no longer means unavailable capability.",
-      "blockedReason": "Internal: explicit analysis-deadline timeout on a real deterministic passed Run with projected incomplete analysis, unchanged terminal outcome and retained accounting/evidence has not been exercised; generic model-failure and lost-paid-lease unit controls are narrower."
+      "note": "Verified deterministic execution and auxiliary analysis deadlines, not model quality. Real CLI timeout preserves terminal execution, factual evidence and settled accounting; source binding positive/negative controls use a local provider."
     },
     {
       "id": "OPS-015",
@@ -9476,10 +9909,14 @@
           {
             "path": "packages/application/src/delivery.test.ts",
             "assertion": "expect(app.database.all(\"SELECT id FROM runs\")).toHaveLength(0);"
+          },
+          {
+            "path": "validation/journeys/m3-ci.docker.test.ts",
+            "assertion": "expect(command.exitCode).toBe(mutant === \"healthy\" ? 0 : 1);"
           }
         ]
       },
-      "blockedReason": "External: real GitHub unavailable/revoked integration acceptance and hosted check isolation not run; webhook notification and exclusively S3 server degraded/no-fallback/revoked-config restore scopes are M4/M5 and unexercised."
+      "blockedReason": "Local unavailable/401 delivery controls preserve the canonical result without rerunning; real hosted read-only-token/revoked-integration refusal for the changed release is pending. Webhook notification, S3-only degraded/no-fallback and revoked-config restore are unexercised M4/M5 scopes."
     },
     {
       "id": "OPS-038",
@@ -10808,22 +11245,36 @@
         "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
         "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
         "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
-        "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings"
+        "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+        "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding",
+        "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch"
       ],
       "oracle": [
-        "Factual rules use scoped persisted evidence/hash and preserve Run JSON; unsupported cause abstains. Model failure leaves factual predecessor immutable; wrong hashes/cross-Run refs cannot ground diagnosis."
+        "Factual rules use scoped persisted evidence/hash and preserve Run JSON; unsupported cause abstains. Model failure leaves factual predecessor immutable; wrong hashes/cross-Run refs cannot ground diagnosis.",
+        "Controlled local provider holds a real passed Docker Run analysis beyond 100 ms; repeat returns the same receipt without dispatch, terminal Run/Attempt bytes and manifest remain unchanged and reservations settle. Frozen authorized source handle resolves exact snapshot/path/hash; wrong project and altered summary fail before another request."
       ],
-      "evidence": ["packages/application/src/ai/analysis.test.ts"],
+      "evidence": [
+        "packages/application/src/ai/analysis.test.ts",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/created/validation/results/m3-analysis-deadline-source.json",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-unit-complete-03/output.log"
+      ],
       "code": ["packages/application/src/ai/analysis.ts"],
       "note": "Verified deterministic diagnosis contract; optional model cause accuracy remains the separately blocked M3-01/M3-06 pilot, not implied by this status.",
       "coverage": {
         "positive": [
-          "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash"
+          "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+          "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding"
         ],
         "negative": [
           "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
           "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
-          "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings"
+          "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+          "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch"
         ],
         "criticalAssertions": [
           {
@@ -10841,6 +11292,34 @@
           {
             "path": "packages/application/src/ai/analysis.test.ts",
             "assertion": "expect(await f.service.analyze(f.run.id, {})).toMatchObject({\n    failureKind: \"unknown\",\n    hypotheses: [],\n  });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(run).toMatchObject({ outcome: \"passed\", gate: \"passed\" });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(repeated.id).toBe(partial.id);\n      expect(requests).toBe(afterFirst);\n      expect(failureRows(app, run.id)).toEqual(rows);\n      expect((await app.artifacts.get(run.id)).manifest).toEqual(manifest);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(\n        app.database.get(\"SELECT COUNT(*) AS n FROM budget_reservations WHERE state='reserved'\")?.n,\n      ).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "expect(grounded.fixTarget).toMatchObject({\n        codeSnapshotId: discovery.codeSnapshot.id,\n        relativePath: \"price.ts\",\n        contentHash: discovery.summary.fileRefs.find((ref) => ref.path === \"price.ts\")!.contentHash,\n      });"
+          },
+          {
+            "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
+            "assertion": "await expect(\n        app.analysis.analyze(run.id, { model: true, discoveryId: discovery.job.id }),\n      ).rejects.toMatchObject({ code: \"INVALID_ARGUMENT\" });\n      expect(requests).toBe(beforeNegative);"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(result.fixTarget).toEqual({\n    codeSnapshotId: f.detail.codeSnapshot.id,\n    relativePath: \"src/price.ts\",\n    contentHash: \"b\".repeat(64),\n  });"
+          },
+          {
+            "path": "packages/application/src/ai/analysis.test.ts",
+            "assertion": "expect(f.complete).not.toHaveBeenCalled();"
           }
         ]
       }
@@ -10980,7 +11459,10 @@
       "status": "verified",
       "scenario": [
         "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
-        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification",
+        "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification",
+        "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+        "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
       ],
       "oracle": [
         "Proposal defaults proposed with null approvalMode, authorized approval creates distinct verification Run, unchanged protected assertion catches independent semantic mutant, original sealed failure remains."
@@ -10988,7 +11470,9 @@
       "evidence": [
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-healing.json",
         "validation/journeys/m3-healing.docker.test.ts",
-        "packages/application/src/ai/healing.test.ts"
+        "packages/application/src/ai/healing.test.ts",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
@@ -10997,11 +11481,14 @@
       "note": "Deterministic controlled-provider/manual-review healing contract only; model-quality and automatic policy equivalence are not inferred.",
       "coverage": {
         "positive": [
-          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant"
+          "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+          "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification"
         ],
         "negative": [
           "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
-          "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification"
+          "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification",
+          "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+          "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics"
         ],
         "criticalAssertions": [
           {
@@ -11019,6 +11506,22 @@
           {
             "path": "packages/application/src/ai/healing.test.ts",
             "assertion": "await expect(denied.approve(f.proposal.id, 1)).rejects.toMatchObject({ code: \"FORBIDDEN\" });"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.revisions.list(f.test.id)).toEqual(revisions);\n  expect(f.app.runs.list()).toEqual(runs);\n  expect(f.app.context.database.get(\"SELECT COUNT(*) AS n FROM healing_proposals\")?.n).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.complete).toHaveBeenCalledTimes(1);"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(JSON.stringify(job)).not.toContain(\"model-content-canary\");"
+          },
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);"
           }
         ]
       }
@@ -11468,7 +11971,8 @@
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-toast-without-persist.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-nonpass.json",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-inconclusive.json",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json"
       ],
       "code": [
         "packages/application/src/ci.ts",
@@ -11478,7 +11982,8 @@
       ],
       "coverage": {
         "positive": [
-          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
         ],
         "negative": [
           "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
@@ -11503,10 +12008,14 @@
           {
             "path": "tools/src/github-action/inputs.test.ts",
             "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
           }
         ]
       },
-      "blockedReason": "External: pinned Action installation/execution, SHA-bound checks, required-gate and old-A/new-B ran only on a public disposable repository (validation/results/m3-acceptance/hosted/public/acceptance.json); private-repository acceptance, fork token isolation on GitHub and public immutable distribution (UNLICENSED) remain unproven."
+      "blockedReason": "Historical public hosted pinned Action/checks, old-A/new-B and branch protection acceptance is retained, but it does not certify changed release bytes. New public Apache-2.0 runtime/Action/onboarding acceptance is pending. Actual cross-owner fork token isolation requires a second authorized GitHub identity; permission-removal acceptance remains unavailable. Private-repository acceptance is superseded by the public-only operator decision."
     },
     {
       "id": "REQ-033",
@@ -13594,7 +14103,8 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
+      "note": "Verified restricted-raw/sanitized-export boundary required by specs/07-security.md, not universal trace-redaction certification. Undemonstrated trace formats stay restrictedRaw or are not collected; known residues are disclosed. Unknown PII, encoded values and media require minimization/manual review.",
       "scenario": [
         "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-034 real trace retains source/network/snapshot residues only as restricted raw and sanitized exports omit them",
         "packages/application/src/retention.test.ts::sanitized export omits restricted raw bytes and retains source seal provenance"
@@ -13643,8 +14153,7 @@
             "assertion": "await expect(fs.access(join(out, \"evidence/result.txt\"))).rejects.toBeDefined();"
           }
         ]
-      },
-      "blockedReason": "Internal limitation: complete trace-format redaction is not demonstrated or certified; raw traces remain restrictedRaw and sanitized exports omit them. Real embedded-source/network-request/network-response/DOM-snapshot residues and report warnings are retained; unknown PII, encoded values and media still require minimization/manual review."
+      }
     },
     {
       "id": "SEC-035",
@@ -15238,7 +15747,10 @@
       "oracle": [
         "Local report metrics separate first/terminal/retry/conditional counts and keep exclusions visible without denominator improvement."
       ],
-      "evidence": ["packages/reporting/src/metrics.test.ts"],
+      "evidence": [
+        "packages/reporting/src/metrics.test.ts",
+        "validation/results/m3-acceptance/001-unit-final/output.log"
+      ],
       "code": ["packages/reporting/src/metrics.ts"],
       "coverage": {
         "positive": [
@@ -15537,7 +16049,10 @@
       "oracle": [
         "Exact zero-failure unilateral bounds for n=0/1/30/100/299/300 and Wilson remain distinct; insufficient counts cannot become <1% claim. Offline numeric controls are not 300 live observations."
       ],
-      "evidence": ["packages/domain/src/flake-statistics.test.ts"],
+      "evidence": [
+        "packages/domain/src/flake-statistics.test.ts",
+        "validation/results/m3-acceptance/001-unit-final/output.log"
+      ],
       "code": ["packages/domain/src/foundations.ts"],
       "coverage": {
         "positive": [
@@ -16082,32 +16597,51 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
+      "note": "Verified retained deterministic mutation-inventory reporting, not model quality or independent safety sign-off. Inventory observed n=11, killed=10, equivalent=m3-masked-comparison, survivors=[], invalid=[]; equivalent rationale is scoped to the pure replacement implementation. Changed implementation needs fresh critical-mutation acceptance before round-2 admission.",
       "scenario": [
         "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
-        "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations"
+        "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
+        "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
       ],
       "oracle": [
-        "Score refuses semantic-mutant credit without reaching unchanged business assertion and independent oracle; no reviewed patches remains insufficientData."
+        "Independent source-isolated subprocess healthy baseline passes 13 targeted controls. Eleven exact source mutations retain identities, source diffs, targeted test names, failure excerpts and rationales: 10 killed, 1 explicitly equivalent, zero survivors and invalid mutants. Setup/import failures are invalid rather than kills."
       ],
-      "evidence": ["tools/src/evals/m3-scoring.test.ts"],
-      "code": ["tools/src/evals/m3-scoring.ts"],
+      "evidence": [
+        "tools/src/evals/m3-scoring.test.ts",
+        "tools/src/traceability/m3-mutations.test.ts",
+        "validation/results/m3-critical-mutations.json",
+        "validation/results/m3-acceptance/001-mutm3-4/output.log"
+      ],
+      "code": [
+        "tools/src/evals/m3-scoring.ts",
+        "tools/src/traceability/m3-mutations.test.ts"
+      ],
       "coverage": {
         "positive": [
-          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing"
+          "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
+          "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
         ],
         "negative": [
           "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
-          "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations"
+          "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
+          "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations"
         ],
         "criticalAssertions": [
           {
             "path": "tools/src/evals/m3-scoring.test.ts",
             "assertion": "expect(scoreM3(rows).safeHealingSuccessRate.successes).toBe(0);"
+          },
+          {
+            "path": "tools/src/traceability/m3-mutations.test.ts",
+            "assertion": "expect(healthy.code, healthy.output).toBe(0);\n    expect(healthy.setupFailure, healthy.output).toBe(false);\n    expect(healthy.passedTests).toBe(healthyTestCount);\n    expect(observations).toHaveLength(mutations.length);"
+          },
+          {
+            "path": "tools/src/traceability/m3-mutations.test.ts",
+            "assertion": "expect(\n        [\"killed\", \"equivalent\"],\n        `${row.id}: ${row.outcome}\\n${row.failureExcerpt ?? \"\"}`,\n      ).toContain(row.outcome);"
           }
         ]
-      },
-      "blockedReason": "Internal: no executed M3 critical mutation inventory listing killed/survived/invalid/equivalent mutants and rationales; scoring safety guards are not mutation score. External: full pilot semantic-mutant observations and safety sign-off remain unexecuted."
+      }
     },
     {
       "id": "VAL-023",
@@ -16757,7 +17291,8 @@
         "packages/application/src/delivery.test.ts",
         "validation/journeys/m3-ci.docker.test.ts",
         "tools/src/github-action/inputs.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
@@ -16768,7 +17303,8 @@
         "positive": [
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
-          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
@@ -16788,6 +17324,10 @@
           {
             "path": "packages/application/src/delivery.test.ts",
             "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"failure\");"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
           }
         ]
       },
