@@ -79,8 +79,10 @@ const mutations: Mutation[] = [
     id: "m3-patch-allowlist",
     invariant: "Healing patch path allowlist",
     file: "packages/application/src/ai/healing-patch.ts",
-    original: "if (!locator && !drag && !download && !wait && !manual)",
-    replacement: "if (false)",
+    original:
+      "const replacement = healingReplacements(step).find((entry) => entry.path === change.path);",
+    replacement:
+      "const replacement = healingReplacements(step).find((entry) => entry.path === change.path) ?? { path: change.path, valueShape: null, manualOnly: false };",
     target: {
       file: "packages/application/src/ai/healing-mask.test.ts",
       name: "refuses an otherwise schema-valid request method change outside the healing path allowlist",
@@ -209,6 +211,34 @@ const mutations: Mutation[] = [
       /retry_unsafe_external_effect.*insufficient_evidence|insufficient_evidence.*retry_unsafe_external_effect/s,
     rationale:
       "After the mutating owned-resource request was sent, a proxy ECONNRESET cannot establish that the effect never occurred; the existing real HTTP proxy fixture distinguishes read and write reasons.",
+  },
+  {
+    id: "m3-analysis-source-target",
+    invariant: "Fix targets resolve only to authorized source evidence",
+    file: "packages/application/src/ai/analysis.ts",
+    original: "if (output.fixTargetHandle !== null && !fixTarget?.codeSnapshotId)",
+    replacement: "if (output.fixTargetHandle !== null && !fixTarget)",
+    target: {
+      file: "packages/application/src/ai/analysis.test.ts",
+      name: "execution handles cannot be promoted to source fix targets",
+    },
+    expectedFailure: /expected false to be true/,
+    rationale:
+      "Accepting any supplied handle lets an execution artifact become a persisted source fix target without a code snapshot binding.",
+  },
+  {
+    id: "m3-license-asset",
+    invariant: "Runtime installation requires the shipped license assets",
+    file: "tools/src/distribution/install.ts",
+    original: "if (!value.files.some((file) => file.path === asset && file.size > 0))",
+    replacement: "if (false)",
+    target: {
+      file: "tools/src/distribution/distribution.test.ts",
+      name: "refuses a hash-pinned manifest that omits the original LICENSE",
+    },
+    expectedFailure: /to throw/i,
+    rationale:
+      "A hash-pinned manifest is otherwise self-consistent; only the explicit asset check refuses a runtime stripped of its Apache-2.0 license.",
   },
 ];
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -362,6 +392,13 @@ it("kills M3 critical mutations in source-isolated copies and retains equivalent
       "tools/src/github-action/inputs.ts",
       "tools/src/github-action/download.ts",
       "tools/src/github-action/publisher.ts",
+      "tools/src/distribution/archive.ts",
+      "tools/src/distribution/install.ts",
+      "tools/src/distribution/package.ts",
+      "tools/src/distribution/licenses.ts",
+      "tools/src/distribution/sources.ts",
+      "tools/src/distribution/browser-sources.ts",
+      "tools/src/distribution/python-sources.ts",
       "tools/src/evals/freeze.ts",
       "tools/src/evals/m3.ts",
       "tools/src/evals/m3-scoring.ts",
