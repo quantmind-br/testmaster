@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -130,7 +131,7 @@ describe("pinned distribution verification", () => {
   });
 });
 describe("relocatable production dependency graph", () => {
-  it("includes transitive production packages and runtime assets without source, tests or declarations", async () => {
+  it("includes transitive production packages and runtime assets without workspace source, tests or declarations, keeping third-party runtime directories", async () => {
     const root = await temporary();
     const source = join(root, "repo");
     const output = join(root, "staged");
@@ -166,6 +167,15 @@ describe("relocatable production dependency graph", () => {
     await fixturePackage("node_modules/.pnpm/external@1/node_modules/external", "external", {
       transitive: "1.0.0",
     });
+    // Published third-party runtime modules may live in directories that are repository-private
+    // names for workspace packages (graphql ships `validation/`).
+    const external = join(source, "node_modules/.pnpm/external@1/node_modules/external");
+    await mkdir(join(external, "validation"));
+    await writeFile(join(external, "validation/rules.js"), "export const rules = 1;");
+    await writeFile(
+      join(external, "dist/main.js"),
+      'export { rules } from "../validation/rules.js";\nexport const runtime = true;',
+    );
     await fixturePackage(
       "node_modules/.pnpm/transitive@1/node_modules/transitive",
       "transitive",
@@ -193,7 +203,24 @@ describe("relocatable production dependency graph", () => {
       "external",
       "transitive",
     ]);
-    expect(staged.files.some((file) => /(?:\/src\/|\.d\.ts$|\.map$)/u.test(file.path))).toBe(false);
+    expect(
+      staged.files.some(
+        (file) =>
+          !file.path.startsWith("node_modules/") && /(?:\/src\/|\.d\.ts$|\.map$)/u.test(file.path),
+      ),
+    ).toBe(false);
+    expect(staged.files.some((file) => /\.d\.ts$|\.map$/u.test(file.path))).toBe(false);
+    // Executing the staged entry resolves its relative runtime imports as a consumer would.
+    expect(() =>
+      execFileSync(
+        process.execPath,
+        [join(output, "apps/cli/node_modules/external/dist/main.js")],
+        { stdio: "pipe" },
+      ),
+    ).not.toThrow();
+    expect(
+      await readFile(join(output, "apps/cli/node_modules/external/validation/rules.js"), "utf8"),
+    ).toBe("export const rules = 1;");
     expect(
       await readFile(join(output, "apps/cli/node_modules/@testmaster/core/dist/main.js"), "utf8"),
     ).toContain("runtime = true");

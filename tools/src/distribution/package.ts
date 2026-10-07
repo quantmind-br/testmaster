@@ -57,42 +57,56 @@ export const RUNTIME_RESOURCES = [
   "containers/seccomp_profile.json",
   "packages/application/skill-content/1.0.0/SKILL.md",
 ] as const;
-async function copyTree(source: string, destination: string): Promise<void> {
+/**
+ * Workspace packages contribute only their built output, so repository-private directories
+ * (sources, tests, validation, evaluation results) are dropped by name. Third-party packages are
+ * copied as published: directory names such as `validation` or `src` can be runtime modules
+ * there (graphql ships `validation/`), so only nested dependency trees, VCS metadata, type
+ * declarations/maps and credential-shaped files are excluded.
+ */
+type CopyScope = "workspace" | "dependency";
+function excluded(name: string, scope: CopyScope): boolean {
+  if (
+    name === "node_modules" ||
+    name === ".git" ||
+    name === ".npmrc" ||
+    name.startsWith(".env") ||
+    name.endsWith(".d.ts") ||
+    name.endsWith(".d.cts") ||
+    name.endsWith(".d.mts") ||
+    name.endsWith(".map") ||
+    /\.(?:pem|key|tsbuildinfo)$/u.test(name)
+  )
+    return true;
+  return (
+    scope === "workspace" &&
+    ([
+      "src",
+      "test",
+      "tests",
+      "__tests__",
+      ".github",
+      "validation",
+      "evals",
+      "results",
+      "coverage",
+      "private",
+      "secrets",
+      ".pnpmfile.cjs",
+      ".yarnrc",
+      ".yarnrc.yml",
+      ".ai-memory.toml",
+    ].includes(name) ||
+      /(?:^|\.)(?:test|spec)\.[cm]?js$/u.test(name))
+  );
+}
+async function copyTree(source: string, destination: string, scope: CopyScope): Promise<void> {
   const stat = await lstat(source);
   if (stat.isDirectory()) {
     await mkdir(destination, { recursive: true, mode: 0o700 });
     for (const name of (await readdir(source)).sort()) {
-      if (
-        [
-          "node_modules",
-          "src",
-          "test",
-          "tests",
-          "__tests__",
-          ".git",
-          ".github",
-          "validation",
-          "evals",
-          "results",
-          "coverage",
-          "private",
-          "secrets",
-          ".npmrc",
-          ".pnpmfile.cjs",
-          ".yarnrc",
-          ".yarnrc.yml",
-          ".ai-memory.toml",
-        ].includes(name) ||
-        name.startsWith(".env") ||
-        name.endsWith(".d.ts") ||
-        name.endsWith(".d.cts") ||
-        name.endsWith(".d.mts") ||
-        name.endsWith(".map") ||
-        /(?:^|\.)(?:test|spec)\.[cm]?js$/u.test(name) ||
-        /\.(?:pem|key|tsbuildinfo)$/u.test(name)
-      )
-        continue;
-      await copyTree(join(source, name), join(destination, name));
+      if (excluded(name, scope)) continue;
+      await copyTree(join(source, name), join(destination, name), scope);
     }
   } else if (stat.isSymbolicLink()) {
     const target = await readlink(source);
@@ -172,8 +186,8 @@ export async function stageRuntime(
     if (workspaceSource === source) {
       await mkdir(target, { recursive: true, mode: 0o700 });
       await copyFile(join(source, "package.json"), join(target, "package.json"));
-      await copyTree(join(source, "dist"), join(target, "dist"));
-    } else await copyTree(source, target);
+      await copyTree(join(source, "dist"), join(target, "dist"), "workspace");
+    } else await copyTree(source, target, "dependency");
     const dependencies = {
       ...document.peerDependencies,
       ...document.dependencies,
@@ -217,7 +231,7 @@ export async function stageRuntime(
   // unsafe-runtime dispatches this harness by relative path, not a package import.
   await add(join(root, "packages/runner"));
   for (const resource of RUNTIME_RESOURCES)
-    await copyTree(join(root, resource), join(destination, resource));
+    await copyTree(join(root, resource), join(destination, resource), "workspace");
   const dependencies = [...nodes.values()]
     .map(({ document }) => ({
       name: document.name,
