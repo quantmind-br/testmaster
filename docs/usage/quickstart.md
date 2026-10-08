@@ -148,7 +148,7 @@ at execution time; configuring a model does not authorize data transfer or estab
           "id": "quantforge",
           "kind": "openai-compatible",
           "baseUrl": "https://api.quantforge.com.br/v1",
-          "apiKeyEnv": "QUANTFORGE_API_KEY",
+          "apiKeyEnv": "TESTMASTER_MODEL_API_KEY",
           "models": [{ "id": "qwen3.8-flash", "capabilities": { "structuredJson": true, "toolCalls": true, "contextTokens": 128000, "maxOutputTokens": 8192 } }],
           "prices": {
             "qwen3.8-flash": { "currency": "USD", "scale": 6, "inputPerMillion": "150000", "outputPerMillion": "470000", "cacheReadPerMillion": "16000", "version": "models.dev alibaba/qwen3.8-flash 2026-10-07" }
