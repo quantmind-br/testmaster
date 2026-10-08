@@ -1,0 +1,175 @@
+{
+  "id": "m3-bug-07",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1198a-1a03-72f2-b9a4-ef2d5e221c36",
+    "revisionId": "rev_01a1198a-19c9-7685-906c-0a1f8d82b6d4",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "page",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "ff70191ac01ba194db83cb94a91bfed917700d8d40ae129d5cb776b52d0f86c0",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1198a-19b3-73d6-923e-0aa5cd55d0f7",
+    "admissionHash": "6a049590d2415ea17cec055dee3a844e78aedcfcc884a7188749cd8a8d7b862b"
+  },
+  "transformed": {
+    "runId": "run_01a1198a-1d2d-7645-9fe2-209d013d09e6",
+    "revisionId": "rev_01a1198a-19c9-7685-906c-0a1f8d82b6d4",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "page",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "ff70191ac01ba194db83cb94a91bfed917700d8d40ae129d5cb776b52d0f86c0",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1198a-19b3-73d6-923e-0aa5cd55d0f7",
+    "admissionHash": "6a049590d2415ea17cec055dee3a844e78aedcfcc884a7188749cd8a8d7b862b"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "paginationContinuity",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "expected": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ],
+      "observed": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ]
+    }
+  },
+  "transformedOracle": {
+    "check": "paginationContinuity",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "expected": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ],
+      "observed": [
+        "p1",
+        "p2",
+        "p4",
+        "p5"
+      ]
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-07",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "page",
+        "kind": "action",
+        "operation": "request",
+        "description": "page",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "offset"
+              },
+              "value": {
+                "literal": "2"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "page",
+          "jsonPointer": "/items/0/id"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "p3"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

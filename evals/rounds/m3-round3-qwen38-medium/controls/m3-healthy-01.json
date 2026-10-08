@@ -1,0 +1,152 @@
+{
+  "id": "m3-healthy-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a11982-2dc9-70dc-8bd8-831709f31974",
+    "revisionId": "rev_01a11982-2d6e-76e3-bf21-f61cd5e8464a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "3c82e390980bb9371689e6ae74e5a96ee9264fd593066316aca295bf7449efc9",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a11982-2d5a-75b9-8ec3-f89bfb5a43ad",
+    "admissionHash": "4f51a6f55f0ea4fd47ff35ba97b1609b2b463d808f8cfe746b9ca40fe4966597"
+  },
+  "transformed": {
+    "runId": "run_01a11982-3193-739e-aa79-a5f5d4b79663",
+    "revisionId": "rev_01a11982-2d6e-76e3-bf21-f61cd5e8464a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "3c82e390980bb9371689e6ae74e5a96ee9264fd593066316aca295bf7449efc9",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a11982-2d5a-75b9-8ec3-f89bfb5a43ad",
+    "admissionHash": "4f51a6f55f0ea4fd47ff35ba97b1609b2b463d808f8cfe746b9ca40fe4966597"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "passwordValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 401,
+      "sessionsCreated": 0
+    }
+  },
+  "transformedOracle": {
+    "check": "passwordValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 401,
+      "sessionsCreated": 0
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-healthy-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

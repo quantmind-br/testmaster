@@ -1,0 +1,196 @@
+{
+  "id": "m3-bug-06",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1198a-120a-70f8-88ba-cf021f68a698",
+    "revisionId": "rev_01a1198a-11d0-76b5-9834-f6f1cbc5c939",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "products",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "3a3fbd932f7afc4e921c432cf4aebbb859e8eaadb86685df64e9cd83a66c6b74",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1198a-11bb-720a-9224-4462c3d159db",
+    "admissionHash": "6713cc51c7c1ae9a94f09033c72d8436edd4721aac4f1cdc162a157cd7331317"
+  },
+  "transformed": {
+    "runId": "run_01a1198a-159a-72d5-b3cc-88ea60689e2a",
+    "revisionId": "rev_01a1198a-11d0-76b5-9834-f6f1cbc5c939",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "products",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "3a3fbd932f7afc4e921c432cf4aebbb859e8eaadb86685df64e9cd83a66c6b74",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1198a-11bb-720a-9224-4462c3d159db",
+    "admissionHash": "6713cc51c7c1ae9a94f09033c72d8436edd4721aac4f1cdc162a157cd7331317"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "productSchema",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "items": [
+        {
+          "id": "p1",
+          "name": "Precision Widget",
+          "priceCents": 1005
+        },
+        {
+          "id": "p2",
+          "name": "Blue Mug",
+          "priceCents": 1299
+        },
+        {
+          "id": "p3",
+          "name": "Notebook",
+          "priceCents": 425
+        },
+        {
+          "id": "p4",
+          "name": "Pencil",
+          "priceCents": 99
+        },
+        {
+          "id": "p5",
+          "name": "Canvas Bag",
+          "priceCents": 1750
+        }
+      ],
+      "total": 5,
+      "nextOffset": 100
+    }
+  },
+  "transformedOracle": {
+    "check": "productSchema",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "items": [
+        {
+          "id": "p1",
+          "name": "Precision Widget",
+          "costCents": 1005
+        },
+        {
+          "id": "p2",
+          "name": "Blue Mug",
+          "costCents": 1299
+        },
+        {
+          "id": "p3",
+          "name": "Notebook",
+          "costCents": 425
+        },
+        {
+          "id": "p4",
+          "name": "Pencil",
+          "costCents": 99
+        },
+        {
+          "id": "p5",
+          "name": "Canvas Bag",
+          "costCents": 1750
+        }
+      ],
+      "total": 5,
+      "nextOffset": 100
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "products",
+        "kind": "action",
+        "operation": "request",
+        "description": "products",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "products",
+          "jsonPointer": "/items/0/priceCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 1005
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

@@ -1,0 +1,214 @@
+{
+  "id": "m3-drift-05",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a11984-7486-7727-9837-e94e6863e178",
+    "revisionId": "rev_01a11984-7447-702c-877a-cf1b94dd5800",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "password",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "catalog_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "profile",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "upload",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "uploaded",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "download",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "a122f1f52ca1c53c11a49f01263cafab3447e4cb6623daf0d25740c0fb84806e",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a11984-742b-73d2-b920-3cc79284bc1a",
+    "admissionHash": "b01d00a03566cd2c781013d72c2fe8af7bc67430f05ac444770fc7d6586a7415"
+  },
+  "transformed": {
+    "runId": "run_01a11984-7a6d-7512-b4ba-64999d9b6fd7",
+    "revisionId": "rev_01a11984-7447-702c-877a-cf1b94dd5800",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "password",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "catalog_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "profile",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "upload",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "uploaded",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "download",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "a122f1f52ca1c53c11a49f01263cafab3447e4cb6623daf0d25740c0fb84806e",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a11984-742b-73d2-b920-3cc79284bc1a",
+    "admissionHash": "b01d00a03566cd2c781013d72c2fe8af7bc67430f05ac444770fc7d6586a7415"
+  },
+  "proposal": {
+    "analysisId": "ana_01a11984-f60c-71f4-8caf-cdc6cfe59574",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a11984-7447-702c-877a-cf1b94dd5800",
+    "candidateRevisionId": "rev_01a11984-f76a-7468-82f8-05f2f140bcce",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "upload",
+        "value": {
+          "by": "testId",
+          "value": "profile-file-input"
+        }
+      }
+    ],
+    "createdAt": "2026-10-08T03:18:26.923Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "19e300dbcb4e7b5214806ce31a54cdb73a08844147c3b5ce45e0f3a4dd7679d8",
+        "runId": "run_01a11984-7a6d-7512-b4ba-64999d9b6fd7"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a11984-741d-76f3-8403-0c7b9ee88803"
+    },
+    "failedRunId": "run_01a11984-7a6d-7512-b4ba-64999d9b6fd7",
+    "id": "hea_01a11984-f769-76d3-8ee3-342463a602a6",
+    "limitations": [],
+    "modelCallId": "mdl_01a11984-f719-76da-97e8-73992a669409",
+    "policyHash": "dcf381e74c660044c84395e7dd2baba5cac419ad5a34b9295af73b61844832d5",
+    "preservedAssertionsHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a11984-7444-761d-a64c-882efba9854b",
+    "verificationRunId": "run_01a11984-f7ab-775e-b25e-72cab43f9cae",
+    "version": 3,
+    "workspaceId": "ws_01a11984-741d-76f3-8403-0a913029f890"
+  }
+}
