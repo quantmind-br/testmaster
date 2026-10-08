@@ -1000,6 +1000,9 @@ export class AnalysisService {
       }
       measurements.push(entry);
     }
+    const locatorHandles = new Set(
+      measurements.filter((item) => item.kind === "locator").map((item) => String(item.evidenceId)),
+    );
     const data = {
       outcome: run.outcome,
       rulesFailureKind: factual.failureKind,
@@ -1045,10 +1048,12 @@ export class AnalysisService {
     });
     validate("AIAnalysisOutput", result.output);
     const output = result.output;
-    const fixTarget =
+    // A fix target is only meaningful when it names authorized source evidence; an unauthorized
+    // one is discarded and disclosed rather than discarding an otherwise evidenced diagnosis.
+    const proposedTarget =
       output.fixTargetHandle === null ? undefined : catalog.get(output.fixTargetHandle);
-    if (output.fixTargetHandle !== null && !fixTarget?.codeSnapshotId)
-      throw new ContractError("INVALID_ARGUMENT", "Fix target is not authorized source evidence");
+    const fixTarget = proposedTarget?.codeSnapshotId ? proposedTarget : undefined;
+    const fixTargetDropped = output.fixTargetHandle !== null && !fixTarget;
     if (
       run.outcome === "passed" &&
       (output.failureKind !== "unknown" ||
@@ -1078,34 +1083,51 @@ export class AnalysisService {
     }
     if (output.failureKind !== "unknown" && !output.hypotheses.length)
       throw new ContractError("INVALID_ARGUMENT", "A model cause requires cited hypotheses");
-    const hypotheses = output.hypotheses.map((hypothesis) => {
-      if (!hypothesis.supports.length)
-        throw new ContractError("INVALID_ARGUMENT", "A model hypothesis requires observed support");
+    let unsupported = 0;
+    const hypotheses = output.hypotheses.flatMap((hypothesis) => {
       const supports = resolve(hypothesis.supports);
+      // Verified locator records are observed execution evidence with admitted content; other
+      // artifacts (screenshots, HTML, logs) are not, so citing only them proves nothing. An
+      // under-supported alternative is not recorded, but it does not discard the rest of the
+      // analysis; the cause itself still needs at least one supported hypothesis below.
       if (
-        !supports.some(
-          (ref) => !ref.codeSnapshotId && (ref.stepId || ref.observationSeq !== undefined),
-        )
-      )
-        throw new ContractError(
-          "INVALID_ARGUMENT",
-          "A model hypothesis requires execution observation support",
-        );
+        !hypothesis.supports.some((handle) => {
+          const ref = catalog.get(handle)!;
+          return (
+            !ref.codeSnapshotId &&
+            (ref.stepId || ref.observationSeq !== undefined || locatorHandles.has(handle))
+          );
+        })
+      ) {
+        unsupported++;
+        return [];
+      }
       const contradicts = resolve(hypothesis.contradicts);
-      return {
-        text: scrubEvidenceText(hypothesis.text, secrets).text,
-        supports,
-        contradicts: [
-          ...new Map(
-            [...contradicts, ...factual.hypotheses.flatMap((item) => item.contradicts)].map(
-              (ref) => [canonicalJson(ref), ref],
-            ),
-          ).values(),
-        ],
-        confidence: hypothesis.confidence,
-        calibrated: false,
-      };
+      return [
+        {
+          text: scrubEvidenceText(hypothesis.text, secrets).text,
+          supports,
+          contradicts: [
+            ...new Map(
+              [...contradicts, ...factual.hypotheses.flatMap((item) => item.contradicts)].map(
+                (ref) => [canonicalJson(ref), ref],
+              ),
+            ).values(),
+          ],
+          confidence: hypothesis.confidence,
+          calibrated: false,
+        },
+      ];
     });
+    if (output.failureKind !== "unknown" && !hypotheses.length)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "A model cause requires a hypothesis with execution observation support",
+      );
+    // Enrichment may refine or contradict-check a rules-derived cause, but an abstention must not
+    // erase a cause the frozen rules established from observed evidence.
+    const retained = output.failureKind === "unknown" && factual.failureKind !== "unknown";
+    const recorded = retained ? [...factual.hypotheses, ...hypotheses] : hypotheses;
     const {
       id: _id,
       workspaceId: _ws,
@@ -1121,16 +1143,25 @@ export class AnalysisService {
         source: "model",
         parentId: factual.id,
         modelCallId: result.modelCallId,
-        failureKind: output.failureKind,
-        recommendedAction: output.recommendedAction,
-        hypotheses,
-        confidence: hypotheses.length
-          ? Math.max(...hypotheses.map((item) => item.confidence))
-          : null,
+        failureKind: retained ? factual.failureKind : output.failureKind,
+        recommendedAction: retained ? factual.recommendedAction : output.recommendedAction,
+        hypotheses: recorded,
+        confidence: recorded.length ? Math.max(...recorded.map((item) => item.confidence)) : null,
         limitations: [
           ...new Set([
             ...data.limitations,
+            ...(retained
+              ? ["Model abstained; the evidenced rules-derived cause is retained."]
+              : []),
+            ...(fixTargetDropped
+              ? ["A model fix target without authorized source evidence was not recorded."]
+              : []),
             ...output.limitations.map((value) => scrubEvidenceText(value, secrets).text),
+            ...(unsupported
+              ? [
+                  `${unsupported} model hypotheses without execution observation support were not recorded.`,
+                ]
+              : []),
           ]),
         ],
       },

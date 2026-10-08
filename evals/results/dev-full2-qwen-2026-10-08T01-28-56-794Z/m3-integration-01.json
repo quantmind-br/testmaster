@@ -1,0 +1,351 @@
+{
+  "id": "m3-integration-01",
+  "group": "integration",
+  "expectedFailureKind": "product_bug",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "products-update-ignored",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"products-update-ignored\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "92e9d97953b497e64b4d56f91173d86ed4e273cc143cce4c44022058d70fa78f",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "productWorkflow",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-integration-01",
+    "type": "integration",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": "correct-password"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-m3-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "create",
+        "kind": "action",
+        "operation": "request",
+        "description": "create",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "name": "Workflow original",
+                "priceCents": 123
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "product_id",
+              "from": "jsonPointer",
+              "pointer": "/id",
+              "valueType": "string",
+              "sensitive": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "read",
+        "kind": "action",
+        "operation": "request",
+        "description": "read",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            },
+            {
+              "variableRef": "create.product_id"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "initial_value",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "initial_value",
+        "required": true,
+        "input": {
+          "responseStepId": "read",
+          "jsonPointer": "/priceCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 123
+          }
+        }
+      },
+      {
+        "id": "update",
+        "kind": "action",
+        "operation": "request",
+        "description": "update",
+        "required": true,
+        "input": {
+          "method": "PUT",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            },
+            {
+              "variableRef": "create.product_id"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "name": "Workflow updated",
+                "priceCents": 456
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "query",
+        "kind": "action",
+        "operation": "request",
+        "description": "query",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            },
+            {
+              "variableRef": "create.product_id"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "query",
+          "jsonPointer": "/priceCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 456
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "92e9d97953b497e64b4d56f91173d86ed4e273cc143cce4c44022058d70fa78f",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "b243989e7cf9bd14790d16e7c6fad3aab7104a554b4e1ae54c8a30fae0ab7516",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "error",
+  "stages": {},
+  "diagnosis": null,
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 18162,
+    "outputTokens": 7887,
+    "reasoningTokens": 6352,
+    "cacheTokens": 0,
+    "unknownCalls": 1,
+    "unknownCostCalls": 3,
+    "conservativeCharge": 75808,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "integration-generation",
+      "code": "pipeline_error",
+      "messageHash": "4f45fff69202d9d1263c6ffb979a7363c10c7e0896abdf855087d7cf5db076ef",
+      "detail": "UPSTREAM_TIMEOUT: Model request deadline exceeded"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-f6TWyf",
+    "baseRevision": {
+      "id": "rev_01a11948-2d09-77ae-8ddc-1d6e88533c39",
+      "protectedHash": "cfd42d891a0823b762fad9a49b91964fb30b66d63eb4ce8c9d187f7a9438bbdd"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a11948-f339-73b0-9b80-5e36c17a4e02",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "4d4ff83c099be1441061aea9fbc72eeaa42858b02ac65d0f2af7d646f3f3841f",
+        "responseHash": "129cfaab01d1da2dc1cbd17f6e0aa4177a3b344eed948abd61600b3866b08d24",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "invalid",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 8922,
+          "outputTokens": 3553,
+          "reasoningTokens": 3504
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a1194a-d991-77bd-ae84-b5a70e4fcb71",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "3308637c44ad61af5ae74b4745dd71b5246f6898b4151f5b2180019aaafa2201",
+        "responseHash": "65b575b46a84e6338025e64243d3e327b7d0e49a08f5ecde789a64b432175633",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 1,
+        "transportAttempt": 0,
+        "outcome": "invalid",
+        "usage": {
+          "cachedInputTokens": 9216,
+          "inputTokens": 9240,
+          "outputTokens": 4334,
+          "reasoningTokens": 2848
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a1194a-ec52-71f7-a2d6-3ec229209083",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "9d3e653da51d5342aea35df56964a23158882918c359aefc9097fbb7e4f64823",
+        "responseHash": null,
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 2,
+        "transportAttempt": 0,
+        "outcome": "cancelled",
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "reasoningTokens": null
+        },
+        "cost": "unknown"
+      }
+    ]
+  }
+}

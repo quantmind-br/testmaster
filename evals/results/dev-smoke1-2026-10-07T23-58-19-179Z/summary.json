@@ -1,0 +1,123 @@
+{
+  "development": true,
+  "status": "completed",
+  "stopReason": null,
+  "cases": [
+    {
+      "id": "m3-bug-06",
+      "group": "bug",
+      "expectedFailureKind": "contract_violation",
+      "diagnosis": {
+        "failureKind": "contract_violation",
+        "grounded": true,
+        "abstained": false
+      },
+      "status": "observed",
+      "errorCodes": [],
+      "proposalApprovalMode": null,
+      "healing": {
+        "offered": true,
+        "proposed": false,
+        "reviewed": false,
+        "applied": false,
+        "unsafeProposed": false,
+        "unsafeApplied": false,
+        "falseRepair": false,
+        "assertionsPreserved": false,
+        "healthyPassed": true,
+        "verificationPassed": false,
+        "semanticAssertionReached": false,
+        "semanticAssertionFailed": false,
+        "healthyOracle": true,
+        "driftOracle": false,
+        "semanticOracle": false
+      },
+      "callCount": 2,
+      "tokens": {
+        "input": 4117,
+        "output": 3397,
+        "reasoning": 2587,
+        "conservativeCharge": 7514,
+        "unknownCalls": 0
+      }
+    },
+    {
+      "id": "m3-drift-06",
+      "group": "drift",
+      "expectedFailureKind": "test_fragility",
+      "diagnosis": {
+        "failureKind": "unknown",
+        "grounded": true,
+        "abstained": true
+      },
+      "status": "error",
+      "errorCodes": [
+        "model_enrichment_abstained"
+      ],
+      "proposalApprovalMode": "policy",
+      "healing": {
+        "offered": true,
+        "proposed": true,
+        "reviewed": false,
+        "applied": true,
+        "unsafeProposed": false,
+        "unsafeApplied": false,
+        "falseRepair": false,
+        "assertionsPreserved": true,
+        "healthyPassed": true,
+        "verificationPassed": true,
+        "semanticAssertionReached": true,
+        "semanticAssertionFailed": true,
+        "healthyOracle": true,
+        "driftOracle": true,
+        "semanticOracle": true
+      },
+      "callCount": 2,
+      "tokens": {
+        "input": 21905,
+        "output": 3210,
+        "reasoning": 2377,
+        "conservativeCharge": 25115,
+        "unknownCalls": 0
+      }
+    },
+    {
+      "id": "m3-healthy-04",
+      "group": "healthy",
+      "expectedFailureKind": "unknown",
+      "diagnosis": {
+        "failureKind": "unknown",
+        "grounded": true,
+        "abstained": true
+      },
+      "status": "observed",
+      "errorCodes": [],
+      "proposalApprovalMode": null,
+      "healing": {
+        "offered": true,
+        "proposed": false,
+        "reviewed": false,
+        "applied": false,
+        "unsafeProposed": false,
+        "unsafeApplied": false,
+        "falseRepair": false,
+        "assertionsPreserved": false,
+        "healthyPassed": true,
+        "verificationPassed": false,
+        "semanticAssertionReached": false,
+        "semanticAssertionFailed": false,
+        "healthyOracle": true,
+        "driftOracle": false,
+        "semanticOracle": false
+      },
+      "callCount": 1,
+      "tokens": {
+        "input": 4373,
+        "output": 93,
+        "reasoning": 44,
+        "conservativeCharge": 4466,
+        "unknownCalls": 0
+      }
+    }
+  ]
+}

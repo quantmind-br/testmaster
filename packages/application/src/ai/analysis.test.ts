@@ -359,6 +359,67 @@ it("structured catalog retains frozen assertion semantics and verified reference
     }),
   );
 });
+async function attachLocatorEvidence(f: Awaited<ReturnType<typeof fixture>>, namedCount: number) {
+  const candidates = Array.from({ length: 52 }, (_, index) => {
+    const identity = {
+      role: index >= 52 - namedCount ? "button" : "",
+      name: index === 51 ? "Checkout" : index >= 52 - namedCount ? `Control ${index}` : "",
+      tag: index >= 52 - namedCount ? "button" : "div",
+      type: "",
+      attributes: {},
+    };
+    return {
+      ...identity,
+      fingerprint: locatorFingerprint(identity),
+      matched: index === 51,
+      visible: true,
+    };
+  });
+  const payload = {
+    schemaVersion: "1.0.0" as const,
+    stepId: "price",
+    phase: "before" as const,
+    frameOrigin: "http://localhost",
+    locator: { by: "role" as const, role: "button", name: "Checkout", exact: true },
+    cardinality: 1,
+    candidates,
+    truncated: false,
+    state: null,
+  };
+  const record: LocatorEvidence = { ...payload, evidenceHash: semanticHash(payload) };
+  const fixtures = relationalFixtures(f.db);
+  const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
+  const artifact = fixtures.find((item) => item.kind === "Artifact")!;
+  for (const item of [snapshot, artifact]) {
+    if (item.kind === "Artifact") {
+      Object.assign(item.dto, { state: "available", hash: "a".repeat(64) });
+      item.row.state = "available";
+      item.row.hash = "a".repeat(64);
+      item.row.data_json = canonicalJson(item.dto);
+    }
+    const insert = fixtureInsert(item);
+    f.db.run(insert.sql, ...insert.values);
+  }
+  const locatorPath = "locators/price.json";
+  const hash = "a".repeat(64);
+  const entries = [
+    {
+      artifactId: artifact.dto.id,
+      relativePath: locatorPath,
+      kind: "locator-evidence",
+      sizeBytes: 20000,
+      state: "available",
+      redactionStatus: "sanitized",
+      sha256: hash,
+    },
+  ];
+  const bundle = {
+    manifest: { snapshotId: snapshot.dto.id, attemptId: f.step.attemptId, entries },
+  };
+  vi.mocked(f.artifacts.get).mockResolvedValue(bundle as never);
+  f.artifacts.read = vi.fn(async () => ({ bytes: Buffer.from(JSON.stringify(record)) })) as never;
+  return { snapshot, artifact, locatorPath, hash };
+}
 it.each([
   { passed: false, namedCount: 1 },
   { passed: true, namedCount: 1 },
@@ -367,64 +428,7 @@ it.each([
   "locator catalog preserves relevant identities and discloses summarized candidates ($passed, $namedCount)",
   async ({ passed, namedCount }) => {
     const f = await fixture({ passed });
-    const candidates = Array.from({ length: 52 }, (_, index) => {
-      const identity = {
-        role: index >= 52 - namedCount ? "button" : "",
-        name: index === 51 ? "Checkout" : index >= 52 - namedCount ? `Control ${index}` : "",
-        tag: index >= 52 - namedCount ? "button" : "div",
-        type: "",
-        attributes: {},
-      };
-      return {
-        ...identity,
-        fingerprint: locatorFingerprint(identity),
-        matched: index === 51,
-        visible: true,
-      };
-    });
-    const payload = {
-      schemaVersion: "1.0.0" as const,
-      stepId: "price",
-      phase: "before" as const,
-      frameOrigin: "http://localhost",
-      locator: { by: "role" as const, role: "button", name: "Checkout", exact: true },
-      cardinality: 1,
-      candidates,
-      truncated: false,
-      state: null,
-    };
-    const record: LocatorEvidence = { ...payload, evidenceHash: semanticHash(payload) };
-    const fixtures = relationalFixtures(f.db);
-    const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
-    const artifact = fixtures.find((item) => item.kind === "Artifact")!;
-    for (const item of [snapshot, artifact]) {
-      if (item.kind === "Artifact") {
-        Object.assign(item.dto, { state: "available", hash: "a".repeat(64) });
-        item.row.state = "available";
-        item.row.hash = "a".repeat(64);
-        item.row.data_json = canonicalJson(item.dto);
-      }
-      const insert = fixtureInsert(item);
-      f.db.run(insert.sql, ...insert.values);
-    }
-    const locatorPath = "locators/price.json";
-    const hash = "a".repeat(64);
-    const entries = [
-      {
-        artifactId: artifact.dto.id,
-        relativePath: locatorPath,
-        kind: "locator-evidence",
-        sizeBytes: 20000,
-        state: "available",
-        redactionStatus: "sanitized",
-        sha256: hash,
-      },
-    ];
-    const bundle = {
-      manifest: { snapshotId: snapshot.dto.id, attemptId: f.step.attemptId, entries },
-    };
-    vi.mocked(f.artifacts.get).mockResolvedValue(bundle as never);
-    f.artifacts.read = vi.fn(async () => ({ bytes: Buffer.from(JSON.stringify(record)) })) as never;
+    const { snapshot, artifact, locatorPath, hash } = await attachLocatorEvidence(f, namedCount);
     await f.service.analyze(f.run.id, { model: true });
     expect(f.complete).toHaveBeenCalledTimes(1);
     const request = f.complete.mock.calls[0]![0] as {
@@ -762,7 +766,7 @@ it("wrong-project discovery and altered summary fail before model dispatch", asy
 it("execution handles cannot be promoted to source fix targets", async () => {
   const f = await fixture();
   f.complete.mockImplementationOnce(async () => ({
-    modelCallId: "mdl_00000000-0000-4000-8000-000000000009",
+    modelCallId: f.modelCallId,
     output: {
       failureKind: "product_bug",
       hypotheses: [
@@ -775,9 +779,11 @@ it("execution handles cannot be promoted to source fix targets", async () => {
   }));
   const result = await f.service.analyze(f.run.id, { model: true });
   expect(result.fixTarget).toBeUndefined();
+  expect(result.modelCallId).not.toBeNull();
+  expect(result.failureKind).toBe("product_bug");
   expect(
     result.limitations.some((value) =>
-      value.includes("Fix target is not authorized source evidence"),
+      value.includes("fix target without authorized source evidence was not recorded"),
     ),
   ).toBe(true);
 });
@@ -792,6 +798,81 @@ it("oversized evidence abstains before dispatch instead of silently dropping its
   const result = await f.service.analyze(f.run.id, { model: true });
   expect(f.complete).not.toHaveBeenCalled();
   expect(result.limitations.some((value) => value.includes("oversized structures"))).toBe(true);
+});
+it.each([
+  { cite: "locator", accepted: true },
+  { cite: "run", accepted: false },
+])(
+  "a hypothesis supported only by a $cite handle is accepted: $accepted",
+  async ({ cite, accepted }) => {
+    const f = await fixture();
+    await attachLocatorEvidence(f, 1);
+    f.complete.mockImplementationOnce(async (input: unknown) => {
+      const data = (input as { data: { measurements: Record<string, unknown>[] } }).data;
+      const handle = String(data.measurements.find((item) => item.kind === cite)!.evidenceId);
+      return {
+        modelCallId: f.modelCallId,
+        output: {
+          failureKind: "product_bug",
+          hypotheses: [{ text: "Observed", supports: [handle], contradicts: [], confidence: 0.5 }],
+          recommendedAction: "fix_product",
+          fixTargetHandle: null,
+          limitations: [],
+        },
+      };
+    });
+    const result = await f.service.analyze(f.run.id, { model: true });
+    expect(result.modelCallId !== null).toBe(accepted);
+    if (!accepted)
+      expect(
+        result.limitations.some((value) => value.includes("execution observation support")),
+      ).toBe(true);
+  },
+);
+it("an under-supported alternative is dropped with a disclosure while a supported hypothesis is kept", async () => {
+  const f = await fixture();
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.6 },
+        {
+          text: "Alternative without observation",
+          supports: ["E1"],
+          contradicts: [],
+          confidence: 0.2,
+        },
+      ],
+      recommendedAction: "fix_product",
+      fixTargetHandle: null,
+      limitations: [],
+    },
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.modelCallId).not.toBeNull();
+  expect(result.hypotheses.map((item) => item.confidence)).toEqual([0.6]);
+  expect(result.limitations.some((value) => value.includes("were not recorded"))).toBe(true);
+});
+it("a model abstention does not erase the cause the rules established from observed evidence", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  expect(factual.failureKind).toBe("product_bug");
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+    },
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.modelCallId).not.toBeNull();
+  expect(result.failureKind).toBe("product_bug");
+  expect(result.hypotheses.length).toBeGreaterThan(0);
+  expect(result.recommendedAction).toBe("fix_product");
 });
 it("unknown model handles reject the entire enrichment and preserve the factual predecessor", async () => {
   const f = await fixture();

@@ -17,7 +17,7 @@ export const promptVersions = {
   summarize: "summarize-1",
   classify: "classify-1",
   analyze: "analyze-4-compact-structural-evidence",
-  heal: "heal-2-path-contract-abstention",
+  heal: "heal-3-repeated-locator-coverage",
 } as const;
 export interface ModelInput {
   projectId: string;

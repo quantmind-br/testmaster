@@ -216,13 +216,13 @@ const mutations: Mutation[] = [
     id: "m3-analysis-source-target",
     invariant: "Fix targets resolve only to authorized source evidence",
     file: "packages/application/src/ai/analysis.ts",
-    original: "if (output.fixTargetHandle !== null && !fixTarget?.codeSnapshotId)",
-    replacement: "if (output.fixTargetHandle !== null && !fixTarget)",
+    original: "const fixTarget = proposedTarget?.codeSnapshotId ? proposedTarget : undefined;",
+    replacement: "const fixTarget = proposedTarget;",
     target: {
       file: "packages/application/src/ai/analysis.test.ts",
       name: "execution handles cannot be promoted to source fix targets",
     },
-    expectedFailure: /expected false to be true/,
+    expectedFailure: /to be undefined/,
     rationale:
       "Accepting any supplied handle lets an execution artifact become a persisted source fix target without a code snapshot binding.",
   },

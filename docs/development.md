@@ -638,6 +638,16 @@ distinct in ledgers; abstentions and errors are primary misses. Primary denomina
 drift / 26 nonhealthy / 30 main / 4 healthy / 9 true-bug offers; enrichment errors are misses
 even when the factual fallback matched.
 
+For local evaluator development, use `dev REGISTRATION OUT_LABEL [CASE_ID...]`. It runs
+the same measurement pipeline and registered budget/secret safeguards without freeze,
+readiness, commit or start-once checks; omitted case IDs select all 30 main cases plus
+integration. The output label must match `[a-z0-9][a-z0-9.-]{0,40}`. Artifacts live under
+`evals/results/dev-<label>-<timestamp>/` and are explicitly marked as development probes,
+never registered rounds and never evidence toward a milestone gate. Subsets retain
+per-case ledgers and `summary.json` without primary scoring; complete cohorts also get
+the normal score report. The registered effort accepts low, medium, high, xhigh or max;
+optional provider context/output capabilities are local admission metadata, not wire caps.
+
 Round 1 (`b173a64`, `evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/`) failed:
 safe healing 0/12, cause accuracy 1/26; `validation/results/m3-round1-posthoc-audit.json`
 records the evaluator and prompt defects corrected since. Its registration prose asks for a

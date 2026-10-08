@@ -19,6 +19,7 @@ import {
   claimStart,
   compareProtectedAssertions,
   controlledHealingOutput,
+  devM3,
   freezeM3,
   healingRefusal,
   implementationManifest,
@@ -124,7 +125,7 @@ it("writes the registered provider as a profile the product configuration accept
   const { r } = await fixtureCopy();
   const home = await mkdtemp(join(tmpdir(), "tm-m3-profile-"));
   temporary.push(home);
-  await writeEvalProfile(home, r.provider);
+  await writeEvalProfile(home, r.provider, r.decoding);
   const config = await resolveConfig({ cwd: home, home, env: { HOME: home } });
   expect(config.modelProviders).toMatchObject([
     {
@@ -135,6 +136,142 @@ it("writes the registered provider as a profile the product configuration accept
     },
   ]);
   expect(config.profilePolicy.allowedModelProviders).toEqual([r.provider.id]);
+});
+it.each(["low", "medium", "high", "xhigh", "max"])(
+  "accepts the shared registered reasoning effort %s",
+  async (effort) => {
+    const { root, path, r } = await fixtureCopy();
+    r.decoding.reasoning_effort = effort;
+    await writeFile(join(root, path), JSON.stringify(r));
+    expect((await checkM3(root, path)).modelCalls).toBe(0);
+  },
+);
+it.each([{ reasoning_effort: "extreme" }, { reasoning_effort: "max", temperature: 1 }])(
+  "refuses unsupported reasoning or additional wire controls %j",
+  async (decoding) => {
+    const { root, path, r } = await fixtureCopy();
+    r.decoding = decoding;
+    await writeFile(join(root, path), JSON.stringify(r));
+    await expect(checkM3(root, path)).rejects.toThrow("generation controls");
+  },
+);
+it("writes registered effort and local capabilities instead of fixed profile defaults", async () => {
+  const { r } = await fixtureCopy();
+  const home = await mkdtemp(join(tmpdir(), "tm-m3-profile-capabilities-"));
+  temporary.push(home);
+  r.decoding.reasoning_effort = "xhigh";
+  r.provider.capabilities = { contextTokens: 1048576, maxOutputTokens: 131072 };
+  await writeEvalProfile(home, r.provider, r.decoding);
+  const config = await resolveConfig({ cwd: home, home, env: { HOME: home } });
+  expect(config.modelProviders[0]!.models[0]).toMatchObject({
+    reasoningEffort: "xhigh",
+    capabilities: { contextTokens: 1048576, maxOutputTokens: 131072 },
+  });
+  r.provider.capabilities.contextTokens = 1.5;
+  const { root, path } = await fixtureCopy();
+  await writeFile(join(root, path), JSON.stringify(r));
+  await expect(checkM3(root, path)).rejects.toThrow("capabilities");
+});
+async function developmentFixture() {
+  const fixture = await fixtureCopy();
+  fixture.r.provider.apiKeyEnv = "TESTMASTER_M3_DEV_UNSET_KEY";
+  fixture.r.provider.baseUrl = "http://127.0.0.1:1/v1";
+  fixture.r.budget.maxTokens = 1;
+  await writeFile(
+    join(fixture.root, fixture.path),
+    JSON.stringify({
+      provider: fixture.r.provider,
+      decoding: fixture.r.decoding,
+      budget: fixture.r.budget,
+      corpus: fixture.r.corpus,
+    }),
+  );
+  return fixture;
+}
+it("refuses unsafe dev labels and unknown IDs before creating results or a start marker", async () => {
+  const { root, path, r } = await developmentFixture();
+  for (const label of ["../escape", "UPPER", "", "a".repeat(42)])
+    await expect(devM3(root, path, label, ["m3-bug-01"])).rejects.toThrow("output label");
+  await expect(devM3(root, path, "known-label", ["m3-unknown-01"])).rejects.toThrow(
+    "Unknown M3 case ID",
+  );
+  await expect(readFile(join(root, "evals/results"))).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(readFile(join(root, "evals/rounds", r.id, "started.json"))).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+});
+it.each(["provider", "decoding", "budget", "corpus"])(
+  "requires structurally valid dev %s even though freeze gates are skipped",
+  async (field) => {
+    const { root, path } = await developmentFixture();
+    const input = JSON.parse(await readFile(join(root, path), "utf8"));
+    delete input[field];
+    await writeFile(join(root, path), JSON.stringify(input));
+    await expect(devM3(root, path, "missing-input", ["m3-bug-01"])).rejects.toThrow();
+    await expect(readFile(join(root, "evals/results"))).rejects.toMatchObject({ code: "ENOENT" });
+  },
+);
+it("records an unstarted dev subset without freeze, scoring, dispatch or a start marker", async () => {
+  const { root, path, r } = await developmentFixture();
+  const original = globalThis.fetch;
+  globalThis.fetch = () => {
+    throw new Error("Missing-key dev probe attempted network");
+  };
+  try {
+    const directory = await devM3(root, path, "subset", ["m3-bug-01"]);
+    expect(directory).toMatch(/^evals\/results\/dev-subset-/);
+    const round = JSON.parse(await readFile(join(root, directory, "round.json"), "utf8"));
+    expect(round).toMatchObject({
+      development: true,
+      status: "completed",
+      stopReason: "missing_key",
+      logicalCommands: 0,
+      transportAttempts: 0,
+    });
+    const report = JSON.parse(await readFile(join(root, directory, "report.json"), "utf8"));
+    expect(report.development).toBe(true);
+    expect(report.score).toBeUndefined();
+    expect(JSON.parse(await readFile(join(root, directory, "summary.json"), "utf8"))).toMatchObject(
+      {
+        development: true,
+        cases: [
+          {
+            id: "m3-bug-01",
+            group: "bug",
+            expectedFailureKind: "product_bug",
+            diagnosis: null,
+            status: "unstarted",
+            errorCodes: [],
+            proposalApprovalMode: null,
+            callCount: 0,
+            tokens: { conservativeCharge: 0 },
+          },
+        ],
+      },
+    );
+    expect(await readFile(join(root, directory, "report.md"), "utf8")).toMatch(
+      /^# M3 development probe \(not a registered round\)/,
+    );
+    await expect(readFile(join(root, "evals/rounds", r.id, "started.json"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+it("does not consult an existing start marker and scores only complete dev cohorts", async () => {
+  const { root, path, r } = await developmentFixture();
+  const marker = join(root, "evals/rounds", r.id, "started.json");
+  await writeFile(marker, "registered round already started");
+  const directory = await devM3(root, path, "all-cases");
+  const report = JSON.parse(await readFile(join(root, directory, "report.json"), "utf8"));
+  expect(report).toMatchObject({
+    development: true,
+    round: { development: true, status: "completed", stopReason: "missing_key" },
+    score: { plannedMainCases: 30 },
+  });
+  expect(report.ledgers).toHaveLength(31);
+  expect(await readFile(marker, "utf8")).toBe("registered round already started");
 });
 it("accepts a new exact round identity and confines it to its registration directory", async () => {
   const { root, r } = await fixtureCopy();
@@ -267,6 +404,23 @@ it("binds implementation before controls and rejects stale hashes or missing cat
       "packages/persistence/migrations/sqlite/0008_fixture_inputs.sql",
     ]),
   );
+  const changedEffort = await implementationManifest(resolve("."), {
+    ...r,
+    requiredFreezeFiles: [],
+    corpus: "evals/m3/corpus.json",
+    decoding: { reasoning_effort: "max" },
+  });
+  const changedCapabilities = await implementationManifest(resolve("."), {
+    ...r,
+    requiredFreezeFiles: [],
+    corpus: "evals/m3/corpus.json",
+    provider: {
+      ...r.provider,
+      capabilities: { contextTokens: 1048576, maxOutputTokens: 131072 },
+    },
+  });
+  expect(() => assertImplementationBinding(manifest, changedEffort)).toThrow("changed after");
+  expect(() => assertImplementationBinding(manifest, changedCapabilities)).toThrow("changed after");
   expect(() => assertImplementationBinding(manifest, manifest)).not.toThrow();
   expect(() => assertImplementationBinding(manifest, { ...manifest, hash: "changed" })).toThrow(
     "changed after",

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0.0",
+  "label": "coverage-pilot",
+  "corpus": "evals/m3/corpus.json",
+  "caseOrder": "lexicographic ID, integration supplemental after main cases",
+  "provider": {
+    "id": "quantforge",
+    "kind": "openai-compatible",
+    "baseUrl": "https://api.quantforge.com.br/v1",
+    "apiKeyEnv": "QUANTFORGE_API_KEY",
+    "model": "muse-spark-1.3",
+    "capabilities": {
+      "contextTokens": 1048576,
+      "maxOutputTokens": 131072
+    }
+  },
+  "decoding": {
+    "reasoning_effort": "xhigh"
+  },
+  "budget": {
+    "maxTokens": 10000000,
+    "maxWallTimeMs": 7200000,
+    "commandDeadlineMs": 180000,
+    "maxLogicalCommands": 61,
+    "maxTransportAttempts": 366,
+    "outputReservation": 8192,
+    "maxInputTokens": 100000
+  },
+  "budgetDisclosure": "61 \u00d7 6 \u00d7 (100000 + 8192) = 39,598,272 local admission projection exceeds shared quota; serial admission stops when insufficient. Wire has no output ceiling, so quota is not a hard billed-spend cap. Reasoning is a component of output, not added twice. Monetary tariffs unknown.",
+  "omittedGenerationControls": [
+    "max_tokens",
+    "max_completion_tokens",
+    "temperature",
+    "top_p",
+    "seed",
+    "presence_penalty",
+    "frequency_penalty",
+    "enable_thinking"
+  ],
+  "evaluationSeed": {
+    "value": 17,
+    "meaning": "Execution seed for the isolated evaluator, not an LLM sampling parameter"
+  },
+  "denominators": {
+    "safeHealing": 12,
+    "causeAccuracy": 26,
+    "trueBugOffers": 9,
+    "healthy": 4,
+    "completion": 30,
+    "supplemental": 1
+  },
+  "targets": {
+    "diagnosisCauseAccuracy": 0.8,
+    "defectRecall": 0.9,
+    "defectPrecision": 0.9,
+    "safeHealingSuccessRate": 0.8,
+    "unsafeAutoapply": 0,
+    "criticalFalseRepair": 0
+  },
+  "id": "dev-muse-spark-xhigh"
+}

@@ -1,0 +1,393 @@
+{
+  "id": "m3-drift-12",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    },
+    {
+      "file": "shop.html",
+      "before": "    console.info('profile-ready');",
+      "after": "    const spinner=document.createElement('p'); spinner.dataset.testid='profile-loading'; spinner.textContent='Loading';view.append(spinner);setTimeout(()=>spinner.remove(),250);\n    console.info('profile-ready');"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "setTimeout(()=>spinner.remove(),250);",
+      "after": "setTimeout(()=>spinner.hidden=true,250);"
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "ea32a94ddc8ae6c2c1a148e0f4c45de87b1b8a81e0cab66a9732d29d02694598"
+  },
+  "oracle": "profileBytes",
+  "semanticNegative": "profile-ignored-write",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-12",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "profile",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "profile",
+        "required": true,
+        "input": {
+          "path": "/profile"
+        }
+      },
+      {
+        "id": "loading_attached",
+        "kind": "action",
+        "operation": "waitFor",
+        "description": "loading_attached",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "profile-loading"
+          },
+          "state": "attached",
+          "deadlineMs": 3000
+        }
+      },
+      {
+        "id": "loading_finished",
+        "kind": "action",
+        "operation": "waitFor",
+        "description": "loading_finished",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "profile-loading"
+          },
+          "state": "detached",
+          "deadlineMs": 3000
+        }
+      },
+      {
+        "id": "upload",
+        "kind": "action",
+        "operation": "upload",
+        "description": "upload",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "profile-upload"
+          },
+          "artifactRefs": [
+            "@UPLOAD_ARTIFACT@"
+          ]
+        }
+      },
+      {
+        "id": "uploaded",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "uploaded",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "upload-size"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "23"
+          }
+        }
+      },
+      {
+        "id": "download",
+        "kind": "action",
+        "operation": "download",
+        "description": "download",
+        "required": true,
+        "input": {
+          "trigger": {
+            "operation": "click",
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "profile-download"
+              }
+            }
+          },
+          "outputName": "profile.bin"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "Require exact original profile bytes",
+        "required": true,
+        "input": {
+          "outputName": "profile.bin"
+        },
+        "expectation": {
+          "predicate": "downloadMatches",
+          "outputName": "profile.bin",
+          "sha256": "d770d3d74413c6864689484c0989c9c49f390256af8d8924418500604d96235d",
+          "sizeBytes": 23
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "77a3d77b26ded229778af24b3d5dda7d84a976cf8bb42c300e8c66fea3f2110f"
+  },
+  "semanticDigests": {
+    "index.js": "7b03344513213c57345a7f104500c1cf0feb287e4e284a1f24c383f0078331e4",
+    "shop.html": "ea32a94ddc8ae6c2c1a148e0f4c45de87b1b8a81e0cab66a9732d29d02694598"
+  },
+  "transformationSourceDigest": "6c84cf075214712d7834f90a93115a7f81209d9eff7f8700897a70ae393b8d4b",
+  "expectedFailingStepIds": [
+    "loading_finished"
+  ],
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 45978,
+    "outputTokens": 8263,
+    "reasoningTokens": 6185,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 4,
+    "conservativeCharge": 54241,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-RYYkk3",
+    "baseRevision": {
+      "id": "rev_01a11943-56d0-76bc-8a4d-3a36a77499b9",
+      "protectedHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93"
+    },
+    "healthy": {
+      "runId": "run_01a11943-571b-7238-8ef4-e7f1d5a51581",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a11943-5eb5-747a-89f7-715ce28565cf",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a11943-7194-71d1-b009-41cd2656ec26",
+      "hash": "d2a5d54f49bde624346076670891137ce245fc1f010dabddb2eca7e90d074692",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a11944-1dd2-7435-86ae-978c34748993",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "560cb1c2e66b990d1ffe7c1d935058c398ae191fb81b1dd243bab4d5f1104f00",
+        "responseHash": "c6116fc6960adb7d10354fde43eb6ac654e43a2d2c3123f3c69c4cc0e8b87c1a",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "invalid",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 11021,
+          "outputTokens": 2537,
+          "reasoningTokens": 1976
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a11944-da36-7662-adfe-77f1ba368c81",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "9483d358e213cabee532a6fa71d08e99c874316754ee2e639856533692664d62",
+        "responseHash": "afa07846c02d609f0521df94469c684336c146aa61c2749d15a9abcb244c0d7b",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 1,
+        "transportAttempt": 0,
+        "outcome": "invalid",
+        "usage": {
+          "cachedInputTokens": 10752,
+          "inputTokens": 11096,
+          "outputTokens": 2493,
+          "reasoningTokens": 1836
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a11945-9b25-7313-988f-ad7e69bd95df",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "aefea9eccb463cbec86722f4284ae4d110a263bfaeb3c1e3dcd5884db6eff37a",
+        "responseHash": "10d6f2989bd5ff1fbcb29a7fb1de6072c2a40aad3893f981abd7d359243b3a6a",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 2,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 10752,
+          "inputTokens": 11194,
+          "outputTokens": 2119,
+          "reasoningTokens": 1473
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a11945-ed48-73e5-8562-6791c4994ac1",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "9b313edea3a9f6dfce06692f21cece0cb83767864fd143e89b26776d969b9ba1",
+        "responseHash": "43ea14ddbe8a30b76dbc291696b5ddb2b2eed2cc9c1108c7885448a8f971544b",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 2048,
+          "inputTokens": 12667,
+          "outputTokens": 1114,
+          "reasoningTokens": 900
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a11945-9b26-71b8-8f6a-949f5e4adf29",
+      "hash": "b24c6785bad2309b7459f6af7e2c8f52f3216059ad1fe27c9a8ef00671a349da"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a11943-56d0-76bc-8a4d-3a36a77499b9",
+      "candidateRevisionId": "rev_01a11945-edcd-744f-a593-e1602105bc58",
+      "baseHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+      "candidateHash": "14874d22b3afeef32fb7803789ca5dede54b8906f616de1906d69146cab31a93",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a11945-edcb-7734-8fa5-1df6af0ff2bc",
+      "hash": "162e34816d5c28333af92de58fbcdc4a44bd25bdd8198e598d49e41ae65d6a5f",
+      "status": "proposed",
+      "approvalMode": null
+    }
+  }
+}

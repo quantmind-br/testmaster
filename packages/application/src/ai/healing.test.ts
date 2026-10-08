@@ -552,7 +552,7 @@ it("oversized evidence refuses before model dispatch rather than enlarging the c
   });
 });
 
-function repeatedControlPlan(differentOriginal = false): ExecutablePlan {
+function repeatedControlPlan(differentOriginal = false, password = false): ExecutablePlan {
   const plan = scaffoldPlan("frontend");
   plan.steps = ["first", "later"].map((id) => ({
     id,
@@ -560,10 +560,12 @@ function repeatedControlPlan(differentOriginal = false): ExecutablePlan {
     operation: "click" as const,
     description: "Submit form",
     input: {
-      locator: {
-        by: "css" as const,
-        value: differentOriginal && id === "later" ? "#other > button" : "#form > button",
-      },
+      locator: password
+        ? { by: "testId" as const, value: "password" }
+        : {
+            by: "css" as const,
+            value: differentOriginal && id === "later" ? "#other > button" : "#form > button",
+          },
     },
   }));
   plan.steps.push({
@@ -581,13 +583,14 @@ function locatorRecord(
   locator: Locator,
   matched: boolean,
   name = "Sign in",
+  password = false,
 ): LocatorEvidence {
   const candidate = {
-    role: "button",
+    role: password ? "" : "button",
     name,
-    tag: "button",
-    type: "submit",
-    attributes: {},
+    tag: password ? "input" : "button",
+    type: password ? "password" : "submit",
+    attributes: password ? { name: "password", "data-testid": "login-password" } : {},
     matched,
     visible: true,
   };
@@ -604,9 +607,12 @@ function locatorRecord(
   };
   return { ...payload, evidenceHash: semanticHash(payload) };
 }
-async function deferredFixture(differentOriginal = false) {
-  const replacement: Locator = { by: "role", role: "button", name: "Sign in", exact: true };
-  const plan = repeatedControlPlan(differentOriginal);
+async function deferredFixture(differentOriginal = false, password = false) {
+  const replacement: Locator = password
+    ? { by: "testId", value: "login-password" }
+    : { by: "role", role: "button", name: "Sign in", exact: true };
+  const name = password ? "Password" : "Sign in";
+  const plan = repeatedControlPlan(differentOriginal, password);
   const f = await generationFixture(
     {
       kind: "patch",
@@ -670,10 +676,23 @@ async function deferredFixture(differentOriginal = false) {
     [
       baseline.id,
       plan.steps.flatMap((step) =>
-        "locator" in step.input ? [locatorRecord(step.id, step.input.locator, true)] : [],
+        "locator" in step.input
+          ? [locatorRecord(step.id, step.input.locator, true, name, password)]
+          : [],
       ),
     ],
-    [failed.id, [locatorRecord("first", { by: "css", value: "#form > button" }, false)]],
+    [
+      failed.id,
+      [
+        locatorRecord(
+          "first",
+          password ? { by: "testId", value: "password" } : { by: "css", value: "#form > button" },
+          false,
+          name,
+          password,
+        ),
+      ],
+    ],
   ]);
   vi.spyOn(f.service.artifacts, "get").mockImplementation(
     async (id) =>
@@ -753,6 +772,17 @@ it("a repeated locator on an unexecuted step is deferred and promoted only after
   expect(result.status).toBe("verified");
   expect(result.extensions?.["testmaster:deferredLocatorProofRunId"]).toBe(f.verification.id);
   expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(proposal.candidateRevisionId);
+});
+it("a named password input without an ARIA role is deferred and promoted after verification identity proof", async () => {
+  const f = await deferredFixture(false, true);
+  const proposal = await f.service.propose(f.failed.id);
+  expect(proposal.approvalMode).toBe("policy");
+  expect(proposal.extensions).toMatchObject({
+    "testmaster:deferredLocatorProofs": [{ stepId: "later" }],
+  });
+  f.records.set(f.verification.id, [locatorRecord("later", f.replacement, true, "Password", true)]);
+  const result = await f.service.reconcile(f.verification.id);
+  expect(result.status).toBe("verified");
 });
 it("an unexecuted step with a different original locator remains manual", async () => {
   const f = await deferredFixture(true);

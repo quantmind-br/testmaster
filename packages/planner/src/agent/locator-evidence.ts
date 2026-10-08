@@ -115,6 +115,14 @@ function selects(locator: Locator, element: LocatorCandidate): boolean {
       return false;
   }
 }
+/** An element has a provable semantic identity when it is named and has a role, or is a named password input. */
+export function hasNamedIdentity(element: LocatorEvidence["candidates"][number]): boolean {
+  return (
+    (!!element.role || (element.tag === "input" && element.type === "password")) &&
+    !!element.name &&
+    !element.name.includes("[REDACTED]")
+  );
+}
 export function assessLocatorEquivalence(
   baseline: LocatorEvidence[],
   failed: LocatorEvidence[],
@@ -141,12 +149,7 @@ export function assessLocatorEquivalence(
       base.candidates.filter((element) => element.fingerprint === original.fingerprint).length !== 1
     )
       continue;
-    if (
-      (!original.role && !(original.tag === "input" && original.type === "password")) ||
-      !original.name ||
-      original.name.includes("[REDACTED]")
-    )
-      continue;
+    if (!hasNamedIdentity(original)) continue;
     for (const failure of failures) {
       if (
         !validLocatorEvidence(failure) ||

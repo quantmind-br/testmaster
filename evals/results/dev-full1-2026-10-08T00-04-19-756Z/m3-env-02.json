@@ -1,0 +1,193 @@
+{
+  "id": "m3-env-02",
+  "group": "env",
+  "expectedFailureKind": "environment",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "serviceHealth",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-env-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "health",
+        "kind": "action",
+        "operation": "request",
+        "description": "health",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "health"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "health",
+          "jsonPointer": "/status"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "ok"
+          }
+        }
+      }
+    ]
+  },
+  "environmentFailure": "unreachable-approved-target",
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "ba7e54aed941f398b9a3d4ba9664f01d3734e6dd3968fd0a4824a5f3f1909473",
+  "expectedFailingStepIds": [],
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "environment",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 3863,
+    "outputTokens": 2787,
+    "reasoningTokens": 1874,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 6650,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "66d0095380bf66b6e27134773a83ebe995aed2bdf2f5fc698afe8439400fdb94"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-6lcgBg",
+    "baseRevision": {
+      "id": "rev_01a118f4-09fc-7213-8895-b20f0ef7dad7",
+      "protectedHash": "c043a7c18d63d16a276b138387f316bdbb7d33aa71f4402c440f2bb7267fde37"
+    },
+    "healthy": {
+      "runId": "run_01a118f4-0a55-7539-8043-4bd20f3d44be",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a118f4-0e1a-7060-abad-527c96ff7406",
+      "outcome": "inconclusive",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a118f4-111e-7666-8dc7-271a203638aa",
+      "hash": "60be335158bfc767c99f5abbe828891242df37b8cc08264432b5c8513a456854",
+      "failureKind": "environment"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a118f4-9b7f-7199-9446-7bdaf898a018",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "dad385c94ec7718e22ac3f992dc6de2db1bc2f48e092c627801c83f45e373a3e",
+        "responseHash": "ece0057fff5e6fc95725e966de97d5a81091535f44d68006dc8f417a15287c0c",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "invalid",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 1894,
+          "outputTokens": 1521,
+          "reasoningTokens": 879
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a118f5-0654-739b-b98f-c4874f96f437",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "e9c48dbfca66a6aa5a4b9c60200c0ccfc78bd74bbaedc00ed1f7cc8f62fc12df",
+        "responseHash": "d7f542ebae7e4b43e507edacd4ab9d7b2125f5e1431cf19e6957c42c508168d1",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 1,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 1024,
+          "inputTokens": 1969,
+          "outputTokens": 1266,
+          "reasoningTokens": 995
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a118f5-0655-71dd-b622-7e6b0d264054",
+      "hash": "176e438b663ac405e8dca1c42f42e13e3393425a8970b91aee177259282cf02a"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "not_failed",
+      "messageHash": "cceecb584eea682acbbf8b32d89d28148223b9e6b26803514204aac60758eed0",
+      "detail": "PRECONDITION_FAILED: Healing requires a terminal failed Run"
+    }
+  }
+}

@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Application, entity } from "@testmaster/application";
 import type { ExecutablePlan, HealingProposal, Requirement } from "@testmaster/contracts";
-import { defaults, validate } from "@testmaster/contracts";
+import { defaults, reasoningEfforts, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { assertionsHash } from "@testmaster/planner";
 import * as fixture from "../../../evals/m3/fixture.mjs";
@@ -53,7 +53,14 @@ export interface M3Registration {
   corpus: string;
   frozenFiles: Record<string, string>;
   requiredFreezeFiles: string[];
-  provider: { id: string; kind: string; baseUrl: string; apiKeyEnv: string; model: string };
+  provider: {
+    id: string;
+    kind: string;
+    baseUrl: string;
+    apiKeyEnv: string;
+    model: string;
+    capabilities?: { contextTokens: number; maxOutputTokens: number };
+  };
   decoding: { reasoning_effort: string };
   budget: {
     maxTokens: number;
@@ -86,6 +93,7 @@ interface Round {
   consecutiveTransportFailures: number;
   stopReason: string | null;
   pending: { caseId: string; reservation: number } | null;
+  development?: true;
 }
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 /**
@@ -213,17 +221,102 @@ export async function assertNotStarted(root: string, id: string) {
   if (entries.some((entry) => entry.isDirectory() && entry.name.startsWith(`${id}-`)))
     throw new Error("Registration already started; settle retained ledgers without new paid calls");
 }
+function validateMeasurementInputs(registration: M3Registration, corpus: Corpus) {
+  const provider = registration.provider;
+  const decoding = registration.decoding;
+  if (
+    !provider ||
+    provider.kind !== "openai-compatible" ||
+    [provider.id, provider.model, provider.apiKeyEnv].some(
+      (value) => typeof value !== "string" || !value.trim(),
+    ) ||
+    !/^[A-Za-z_][A-Za-z0-9_]*$/.test(provider.apiKeyEnv) ||
+    typeof provider.baseUrl !== "string" ||
+    !URL.canParse(provider.baseUrl) ||
+    !["http:", "https:"].includes(new URL(provider.baseUrl).protocol) ||
+    !decoding ||
+    Object.keys(decoding).length !== 1 ||
+    !reasoningEfforts.some((effort) => effort === decoding.reasoning_effort)
+  )
+    throw new Error("Invalid provider or generation controls");
+  if (
+    provider.capabilities !== undefined &&
+    (!provider.capabilities ||
+      ![provider.capabilities.contextTokens, provider.capabilities.maxOutputTokens].every(
+        (value) => Number.isSafeInteger(value) && value > 0,
+      ))
+  )
+    throw new Error("Invalid provider capabilities");
+  const budget = registration.budget;
+  if (
+    !budget ||
+    ![
+      budget.maxTokens,
+      budget.maxWallTimeMs,
+      budget.commandDeadlineMs,
+      budget.maxLogicalCommands,
+      budget.maxTransportAttempts,
+      budget.outputReservation,
+      budget.maxInputTokens,
+    ].every((value) => Number.isSafeInteger(value) && value > 0)
+  )
+    throw new Error("Invalid round budget");
+  if (
+    !corpus ||
+    !Array.isArray(corpus.cases) ||
+    corpus.cases.length !== 31 ||
+    new Set(corpus.cases.map((row) => row.id)).size !== 31 ||
+    !corpus.baseFiles ||
+    !corpus.semanticPatches ||
+    typeof corpus.uploadFixture?.content !== "string" ||
+    hash(corpus.uploadFixture.content) !== corpus.uploadFixture.sha256
+  )
+    throw new Error("Invalid M3 corpus");
+  const labels: PlannedCase[] = [
+    ...plannedCases(),
+    { id: "m3-integration-01", group: "integration", expectedFailureKind: "product_bug" },
+  ];
+  for (const label of labels) {
+    const item = corpus.cases.find((row) => row.id === label.id);
+    if (
+      !item ||
+      item.group !== label.group ||
+      item.expectedFailureKind !== label.expectedFailureKind ||
+      typeof item.mutant !== "string" ||
+      typeof item.semanticNegative !== "string" ||
+      typeof item.oracle !== "string" ||
+      !Array.isArray(item.expectedFailingStepIds) ||
+      item.plan?.kind !== "executable" ||
+      !Array.isArray(item.plan.steps) ||
+      (item.healthyPlan !== undefined &&
+        (item.healthyPlan.kind !== "executable" || !Array.isArray(item.healthyPlan.steps))) ||
+      ![item.patches, item.baselinePatches].every(
+        (patches) =>
+          Array.isArray(patches) &&
+          patches.every(
+            (patch) =>
+              typeof patch.file === "string" &&
+              typeof patch.before === "string" &&
+              typeof patch.after === "string",
+          ),
+      )
+    )
+      throw new Error(`Invalid corpus case: ${label.id}`);
+  }
+}
 export async function checkM3(root: string, registrationPath: string) {
   const registration = JSON.parse(
     await readFile(confined(root, registrationPath), "utf8"),
   ) as M3Registration;
   const corpus = JSON.parse(await readFile(confined(root, registration.corpus), "utf8")) as Corpus;
+  validateMeasurementInputs(registration, corpus);
   assertRegistrationIdentity(registration.id, registrationPath);
   if (registration.status !== "preregistered-not-executed")
     throw new Error("Invalid M3 registration status");
   await assertNotStarted(root, registration.id);
   if (
-    JSON.stringify(registration.decoding) !== JSON.stringify({ reasoning_effort: "medium" }) ||
+    Object.keys(registration.decoding).length !== 1 ||
+    !reasoningEfforts.some((effort) => effort === registration.decoding.reasoning_effort) ||
     registration.provider.baseUrl !== "https://api.quantforge.com.br/v1" ||
     registration.provider.apiKeyEnv !== "QUANTFORGE_API_KEY" ||
     registration.provider.model !== "qwen3.8-flash" ||
@@ -1134,7 +1227,11 @@ export function bindCollectionFailure() {
   };
 }
 /** Operator-owned profile/policy for the isolated evaluation home, in the schema the CLI accepts. */
-export async function writeEvalProfile(home: string, provider: M3Registration["provider"]) {
+export async function writeEvalProfile(
+  home: string,
+  provider: M3Registration["provider"],
+  decoding: M3Registration["decoding"],
+) {
   await mkdir(join(home, ".config/testmaster"), { recursive: true });
   await writeFile(
     join(home, ".config/testmaster/profiles.json"),
@@ -1151,12 +1248,12 @@ export async function writeEvalProfile(home: string, provider: M3Registration["p
               models: [
                 {
                   id: provider.model,
-                  reasoningEffort: "medium",
+                  reasoningEffort: decoding.reasoning_effort,
                   capabilities: {
                     structuredJson: true,
                     toolCalls: true,
-                    contextTokens: 128000,
-                    maxOutputTokens: 8192,
+                    contextTokens: provider.capabilities?.contextTokens ?? 128000,
+                    maxOutputTokens: provider.capabilities?.maxOutputTokens ?? 8192,
                   },
                 },
               ],
@@ -1209,7 +1306,7 @@ async function setup(
     env.TESTMASTER_OFFLINE = "false";
     env[r.provider.apiKeyEnv] = "model-free-provider-guard";
   }
-  await writeEvalProfile(home, r.provider);
+  await writeEvalProfile(home, r.provider, r.decoding);
   await new Promise<void>((accept, reject) => {
     const child = spawn(
       process.execPath,
@@ -1332,12 +1429,56 @@ function grounded(analysis: { facts: unknown[]; hypotheses: unknown[]; failureKi
   );
 }
 async function report(root: string, round: Round, ledgers: M3Ledger[]) {
+  if (round.development) {
+    await atomic(join(root, round.directory, "summary.json"), {
+      development: true,
+      status: round.status,
+      stopReason: round.stopReason,
+      cases: ledgers.map((ledger) => ({
+        id: ledger.id,
+        group: ledger.group,
+        expectedFailureKind: ledger.expectedFailureKind,
+        diagnosis: ledger.diagnosis,
+        status: ledger.status,
+        errorCodes: ledger.errors.map((error) => error.code),
+        proposalApprovalMode:
+          (ledger.records.proposal as { approvalMode?: string } | undefined)?.approvalMode ?? null,
+        healing: ledger.healing,
+        callCount: ((ledger.records.calls ?? []) as unknown[]).length,
+        tokens: {
+          input: ledger.usage.inputTokens,
+          output: ledger.usage.outputTokens,
+          reasoning: ledger.usage.reasoningTokens,
+          conservativeCharge: ledger.usage.conservativeCharge,
+          unknownCalls: ledger.usage.unknownCalls,
+        },
+      })),
+    });
+    if (ledgers.filter((ledger) => ledger.group !== "integration").length !== 30) {
+      await atomic(join(root, round.directory, "round.json"), round);
+      await atomic(join(root, round.directory, "report.json"), {
+        development: true,
+        round,
+        ledgers,
+      });
+      await writeFile(
+        join(root, round.directory, "report.md"),
+        `# M3 development probe (not a registered round)\n\nStatus: ${round.status}; stop: ${round.stopReason ?? "none"}.\n\nSelected cases: ${ledgers.length}. See summary.json and per-case ledgers; no primary metrics are scored for subsets. Development probes never count toward a milestone gate.\n`,
+      );
+      return;
+    }
+  }
   const score = scoreM3(ledgers);
   await atomic(join(root, round.directory, "round.json"), round);
-  await atomic(join(root, round.directory, "report.json"), { round, score, ledgers });
+  await atomic(join(root, round.directory, "report.json"), {
+    ...(round.development ? { development: true } : {}),
+    round,
+    score,
+    ledgers,
+  });
   await writeFile(
     join(root, round.directory, "report.md"),
-    `# M3 coverage pilot\n\nStatus: ${round.status}; stop: ${round.stopReason ?? "none"}.\n\nSafe healing: ${score.safeHealingSuccessRate.successes}/12. Cause accuracy: ${score.diagnosisCauseAccuracy.successes}/26. Completion: ${score.endToEndCompletion.successes}/30.\n\n${score.limitations.join("\n\n")}\n`,
+    `${round.development ? "# M3 development probe (not a registered round)" : "# M3 coverage pilot"}\n\nStatus: ${round.status}; stop: ${round.stopReason ?? "none"}.\n\nSafe healing: ${score.safeHealingSuccessRate.successes}/12. Cause accuracy: ${score.diagnosisCauseAccuracy.successes}/26. Completion: ${score.endToEndCompletion.successes}/30.\n\n${score.limitations.join("\n\n")}\n${round.development ? "\nDevelopment probes never count toward a milestone gate.\n" : ""}`,
   );
 }
 export async function settleM3(root: string, directory: string) {
@@ -1447,10 +1588,65 @@ export async function runM3(root: string, commit: string, path: string) {
     stopReason: null,
     pending: null,
   };
-  const ordered = corpus.cases
+  await executeRound(root, r, corpus, directory, round, orderedCases(corpus));
+}
+/** Development measurements share execution safeguards, but never claim registered-round evidence. */
+export async function devM3(
+  root: string,
+  registrationPath: string,
+  outLabel: string,
+  caseIds?: string[],
+) {
+  if (!/^[a-z0-9][a-z0-9.-]{0,40}$/.test(outLabel))
+    throw new Error("Invalid development output label");
+  const bytes = await readFile(confined(root, registrationPath));
+  const r = JSON.parse(bytes.toString()) as M3Registration;
+  if (typeof r.corpus !== "string" || !r.corpus)
+    throw new Error("Invalid development registration");
+  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  validateMeasurementInputs(r, corpus);
+  const allCases = orderedCases(corpus);
+  if (caseIds !== undefined) {
+    if (!caseIds.length) throw new Error("Select at least one development case");
+    for (const id of caseIds)
+      if (!allCases.some((item) => item.id === id)) throw new Error(`Unknown M3 case ID: ${id}`);
+  }
+  const selected = caseIds ? allCases.filter((item) => caseIds.includes(item.id)) : allCases;
+  const directory = `evals/results/dev-${outLabel}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  await mkdir(join(root, "evals/results"), { recursive: true });
+  await mkdir(join(root, directory), { recursive: false, mode: 0o700 });
+  const round: Round = {
+    registrationId: typeof r.id === "string" ? r.id : `dev-${outLabel}`,
+    registrationHash: hash(bytes),
+    commit: "",
+    directory,
+    startedAt: new Date().toISOString(),
+    status: "started",
+    chargedTokens: 0,
+    logicalCommands: 0,
+    transportAttempts: 0,
+    consecutiveTransportFailures: 0,
+    stopReason: null,
+    pending: null,
+    development: true,
+  };
+  await executeRound(root, r, corpus, directory, round, selected);
+  return directory;
+}
+function orderedCases(corpus: Corpus) {
+  return corpus.cases
     .filter((row) => row.group !== "integration")
     .sort((a, b) => a.id.localeCompare(b.id))
     .concat(corpus.cases.filter((row) => row.group === "integration"));
+}
+async function executeRound(
+  root: string,
+  r: M3Registration,
+  corpus: Corpus,
+  directory: string,
+  round: Round,
+  ordered: Case[],
+) {
   const ledgers = ordered.map(emptyLedger);
   const flush = async () => {
     await atomic(join(root, directory, "round.json"), round);
@@ -2035,17 +2231,19 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         ? controlsM3(root, args[0]!, args[1]!)
         : mode === "run" && args.length === 2
           ? runM3(root, args[0]!, args[1]!)
-          : mode === "settle" && args.length === 1
-            ? settleM3(root, args[0]!)
-            : mode === "policy-probes" && args.length === 2
-              ? policyProbesM3(root, args[0]!, args[1]!)
-              : mode === "freeze" && args.length === 3
-                ? freezeM3(root, args[0]!, args[1]!, args[2]!)
-                : Promise.reject(
-                    new Error(
-                      "Usage: m3 check REGISTRATION | controls REGISTRATION OUT_DIR | policy-probes REGISTRATION OUT_DIR | run COMMIT REGISTRATION | settle RESULTS | freeze REGISTRATION CONTROLS POLICY_PROBES",
-                    ),
-                  );
+          : mode === "dev" && args.length >= 2
+            ? devM3(root, args[0]!, args[1]!, args.length > 2 ? args.slice(2) : undefined)
+            : mode === "settle" && args.length === 1
+              ? settleM3(root, args[0]!)
+              : mode === "policy-probes" && args.length === 2
+                ? policyProbesM3(root, args[0]!, args[1]!)
+                : mode === "freeze" && args.length === 3
+                  ? freezeM3(root, args[0]!, args[1]!, args[2]!)
+                  : Promise.reject(
+                      new Error(
+                        "Usage: m3 check REGISTRATION | controls REGISTRATION OUT_DIR | policy-probes REGISTRATION OUT_DIR | run COMMIT REGISTRATION | dev REGISTRATION OUT_LABEL [CASE_ID...] | settle RESULTS | freeze REGISTRATION CONTROLS POLICY_PROBES",
+                      ),
+                    );
   command.catch((error) => {
     console.error(JSON.stringify({ error: String(error) }));
     process.exitCode = 1;
