@@ -56,6 +56,14 @@ rejected by both extension and magic, never recursively unpacked.
 
 ## Relocatable runtime distribution
 
+Experimental public runtime releases target Linux x64 with Node 24 and rootful hardened
+Docker using the containerd image store. Internal workspace packages remain private;
+the relocatable archive, not an incomplete npm package, is the distribution boundary.
+Every historical file referenced by the traceability registry must be versioned so
+`pnpm check` can validate an independent clean checkout. Preservation capture trees
+that are not referenced are not required release inputs. Public availability does not
+homologate M3 model, healing or integration capabilities.
+
 Release packaging runs from a clean worktree of the committed release (dirty or untracked
 sources are refused) after building the CLI and freezing the runner image lock:
 

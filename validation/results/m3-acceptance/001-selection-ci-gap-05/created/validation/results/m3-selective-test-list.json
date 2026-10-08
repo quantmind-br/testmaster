@@ -1,0 +1,228 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-selective-test-list",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T01:17:15.384Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-selective-test-list",
+        "--base-url",
+        "http://127.0.0.1:44607",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a12e0a17-2da3-48a6-ab18-2d2481208954",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-M6kZs2/repo/one.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d635415a-9e52-4721-b2a4-4ad31c51b9d3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-M6kZs2/repo/two.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8cd1a784-9cbd-49b8-8e74-447c1cb7da8c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-M6kZs2/repo/quarantined.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d7c9525e-4759-4c26-bd39-341e7a638da6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-M6kZs2/repo/archived.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_47ccb39f-956d-4d32-b6fe-9e2350ed0000",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a113ef-6acb-7777-bb87-41aa0711da96",
+        "tst_01a113ef-6e16-77cb-9438-31efb67d137e",
+        "tst_01a113ef-7141-728f-b218-6c7e40ada984",
+        "tst_01a113ef-7463-700c-a434-9e856cee3621",
+        "--wait",
+        "--env",
+        "env_01a113ef-688b-75c5-ab4d-a6a9ee501343",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d79e386b-3319-42d3-ac5d-d244a746dbbb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "quarantine",
+        "tst_01a113ef-7141-728f-b218-6c7e40ada984",
+        "--reason",
+        "owner investigating flaky fixture",
+        "--expires-at",
+        "2026-10-07T02:17:10.055Z",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ffc93e6c-d8b3-4a53-8bb0-ca663055acb4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "archive",
+        "tst_01a113ef-7463-700c-a434-9e856cee3621",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fdcdb47f-b0f1-4a1f-87a6-6702076842bd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a113ef-6acb-7777-bb87-41aa0711da96",
+        "tst_01a113ef-6e16-77cb-9438-31efb67d137e",
+        "tst_01a113ef-7141-728f-b218-6c7e40ada984",
+        "tst_01a113ef-7463-700c-a434-9e856cee3621",
+        "--wait",
+        "--env",
+        "env_01a113ef-688b-75c5-ab4d-a6a9ee501343",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a613ab02-95d3-4b8e-a637-eaa8a778437d",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a113ef-7ea6-73f5-9bc6-f4f6d4474813",
+    "run_01a113ef-7ea8-724d-b0ce-d6f4ab27f819",
+    "run_01a113ef-7ea9-72e0-b47f-41c37886320e",
+    "run_01a113ef-7eab-7050-b944-0dd1e48f318b",
+    "run_01a113ef-9cf4-7613-a75b-e66ec13cd9d2",
+    "run_01a113ef-9cf6-750f-9ae3-62a7c55f0814"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "explicitListExclusions",
+      "healthyBatchId": "bat_01a113ef-7ea4-759b-99b4-bcf4f1eeeb67",
+      "selectedBatchId": "bat_01a113ef-9cf2-768c-b315-a69d577a3161",
+      "exclusions": [
+        {
+          "testId": "tst_01a113ef-7141-728f-b218-6c7e40ada984",
+          "reason": "quarantined",
+          "owner": "usr_01a113ef-687c-74fb-b2e6-01679886594a",
+          "detail": "owner investigating flaky fixture",
+          "expiresAt": "2026-10-07T02:17:10.055Z"
+        },
+        {
+          "testId": "tst_01a113ef-7463-700c-a434-9e856cee3621",
+          "reason": "archived",
+          "owner": null,
+          "detail": null,
+          "expiresAt": null
+        }
+      ],
+      "paths": [
+        "/one",
+        "/two",
+        "/quarantined",
+        "/archived",
+        "/one",
+        "/two"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-analysis-deadline-source",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T15:31:47.728Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-analysis-deadline-source",
+        "--base-url",
+        "http://127.0.0.1:35577",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6a248b6b-ddb2-4b6e-a38c-23dd2ee791f4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-7Sb921/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9a79ecb5-0d04-4023-b3da-0656464fcaf4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "analyze",
+        "run_01a116fd-f9de-7259-a7dc-ab09b385c599",
+        "--model",
+        "--deadline-ms",
+        "100",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8d887d7e-7931-4097-b5a7-18ad2ed29cb1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "analyze",
+        "run_01a116fd-f9de-7259-a7dc-ab09b385c599",
+        "--model",
+        "--deadline-ms",
+        "100",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_99f1a671-f520-4571-99c2-79e5bfb793e9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "analyze",
+        "run_01a116fd-f9de-7259-a7dc-ab09b385c599",
+        "--model",
+        "--discovery",
+        "dsc_01a116fd-f98e-7122-a673-ff26697d5c69",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_50e36ade-2bed-480b-b711-e954c7ae83b3",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a116fd-f9de-7259-a7dc-ab09b385c599"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "analysisDeadlineSourceBinding",
+      "controlledProvider": true,
+      "qualityEvidence": false,
+      "runId": "run_01a116fd-f9de-7259-a7dc-ab09b385c599",
+      "timeoutAnalysisId": "ana_01a116fd-feae-7302-abb8-21d0324b9a03",
+      "sourceAnalysisId": "ana_01a116fe-0179-7253-99e5-cf8f84794216",
+      "dispatches": 2
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

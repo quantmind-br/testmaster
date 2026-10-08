@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-uncertain-effect-cleanup",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T01:18:53.263Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-uncertain-effect-cleanup",
+        "--base-url",
+        "http://127.0.0.1:40647",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ca2a8935-fb4f-4975-978f-57e6f733192e",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a113f1-1115-7634-9244-b020286dca25",
+    "run_01a113f1-1dff-745d-8768-25179e39df70"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "lostEffectAndDeniedCleanup",
+      "runId": "run_01a113f1-1dff-745d-8768-25179e39df70",
+      "postEffects": 1,
+      "persistedUsers": 1,
+      "deniedCleanupRequests": 0,
+      "authorizedCleanupRequests": 1,
+      "resourceId": "res_01a113f1-2293-71fd-aec3-4ba169f95ccf"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

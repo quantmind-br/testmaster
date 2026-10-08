@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-inconclusive",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T00:36:19.424Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-inconclusive",
+        "--base-url",
+        "http://127.0.0.1:44885",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4f671357-afea-4a14-86f9-1ded7ae6959a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a113ca-20ac-776a-85c0-5686ae8283e6",
+        "--env",
+        "local",
+        "--output-dir",
+        "/tmp/tm-m1-dBf30c/inconclusive-output",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_66ccc79c-7f4d-412c-8d5b-c3dee56a95ec",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a113ca-2984-716c-bdc2-327adbf60213"
+  ],
+  "oracleVerdicts": [],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

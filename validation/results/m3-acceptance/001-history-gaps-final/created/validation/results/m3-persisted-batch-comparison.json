@@ -1,0 +1,279 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-persisted-batch-comparison",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T01:15:26.145Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-persisted-batch-comparison",
+        "--base-url",
+        "http://127.0.0.1:38251",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_27dbdb61-74d5-47da-819d-16360912e414",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a113ed-e26a-70a7-a493-591db4d969d9",
+    "run_01a113ed-e277-76de-90fd-35dea5644bc8",
+    "run_01a113ed-e8b0-742c-ad2f-f925dad45530",
+    "run_01a113ed-e8ba-726d-a748-380daa725ac8",
+    "run_01a113ed-ef56-7120-872d-b7ddf65dec05",
+    "run_01a113ed-ef63-7438-9013-52bfbb3d1be9",
+    "run_01a113ed-f601-72e0-a435-651d11f24fef",
+    "run_01a113ed-f60f-779a-8b56-3857d97d5d6e"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "persistedLogicalBatchMatching",
+      "batches": [
+        "bat_01a113ed-e25b-76ed-94d4-40e12bdf86ec",
+        "bat_01a113ed-e8a2-75d5-b0b6-1a0db8bcb487",
+        "bat_01a113ed-ef49-742f-81a5-2b7e8ec5d9fb",
+        "bat_01a113ed-f5f7-7382-94aa-d731255a9b88"
+      ],
+      "diff": {
+        "comparability": "partially_comparable",
+        "reasons": [
+          "member-added-or-removed"
+        ],
+        "differences": [
+          {
+            "field": "member-4ce9b9220f6f6f8328bf9ffd4f397065269ee9ef0c434c896ac554bb918fd46b",
+            "left": null,
+            "right": "run_01a113ed-ef56-7120-872d-b7ddf65dec05"
+          },
+          {
+            "field": "5646f7fe05eed91dc918d69be8dac4669415684b04a7184a11d0d69201a1de9b-steps",
+            "left": [
+              {
+                "createdAt": "2026-10-07T01:15:20.185Z",
+                "durationMs": 36,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a113ed-e2a6-7017-8353-4a13dde635be"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a113ed-e1a9-7348-9131-ed3661dc4375"
+              },
+              {
+                "createdAt": "2026-10-07T01:15:20.186Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": null,
+                "index": 1,
+                "observed": null,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a113ed-e1a9-7348-9131-ed3661dc4375"
+              },
+              {
+                "createdAt": "2026-10-07T01:15:20.187Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": null,
+                "index": 2,
+                "observed": null,
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a113ed-e1a9-7348-9131-ed3661dc4375"
+              }
+            ],
+            "right": [
+              {
+                "createdAt": "2026-10-07T01:15:24.228Z",
+                "durationMs": 10,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a113ed-f25a-711f-bf51-9342a39758b1"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a113ed-e1a9-7348-9131-ed3661dc4375"
+              },
+              {
+                "createdAt": "2026-10-07T01:15:24.229Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": null,
+                "index": 1,
+                "observed": null,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a113ed-e1a9-7348-9131-ed3661dc4375"
+              },
+              {
+                "createdAt": "2026-10-07T01:15:24.230Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": null,
+                "index": 2,
+                "observed": null,
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a113ed-e1a9-7348-9131-ed3661dc4375"
+              }
+            ]
+          },
+          {
+            "field": "5646f7fe05eed91dc918d69be8dac4669415684b04a7184a11d0d69201a1de9b-artifacts",
+            "left": [
+              {
+                "kind": "http",
+                "hash": "32847f09ef9022ebff3c31488b8d1cf5826226c7cc262d53fa22011dea42c0da",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "3facff5644f26e4919083f3c4a8d4f8e68a6b03aff6d8d0421d2f1d7dde99ff2",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "f67f430501f3117b7b4b9c09e31e9229a8b0facbe77b3542af59ca97ebc8a1be",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ],
+            "right": [
+              {
+                "kind": "http",
+                "hash": "32a35637135c5ef8333b39190068a8454fdea7b26457249e78aaf694e6292f6a",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "3facff5644f26e4919083f3c4a8d4f8e68a6b03aff6d8d0421d2f1d7dde99ff2",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "a8c8a8173bfd54a92a6c53d2c93574160e50020824ae1393b7f9a9f41bcc3b56",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ]
+          },
+          {
+            "field": "5646f7fe05eed91dc918d69be8dac4669415684b04a7184a11d0d69201a1de9b-durations",
+            "left": [
+              {
+                "number": 1,
+                "durationMs": 689
+              }
+            ],
+            "right": [
+              {
+                "number": 1,
+                "durationMs": 745
+              }
+            ]
+          },
+          {
+            "field": "member-83fe69dfcadd95ea8ffc038c376dae35f5e5b6ab25edf8e46109155c3ec0eb90",
+            "left": "run_01a113ed-e277-76de-90fd-35dea5644bc8",
+            "right": null
+          }
+        ],
+        "comparisonIdentity": "682389493ad81ffe384e0f91ec912d298fe7449a3c22f0024bf6761eff8b883f",
+        "nextCursor": null
+      },
+      "duplicate": {
+        "comparability": "incomparable",
+        "reasons": [
+          "ambiguous-logical-member-key",
+          "member-added-or-removed"
+        ],
+        "differences": [
+          {
+            "field": "ambiguous-5646f7fe05eed91dc918d69be8dac4669415684b04a7184a11d0d69201a1de9b",
+            "left": [
+              "run_01a113ed-f601-72e0-a435-651d11f24fef",
+              "run_01a113ed-f60f-779a-8b56-3857d97d5d6e"
+            ],
+            "right": [
+              "run_01a113ed-e8ba-726d-a748-380daa725ac8"
+            ]
+          },
+          {
+            "field": "member-83fe69dfcadd95ea8ffc038c376dae35f5e5b6ab25edf8e46109155c3ec0eb90",
+            "left": null,
+            "right": "run_01a113ed-e8b0-742c-ad2f-f925dad45530"
+          }
+        ],
+        "comparisonIdentity": "66661aa7d9d65328617c6b32db333dad7b0943af24618ee88037dd855082a613",
+        "nextCursor": null
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

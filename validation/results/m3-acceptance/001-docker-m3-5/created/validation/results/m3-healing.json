@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-healing",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-07T00:43:54.497Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-healing",
+        "--base-url",
+        "http://127.0.0.1:38791",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c1899f13-c244-4189-b66b-1b8092946ab2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a113d1-0ab1-7479-bf79-21a7b824ee87",
+    "run_01a113d1-0ebe-7749-8d72-26c82daef02c",
+    "run_01a113d1-174c-7756-b511-1b7712cb3d04",
+    "run_01a113d1-1b44-759e-9bf5-943c64d5eeae"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "deterministicControlledProviderHealing",
+      "healthy": true,
+      "originalRunId": "run_01a113d1-0ebe-7749-8d72-26c82daef02c",
+      "proposalId": "hea_01a113d1-1705-717d-b46d-38cc0b1cb669",
+      "verificationRunId": "run_01a113d1-174c-7756-b511-1b7712cb3d04",
+      "semanticMutantRunId": "run_01a113d1-1b44-759e-9bf5-943c64d5eeae",
+      "providerCompletions": 1,
+      "originalFailureImmutable": true,
+      "semanticAssertionKilledMutant": true,
+      "qualityEvidence": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
