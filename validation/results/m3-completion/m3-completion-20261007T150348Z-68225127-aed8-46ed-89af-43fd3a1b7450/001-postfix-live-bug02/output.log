@@ -1,0 +1,228 @@
+{
+  "id": "m3-bug-02",
+  "accepted": true,
+  "reportDirectory": "evals/results/dev-replay-postfix-live-m3-bug-02-2026-10-08T17-05-44.123Z-f487dafc",
+  "modelCallId": "mdl_01a11c7a-eb33-75ed-b6d9-0dc353439458",
+  "conclusionAndHealingPreserved": true,
+  "modelSteps": [
+    {
+      "text": "Inspect the full response body captured for the orders step (E23) to confirm the /items array is empty and not truncated by serialization, and verify the order ID from E22 appears or does not appear in any available listing fields.",
+      "source": "model",
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3d74-7056-8e12-b987210ed21a",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "975af932d7c016a4420005797173bf96b779015da3ab4bae5ed2ad0a36f44db3",
+          "relativePath": "http/orders.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        },
+        {
+          "artifactId": "art_01a1199e-3d71-7218-af42-af09c2f65673",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "c9faeaaa12f4d7ca541e911f4f8066e2f0936d532d15513a5d0f59415395dbbb",
+          "relativePath": "http/order.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        },
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+        }
+      ]
+    },
+    {
+      "text": "Review the container log (E24) around the order creation and orders listing timestamps for database write errors, transaction rollback messages, or index-replication delays that could explain the missing item.",
+      "source": "model",
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3dca-759b-9913-5b4ba69a4851",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "relativePath": "logs/container.log",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        },
+        {
+          "artifactId": "art_01a1199e-3d71-7218-af42-af09c2f65673",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "c9faeaaa12f4d7ca541e911f4f8066e2f0936d532d15513a5d0f59415395dbbb",
+          "relativePath": "http/order.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        },
+        {
+          "artifactId": "art_01a1199e-3d74-7056-8e12-b987210ed21a",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "975af932d7c016a4420005797173bf96b779015da3ab4bae5ed2ad0a36f44db3",
+          "relativePath": "http/orders.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ]
+    },
+    {
+      "text": "Examine the runtime snapshot (E25) and network egress trace (E26) to determine whether the orders request carried the correct session/auth token and whether any intermediate proxy or caching layer returned a stale empty result.",
+      "source": "model",
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3dcb-76e7-a724-dbaefb5bd17b",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "497a4a3fbec8fbadd9aedb74b8a923115f0033bb72514bf57f77735e44c30972",
+          "relativePath": "snapshot/runtime.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        },
+        {
+          "artifactId": "art_01a1199e-3dcb-76e7-a724-dcc290337622",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "17c9a61d28326b358689f15e050ec5c5f63e5a9b6e3a3a05d9504bda31c8ea20",
+          "relativePath": "logs/egress.ndjson",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        },
+        {
+          "artifactId": "art_01a1199e-3d4d-7632-8c18-e84f2a903e95",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9e3e82eafa67fa6a7ae95477e4e60811399462067345e01520d07c4f151878f6",
+          "relativePath": "http/authenticate.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ]
+    },
+    {
+      "text": "Re-run the order creation and listing steps with an explicit delay or polling loop to test whether the item eventually appears, which would shift the diagnosis toward test_fragility (eventual consistency) rather than product_bug.",
+      "source": "model",
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+        },
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741"
+        },
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "No authorized discovery was requested; no source targets supplied.",
+    "No source-kind evidence was supplied; fixTargetHandle is null.",
+    "HTTP status codes and response body structure alone are not proof of a specific root-cause mechanism in the product.",
+    "No timing metadata or retry logs are available to distinguish a persistence bug from an eventual-consistency race.",
+    "No approved JSON schema or contract predicate is provided to confirm or rule out a contract_violation.",
+    "The response body content of E23 is not directly inspected beyond the structural pointer in E6."
+  ],
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_persistence",
+      "recommendedActions": [
+        {
+          "action": "inspect_persistence",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_persistence",
+      "recommendedActions": [
+        {
+          "action": "inspect_persistence",
+          "source": "rules"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 5,
+        "sources": [
+          "rules",
+          "model",
+          "model",
+          "model",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  },
+  "usage": {
+    "inputTokens": 3899,
+    "outputTokens": 2433,
+    "reasoningTokens": 1434,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 21855,
+    "costs": []
+  },
+  "calls": [
+    {
+      "id": "mdl_01a11c7a-eb33-75ed-b6d9-0dc353439458",
+      "model": "qwen3.8-flash",
+      "latencyMs": 35650,
+      "createdAt": "2026-10-08T17:06:20.086Z",
+      "repairAttempt": 0,
+      "transportAttempt": 0,
+      "outcome": "success",
+      "usage": {
+        "cachedInputTokens": 0,
+        "inputTokens": 3899,
+        "outputTokens": 2433,
+        "reasoningTokens": 1434
+      },
+      "cost": "unknown"
+    }
+  ],
+  "errors": [],
+  "originalByteIdentical": true
+}
+{"generationCalls":1,"inventoryCalls":1,"conservativeTokens":21855,"stopped":null,"stopReason":null}

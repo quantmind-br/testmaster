@@ -1,0 +1,811 @@
+{
+  "development": true,
+  "registered": false,
+  "holdout": false,
+  "smoke": {
+    "calls": 8,
+    "generationCalls": 4,
+    "inventoryCalls": 4,
+    "conservativeTokens": 91878,
+    "stopped": null,
+    "wire": [
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 13663,
+        "reservation": 21855,
+        "status": 200
+      },
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 9047,
+        "reservation": 17239,
+        "status": 200
+      },
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 27683,
+        "reservation": 35875,
+        "status": 200
+      },
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 8717,
+        "reservation": 16909,
+        "status": 200
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "m3-bug-02",
+      "accepted": true,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-bug-02-2026-10-08T17-05-44.123Z-f487dafc",
+      "modelCallId": "mdl_01a11c7a-eb33-75ed-b6d9-0dc353439458",
+      "conclusionAndHealingPreserved": true,
+      "modelSteps": [
+        {
+          "text": "Inspect the full response body captured for the orders step (E23) to confirm the /items array is empty and not truncated by serialization, and verify the order ID from E22 appears or does not appear in any available listing fields.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a1199e-3d74-7056-8e12-b987210ed21a",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "975af932d7c016a4420005797173bf96b779015da3ab4bae5ed2ad0a36f44db3",
+              "relativePath": "http/orders.json",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            },
+            {
+              "artifactId": "art_01a1199e-3d71-7218-af42-af09c2f65673",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "c9faeaaa12f4d7ca541e911f4f8066e2f0936d532d15513a5d0f59415395dbbb",
+              "relativePath": "http/order.json",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            },
+            {
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+            }
+          ]
+        },
+        {
+          "text": "Review the container log (E24) around the order creation and orders listing timestamps for database write errors, transaction rollback messages, or index-replication delays that could explain the missing item.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a1199e-3dca-759b-9913-5b4ba69a4851",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "relativePath": "logs/container.log",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            },
+            {
+              "artifactId": "art_01a1199e-3d71-7218-af42-af09c2f65673",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "c9faeaaa12f4d7ca541e911f4f8066e2f0936d532d15513a5d0f59415395dbbb",
+              "relativePath": "http/order.json",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            },
+            {
+              "artifactId": "art_01a1199e-3d74-7056-8e12-b987210ed21a",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "975af932d7c016a4420005797173bf96b779015da3ab4bae5ed2ad0a36f44db3",
+              "relativePath": "http/orders.json",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            }
+          ]
+        },
+        {
+          "text": "Examine the runtime snapshot (E25) and network egress trace (E26) to determine whether the orders request carried the correct session/auth token and whether any intermediate proxy or caching layer returned a stale empty result.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a1199e-3dcb-76e7-a724-dbaefb5bd17b",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "497a4a3fbec8fbadd9aedb74b8a923115f0033bb72514bf57f77735e44c30972",
+              "relativePath": "snapshot/runtime.json",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            },
+            {
+              "artifactId": "art_01a1199e-3dcb-76e7-a724-dcc290337622",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "17c9a61d28326b358689f15e050ec5c5f63e5a9b6e3a3a05d9504bda31c8ea20",
+              "relativePath": "logs/egress.ndjson",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            },
+            {
+              "artifactId": "art_01a1199e-3d4d-7632-8c18-e84f2a903e95",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "9e3e82eafa67fa6a7ae95477e4e60811399462067345e01520d07c4f151878f6",
+              "relativePath": "http/authenticate.json",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+            }
+          ]
+        },
+        {
+          "text": "Re-run the order creation and listing steps with an explicit delay or polling loop to test whether the item eventually appears, which would shift the diagnosis toward test_fragility (eventual consistency) rather than product_bug.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+            },
+            {
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741"
+            },
+            {
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9",
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "No authorized discovery was requested; no source targets supplied.",
+        "No source-kind evidence was supplied; fixTargetHandle is null.",
+        "HTTP status codes and response body structure alone are not proof of a specific root-cause mechanism in the product.",
+        "No timing metadata or retry logs are available to distinguish a persistence bug from an eventual-consistency race.",
+        "No approved JSON schema or contract predicate is provided to confirm or rule out a contract_violation.",
+        "The response body content of E23 is not directly inspected beyond the structural pointer in E6."
+      ],
+      "utility": {
+        "rules": {
+          "recommendedAction": "inspect_persistence",
+          "recommendedActions": [
+            {
+              "action": "inspect_persistence",
+              "source": "rules"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_partially_supported",
+            "failureKind": "product_bug"
+          },
+          "healing": {
+            "advice": "not_indicated"
+          },
+          "nextSteps": {
+            "count": 1,
+            "sources": [
+              "rules"
+            ]
+          },
+          "unsupportedClaims": 0
+        },
+        "model": {
+          "recommendedAction": "inspect_persistence",
+          "recommendedActions": [
+            {
+              "action": "inspect_persistence",
+              "source": "rules"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_partially_supported",
+            "failureKind": "product_bug"
+          },
+          "healing": {
+            "advice": "not_indicated"
+          },
+          "nextSteps": {
+            "count": 5,
+            "sources": [
+              "rules",
+              "model",
+              "model",
+              "model",
+              "model"
+            ]
+          },
+          "unsupportedClaims": 0
+        }
+      },
+      "usage": {
+        "inputTokens": 3899,
+        "outputTokens": 2433,
+        "reasoningTokens": 1434,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 21855,
+        "costs": []
+      },
+      "calls": [
+        {
+          "id": "mdl_01a11c7a-eb33-75ed-b6d9-0dc353439458",
+          "model": "qwen3.8-flash",
+          "latencyMs": 35650,
+          "createdAt": "2026-10-08T17:06:20.086Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 3899,
+            "outputTokens": 2433,
+            "reasoningTokens": 1434
+          },
+          "cost": "unknown"
+        }
+      ],
+      "errors": [],
+      "originalByteIdentical": true
+    },
+    {
+      "id": "m3-bug-03",
+      "accepted": true,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-bug-03-2026-10-08T17-06-37.810Z-b3dc3d11",
+      "modelCallId": "mdl_01a11c7b-a293-709f-b1d8-8f31ddedc1df",
+      "conclusionAndHealingPreserved": true,
+      "modelSteps": [
+        {
+          "text": "Inspect the HTTP response body captured in art_01a1199f-a61e-75e2-8afa-f94ce18aab77 (E10) to confirm the full health-check JSON payload and determine whether additional fields (e.g., sub-component statuses) explain the \"degraded\" value.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a1199f-a61e-75e2-8afa-f94ce18aab77",
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "contentHash": "74e14c5588a354b4c1fd5f728231e77264769e655e18b10bf6260e28bbd3ece3",
+              "relativePath": "http/health.json",
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+            },
+            {
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+            }
+          ]
+        },
+        {
+          "text": "Review the runtime snapshot artifact art_01a1199f-a6aa-73f1-808c-c9b59358d93b (E12) for dependency health, circuit-breaker state, or configuration that correlates with the /status==\"degraded\" observation.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a1199f-a6aa-73f1-808c-c9b59358d93b",
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "contentHash": "d9579500091b101acb4958f7ff252a623e0d554c2d6204b7170c6a861d85cc4a",
+              "relativePath": "snapshot/runtime.json",
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+            },
+            {
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+            }
+          ]
+        },
+        {
+          "text": "Examine container logs at art_01a1199f-a6a9-7332-9560-38ef7ed7d025 (E11) around the time window of the health request for warnings, errors, or dependency-connection failures that may have triggered the degraded status.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a1199f-a6a9-7332-9560-38ef7ed7d025",
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "relativePath": "logs/container.log",
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+            },
+            {
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "contentHash": "fc3784367f628da9a8c219c1e28b97b16751e992b95e679615ba020496351bb2",
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "stepId": "stp_01a1199f-a61f-7274-ab96-9e856d4f40f5"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "No authorized discovery was requested; no source targets supplied.",
+        "No source-kind handles were supplied; fixTargetHandle cannot be assigned.",
+        "Baseline value is only marked \"different\"; the exact prior /status value is not independently captured in the facts.",
+        "Log (E11), snapshot (E12), and network (E13) artifacts are available but their contents have not been inspected.",
+        "No authorized discovery was requested, so dependency or configuration root cause cannot be traced."
+      ],
+      "utility": {
+        "rules": {
+          "recommendedAction": "compare_requirement",
+          "recommendedActions": [
+            {
+              "action": "compare_requirement",
+              "source": "rules"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_partially_supported",
+            "failureKind": "product_bug"
+          },
+          "healing": {
+            "advice": "not_indicated"
+          },
+          "nextSteps": {
+            "count": 1,
+            "sources": [
+              "rules"
+            ]
+          },
+          "unsupportedClaims": 0
+        },
+        "model": {
+          "recommendedAction": "compare_requirement",
+          "recommendedActions": [
+            {
+              "action": "compare_requirement",
+              "source": "rules"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_partially_supported",
+            "failureKind": "product_bug"
+          },
+          "healing": {
+            "advice": "not_indicated"
+          },
+          "nextSteps": {
+            "count": 4,
+            "sources": [
+              "rules",
+              "model",
+              "model",
+              "model"
+            ]
+          },
+          "unsupportedClaims": 0
+        }
+      },
+      "usage": {
+        "inputTokens": 2300,
+        "outputTokens": 1667,
+        "reasoningTokens": 969,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 17239,
+        "costs": []
+      },
+      "calls": [
+        {
+          "id": "mdl_01a11c7b-a293-709f-b1d8-8f31ddedc1df",
+          "model": "qwen3.8-flash",
+          "latencyMs": 28929,
+          "createdAt": "2026-10-08T17:07:07.031Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 2300,
+            "outputTokens": 1667,
+            "reasoningTokens": 969
+          },
+          "cost": "unknown"
+        }
+      ],
+      "errors": [],
+      "originalByteIdentical": true
+    },
+    {
+      "id": "m3-drift-03",
+      "accepted": true,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-drift-03-2026-10-08T17-07-07.060Z-182c7aff",
+      "modelCallId": "mdl_01a11c7c-721f-75c0-8186-c9478a1cd83b",
+      "conclusionAndHealingPreserved": true,
+      "modelSteps": [
+        {
+          "text": "Inspect the full DOM artifact for the invalid_password before-phase (E39: browser/steps/invalid_password-before.html) to determine whether any password-type input, aria-label='password', or equivalent accessible name exists that the data-testid selector would miss.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a119a8-cb0c-754e-bc55-0afd8038c170",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+              "relativePath": "browser/steps/invalid_password-before.html",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+              "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+              "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            }
+          ]
+        },
+        {
+          "text": "Review the network artifact (E44) and console artifact (E43) captured around the invalid_password step to check whether a lazy-loading component or auth-form API call failed or was delayed, which could explain the password field's absence at locator time.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a119a8-cb32-7410-9f40-458d3b4d54de",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "e241a6a614036f3820c6ecd330c19e625114550447baae2ee773f88a2658f9cb",
+              "relativePath": "browser/network.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-cb31-711a-abbe-25c883ca7984",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+              "relativePath": "browser/console.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "c71440e13ae679968b741519e6d259c68b9bb7dfc62ba9382a1ebe8f01144650",
+              "observationSeq": 35,
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+            },
+            {
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4",
+              "observationSeq": 54,
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+            }
+          ]
+        },
+        {
+          "text": "Compare the after-phase screenshot (E41: browser/steps/invalid_password-after.png) with the before-phase screenshot (E38) and with the successful invalid_email after-phase (E35) to visually confirm whether a password input was rendered but not addressed by the locator.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "artifactId": "art_01a119a8-cb2b-7088-985b-65fad8b83b0f",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+              "relativePath": "browser/steps/invalid_password-after.png",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+              "relativePath": "browser/steps/invalid_password-before.png",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-55ba-709b-92ba-d529da7783cb",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+              "relativePath": "browser/steps/invalid_email-after.png",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+              "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+              "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            }
+          ]
+        },
+        {
+          "text": "If the source test definition is available, verify whether the 'invalid_password' step's locator selector (data-testid=\"password\") matches the current application markup, or whether the selector was recently renamed/removed in a baseline update indicated by the 'different' baseline flag.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+            },
+            {
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4",
+              "observationSeq": 54,
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+            },
+            {
+              "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+              "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            },
+            {
+              "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+              "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.",
+        "No authorized discovery was requested; no source targets supplied.",
+        "No source-kind handle was supplied; fixTargetHandle must be null.",
+        "Locator evidence lists only 8 of 26 candidates; the remaining 18 unlisted candidates may include a password field, preventing a definitive absence claim.",
+        "No equivalent control (same role/name/recorded equivalence) was positively identified, so the test_fragility threshold (target absent + page rendered + equivalent present) is not met.",
+        "Timeout with assertion_timeout alone is not a diagnosis per policy.",
+        "Network and console artifact contents (E43, E44) are not inline-expanded; a dynamic-rendering cause cannot be ruled in or out.",
+        "Baseline 'different' status is noted but its precise diff content is unavailable."
+      ],
+      "utility": {
+        "rules": {
+          "recommendedAction": "inspect_locator_candidates",
+          "recommendedActions": [
+            {
+              "action": "inspect_locator_candidates",
+              "source": "rules"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_unknown",
+            "failureKind": "unknown"
+          },
+          "healing": {
+            "advice": "manual_review_only"
+          },
+          "nextSteps": {
+            "count": 1,
+            "sources": [
+              "rules"
+            ]
+          },
+          "unsupportedClaims": 0
+        },
+        "model": {
+          "recommendedAction": "inspect_locator_candidates",
+          "recommendedActions": [
+            {
+              "action": "inspect_locator_candidates",
+              "source": "rules"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_unknown",
+            "failureKind": "unknown"
+          },
+          "healing": {
+            "advice": "manual_review_only"
+          },
+          "nextSteps": {
+            "count": 5,
+            "sources": [
+              "rules",
+              "model",
+              "model",
+              "model",
+              "model"
+            ]
+          },
+          "unsupportedClaims": 0
+        }
+      },
+      "usage": {
+        "inputTokens": 7939,
+        "outputTokens": 2858,
+        "reasoningTokens": 1656,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 35875,
+        "costs": []
+      },
+      "calls": [
+        {
+          "id": "mdl_01a11c7c-721f-75c0-8186-c9478a1cd83b",
+          "model": "qwen3.8-flash",
+          "latencyMs": 52671,
+          "createdAt": "2026-10-08T17:08:00.160Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 7939,
+            "outputTokens": 2858,
+            "reasoningTokens": 1656
+          },
+          "cost": "unknown"
+        }
+      ],
+      "errors": [],
+      "originalByteIdentical": true
+    },
+    {
+      "id": "m3-healthy-01",
+      "accepted": true,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-healthy-01-2026-10-08T17-08-00.185Z-1c79e696",
+      "modelCallId": "mdl_01a11c7c-a386-77de-ac22-9897a6ed7f67",
+      "conclusionAndHealingPreserved": true,
+      "modelSteps": [
+        {
+          "text": "Confirm whether the stepId 'invalid' is the intended identifier for this request path and verify the recorded contract for the expected 401 response against the service definition.",
+          "source": "model",
+          "evidenceRefs": [
+            {
+              "attemptId": "att_01a119bc-615f-7245-bd83-d3c11337c5a1",
+              "contentHash": "c03ea2a80c8960be40d02a27cdb93ae3519de516dffbfa56f64296a82889b962",
+              "runId": "run_01a119bc-6125-739b-9874-41c7747ae82e",
+              "stepId": "stp_01a119bc-63c8-72e6-a1f5-1dd73630b813"
+            },
+            {
+              "attemptId": "att_01a119bc-615f-7245-bd83-d3c11337c5a1",
+              "contentHash": "abaa4cc407dc08f5ee0fe2decef957f460315cf30f584391606497a0515fbcd2",
+              "runId": "run_01a119bc-6125-739b-9874-41c7747ae82e",
+              "stepId": "stp_01a119bc-63c9-73fc-862a-e51716d3af89"
+            },
+            {
+              "artifactId": "art_01a119bc-63c6-7162-b82c-e1b3a2ed420d",
+              "attemptId": "att_01a119bc-615f-7245-bd83-d3c11337c5a1",
+              "contentHash": "618fe4c49e7e7187878065f239423ccafb6450d6ea384f8fe53aaad4cf5c4afe",
+              "relativePath": "http/invalid.json",
+              "runId": "run_01a119bc-6125-739b-9874-41c7747ae82e",
+              "snapshotId": "snp_01a119bc-6161-770d-88a0-abc4756b319e"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "No authorized discovery was requested; no source targets supplied.",
+        "No source-kind handles were supplied; fixTargetHandle must be null."
+      ],
+      "utility": {
+        "rules": {
+          "recommendedAction": "no_action",
+          "recommendedActions": [],
+          "conclusion": {
+            "status": "no_failure",
+            "failureKind": "unknown"
+          },
+          "healing": {
+            "advice": "not_indicated"
+          },
+          "nextSteps": {
+            "count": 0,
+            "sources": []
+          },
+          "unsupportedClaims": 0
+        },
+        "model": {
+          "recommendedAction": "no_action",
+          "recommendedActions": [
+            {
+              "action": null,
+              "source": "model"
+            }
+          ],
+          "conclusion": {
+            "status": "no_failure",
+            "failureKind": "unknown"
+          },
+          "healing": {
+            "advice": "not_indicated"
+          },
+          "nextSteps": {
+            "count": 1,
+            "sources": [
+              "model"
+            ]
+          },
+          "unsupportedClaims": 0
+        }
+      },
+      "usage": {
+        "inputTokens": 2239,
+        "outputTokens": 473,
+        "reasoningTokens": 295,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 16909,
+        "costs": []
+      },
+      "calls": [
+        {
+          "id": "mdl_01a11c7c-a386-77de-ac22-9897a6ed7f67",
+          "model": "qwen3.8-flash",
+          "latencyMs": 12569,
+          "createdAt": "2026-10-08T17:08:12.806Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 2239,
+            "outputTokens": 473,
+            "reasoningTokens": 295
+          },
+          "cost": "unknown"
+        }
+      ],
+      "errors": [],
+      "originalByteIdentical": true
+    }
+  ]
+}

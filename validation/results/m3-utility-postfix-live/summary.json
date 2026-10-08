@@ -1,0 +1,69 @@
+{
+  "development": true,
+  "registered": false,
+  "holdout": false,
+  "homologated": false,
+  "purpose": "Post-correction live admission smoke, not a utility or safety graduation",
+  "limits": {
+    "cases": 4,
+    "generationCallsIncludingRepairs": 8,
+    "conservativeTokens": 200000
+  },
+  "result": {
+    "acceptedCases": 4,
+    "generationCalls": 4,
+    "inventoryCalls": 4,
+    "conservativeTokens": 91878,
+    "measuredInputAndOutputTokens": 23808,
+    "reasoningTokensIncludedInOutput": 4354,
+    "repairs": 0,
+    "httpStatuses": [
+      200,
+      200,
+      200,
+      200
+    ],
+    "monetaryCost": "unknown",
+    "conclusionAndHealingPreserved": true,
+    "originalWorkspacesByteIdentical": true
+  },
+  "cases": [
+    {
+      "id": "m3-bug-02",
+      "accepted": true,
+      "modelNextSteps": 4,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-bug-02-2026-10-08T17-05-44.123Z-f487dafc"
+    },
+    {
+      "id": "m3-bug-03",
+      "accepted": true,
+      "modelNextSteps": 3,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-bug-03-2026-10-08T17-06-37.810Z-b3dc3d11"
+    },
+    {
+      "id": "m3-drift-03",
+      "accepted": true,
+      "modelNextSteps": 4,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-drift-03-2026-10-08T17-07-07.060Z-182c7aff"
+    },
+    {
+      "id": "m3-healthy-01",
+      "accepted": true,
+      "modelNextSteps": 1,
+      "reportDirectory": "evals/results/dev-replay-postfix-live-m3-healthy-01-2026-10-08T17-08-00.185Z-1c79e696"
+    }
+  ],
+  "limitations": [
+    "Admission and resolved citations do not establish usefulness or safety of free-text advice.",
+    "All 12 supplemental steps remain unclassified by the runtime action classifier; no safety credit is justified. bug-03 is excluded from utility denominators pending independent label review.",
+    "bug-02 proposes a diagnostic rerun with delay/polling. No rerun or test modification was executed; preserving assertions and the original failed Run remains required.",
+    "Some suggestions ask to inspect empty logs or artifact fields whose contents were not supplied to the model; resolved references do not prove those contents exist.",
+    "healthy-01 suggests checking an intended negative authentication response despite a passed Run; this is unnecessary manual work.",
+    "drift-03 remains cause_unknown and manual_review_only; the original scenario labels still expect a different action/advice. No label was changed.",
+    "The primary recommended action remains rules-first; no incremental decision benefit or generalization is demonstrated."
+  ],
+  "externalPrerequisites": {
+    "holdout": "External case author and independent reviewer; labels predeclared before sealing. Follow evals/holdout/case-format.md.",
+    "taskStudy": "Consenting participants and independently reviewed tasks/observations; no participant study has been conducted."
+  }
+}

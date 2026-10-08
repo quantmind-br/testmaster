@@ -783,3 +783,26 @@ safety-review, participant-study or fork-isolation reasons and no missing protec
 The cumulative M3 milestone remains red (exit 1). See `validation/results/m3-utility/verification.json`
 and `gates/summary.json`. The 62 original retained workspaces / 6,841 files remain byte-identical.
 
+#### Post-correction live admission smoke (2026-10-08)
+
+The separately authorized bounded smoke ran `m3-bug-02` first, then `m3-bug-03`,
+`m3-drift-03` and `m3-healthy-01`. All four enrichments were admitted by the current
+built application: four Qwen medium generation requests and four inventory requests,
+91,878 conservative tokens, 23,808 measured input/output tokens, no repairs and all
+generation responses HTTP 200. Conclusion and healing advice remained rules-owned;
+the four original workspaces were byte-identical. No test changes or healing were applied.
+
+Admission is not demonstrated utility or safety. The twelve supplemental next steps
+remain unclassified by the runtime classifier; `bug-03` is excluded from utility
+denominators pending independent label review. `healthy-01` suggests unnecessary
+investigation despite passing. `bug-02` suggests diagnostic polling, not authorized
+test modification; some advice points to empty logs or uninspected artifact fields.
+`drift-03` still has unknown cause and manual-only advice, which differs from the
+existing scenario labels. Those labels and the earlier smoke evidence were not changed.
+
+Evidence: `validation/results/m3-utility-postfix-live/summary.json`, `session.json`
+and the referenced development replay reports. The next prerequisite is an external
+case author and independent reviewer using `evals/holdout/case-format.md`; a real
+user-task study additionally requires consenting participants and reviewed tasks.
+No capability was homologated by this smoke.
+

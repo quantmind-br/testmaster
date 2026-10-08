@@ -1,0 +1,227 @@
+{
+  "id": "m3-bug-03",
+  "group": "bug",
+  "expectedFailureKind": "unknown",
+  "labels": {
+    "correctActions": [
+      "collect_more_evidence"
+    ],
+    "acceptableActions": [],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "not_indicated",
+    "healingEligibility": "none",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "disputed",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "health-degraded"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "unknown",
+      "rationale": "The scenario mechanism is known to the author, but the visible failed step does not independently establish that mechanism. Independent review is pending."
+    }
+  },
+  "controls": {},
+  "labelStatus": "disputed",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "health-degraded",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"health-degraded\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "3d4fae867a0063a0faf522a5ad0fcb924d0ba7481762e25745a3e1f07e310b3f",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "serviceHealth",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "health",
+        "kind": "action",
+        "operation": "request",
+        "description": "health",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "health"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "health",
+          "jsonPointer": "/status"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "ok"
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "3d4fae867a0063a0faf522a5ad0fcb924d0ba7481762e25745a3e1f07e310b3f",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "dfeda6ddce7b42c6b21bec005360803d1aabce6a2e15bfeebec592e97fa0d46d",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 2300,
+    "outputTokens": 1667,
+    "reasoningTokens": 969,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 17239,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-QJZloh",
+    "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+    "rulesAnalysisId": "ana_01a11c7b-30d6-73aa-91c2-928ba49f135f",
+    "calls": [
+      {
+        "id": "mdl_01a11c7b-a293-709f-b1d8-8f31ddedc1df",
+        "model": "qwen3.8-flash",
+        "latencyMs": 28929,
+        "createdAt": "2026-10-08T17:07:07.031Z",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 2300,
+          "outputTokens": 1667,
+          "reasoningTokens": 969
+        },
+        "cost": "unknown"
+      }
+    ]
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 4,
+        "sources": [
+          "rules",
+          "model",
+          "model",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

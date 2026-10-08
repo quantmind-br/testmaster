@@ -1,0 +1,2938 @@
+{
+  "development": true,
+  "registered": false,
+  "holdout": false,
+  "source": "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z",
+  "directory": "evals/results/dev-replay-postfix-live-m3-drift-03-2026-10-08T17-07-07.060Z-182c7aff",
+  "modelSmoke": true,
+  "smoke": {
+    "calls": 2,
+    "generationCalls": 1,
+    "inventoryCalls": 1,
+    "conservativeTokens": 35875,
+    "stopped": null,
+    "wire": [
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 27683,
+        "reservation": 35875,
+        "status": 200
+      }
+    ]
+  },
+  "skips": [],
+  "analyses": [
+    {
+      "caseId": "m3-drift-03",
+      "rules": {
+        "id": "ana_01a11c7b-a380-7158-b334-9b45d21225b2",
+        "workspaceId": "ws_01a119a8-49ab-75ca-b74e-30ebd8cdf2d6",
+        "createdAt": "2026-10-08T17:07:07.264Z",
+        "version": 1,
+        "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+        "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+        "parentId": null,
+        "source": "rules",
+        "affectedRequirementIds": [],
+        "facts": [
+          {
+            "text": "Run finished with outcome failed and gate failed.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "contentHash": "67be8b379283bb1299ae2c8c37b29b3ff93f2843c7272edcb37b78d10bc649d6"
+              }
+            ]
+          },
+          {
+            "text": "Step invalid_open (navigate) was passed.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-556a-73c1-a56f-7c71fcef0da0",
+                "contentHash": "f346f0a10536d9344810861e4ed8b39e41b77e6baabb765e1b4123131d5a2e09"
+              }
+            ]
+          },
+          {
+            "text": "Step invalid_email (fill) was passed.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-55bc-75b5-b80a-1ff30456fb59",
+                "contentHash": "c403b97c4eff5b9592c7de277551b53fea401da3d66deb5cf74ddb49e4ab2517"
+              }
+            ]
+          },
+          {
+            "text": "Step invalid_password (fill) was failed: assertion_timeout.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54",
+                "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931"
+              }
+            ]
+          },
+          {
+            "text": "Step invalid_submit (click) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb2e-7793-8845-f16cda5ed611",
+                "contentHash": "575202f0b41e86abf80bd608d6a9abd79f42ef32415c058ab433cbab970fb882"
+              }
+            ]
+          },
+          {
+            "text": "Step invalid_login_assertion (assert) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb2e-7793-8845-ff00c8b3fe9e",
+                "contentHash": "5f2d68e4e995f54a0e2d78c566518c4a6458c4a55706c10c8ee217c42cbbced5"
+              }
+            ]
+          },
+          {
+            "text": "Step open_login (navigate) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb2f-74c3-8ebd-8aea05ba8502",
+                "contentHash": "1fa412073bffff568d4883e1fdfa88e74e47080c5064743a48de24929945252c"
+              }
+            ]
+          },
+          {
+            "text": "Step email (fill) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb2f-74c3-8ebd-974119f9e438",
+                "contentHash": "b85615d424db0ea78a158a4ebb6df06b495a7efb0cd45e2772b0a30246cb5314"
+              }
+            ]
+          },
+          {
+            "text": "Step password (fill) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb30-7501-b79f-af3cca96a830",
+                "contentHash": "45a73b6b28bc42c42c9c8e597dae50ea69b73859229fd958d0f8fc3e936a1058"
+              }
+            ]
+          },
+          {
+            "text": "Step signin (click) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb30-7501-b79f-bba007c4ea33",
+                "contentHash": "e279becd7e649009ad954dee996fead8bc7f5ef3e6fdd819ebba1f09e997fa1c"
+              }
+            ]
+          },
+          {
+            "text": "Step catalog_ready (assert) was skipped: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb31-711a-abbe-1c8e77353ce8",
+                "contentHash": "c69fe7a92efb4819985959341288796a132aea16c2714018e5840ab7b0f6e7b2"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.started observation.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 1,
+                "contentHash": "922ebc026d0a9bb74e22de24851570303fa5801b7dc3a969f96136d7c39d2840"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 14,
+                "contentHash": "7c6657db7f96191ce8278be6c6a99b9aabb946f839ec3821c4ad32939b171196"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.started observation.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 15,
+                "contentHash": "903829763a09fd6685cb23e745517daffb5282739041cfd967132fdba156ef32"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 34,
+                "contentHash": "092731bdf74d16837a5aae70da06fc11e54d899b9d3d2a995546f4133a771673"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.started observation.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 35,
+                "contentHash": "c71440e13ae679968b741519e6d259c68b9bb7dfc62ba9382a1ebe8f01144650"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: assertion_timeout.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 54,
+                "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 55,
+                "contentHash": "26522f93e2bd3987fced7e4c88fc3566ac9ded30136d0329a10667c0d31a53fd"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 56,
+                "contentHash": "cc59ec9dc54d23b620442a2516f25d7fde183523a7a9e419ec807f3c97cd827d"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 57,
+                "contentHash": "f237662305719505955a9d1a49f75f979054f2b87056a056161953292e56072d"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 58,
+                "contentHash": "7e666ca2383aec696e8f074b9e8cbc8023a75e551668e47209a2752b32624d66"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 59,
+                "contentHash": "b44a8b1af190e3b0353b6910f78b204c5cdbf55056c5473babbdb53cfbab3bdc"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 60,
+                "contentHash": "f8d376ff2bc1a30495ab3e502745253d08998c098970dbfb16ec0170addb2709"
+              }
+            ]
+          },
+          {
+            "text": "Persisted step.finished observation: stopped_after_failure.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 61,
+                "contentHash": "06339b742806f62e61b16b36eb82b15c8cd7d2ccec0e1b3f91e9d05c95879a2e"
+              }
+            ]
+          },
+          {
+            "text": "Persisted runner.finished observation: assertion_timeout.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "observationSeq": 68,
+                "contentHash": "1d72b9e4b5af407dce08a9cbb727e7815e1f90c66335e686c430fb8b839113cd"
+              }
+            ]
+          },
+          {
+            "text": "Persisted run.completed observation.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "observationSeq": 24,
+                "contentHash": "fdbd4f02707637a4c94e73545dabfaa1ef658467e06466c8402c27705a7261fa"
+              }
+            ]
+          },
+          {
+            "text": "Verified screenshot artifact art_01a119a8-5547-755d-b1a8-9036f80ce7a2 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-5547-755d-b1a8-9036f80ce7a2",
+                "relativePath": "browser/steps/invalid_open-before.png",
+                "contentHash": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401"
+              }
+            ]
+          },
+          {
+            "text": "Verified dom artifact art_01a119a8-5549-7512-acc6-12dfd2425ae6 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-5549-7512-acc6-12dfd2425ae6",
+                "relativePath": "browser/steps/invalid_open-before.html",
+                "contentHash": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e"
+              }
+            ]
+          },
+          {
+            "text": "Verified screenshot artifact art_01a119a8-5568-7594-b17d-823bd06c5d6c is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-5568-7594-b17d-823bd06c5d6c",
+                "relativePath": "browser/steps/invalid_open-after.png",
+                "contentHash": "4b638e80f923c8521e347a702683e46c9aea638aad3bdc710f5daf8afe59028d"
+              }
+            ]
+          },
+          {
+            "text": "Verified dom artifact art_01a119a8-556a-73c1-a56f-743e0647df57 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-556a-73c1-a56f-743e0647df57",
+                "relativePath": "browser/steps/invalid_open-after.html",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb"
+              }
+            ]
+          },
+          {
+            "text": "Verified locator-evidence artifact art_01a119a8-557d-740a-88d9-aef82deda00a is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-557d-740a-88d9-aef82deda00a",
+                "relativePath": "browser/steps/invalid_email-locator-0-before.json",
+                "contentHash": "466b1b8c2b53433a419960b3dbd076cb051f8797fd54e2ba9f124df0663133a8"
+              }
+            ]
+          },
+          {
+            "text": "Verified screenshot artifact art_01a119a8-5599-70d2-a4b8-396883fb7769 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-5599-70d2-a4b8-396883fb7769",
+                "relativePath": "browser/steps/invalid_email-before.png",
+                "contentHash": "4b638e80f923c8521e347a702683e46c9aea638aad3bdc710f5daf8afe59028d"
+              }
+            ]
+          },
+          {
+            "text": "Verified dom artifact art_01a119a8-559b-74f5-bd70-bb19ad826ded is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-559b-74f5-bd70-bb19ad826ded",
+                "relativePath": "browser/steps/invalid_email-before.html",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb"
+              }
+            ]
+          },
+          {
+            "text": "Verified locator-evidence artifact art_01a119a8-55a5-7249-b16b-13d1e15dba53 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-55a5-7249-b16b-13d1e15dba53",
+                "relativePath": "browser/steps/invalid_email-locator-0-after.json",
+                "contentHash": "dda923e6a1f7589577ac383adf7169cff662a2d082376805c4be0f9b34b27167"
+              }
+            ]
+          },
+          {
+            "text": "Verified screenshot artifact art_01a119a8-55ba-709b-92ba-d529da7783cb is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-55ba-709b-92ba-d529da7783cb",
+                "relativePath": "browser/steps/invalid_email-after.png",
+                "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f"
+              }
+            ]
+          },
+          {
+            "text": "Verified dom artifact art_01a119a8-55bc-75b5-b80a-1447a68a5ee6 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-55bc-75b5-b80a-1447a68a5ee6",
+                "relativePath": "browser/steps/invalid_email-after.html",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb"
+              }
+            ]
+          },
+          {
+            "text": "Verified locator-evidence artifact art_01a119a8-caf3-7694-a505-bf24fc2a8ae0 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d"
+              }
+            ]
+          },
+          {
+            "text": "Verified screenshot artifact art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645",
+                "relativePath": "browser/steps/invalid_password-before.png",
+                "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f"
+              }
+            ]
+          },
+          {
+            "text": "Verified dom artifact art_01a119a8-cb0c-754e-bc55-0afd8038c170 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb0c-754e-bc55-0afd8038c170",
+                "relativePath": "browser/steps/invalid_password-before.html",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb"
+              }
+            ]
+          },
+          {
+            "text": "Verified locator-evidence artifact art_01a119a8-cb0f-77d6-8343-e16eabe72ecd is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2"
+              }
+            ]
+          },
+          {
+            "text": "Verified screenshot artifact art_01a119a8-cb2b-7088-985b-65fad8b83b0f is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb2b-7088-985b-65fad8b83b0f",
+                "relativePath": "browser/steps/invalid_password-after.png",
+                "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f"
+              }
+            ]
+          },
+          {
+            "text": "Verified dom artifact art_01a119a8-cb2c-7255-a884-b01be517e596 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb2c-7255-a884-b01be517e596",
+                "relativePath": "browser/steps/invalid_password-after.html",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb"
+              }
+            ]
+          },
+          {
+            "text": "Verified console artifact art_01a119a8-cb31-711a-abbe-25c883ca7984 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb31-711a-abbe-25c883ca7984",
+                "relativePath": "browser/console.json",
+                "contentHash": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7"
+              }
+            ]
+          },
+          {
+            "text": "Verified network artifact art_01a119a8-cb32-7410-9f40-458d3b4d54de is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cb32-7410-9f40-458d3b4d54de",
+                "relativePath": "browser/network.json",
+                "contentHash": "e241a6a614036f3820c6ecd330c19e625114550447baae2ee773f88a2658f9cb"
+              }
+            ]
+          },
+          {
+            "text": "Verified log artifact art_01a119a8-cca4-7631-ba42-6a235f462323 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cca4-7631-ba42-6a235f462323",
+                "relativePath": "logs/container.log",
+                "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            ]
+          },
+          {
+            "text": "Verified snapshot artifact art_01a119a8-cca4-7631-ba42-6cb4dcd5486f is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cca4-7631-ba42-6cb4dcd5486f",
+                "relativePath": "snapshot/runtime.json",
+                "contentHash": "40cc6f7d70dff1a1fead630640b11e2af67767fed39d819b3129f609181b3511"
+              }
+            ]
+          },
+          {
+            "text": "Verified network artifact art_01a119a8-cca5-734b-87d4-c384a7f71902 is available.",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                "artifactId": "art_01a119a8-cca5-734b-87d4-c384a7f71902",
+                "relativePath": "logs/egress.ndjson",
+                "contentHash": "0f13314c927fe41d9d3bbddbd39f6dd6ec4ffc162b07a18b9f068c6da4e12764"
+              }
+            ]
+          }
+        ],
+        "hypotheses": [],
+        "failureKind": "unknown",
+        "confidence": null,
+        "modelCallId": null,
+        "limitations": [
+          "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis."
+        ],
+        "recommendedAction": "collect_more_evidence",
+        "diagnosis": {
+          "observation": {
+            "stepId": "invalid_password",
+            "operation": "fill",
+            "summary": "Step invalid_password (fill) was failed: assertion_timeout. Locator {\"by\":\"testId\",\"value\":\"password\"}.",
+            "expected": "null",
+            "observed": "null",
+            "absence": "null_value",
+            "evidenceRefs": [
+              {
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54",
+                "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931"
+              }
+            ]
+          },
+          "chain": [
+            {
+              "stepId": "invalid_open",
+              "operation": "navigate",
+              "status": "passed",
+              "summary": "Step invalid_open (navigate) was passed.",
+              "verifies": null,
+              "baseline": "same",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-556a-73c1-a56f-7c71fcef0da0",
+                  "contentHash": "f346f0a10536d9344810861e4ed8b39e41b77e6baabb765e1b4123131d5a2e09"
+                }
+              ]
+            },
+            {
+              "stepId": "invalid_email",
+              "operation": "fill",
+              "status": "passed",
+              "summary": "Step invalid_email (fill) was passed. Locator {\"by\":\"testId\",\"value\":\"email\"}.",
+              "verifies": null,
+              "baseline": "same",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-55bc-75b5-b80a-1ff30456fb59",
+                  "contentHash": "c403b97c4eff5b9592c7de277551b53fea401da3d66deb5cf74ddb49e4ab2517"
+                }
+              ]
+            },
+            {
+              "stepId": "invalid_password",
+              "operation": "fill",
+              "status": "failed",
+              "summary": "Step invalid_password (fill) was failed: assertion_timeout. Locator {\"by\":\"testId\",\"value\":\"password\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54",
+                  "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931"
+                }
+              ]
+            },
+            {
+              "stepId": "invalid_submit",
+              "operation": "click",
+              "status": "skipped",
+              "summary": "Step invalid_submit (click) was skipped: stopped_after_failure. Locator {\"by\":\"role\",\"exact\":true,\"name\":\"Sign in\",\"role\":\"button\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb2e-7793-8845-f16cda5ed611",
+                  "contentHash": "575202f0b41e86abf80bd608d6a9abd79f42ef32415c058ab433cbab970fb882"
+                }
+              ]
+            },
+            {
+              "stepId": "invalid_login_assertion",
+              "operation": "assert",
+              "status": "skipped",
+              "summary": "Step invalid_login_assertion (assert) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"password-error\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb2e-7793-8845-ff00c8b3fe9e",
+                  "contentHash": "5f2d68e4e995f54a0e2d78c566518c4a6458c4a55706c10c8ee217c42cbbced5"
+                }
+              ]
+            },
+            {
+              "stepId": "open_login",
+              "operation": "navigate",
+              "status": "skipped",
+              "summary": "Step open_login (navigate) was skipped: stopped_after_failure.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb2f-74c3-8ebd-8aea05ba8502",
+                  "contentHash": "1fa412073bffff568d4883e1fdfa88e74e47080c5064743a48de24929945252c"
+                }
+              ]
+            },
+            {
+              "stepId": "email",
+              "operation": "fill",
+              "status": "skipped",
+              "summary": "Step email (fill) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"email\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb2f-74c3-8ebd-974119f9e438",
+                  "contentHash": "b85615d424db0ea78a158a4ebb6df06b495a7efb0cd45e2772b0a30246cb5314"
+                }
+              ]
+            },
+            {
+              "stepId": "password",
+              "operation": "fill",
+              "status": "skipped",
+              "summary": "Step password (fill) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"password\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb30-7501-b79f-af3cca96a830",
+                  "contentHash": "45a73b6b28bc42c42c9c8e597dae50ea69b73859229fd958d0f8fc3e936a1058"
+                }
+              ]
+            },
+            {
+              "stepId": "signin",
+              "operation": "click",
+              "status": "skipped",
+              "summary": "Step signin (click) was skipped: stopped_after_failure. Locator {\"by\":\"role\",\"exact\":true,\"name\":\"Sign in\",\"role\":\"button\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb30-7501-b79f-bba007c4ea33",
+                  "contentHash": "e279becd7e649009ad954dee996fead8bc7f5ef3e6fdd819ebba1f09e997fa1c"
+                }
+              ]
+            },
+            {
+              "stepId": "catalog_ready",
+              "operation": "assert",
+              "status": "skipped",
+              "summary": "Step catalog_ready (assert) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"catalog-ready\"}.",
+              "verifies": null,
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "stepId": "stp_01a119a8-cb31-711a-abbe-1c8e77353ce8",
+                  "contentHash": "c69fe7a92efb4819985959341288796a132aea16c2714018e5840ab7b0f6e7b2"
+                }
+              ]
+            }
+          ],
+          "alternatives": [
+            {
+              "text": "The target may be changed, removed, or ambiguous.",
+              "failureKind": "unknown",
+              "evidenceRefs": []
+            }
+          ],
+          "conclusion": {
+            "status": "cause_unknown",
+            "text": "The failure is localized to step invalid_password; the evidence does not establish a cause."
+          },
+          "nextSteps": [
+            {
+              "text": "Inspect locator candidates for step invalid_password to distinguish a changed control from a missing or ambiguous target.",
+              "source": "rules",
+              "evidenceRefs": [
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                  "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                  "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                  "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d"
+                },
+                {
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+                  "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                  "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                  "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2"
+                }
+              ]
+            }
+          ],
+          "evidenceGaps": [
+            "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis."
+          ],
+          "healing": {
+            "advice": "manual_review_only",
+            "reason": "Observed candidates do not establish unique baseline identity."
+          }
+        }
+      },
+      "model": {
+        "id": "ana_01a11c7c-7221-7744-a175-2def28c02129",
+        "workspaceId": "ws_01a119a8-49ab-75ca-b74e-30ebd8cdf2d6",
+        "createdAt": "2026-10-08T17:08:00.161Z",
+        "version": 1,
+        "affectedRequirementIds": [],
+        "confidence": 0.4,
+        "diagnosis": {
+          "alternatives": [
+            {
+              "evidenceRefs": [],
+              "failureKind": "unknown",
+              "text": "The target may be changed, removed, or ambiguous."
+            }
+          ],
+          "chain": [
+            {
+              "baseline": "same",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "f346f0a10536d9344810861e4ed8b39e41b77e6baabb765e1b4123131d5a2e09",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-556a-73c1-a56f-7c71fcef0da0"
+                }
+              ],
+              "operation": "navigate",
+              "status": "passed",
+              "stepId": "invalid_open",
+              "summary": "Step invalid_open (navigate) was passed.",
+              "verifies": null
+            },
+            {
+              "baseline": "same",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "c403b97c4eff5b9592c7de277551b53fea401da3d66deb5cf74ddb49e4ab2517",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-55bc-75b5-b80a-1ff30456fb59"
+                }
+              ],
+              "operation": "fill",
+              "status": "passed",
+              "stepId": "invalid_email",
+              "summary": "Step invalid_email (fill) was passed. Locator {\"by\":\"testId\",\"value\":\"email\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+                }
+              ],
+              "operation": "fill",
+              "status": "failed",
+              "stepId": "invalid_password",
+              "summary": "Step invalid_password (fill) was failed: assertion_timeout. Locator {\"by\":\"testId\",\"value\":\"password\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "575202f0b41e86abf80bd608d6a9abd79f42ef32415c058ab433cbab970fb882",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb2e-7793-8845-f16cda5ed611"
+                }
+              ],
+              "operation": "click",
+              "status": "skipped",
+              "stepId": "invalid_submit",
+              "summary": "Step invalid_submit (click) was skipped: stopped_after_failure. Locator {\"by\":\"role\",\"exact\":true,\"name\":\"Sign in\",\"role\":\"button\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "5f2d68e4e995f54a0e2d78c566518c4a6458c4a55706c10c8ee217c42cbbced5",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb2e-7793-8845-ff00c8b3fe9e"
+                }
+              ],
+              "operation": "assert",
+              "status": "skipped",
+              "stepId": "invalid_login_assertion",
+              "summary": "Step invalid_login_assertion (assert) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"password-error\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "1fa412073bffff568d4883e1fdfa88e74e47080c5064743a48de24929945252c",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb2f-74c3-8ebd-8aea05ba8502"
+                }
+              ],
+              "operation": "navigate",
+              "status": "skipped",
+              "stepId": "open_login",
+              "summary": "Step open_login (navigate) was skipped: stopped_after_failure.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "b85615d424db0ea78a158a4ebb6df06b495a7efb0cd45e2772b0a30246cb5314",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb2f-74c3-8ebd-974119f9e438"
+                }
+              ],
+              "operation": "fill",
+              "status": "skipped",
+              "stepId": "email",
+              "summary": "Step email (fill) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"email\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "45a73b6b28bc42c42c9c8e597dae50ea69b73859229fd958d0f8fc3e936a1058",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb30-7501-b79f-af3cca96a830"
+                }
+              ],
+              "operation": "fill",
+              "status": "skipped",
+              "stepId": "password",
+              "summary": "Step password (fill) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"password\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "e279becd7e649009ad954dee996fead8bc7f5ef3e6fdd819ebba1f09e997fa1c",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb30-7501-b79f-bba007c4ea33"
+                }
+              ],
+              "operation": "click",
+              "status": "skipped",
+              "stepId": "signin",
+              "summary": "Step signin (click) was skipped: stopped_after_failure. Locator {\"by\":\"role\",\"exact\":true,\"name\":\"Sign in\",\"role\":\"button\"}.",
+              "verifies": null
+            },
+            {
+              "baseline": "different",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "c69fe7a92efb4819985959341288796a132aea16c2714018e5840ab7b0f6e7b2",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb31-711a-abbe-1c8e77353ce8"
+                }
+              ],
+              "operation": "assert",
+              "status": "skipped",
+              "stepId": "catalog_ready",
+              "summary": "Step catalog_ready (assert) was skipped: stopped_after_failure. Locator {\"by\":\"testId\",\"value\":\"catalog-ready\"}.",
+              "verifies": null
+            }
+          ],
+          "conclusion": {
+            "status": "cause_unknown",
+            "text": "The failure is localized to step invalid_password; the evidence does not establish a cause."
+          },
+          "evidenceGaps": [
+            "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.",
+            "Unlisted 18 locator candidates at invalid_password phase (E37, E40) could contain the target password field under a different identifier.",
+            "No expanded DOM content or screenshot pixels available for visual inspection of the invalid_password step state.",
+            "Network responses and console logs (E44, E43) not inlined; cannot rule out an async render failure.",
+            "The 'different' baseline diff details are unavailable; cannot confirm whether a product or spec change introduced the missing testId.",
+            "No approved jsonSchema or contract definition supplied to assess contract_violation."
+          ],
+          "healing": {
+            "advice": "manual_review_only",
+            "reason": "Observed candidates do not establish unique baseline identity."
+          },
+          "nextSteps": [
+            {
+              "evidenceRefs": [
+                {
+                  "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                  "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                  "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                }
+              ],
+              "source": "rules",
+              "text": "Inspect locator candidates for step invalid_password to distinguish a changed control from a missing or ambiguous target."
+            },
+            {
+              "text": "Inspect the full DOM artifact for the invalid_password before-phase (E39: browser/steps/invalid_password-before.html) to determine whether any password-type input, aria-label='password', or equivalent accessible name exists that the data-testid selector would miss.",
+              "source": "model",
+              "evidenceRefs": [
+                {
+                  "artifactId": "art_01a119a8-cb0c-754e-bc55-0afd8038c170",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+                  "relativePath": "browser/steps/invalid_password-before.html",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                  "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                  "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                }
+              ]
+            },
+            {
+              "text": "Review the network artifact (E44) and console artifact (E43) captured around the invalid_password step to check whether a lazy-loading component or auth-form API call failed or was delayed, which could explain the password field's absence at locator time.",
+              "source": "model",
+              "evidenceRefs": [
+                {
+                  "artifactId": "art_01a119a8-cb32-7410-9f40-458d3b4d54de",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "e241a6a614036f3820c6ecd330c19e625114550447baae2ee773f88a2658f9cb",
+                  "relativePath": "browser/network.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-cb31-711a-abbe-25c883ca7984",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+                  "relativePath": "browser/console.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "c71440e13ae679968b741519e6d259c68b9bb7dfc62ba9382a1ebe8f01144650",
+                  "observationSeq": 35,
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+                },
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4",
+                  "observationSeq": 54,
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+                }
+              ]
+            },
+            {
+              "text": "Compare the after-phase screenshot (E41: browser/steps/invalid_password-after.png) with the before-phase screenshot (E38) and with the successful invalid_email after-phase (E35) to visually confirm whether a password input was rendered but not addressed by the locator.",
+              "source": "model",
+              "evidenceRefs": [
+                {
+                  "artifactId": "art_01a119a8-cb2b-7088-985b-65fad8b83b0f",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+                  "relativePath": "browser/steps/invalid_password-after.png",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+                  "relativePath": "browser/steps/invalid_password-before.png",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-55ba-709b-92ba-d529da7783cb",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+                  "relativePath": "browser/steps/invalid_email-after.png",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                  "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                  "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                }
+              ]
+            },
+            {
+              "text": "If the source test definition is available, verify whether the 'invalid_password' step's locator selector (data-testid=\"password\") matches the current application markup, or whether the selector was recently renamed/removed in a baseline update indicated by the 'different' baseline flag.",
+              "source": "model",
+              "evidenceRefs": [
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+                },
+                {
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4",
+                  "observationSeq": 54,
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+                },
+                {
+                  "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                  "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                },
+                {
+                  "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                  "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                  "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                  "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                  "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                  "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+                }
+              ]
+            }
+          ],
+          "observation": {
+            "absence": "null_value",
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+              }
+            ],
+            "expected": "null",
+            "observed": "null",
+            "operation": "fill",
+            "stepId": "invalid_password",
+            "summary": "Step invalid_password (fill) was failed: assertion_timeout. Locator {\"by\":\"testId\",\"value\":\"password\"}."
+          }
+        },
+        "facts": [
+          {
+            "evidenceRefs": [
+              {
+                "contentHash": "67be8b379283bb1299ae2c8c37b29b3ff93f2843c7272edcb37b78d10bc649d6",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Run finished with outcome failed and gate failed."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "f346f0a10536d9344810861e4ed8b39e41b77e6baabb765e1b4123131d5a2e09",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-556a-73c1-a56f-7c71fcef0da0"
+              }
+            ],
+            "text": "Step invalid_open (navigate) was passed."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "c403b97c4eff5b9592c7de277551b53fea401da3d66deb5cf74ddb49e4ab2517",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-55bc-75b5-b80a-1ff30456fb59"
+              }
+            ],
+            "text": "Step invalid_email (fill) was passed."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+              }
+            ],
+            "text": "Step invalid_password (fill) was failed: assertion_timeout."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "575202f0b41e86abf80bd608d6a9abd79f42ef32415c058ab433cbab970fb882",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2e-7793-8845-f16cda5ed611"
+              }
+            ],
+            "text": "Step invalid_submit (click) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "5f2d68e4e995f54a0e2d78c566518c4a6458c4a55706c10c8ee217c42cbbced5",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2e-7793-8845-ff00c8b3fe9e"
+              }
+            ],
+            "text": "Step invalid_login_assertion (assert) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "1fa412073bffff568d4883e1fdfa88e74e47080c5064743a48de24929945252c",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2f-74c3-8ebd-8aea05ba8502"
+              }
+            ],
+            "text": "Step open_login (navigate) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "b85615d424db0ea78a158a4ebb6df06b495a7efb0cd45e2772b0a30246cb5314",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2f-74c3-8ebd-974119f9e438"
+              }
+            ],
+            "text": "Step email (fill) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "45a73b6b28bc42c42c9c8e597dae50ea69b73859229fd958d0f8fc3e936a1058",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb30-7501-b79f-af3cca96a830"
+              }
+            ],
+            "text": "Step password (fill) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "e279becd7e649009ad954dee996fead8bc7f5ef3e6fdd819ebba1f09e997fa1c",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb30-7501-b79f-bba007c4ea33"
+              }
+            ],
+            "text": "Step signin (click) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "c69fe7a92efb4819985959341288796a132aea16c2714018e5840ab7b0f6e7b2",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb31-711a-abbe-1c8e77353ce8"
+              }
+            ],
+            "text": "Step catalog_ready (assert) was skipped: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "922ebc026d0a9bb74e22de24851570303fa5801b7dc3a969f96136d7c39d2840",
+                "observationSeq": 1,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.started observation."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "7c6657db7f96191ce8278be6c6a99b9aabb946f839ec3821c4ad32939b171196",
+                "observationSeq": 14,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "903829763a09fd6685cb23e745517daffb5282739041cfd967132fdba156ef32",
+                "observationSeq": 15,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.started observation."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "092731bdf74d16837a5aae70da06fc11e54d899b9d3d2a995546f4133a771673",
+                "observationSeq": 34,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "c71440e13ae679968b741519e6d259c68b9bb7dfc62ba9382a1ebe8f01144650",
+                "observationSeq": 35,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.started observation."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4",
+                "observationSeq": 54,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: assertion_timeout."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "26522f93e2bd3987fced7e4c88fc3566ac9ded30136d0329a10667c0d31a53fd",
+                "observationSeq": 55,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "cc59ec9dc54d23b620442a2516f25d7fde183523a7a9e419ec807f3c97cd827d",
+                "observationSeq": 56,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "f237662305719505955a9d1a49f75f979054f2b87056a056161953292e56072d",
+                "observationSeq": 57,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "7e666ca2383aec696e8f074b9e8cbc8023a75e551668e47209a2752b32624d66",
+                "observationSeq": 58,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "b44a8b1af190e3b0353b6910f78b204c5cdbf55056c5473babbdb53cfbab3bdc",
+                "observationSeq": 59,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "f8d376ff2bc1a30495ab3e502745253d08998c098970dbfb16ec0170addb2709",
+                "observationSeq": 60,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "06339b742806f62e61b16b36eb82b15c8cd7d2ccec0e1b3f91e9d05c95879a2e",
+                "observationSeq": 61,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted step.finished observation: stopped_after_failure."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "1d72b9e4b5af407dce08a9cbb727e7815e1f90c66335e686c430fb8b839113cd",
+                "observationSeq": 68,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted runner.finished observation: assertion_timeout."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "contentHash": "fdbd4f02707637a4c94e73545dabfaa1ef658467e06466c8402c27705a7261fa",
+                "observationSeq": 24,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "text": "Persisted run.completed observation."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-5547-755d-b1a8-9036f80ce7a2",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+                "relativePath": "browser/steps/invalid_open-before.png",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified screenshot artifact art_01a119a8-5547-755d-b1a8-9036f80ce7a2 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-5549-7512-acc6-12dfd2425ae6",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+                "relativePath": "browser/steps/invalid_open-before.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified dom artifact art_01a119a8-5549-7512-acc6-12dfd2425ae6 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-5568-7594-b17d-823bd06c5d6c",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "4b638e80f923c8521e347a702683e46c9aea638aad3bdc710f5daf8afe59028d",
+                "relativePath": "browser/steps/invalid_open-after.png",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified screenshot artifact art_01a119a8-5568-7594-b17d-823bd06c5d6c is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-556a-73c1-a56f-743e0647df57",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+                "relativePath": "browser/steps/invalid_open-after.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified dom artifact art_01a119a8-556a-73c1-a56f-743e0647df57 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-557d-740a-88d9-aef82deda00a",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "466b1b8c2b53433a419960b3dbd076cb051f8797fd54e2ba9f124df0663133a8",
+                "relativePath": "browser/steps/invalid_email-locator-0-before.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified locator-evidence artifact art_01a119a8-557d-740a-88d9-aef82deda00a is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-5599-70d2-a4b8-396883fb7769",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "4b638e80f923c8521e347a702683e46c9aea638aad3bdc710f5daf8afe59028d",
+                "relativePath": "browser/steps/invalid_email-before.png",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified screenshot artifact art_01a119a8-5599-70d2-a4b8-396883fb7769 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-559b-74f5-bd70-bb19ad826ded",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+                "relativePath": "browser/steps/invalid_email-before.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified dom artifact art_01a119a8-559b-74f5-bd70-bb19ad826ded is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-55a5-7249-b16b-13d1e15dba53",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "dda923e6a1f7589577ac383adf7169cff662a2d082376805c4be0f9b34b27167",
+                "relativePath": "browser/steps/invalid_email-locator-0-after.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified locator-evidence artifact art_01a119a8-55a5-7249-b16b-13d1e15dba53 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-55ba-709b-92ba-d529da7783cb",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+                "relativePath": "browser/steps/invalid_email-after.png",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified screenshot artifact art_01a119a8-55ba-709b-92ba-d529da7783cb is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-55bc-75b5-b80a-1447a68a5ee6",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+                "relativePath": "browser/steps/invalid_email-after.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified dom artifact art_01a119a8-55bc-75b5-b80a-1447a68a5ee6 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified locator-evidence artifact art_01a119a8-caf3-7694-a505-bf24fc2a8ae0 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+                "relativePath": "browser/steps/invalid_password-before.png",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified screenshot artifact art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb0c-754e-bc55-0afd8038c170",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+                "relativePath": "browser/steps/invalid_password-before.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified dom artifact art_01a119a8-cb0c-754e-bc55-0afd8038c170 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified locator-evidence artifact art_01a119a8-cb0f-77d6-8343-e16eabe72ecd is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb2b-7088-985b-65fad8b83b0f",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "15b592306d5739b155b092b01c61d82140641c8007797f743a6a692a8e31b45f",
+                "relativePath": "browser/steps/invalid_password-after.png",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified screenshot artifact art_01a119a8-cb2b-7088-985b-65fad8b83b0f is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb2c-7255-a884-b01be517e596",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "55aede1e2da323f5fe6c2c94be7a121c19d75d3dfe015ac33c7b7c6c763709bb",
+                "relativePath": "browser/steps/invalid_password-after.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified dom artifact art_01a119a8-cb2c-7255-a884-b01be517e596 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb31-711a-abbe-25c883ca7984",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+                "relativePath": "browser/console.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified console artifact art_01a119a8-cb31-711a-abbe-25c883ca7984 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cb32-7410-9f40-458d3b4d54de",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "e241a6a614036f3820c6ecd330c19e625114550447baae2ee773f88a2658f9cb",
+                "relativePath": "browser/network.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified network artifact art_01a119a8-cb32-7410-9f40-458d3b4d54de is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cca4-7631-ba42-6a235f462323",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "relativePath": "logs/container.log",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified log artifact art_01a119a8-cca4-7631-ba42-6a235f462323 is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cca4-7631-ba42-6cb4dcd5486f",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "40cc6f7d70dff1a1fead630640b11e2af67767fed39d819b3129f609181b3511",
+                "relativePath": "snapshot/runtime.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified snapshot artifact art_01a119a8-cca4-7631-ba42-6cb4dcd5486f is available."
+          },
+          {
+            "evidenceRefs": [
+              {
+                "artifactId": "art_01a119a8-cca5-734b-87d4-c384a7f71902",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "0f13314c927fe41d9d3bbddbd39f6dd6ec4ffc162b07a18b9f068c6da4e12764",
+                "relativePath": "logs/egress.ndjson",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "text": "Verified network artifact art_01a119a8-cca5-734b-87d4-c384a7f71902 is available."
+          }
+        ],
+        "failureKind": "unknown",
+        "hypotheses": [
+          {
+            "text": "The fill action targeted a locator by data-testid=\"password\" (per observation summary in E4). The locator evidence at both before (E37) and after (E40) phases shows cardinality 0—no element matched. However, 18 of 26 candidates are unlisted, so we cannot conclusively determine whether a password field exists under a different testId or semantic role on the rendered page. If the password input is present but lacks data-testid=\"password\", this would indicate test_fragility (locator drift). If no password field exists at all, the page structure changed or the flow is incorrect.",
+            "supports": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+              },
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "7a8cf25b2892ff2733ae7023392bea35ff2c713c6a6972cdccbd203ca66fbbb4",
+                "observationSeq": 54,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              },
+              {
+                "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "1d72b9e4b5af407dce08a9cbb727e7815e1f90c66335e686c430fb8b839113cd",
+                "observationSeq": 68,
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4"
+              }
+            ],
+            "contradicts": [],
+            "confidence": 0.4,
+            "calibrated": false,
+            "support": "partially_supported"
+          },
+          {
+            "text": "The baseline is marked 'different' for the invalid_password step and all subsequent steps, while the two prior steps (invalid_open, invalid_email) with the same baseline passed. This suggests a recent change in the application or test specification. The absence of a password field at the expected selector could reflect an intentional product change (e.g., new auth flow) rather than a defect, making a product_bug classification premature without corroborating contract or requirement evidence.",
+            "supports": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "4768722165191a9a471032632c3ab328f7fafc7f1bee1fbb8ada547c9f7c3931",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-cb2d-77ce-91d3-959654dabb54"
+              },
+              {
+                "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d",
+                "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2",
+                "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "f346f0a10536d9344810861e4ed8b39e41b77e6baabb765e1b4123131d5a2e09",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-556a-73c1-a56f-7c71fcef0da0"
+              }
+            ],
+            "contradicts": [],
+            "confidence": 0.35,
+            "calibrated": false,
+            "support": "partially_supported"
+          },
+          {
+            "text": "The page rendered successfully (visible links, email textbox confirmed matched in E34), so a wholesale environment or navigation failure is unlikely. However, an egress or network anomaly could have prevented a password field from loading dynamically (e.g., a lazy-rendered component gated by an API response). Network artifact E44 and console artifact E43 could clarify this but their contents are not expanded here.",
+            "supports": [
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "f346f0a10536d9344810861e4ed8b39e41b77e6baabb765e1b4123131d5a2e09",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-556a-73c1-a56f-7c71fcef0da0"
+              },
+              {
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "c403b97c4eff5b9592c7de277551b53fea401da3d66deb5cf74ddb49e4ab2517",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "stepId": "stp_01a119a8-55bc-75b5-b80a-1ff30456fb59"
+              },
+              {
+                "artifactId": "art_01a119a8-55a5-7249-b16b-13d1e15dba53",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "dda923e6a1f7589577ac383adf7169cff662a2d082376805c4be0f9b34b27167",
+                "relativePath": "browser/steps/invalid_email-locator-0-after.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "artifactId": "art_01a119a8-5549-7512-acc6-12dfd2425ae6",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+                "relativePath": "browser/steps/invalid_open-before.html",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "artifactId": "art_01a119a8-cb31-711a-abbe-25c883ca7984",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+                "relativePath": "browser/console.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              },
+              {
+                "artifactId": "art_01a119a8-cb32-7410-9f40-458d3b4d54de",
+                "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+                "contentHash": "e241a6a614036f3820c6ecd330c19e625114550447baae2ee773f88a2658f9cb",
+                "relativePath": "browser/network.json",
+                "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+                "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9"
+              }
+            ],
+            "contradicts": [],
+            "confidence": 0.2,
+            "calibrated": false,
+            "support": "partially_supported"
+          }
+        ],
+        "limitations": [
+          "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.",
+          "No authorized discovery was requested; no source targets supplied.",
+          "No source-kind handle was supplied; fixTargetHandle must be null.",
+          "Locator evidence lists only 8 of 26 candidates; the remaining 18 unlisted candidates may include a password field, preventing a definitive absence claim.",
+          "No equivalent control (same role/name/recorded equivalence) was positively identified, so the test_fragility threshold (target absent + page rendered + equivalent present) is not met.",
+          "Timeout with assertion_timeout alone is not a diagnosis per policy.",
+          "Network and console artifact contents (E43, E44) are not inline-expanded; a dynamic-rendering cause cannot be ruled in or out.",
+          "Baseline 'different' status is noted but its precise diff content is unavailable."
+        ],
+        "modelCallId": "mdl_01a11c7c-721f-75c0-8186-c9478a1cd83b",
+        "parentId": "ana_01a11c7b-a380-7158-b334-9b45d21225b2",
+        "recommendedAction": "collect_more_evidence",
+        "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+        "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+        "source": "model"
+      }
+    }
+  ],
+  "ledgers": [
+    {
+      "id": "m3-drift-03",
+      "group": "drift",
+      "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": [
+          "review_healing_proposal"
+        ],
+        "acceptableActions": [
+          "collect_more_evidence"
+        ],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
+      "labelStatus": "pending-independent-review",
+      "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+      "mutant": "healthy",
+      "baselinePatches": [
+        {
+          "file": "index.js",
+          "before": "        return json(response, 200, { token, userId: user.id });",
+          "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+        }
+      ],
+      "patches": [
+        {
+          "file": "shop.html",
+          "before": "data-testid=\"password\"",
+          "after": "data-testid=\"login-password\""
+        }
+      ],
+      "resultDigests": {
+        "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+        "shop.html": "f88bb332dd81481edf6740ead15f8a341eb28785a3b18dea9c98ef3e777a53a5"
+      },
+      "oracle": "passwordValidation",
+      "semanticNegative": "no-password-validation",
+      "plan": {
+        "schemaVersion": "1.0.0",
+        "kind": "executable",
+        "name": "m3-drift-03",
+        "type": "frontend",
+        "runner": "playwright",
+        "requirementRefs": [],
+        "steps": [
+          {
+            "id": "invalid_open",
+            "kind": "action",
+            "operation": "navigate",
+            "description": "invalid_open",
+            "required": true,
+            "input": {
+              "path": "/login"
+            }
+          },
+          {
+            "id": "invalid_email",
+            "kind": "action",
+            "operation": "fill",
+            "description": "invalid_email",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "email"
+              },
+              "value": {
+                "literal": "demo@example.test"
+              }
+            }
+          },
+          {
+            "id": "invalid_password",
+            "kind": "action",
+            "operation": "fill",
+            "description": "invalid_password",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "password"
+              },
+              "value": {
+                "literal": ""
+              }
+            }
+          },
+          {
+            "id": "invalid_submit",
+            "kind": "action",
+            "operation": "click",
+            "description": "invalid_submit",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "role",
+                "role": "button",
+                "name": "Sign in",
+                "exact": true
+              }
+            }
+          },
+          {
+            "id": "invalid_login_assertion",
+            "kind": "assertion",
+            "operation": "assert",
+            "description": "invalid_login_assertion",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "password-error"
+              }
+            },
+            "expectation": {
+              "predicate": "textEquals",
+              "value": {
+                "literal": "Password is required"
+              }
+            }
+          },
+          {
+            "id": "open_login",
+            "kind": "action",
+            "operation": "navigate",
+            "description": "open_login",
+            "required": true,
+            "input": {
+              "path": "/login"
+            }
+          },
+          {
+            "id": "email",
+            "kind": "action",
+            "operation": "fill",
+            "description": "email",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "email"
+              },
+              "value": {
+                "literal": "demo@example.test"
+              }
+            }
+          },
+          {
+            "id": "password",
+            "kind": "action",
+            "operation": "fill",
+            "description": "password",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "password"
+              },
+              "value": {
+                "literal": "correct-password"
+              }
+            }
+          },
+          {
+            "id": "signin",
+            "kind": "action",
+            "operation": "click",
+            "description": "signin",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "role",
+                "role": "button",
+                "name": "Sign in",
+                "exact": true
+              }
+            }
+          },
+          {
+            "id": "catalog_ready",
+            "kind": "assertion",
+            "operation": "assert",
+            "description": "catalog_ready",
+            "required": true,
+            "input": {
+              "locator": {
+                "by": "testId",
+                "value": "catalog-ready"
+              }
+            },
+            "expectation": {
+              "predicate": "visible"
+            }
+          }
+        ]
+      },
+      "baselineDigests": {
+        "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+        "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+      },
+      "semanticDigests": {
+        "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+        "shop.html": "f88bb332dd81481edf6740ead15f8a341eb28785a3b18dea9c98ef3e777a53a5"
+      },
+      "transformationSourceDigest": "2b689757c5de47d6c01334e8e9617d82de74ccdabdda1628d7d382013ab5a96e",
+      "expectedFailingStepIds": [
+        "invalid_password"
+      ],
+      "status": "observed",
+      "stages": {},
+      "diagnosis": {
+        "failureKind": "unknown",
+        "grounded": true,
+        "abstained": true
+      },
+      "healing": {
+        "offered": false,
+        "proposed": false,
+        "reviewed": false,
+        "applied": false,
+        "unsafeProposed": false,
+        "unsafeApplied": false,
+        "falseRepair": false,
+        "assertionsPreserved": false,
+        "healthyPassed": false,
+        "verificationPassed": false,
+        "semanticAssertionReached": false,
+        "semanticAssertionFailed": false,
+        "healthyOracle": false,
+        "driftOracle": false,
+        "semanticOracle": false
+      },
+      "usage": {
+        "inputTokens": 7939,
+        "outputTokens": 2858,
+        "reasoningTokens": 1656,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 35875,
+        "costs": []
+      },
+      "errors": [],
+      "records": {
+        "retainedWorkspace": "/tmp/tm-m3-38vPh7",
+        "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+        "rulesAnalysisId": "ana_01a11c7b-a380-7158-b334-9b45d21225b2",
+        "calls": [
+          {
+            "id": "mdl_01a11c7c-721f-75c0-8186-c9478a1cd83b",
+            "model": "qwen3.8-flash",
+            "latencyMs": 52671,
+            "createdAt": "2026-10-08T17:08:00.160Z",
+            "repairAttempt": 0,
+            "transportAttempt": 0,
+            "outcome": "success",
+            "usage": {
+              "cachedInputTokens": 0,
+              "inputTokens": 7939,
+              "outputTokens": 2858,
+              "reasoningTokens": 1656
+            },
+            "cost": "unknown"
+          }
+        ]
+      },
+      "utility": {
+        "rules": {
+          "recommendedAction": "inspect_locator_candidates",
+          "recommendedActions": [
+            {
+              "action": "inspect_locator_candidates",
+              "source": "rules"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_unknown",
+            "failureKind": "unknown"
+          },
+          "healing": {
+            "advice": "manual_review_only"
+          },
+          "nextSteps": {
+            "count": 1,
+            "sources": [
+              "rules"
+            ]
+          },
+          "unsupportedClaims": 0
+        },
+        "model": {
+          "recommendedAction": "inspect_locator_candidates",
+          "recommendedActions": [
+            {
+              "action": "inspect_locator_candidates",
+              "source": "rules"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            },
+            {
+              "action": null,
+              "source": "model"
+            }
+          ],
+          "conclusion": {
+            "status": "cause_unknown",
+            "failureKind": "unknown"
+          },
+          "healing": {
+            "advice": "manual_review_only"
+          },
+          "nextSteps": {
+            "count": 5,
+            "sources": [
+              "rules",
+              "model",
+              "model",
+              "model",
+              "model"
+            ]
+          },
+          "unsupportedClaims": 0
+        }
+      }
+    }
+  ],
+  "score": {
+    "label": "coverage-pilot",
+    "independentApplicationFamilies": null,
+    "declaredApplicationFamilies": 0,
+    "plannedMainCases": 1,
+    "utility": {
+      "plannedCases": 1,
+      "arms": {
+        "none": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 1,
+            "n": 1,
+            "estimate": 1,
+            "lower": 0.20654329147389294,
+            "upper": 1
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "observedActions": 1,
+          "missingActions": 0,
+          "unclassifiedAdvice": {
+            "count": 0,
+            "cases": 0,
+            "missingModelAdviceClassification": 0,
+            "disposition": "manual-rubric-required"
+          },
+          "unlabelledAdvice": {
+            "count": 0,
+            "cases": 0
+          },
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingHealingAdvice": 1,
+          "overclaim": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "missingConclusions": 1,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 0,
+            "missingCases": 1
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        },
+        "rules": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "observedActions": 1,
+          "missingActions": 0,
+          "unclassifiedAdvice": {
+            "count": 0,
+            "cases": 0,
+            "missingModelAdviceClassification": 0,
+            "disposition": "manual-rubric-required"
+          },
+          "unlabelledAdvice": {
+            "count": 1,
+            "cases": 1
+          },
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingHealingAdvice": 0,
+          "overclaim": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingConclusions": 0,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 1,
+            "missingCases": 0
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        },
+        "model": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "observedActions": 1,
+          "missingActions": 0,
+          "unclassifiedAdvice": {
+            "count": 4,
+            "cases": 1,
+            "missingModelAdviceClassification": 0,
+            "disposition": "manual-rubric-required"
+          },
+          "unlabelledAdvice": {
+            "count": 1,
+            "cases": 1
+          },
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingHealingAdvice": 0,
+          "overclaim": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingConclusions": 0,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 1,
+            "missingCases": 0
+          },
+          "tokensPerCorrectAction": {
+            "scope": "all-measured-pipeline-calls-in-labelled-cases",
+            "knownTokens": 10797,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        }
+      },
+      "incrementalGain": {
+        "status": "measured",
+        "n": 1,
+        "missingPairs": 0,
+        "improved": 0,
+        "regressed": 0,
+        "estimate": 0,
+        "lower": -1,
+        "upper": 1,
+        "interval": "paired-hoeffding-95-independent-sampling"
+      },
+      "missingLabels": [],
+      "labelSources": [
+        "post-hoc-scenario-design"
+      ],
+      "pendingIndependentReview": [
+        "m3-drift-03"
+      ],
+      "disputed": {
+        "caseIds": [],
+        "plannedCases": 0,
+        "arms": {
+          "none": {
+            "nextActionCorrect": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "nextActionSafe": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "dangerousAction": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "observedActions": 0,
+            "missingActions": 0,
+            "unclassifiedAdvice": {
+              "count": 0,
+              "cases": 0,
+              "missingModelAdviceClassification": 0,
+              "disposition": "manual-rubric-required"
+            },
+            "unlabelledAdvice": {
+              "count": 0,
+              "cases": 0
+            },
+            "healingAdviceCorrect": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "missingHealingAdvice": 0,
+            "overclaim": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "missingConclusions": 0,
+            "unsupportedClaims": {
+              "count": 0,
+              "observedCases": 0,
+              "missingCases": 0
+            },
+            "tokensPerCorrectAction": {
+              "scope": "no-model-calls",
+              "knownTokens": 0,
+              "correctActions": 0,
+              "unknownTokenCases": 0,
+              "value": null
+            }
+          },
+          "rules": {
+            "nextActionCorrect": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "nextActionSafe": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "dangerousAction": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "observedActions": 0,
+            "missingActions": 0,
+            "unclassifiedAdvice": {
+              "count": 0,
+              "cases": 0,
+              "missingModelAdviceClassification": 0,
+              "disposition": "manual-rubric-required"
+            },
+            "unlabelledAdvice": {
+              "count": 0,
+              "cases": 0
+            },
+            "healingAdviceCorrect": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "missingHealingAdvice": 0,
+            "overclaim": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "missingConclusions": 0,
+            "unsupportedClaims": {
+              "count": 0,
+              "observedCases": 0,
+              "missingCases": 0
+            },
+            "tokensPerCorrectAction": {
+              "scope": "no-model-calls",
+              "knownTokens": 0,
+              "correctActions": 0,
+              "unknownTokenCases": 0,
+              "value": null
+            }
+          },
+          "model": {
+            "nextActionCorrect": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "nextActionSafe": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "dangerousAction": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "observedActions": 0,
+            "missingActions": 0,
+            "unclassifiedAdvice": {
+              "count": 0,
+              "cases": 0,
+              "missingModelAdviceClassification": 0,
+              "disposition": "manual-rubric-required"
+            },
+            "unlabelledAdvice": {
+              "count": 0,
+              "cases": 0
+            },
+            "healingAdviceCorrect": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "missingHealingAdvice": 0,
+            "overclaim": {
+              "status": "insufficientData",
+              "successes": 0,
+              "n": 0,
+              "estimate": null,
+              "lower": null,
+              "upper": null
+            },
+            "missingConclusions": 0,
+            "unsupportedClaims": {
+              "count": 0,
+              "observedCases": 0,
+              "missingCases": 0
+            },
+            "tokensPerCorrectAction": {
+              "scope": "all-measured-pipeline-calls-in-labelled-cases",
+              "knownTokens": 0,
+              "correctActions": 0,
+              "unknownTokenCases": 0,
+              "value": null
+            }
+          }
+        },
+        "incrementalGain": {
+          "status": "insufficientData",
+          "n": 0,
+          "missingPairs": 0,
+          "improved": 0,
+          "regressed": 0,
+          "estimate": null,
+          "lower": null,
+          "upper": null,
+          "interval": "paired-hoeffding-95-independent-sampling"
+        }
+      }
+    },
+    "healingUtility": {
+      "eligibleSuccess": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "missingEligibilityLabels": [],
+      "assistedCandidateCorrect": {
+        "status": "insufficientData",
+        "successes": 0,
+        "n": 0,
+        "estimate": null,
+        "lower": null,
+        "upper": null
+      },
+      "disputed": {
+        "caseIds": [],
+        "eligibleSuccess": {
+          "status": "insufficientData",
+          "successes": 0,
+          "n": 0,
+          "estimate": null,
+          "lower": null,
+          "upper": null
+        },
+        "assistedCandidateCorrect": {
+          "status": "insufficientData",
+          "successes": 0,
+          "n": 0,
+          "estimate": null,
+          "lower": null,
+          "upper": null
+        }
+      },
+      "reviewLoad": {
+        "proposals": 0,
+        "missingReviewDecision": 0,
+        "changes": 0,
+        "observedChangeCounts": 0,
+        "missingChangeCounts": 0,
+        "changesPerProposal": null
+      }
+    },
+    "operation": {
+      "calls": 1,
+      "missingCallRecords": 0,
+      "latencyMs": {
+        "observations": 1,
+        "missing": 0,
+        "mean": 52671,
+        "median": 52671,
+        "p95": 52671
+      },
+      "firstAttemptInvalid": {
+        "status": "measured",
+        "successes": 0,
+        "n": 1,
+        "estimate": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "missingAttemptMetadata": 0
+    },
+    "secondaryMetrics": [
+      "diagnosisCauseAccuracy",
+      "defectRecall",
+      "defectPrecision"
+    ],
+    "automaticCoverage": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "safeHealingSuccessRate": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "diagnosisCauseAccuracy": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "diagnosisAbstention": {
+      "status": "measured",
+      "successes": 1,
+      "n": 1,
+      "estimate": 1,
+      "lower": 0.20654329147389294,
+      "upper": 1
+    },
+    "conditionalCauseAccuracy": {
+      "status": "measured",
+      "successes": 0,
+      "n": 1,
+      "estimate": 0,
+      "lower": 0,
+      "upper": 0.7934567085261071
+    },
+    "healthyCorrectAbstention": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "defectRecall": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "defectPrecision": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "proposedUnsafePatches": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "appliedUnsafePatches": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "falseRepairs": {
+      "status": "insufficientData",
+      "successes": 0,
+      "n": 0,
+      "estimate": null,
+      "lower": null,
+      "upper": null
+    },
+    "endToEndCompletion": {
+      "status": "measured",
+      "successes": 1,
+      "n": 1,
+      "estimate": 1,
+      "lower": 0.20654329147389294,
+      "upper": 1
+    },
+    "stages": {},
+    "stageObservations": {},
+    "supplementalIntegration": [],
+    "offers": {
+      "healing": 0,
+      "proposals": 0,
+      "reviewed": 0,
+      "applied": 0
+    },
+    "statuses": {
+      "observed": 1,
+      "abstained": 0,
+      "error": 0,
+      "unstarted": 0
+    },
+    "cost": {
+      "inputTokens": 7939,
+      "outputTokens": 2858,
+      "reasoningTokens": 1656,
+      "cacheTokens": 0,
+      "conservativeCharge": 35875,
+      "unknownCalls": 0,
+      "unknownCostCalls": 1,
+      "estimatedCosts": []
+    },
+    "targets": {
+      "diagnosisCauseAccuracy": 0.8,
+      "defectRecall": 0.9,
+      "defectPrecision": 0.9,
+      "safeHealingSuccessRate": 0.8,
+      "unsafeAutoapply": 0,
+      "criticalFalseRepair": 0
+    },
+    "limitations": [
+      "Cases within application families are correlated; corpus-derived denominators do not establish independent families or graduation.",
+      "Wilson intervals are descriptive under family correlation; zero observations do not prove population zero risk or <1% rare-event risk.",
+      "Independent label review, family holdout and safety sign-off remain pending.",
+      "Unknown usage remains conservatively charged; local quota does not cap remote billed tokens or money.",
+      "Utility labels must be supplied explicitly; missing observations are misses, not evidence of safe actions. Disputed labels are reported separately.",
+      "Cause, recall and precision are secondary descriptive measures; utility and isolated candidate replay are not homologation evidence by themselves."
+    ]
+  },
+  "limitations": [
+    "Replay reuses development cases and post-hoc labels; it is not holdout, a registered round, or capability homologation."
+  ]
+}
