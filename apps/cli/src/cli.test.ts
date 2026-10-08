@@ -1,8 +1,8 @@
-import { Application, scaffoldPlan } from "@testmaster/application";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
+import { Application, scaffoldPlan } from "@testmaster/application";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "./cli.js";
 import { Runtime } from "./runtime.js";
@@ -208,7 +208,20 @@ it("run analyze renders useful text while JSON and read-only analysis preserve t
     const call = async (args: string[]) => {
       let stdout = "";
       let stderr = "";
-      const runtime = new Runtime(new Writable({ write(chunk, _encoding, callback) { stdout += String(chunk); callback(); } }), new Writable({ write(chunk, _encoding, callback) { stderr += String(chunk); callback(); } }));
+      const runtime = new Runtime(
+        new Writable({
+          write(chunk, _encoding, callback) {
+            stdout += String(chunk);
+            callback();
+          },
+        }),
+        new Writable({
+          write(chunk, _encoding, callback) {
+            stderr += String(chunk);
+            callback();
+          },
+        }),
+      );
       vi.spyOn(runtime, "app").mockResolvedValue(app);
       await runCli(args, runtime);
       return { stdout, stderr, exit: process.exitCode };
@@ -224,7 +237,12 @@ it("run analyze renders useful text while JSON and read-only analysis preserve t
     const json = await call(["--output", "json", "run", "analyze", run.id]);
     const envelope = JSON.parse(json.stdout);
     expect(envelope.data).toEqual(stored);
-    expect(Object.keys(envelope).sort()).toEqual(["data", "requestId", "schemaVersion", "warnings"]);
+    expect(Object.keys(envelope).sort()).toEqual([
+      "data",
+      "requestId",
+      "schemaVersion",
+      "warnings",
+    ]);
     expect(envelope).not.toHaveProperty("text");
     const read = await call(["run", "analysis", run.id]);
     expect(read.stdout).toBe(analyzed.stdout);
