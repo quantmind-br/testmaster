@@ -663,3 +663,28 @@ cite dozens of non-admitted artifacts exceed the 90000-byte pre-dispatch cap, an
 gateway schema to the persisted one. The four verified policy healings match the frozen policy
 probes exactly; they count as misses because their diagnoses abstained.
 
+After round 2 the implementation was changed against the retained evidence and checked with paid
+development replays (`evals/results/dev-*`, never registered rounds): the model catalog is
+compact (every retained case <=34367 bytes, was up to 126 KB), a 2xx status contradicting a
+required `statusIn` is a rules-derived `product_bug`, unresolved JSON pointers carry a value-free
+structural diagnostic, browser locator evidence waits for attachment before the `before` sample,
+named password inputs are identified without recording values, repeated locators on steps that the
+failed run never executed get a deferred proof that only a passing verification can discharge
+(`HealingService.reconcile` is async and `promoteRevisionCas` refuses an unproven deferral),
+unsupported alternative hypotheses and unauthorized fix targets are dropped with a disclosed
+limitation instead of discarding the diagnosis, and a model abstention keeps a cause the frozen
+rules established from observed evidence. Prompts are `analyze-4-compact-structural-evidence` and
+`heal-3-repeated-locator-coverage`.
+
+Round 3 (`b767367`, one run per registration, same 30 cases, so a regression measurement and not a
+holdout): `qwen3.8-flash` medium got safe healing 9/12, cause accuracy 21/26, defect recall 8/9,
+precision 8/9, completion 30/30, 0/11 unsafe applications, 0/9 false repairs, 567154 conservative
+tokens; `muse-spark-1.3` xhigh got safe healing 9/12, cause accuracy 19/26, recall 8/9, precision
+8/9, completion 30/30, 0/11 unsafe applications, 0/9 false repairs, 504967 tokens. Money is
+unknown for both. `validation/results/m3-round3-posthoc-audit.json` recomputes both scores. Healing
+is capped at 9/12 because `m3-drift-07/08/12` are manual-only by design (renamed control,
+duplicate roleless fingerprint). `m3-bug-03` and `m3-env-03` are labelled `unknown`
+(pending independent review) while rules and both models observe a failed business assertion, so
+they score as misses; labels were not changed. Recall/precision (8/9) and healing (9/12) stay
+below their proposed 0.9/0.8 pilot point targets; the M3 milestone gate stays red.
+

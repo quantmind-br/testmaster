@@ -4980,6 +4980,9 @@
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
         "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
         "validation/results/m3-round2-posthoc-audit.json",
+        "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z/report.json",
+        "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
+        "validation/results/m3-round3-posthoc-audit.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
@@ -4987,7 +4990,7 @@
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts"
       ],
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -6861,10 +6864,13 @@
         "validation/results/m3-round1-posthoc-audit.json",
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
         "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
-        "validation/results/m3-round2-posthoc-audit.json"
+        "validation/results/m3-round2-posthoc-audit.json",
+        "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z/report.json",
+        "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
+        "validation/results/m3-round3-posthoc-audit.json"
       ],
       "code": ["packages/application/src/ai/analysis.ts"],
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
@@ -6956,6 +6962,9 @@
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
         "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
         "validation/results/m3-round2-posthoc-audit.json",
+        "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z/report.json",
+        "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
+        "validation/results/m3-round3-posthoc-audit.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
       ],
@@ -6964,7 +6973,7 @@
         "packages/application/src/ai/healing-patch.ts",
         "packages/planner/src/agent/index.ts"
       ],
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -7402,6 +7411,9 @@
         "evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z/report.json",
         "evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z/report.json",
         "validation/results/m3-round2-posthoc-audit.json",
+        "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z/report.json",
+        "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
+        "validation/results/m3-round3-posthoc-audit.json",
         "evals/rounds/m3-round2-qwen38-medium/controls/manifest.json",
         "evals/rounds/m3-round2-qwen38-medium/policy-probes/manifest.json",
         "tools/src/traceability/m3-mutations.test.ts",
@@ -7617,7 +7629,7 @@
           }
         ]
       },
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality."
+      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality."
     },
     {
       "id": "M4-01",
@@ -18629,6 +18641,26 @@
         "n": 12,
         "decision": "failed",
         "reason": "M3 round 2, the single authorized run (frozen fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 0/9, precision insufficient data; healthy correct abstention 3/4; completion 6/30; 13 proposals, 4 policy-applied and verified, 0 unsafe applied, 0/9 false repairs; supplemental integration observed. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 24/30 diagnoses abstained (10 before dispatch at the 90000-byte catalog cap, 12 rejected by the analysis limitations schema narrowing fixed in d3dc8ed and not live-verified, 2 by the observation-support rule); the 4 verified healings equal the deterministic policy-probe ceiling but score as misses because their diagnoses abstained. 40 calls, 461818 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
+      },
+      {
+        "area": "model-loop-m3-round3-qwen38-medium",
+        "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
+        "approvedTarget": null,
+        "observation": 0.75,
+        "interval": [0.4677, 0.9111],
+        "n": 12,
+        "decision": "failed",
+        "reason": "M3 round 3 for qwen3.8-flash medium (frozen b767367, evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z): safe healing 9/12; cause accuracy 21/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03 unknown and drift-08 unknown; drift-07/08/12 manual-only by design. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
+      },
+      {
+        "area": "model-loop-m3-round3-muse-spark-xhigh",
+        "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
+        "approvedTarget": null,
+        "observation": 0.75,
+        "interval": [0.4677, 0.9111],
+        "n": 12,
+        "decision": "failed",
+        "reason": "M3 round 3 for muse-spark-1.3 xhigh (frozen b767367, evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z): safe healing 9/12; cause accuracy 19/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03/07/08/12 unknown. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
       }
     ]
   }
