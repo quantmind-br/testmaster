@@ -735,3 +735,42 @@ provenance and scoped capability decisions, not reassigned as new IDs or strippe
 AI-005 and HEAL-003 are the new layered-diagnosis and healing-review requirements. New test source
 links record implementation controls, not external holdout, human-study or security homologation.
 
+#### Exercised development evidence (2026-10-08)
+
+`validation/results/m3-utility/rules-replay-summary.json` records offline rules replay over copies
+of 62 retained original workspaces: 61 analyses, with the Qwen supplemental integration Run
+explicitly skipped because its retained Run was missing (30 Qwen / 31 Muse analyses). Originals
+were not replay targets. Each arm's undisputed primary regression cohort has 28 cases: rules
+next-action correct 23/28 versus none 0/28, safe 24/28, dangerous 0/28, healing advice 25/28 and
+overclaim 1/28. The overclaim is env-01's rules environment cause versus the post-hoc security label;
+labels were not revised to fit outputs. The disputed bug-03/env-03 pair remains separate (rules
+correct 0/2 versus none 2/2). These are correlated development-corpus observations, not holdout
+or generalized rates; intervals and limitations remain in the retained summary.
+
+`validation/results/m3-utility/cli/summary.json` records seven real CLI case inspections, text/JSON
+analysis, Markdown/HTML exports and manual/applied healing reviews. The HTML render was visually
+inspected (`cli/diagnosis-render.png`). `assisted-candidate-replay.json` records drift-07/08/12 on
+isolated copies with healing off: all three candidate positives passed, all three semantic negatives
+failed, assertions stayed intact and no candidate was promoted (six Docker controls).
+`generic-driver-controls.json` records two synthetic external-driver controls with four Docker
+runs, physical independent oracles and zero model calls. These prove exercised local mechanics,
+not externally authored holdout, participant review utility or independent security sign-off.
+
+The single limited paid Qwen medium smoke is **failed utility enrichment**, not success:
+`validation/results/m3-utility/qwen-medium-smoke-summary.json` records four generation calls plus
+four inventory calls, all HTTP 200, 91,422 conservative tokens, 24,367 measured input-plus-output
+tokens (5,238 reasoning tokens are included in output, not additive), zero first-attempt schema
+invalids and zero repairs. Generation latencies were 36,126 / 41,098 / 46,747 / 14,855 ms; money
+is unknown. All four enrichments were rejected by the newly added execution-observation-only
+next-step guard despite known handles, so rules layers remained and no model next steps were
+admitted. No observed incremental utility gain or model superiority follows from this smoke.
+
+That extra predicate was removed for next steps only; known-handle validation and existing
+hypothesis-support guards remain. The correction passed 60 deterministic analysis tests and a
+built-runtime controlled-output admission check (`nextstep-guard-runtime.json`, `providerLive:false`);
+the corrected code has **not** received another live provider call. Supplemental-advice safety
+controls passed the 54-test evaluation suite: primary first-displayed action stays rules-first,
+any dangerous visible advice is unsafe and unclassified advice cannot receive safety credit.
+Free-text classification still needs independent manual rubric where unresolved. These scoped
+results do not assert the final integrated check/Docker suite or release gate has passed.
+

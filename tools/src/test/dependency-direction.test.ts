@@ -69,6 +69,8 @@ const verifiedRuntimeLoaders = new Set([
   "tools/src/github-action/main.ts",
   "tools/src/github-action/publisher.ts",
 ]);
+/** Trusted evaluation drivers are path-confined and reviewed separately from workspace layers. */
+const evaluationDriverLoaders = new Set(["tools/src/evals/m3.ts", "tools/src/evals/holdout.ts"]);
 function importSpecifiers(source: string, filename: string): string[] {
   const tree = parse(source, {
     sourceType: "unambiguous",
@@ -104,7 +106,11 @@ function importSpecifiers(source: string, filename: string): string[] {
     if (specifier) {
       const literal = specifier as Record<string, unknown>;
       if (literal.type !== "StringLiteral" || typeof literal.value !== "string") {
-        if (type === "ImportExpression" && verifiedRuntimeLoaders.has(filename)) continue;
+        if (
+          type === "ImportExpression" &&
+          (verifiedRuntimeLoaders.has(filename) || evaluationDriverLoaders.has(filename))
+        )
+          continue;
         throw new Error(`${filename}: non-literal module loading cannot be checked`);
       }
       imports.push(literal.value);

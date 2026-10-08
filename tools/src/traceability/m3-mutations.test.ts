@@ -402,6 +402,11 @@ it("kills M3 critical mutations in source-isolated copies and retains equivalent
       "tools/src/evals/freeze.ts",
       "tools/src/evals/m3.ts",
       "tools/src/evals/m3-scoring.ts",
+      "tools/src/evals/holdout.ts",
+      "tools/src/evals/replay.ts",
+      "tools/src/evals/user-tasks.ts",
+      "evals/m3/corpus.json",
+      "evals/m3/fixture.d.mts",
       // m3.ts imports the fixture driver, which imports the reference-shop oracle.
       "evals/m3/fixture.mjs",
       "fixtures/reference-shop/oracle/index.js",

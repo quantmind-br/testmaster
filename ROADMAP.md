@@ -114,6 +114,19 @@ cross-owner fork-token isolation requiring a second GitHub identity. They are ch
 with `check --capability-gate ID`, do not compensate critical failures and do not replace the red
 `--milestone-gate M3`. Automatic identity/policy guards and original failed evidence are unchanged.
 
+**Exercised utility evidence (not homologation):** retained summaries under
+`validation/results/m3-utility/` record 61 offline analyses on copies of 62 original workspaces
+(one missing Qwen supplemental Run explicitly skipped), seven CLI/report/review case inspections,
+three manual candidates with six positive/semantic-negative Docker controls and no promotion,
+and four Docker controls for a synthetic generic driver with physical oracles and zero model calls.
+Rules scored next-action correct 23/28 and healing advice 25/28 on each undisputed regression
+cohort, with one overclaim; post-hoc/disputed labels were not adjusted to outputs. The authorized
+four-case Qwen medium smoke returned HTTP 200 and valid schema, but **all four enrichments were
+rejected** by an overstrict next-step evidence predicate: no model next steps or utility gain were
+admitted. Its correction is deterministically tested and exercised with controlled output, **not
+live-provider verified**; no extra paid rerun is claimed. No holdout, user-study, generalized safety,
+final integrated-suite pass or M3 graduation follows from these development controls.
+
 ## 7. M4 — Servidor, portal, equipes e automação
 
 - [ ] **M4-01 — Servidor e tenancy** (`Core`, `Security`). Fastify/API, PG, S3/filesystem, identidade local/sessões/tokens, workspace/membership/RBAC, audit e artifact gateway. **Dep.:** M3/M0-03. **Prova:** tenant A não consulta B por IDs/cache/blob; loopback também autenticado; tombstone revoga leitura pelo gateway.
