@@ -135,6 +135,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/runs/{id}/analysis", "analysis:X", "M3", "AnalysisInput", "Analysis"],
   ["POST", "/runs/{id}/healing-proposals", "healing:W", "M3", "HealingInput", "HealingProposal"],
   ["GET", "/healing-proposals/{id}", "healing:R", "M3", "Empty", "HealingProposal"],
+  ["GET", "/healing-proposals/{id}/review", "healing:R", "M3", "Empty", "HealingReview"],
   [
     "POST",
     "/healing-proposals/{id}/approve",
@@ -394,6 +395,11 @@ export const mcpTools = {
       ),
     }),
     output: "HealingProposal",
+  },
+  testmaster_review_healing: {
+    milestone: "M3",
+    input: Obj({ proposalId: id("hea") }),
+    output: "HealingReview",
   },
   testmaster_approve_healing: {
     milestone: "M3",

@@ -260,6 +260,8 @@ const supplemental = {
     fixTargetHandle: Type.Union([EvidenceHandle, Type.Null()]),
     /** Persisted verbatim into `Analysis.limitations`, so each item uses that bound (Name). */
     limitations: Type.Array(P.Name, { maxItems: 100 }),
+    nextSteps: Type.Array(P.Obj({ text: P.Description, evidence: evidenceIds(1) }), { maxItems: 5 }),
+    evidenceGaps: Type.Array(P.Name, { maxItems: 20 }),
   }),
   HealingInput: P.Obj({
     budget: Type.Optional(
@@ -277,6 +279,26 @@ const supplemental = {
       evidenceHandles: evidenceIds(1),
     }),
   ]),
+  HealingReview: P.Obj({
+    changes: Type.Array(P.Obj({ stepId: P.Name, path: P.JsonPointer, before: P.Json, after: P.Json }), { maxItems: 20 }),
+    identity: Type.Array(P.Obj({
+      stepId: P.Name,
+      previous: P.Json,
+      candidates: Type.Array(P.Obj({
+        role: Type.Union([P.Name, Type.Null()]), name: Type.Union([P.Description, Type.Null()]),
+        tag: Type.Union([P.Name, Type.Null()]), type: Type.Union([P.Name, Type.Null()]),
+        label: Type.Union([P.Description, Type.Null()]), form: Type.Union([P.Description, Type.Null()]),
+        matched: Type.Boolean(), visible: Type.Boolean(),
+      })),
+      equivalence: Type.Union([P.Obj({ equivalent: Type.Boolean(), reasons: Type.Array(P.Description) }), Type.Null()]),
+    })),
+    automation: P.Obj({ decision: P.Enum(["applied_by_policy", "manual_review_required", "not_eligible"]), reasons: Type.Array(P.Description) }),
+    preservedAssertions: P.Obj({ hash: P.ContentDigest, intact: Type.Boolean(), stepIds: Type.Array(P.Name) }),
+    risk: P.Risk,
+    verification: Type.Union([P.Obj({ runId: P.id("run"), outcome: P.Outcome, gate: P.Gate }), Type.Null()]),
+    approval: P.Obj({ expectedVersion: P.Version, proposalId: P.id("hea"), candidateRevisionId: P.id("rev") }),
+    evidenceRefs: Type.Array(P.EvidenceRef), limitations: Type.Array(P.Description),
+  }),
   QuarantineInput: P.Obj({
     reason: Type.String({ minLength: 1, maxLength: 2000 }),
     expiresAt: P.Timestamp,

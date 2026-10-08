@@ -6,7 +6,9 @@
     "hypotheses",
     "recommendedAction",
     "fixTargetHandle",
-    "limitations"
+    "limitations",
+    "nextSteps",
+    "evidenceGaps"
   ],
   "properties": {
     "failureKind": {
@@ -115,6 +117,42 @@
     },
     "limitations": {
       "maxItems": 100,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "nextSteps": {
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "evidence"
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "evidence": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "pattern": "^E[1-9][0-9]{0,5}$",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "evidenceGaps": {
+      "maxItems": 20,
       "type": "array",
       "items": {
         "minLength": 1,

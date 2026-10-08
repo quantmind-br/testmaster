@@ -33,6 +33,7 @@ import {
   RedactionStatus,
   Risk,
   roles,
+  StepStatus,
   Timestamp,
   Version,
 } from "./primitives.js";
@@ -304,6 +305,7 @@ export const entities = {
         contradicts: refs,
         confidence: Type.Number({ minimum: 0, maximum: 1 }),
         calibrated: Type.Boolean(),
+        support: Type.Optional(Enum(["supported", "partially_supported"])),
       }),
     ),
     failureKind: FailureKind,
@@ -318,6 +320,24 @@ export const entities = {
       "collect_more_evidence",
     ]),
     fixTarget: Type.Optional(EvidenceRef),
+    /** Optional only for historical records; required by AnalysisService on new writes. */
+    diagnosis: Type.Optional(Obj({
+      observation: nullable(Obj({
+        stepId: nullable(Name), operation: nullable(Name), summary: Description,
+        expected: nullable(Description), observed: nullable(Description),
+        absence: nullable(Enum(["missing_field", "null_value", "empty_collection", "evidence_unavailable"])),
+        evidenceRefs: refs,
+      })),
+      chain: Type.Array(Obj({
+        stepId: Name, operation: Name, status: StepStatus, summary: Description,
+        verifies: nullable(Name), baseline: Enum(["same", "different", "unavailable"]), evidenceRefs: refs,
+      }), { maxItems: 64 }),
+      alternatives: Type.Array(Obj({ text: Description, failureKind: FailureKind, evidenceRefs: refs }), { maxItems: 10 }),
+      conclusion: Obj({ status: Enum(["no_failure", "cause_supported", "cause_partially_supported", "cause_unknown"]), text: Description }),
+      nextSteps: Type.Array(Obj({ text: Description, source: Enum(["rules", "model"]), evidenceRefs: refs }), { maxItems: 10 }),
+      evidenceGaps: Type.Array(Description, { maxItems: 20 }),
+      healing: Obj({ advice: Enum(["not_indicated", "proposal_possible", "manual_review_only"]), reason: Description }),
+    })),
   }),
   HealingProposal: entity("hea", {
     failedRunId: id("run"),

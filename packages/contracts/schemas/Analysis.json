@@ -372,6 +372,18 @@
           },
           "calibrated": {
             "type": "boolean"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "const": "supported",
+                "type": "string"
+              },
+              {
+                "const": "partially_supported",
+                "type": "string"
+              }
+            ]
           }
         }
       }
@@ -537,6 +549,707 @@
         "codeSnapshotId": {
           "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
           "type": "string"
+        }
+      }
+    },
+    "diagnosis": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "observation",
+        "chain",
+        "alternatives",
+        "conclusion",
+        "nextSteps",
+        "evidenceGaps",
+        "healing"
+      ],
+      "properties": {
+        "observation": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "stepId",
+                "operation",
+                "summary",
+                "expected",
+                "observed",
+                "absence",
+                "evidenceRefs"
+              ],
+              "properties": {
+                "stepId": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "operation": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "summary": {
+                  "maxLength": 8000,
+                  "type": "string"
+                },
+                "expected": {
+                  "anyOf": [
+                    {
+                      "maxLength": 8000,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "observed": {
+                  "anyOf": [
+                    {
+                      "maxLength": 8000,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "absence": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "missing_field",
+                          "type": "string"
+                        },
+                        {
+                          "const": "null_value",
+                          "type": "string"
+                        },
+                        {
+                          "const": "empty_collection",
+                          "type": "string"
+                        },
+                        {
+                          "const": "evidence_unavailable",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "evidenceRefs": {
+                  "type": "array",
+                  "items": {
+                    "additionalProperties": false,
+                    "minProperties": 1,
+                    "dependentRequired": {
+                      "attemptId": [
+                        "runId"
+                      ],
+                      "stepId": [
+                        "runId",
+                        "attemptId"
+                      ],
+                      "observationSeq": [
+                        "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
+                      ]
+                    },
+                    "type": "object",
+                    "properties": {
+                      "artifactId": {
+                        "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "sourceRevisionId": {
+                        "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "snapshotId": {
+                        "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "relativePath": {
+                        "minLength": 1,
+                        "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                        "type": "string"
+                      },
+                      "offset": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "length": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "page": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "jsonPointer": {
+                        "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                        "type": "string"
+                      },
+                      "contentHash": {
+                        "pattern": "^[0-9a-f]{64}$",
+                        "type": "string"
+                      },
+                      "runId": {
+                        "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "attemptId": {
+                        "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "stepId": {
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      "observationSeq": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chain": {
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "stepId",
+              "operation",
+              "status",
+              "summary",
+              "verifies",
+              "baseline",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "stepId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "operation": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "const": "pending",
+                    "type": "string"
+                  },
+                  {
+                    "const": "running",
+                    "type": "string"
+                  },
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "skipped",
+                    "type": "string"
+                  },
+                  {
+                    "const": "not_run",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              },
+              "summary": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "verifies": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "baseline": {
+                "anyOf": [
+                  {
+                    "const": "same",
+                    "type": "string"
+                  },
+                  {
+                    "const": "different",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unavailable",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "dependentRequired": {
+                    "attemptId": [
+                      "runId"
+                    ],
+                    "stepId": [
+                      "runId",
+                      "attemptId"
+                    ],
+                    "observationSeq": [
+                      "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
+                    ]
+                  },
+                  "type": "object",
+                  "properties": {
+                    "artifactId": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "relativePath": {
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                      "type": "string"
+                    },
+                    "contentHash": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "runId": {
+                      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "attemptId": {
+                      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "observationSeq": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "alternatives": {
+          "maxItems": 10,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "text",
+              "failureKind",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "text": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "failureKind": {
+                "anyOf": [
+                  {
+                    "const": "product_bug",
+                    "type": "string"
+                  },
+                  {
+                    "const": "test_fragility",
+                    "type": "string"
+                  },
+                  {
+                    "const": "environment",
+                    "type": "string"
+                  },
+                  {
+                    "const": "contract_violation",
+                    "type": "string"
+                  },
+                  {
+                    "const": "security_policy",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unknown",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "dependentRequired": {
+                    "attemptId": [
+                      "runId"
+                    ],
+                    "stepId": [
+                      "runId",
+                      "attemptId"
+                    ],
+                    "observationSeq": [
+                      "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
+                    ]
+                  },
+                  "type": "object",
+                  "properties": {
+                    "artifactId": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "relativePath": {
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                      "type": "string"
+                    },
+                    "contentHash": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "runId": {
+                      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "attemptId": {
+                      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "observationSeq": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "conclusion": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "status",
+            "text"
+          ],
+          "properties": {
+            "status": {
+              "anyOf": [
+                {
+                  "const": "no_failure",
+                  "type": "string"
+                },
+                {
+                  "const": "cause_supported",
+                  "type": "string"
+                },
+                {
+                  "const": "cause_partially_supported",
+                  "type": "string"
+                },
+                {
+                  "const": "cause_unknown",
+                  "type": "string"
+                }
+              ]
+            },
+            "text": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        },
+        "nextSteps": {
+          "maxItems": 10,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "text",
+              "source",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "text": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "source": {
+                "anyOf": [
+                  {
+                    "const": "rules",
+                    "type": "string"
+                  },
+                  {
+                    "const": "model",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "dependentRequired": {
+                    "attemptId": [
+                      "runId"
+                    ],
+                    "stepId": [
+                      "runId",
+                      "attemptId"
+                    ],
+                    "observationSeq": [
+                      "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
+                    ]
+                  },
+                  "type": "object",
+                  "properties": {
+                    "artifactId": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "relativePath": {
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                      "type": "string"
+                    },
+                    "contentHash": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "runId": {
+                      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "attemptId": {
+                      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "observationSeq": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "evidenceGaps": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        },
+        "healing": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "advice",
+            "reason"
+          ],
+          "properties": {
+            "advice": {
+              "anyOf": [
+                {
+                  "const": "not_indicated",
+                  "type": "string"
+                },
+                {
+                  "const": "proposal_possible",
+                  "type": "string"
+                },
+                {
+                  "const": "manual_review_only",
+                  "type": "string"
+                }
+              ]
+            },
+            "reason": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
         }
       }
     },
