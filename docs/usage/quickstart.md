@@ -3,6 +3,18 @@
 TestMaster runs approved test revisions deterministically inside a hardened Docker sandbox and keeps
 verifiable evidence under `.testmaster/`. Generation with a model is optional and `experimental`.
 
+## Install the public experimental runtime
+
+The Linux x64 relocatable prerelease is available at
+[runtime-89a7205](https://github.com/quantmind-br/testmaster/releases/tag/runtime-89a7205).
+Download its `INSTALL.md` for hash-pinned installation without building the monorepo.
+Node 24 and rootful hardened Docker with the containerd image store remain host
+requirements. The release includes a standalone installer, runtime, both locked
+images, corresponding sources, SBOM and acceptance evidence. npm packages remain
+private; public availability is not GA or M3 homologation. Use the documented
+per-user link in `~/.local/bin` to make `testmaster` available on PATH.
+
+
 ## Prerequisites
 
 - Linux x64, Node.js 24, pnpm 12.9.1, Docker Engine reachable by the current user (validated: rootful
