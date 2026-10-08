@@ -280,6 +280,10 @@ it("accepts a new exact round identity and confines it to its registration direc
   await mkdir(dirname(join(root, path)), { recursive: true });
   await writeFile(join(root, path), JSON.stringify(r));
   expect((await checkM3(root, path)).modelCalls).toBe(0);
+  const museId = "m3-round3-muse-spark-xhigh";
+  expect(() =>
+    assertRegistrationIdentity(museId, `evals/rounds/${museId}/preregistration.json`),
+  ).not.toThrow();
   for (const id of ["../escape", "m3-round0-qwen38-medium", "m3-round2-qwen38-medium/escape"])
     expect(() => assertRegistrationIdentity(id, path)).toThrow("identity/path");
   expect(() => assertRegistrationIdentity(r.id, "evals/rounds/other/preregistration.json")).toThrow(

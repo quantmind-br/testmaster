@@ -132,7 +132,7 @@ export function applyExactPatches(source: string, patches: Patch[], file: string
 }
 export function assertRegistrationIdentity(id: string, path: string) {
   if (
-    !/^m3-round[1-9][0-9]*-qwen38-medium$/.test(id) ||
+    !/^m3-round[1-9][0-9]*-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) ||
     path !== `evals/rounds/${id}/preregistration.json`
   )
     throw new Error("Invalid M3 registration identity/path");
@@ -304,6 +304,8 @@ function validateMeasurementInputs(registration: M3Registration, corpus: Corpus)
       throw new Error(`Invalid corpus case: ${label.id}`);
   }
 }
+// Models the operator has approved for registered rounds.
+const approvedModels = ["qwen3.8-flash", "muse-spark-1.3"];
 export async function checkM3(root: string, registrationPath: string) {
   const registration = JSON.parse(
     await readFile(confined(root, registrationPath), "utf8"),
@@ -319,7 +321,7 @@ export async function checkM3(root: string, registrationPath: string) {
     !reasoningEfforts.some((effort) => effort === registration.decoding.reasoning_effort) ||
     registration.provider.baseUrl !== "https://api.quantforge.com.br/v1" ||
     registration.provider.apiKeyEnv !== "QUANTFORGE_API_KEY" ||
-    registration.provider.model !== "qwen3.8-flash" ||
+    !approvedModels.some((model) => model === registration.provider.model) ||
     registration.provider.id !== "quantforge" ||
     registration.provider.kind !== "openai-compatible"
   )
