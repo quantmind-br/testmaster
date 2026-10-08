@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "runId"
+  ],
+  "properties": {
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "model": {
+      "type": "boolean"
+    },
+    "discoveryId": {
+      "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "budget": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "deadlineMs": {
+          "minimum": 1,
+          "maximum": 180000,
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_analyze_run",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

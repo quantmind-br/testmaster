@@ -1,3 +1,4 @@
+import type { Analysis } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, it } from "vitest";
@@ -7,6 +8,8 @@ import {
   exportJson,
   exportJunit,
   exportMarkdown,
+  diagnosisSummary,
+  formatDiagnosisSummary,
   type ReportSnapshot,
   reportGate,
 } from "./index.js";
@@ -221,4 +224,61 @@ it("summarizes nonempty excludes and reasons without adding excluded members to 
   expect(output).toContain("explicit_selection_exclusion");
   expect(JSON.parse(exportJson(input)).selection.excluded).toEqual(input.selection.excluded);
   expect(exportMarkdown(input)).toContain("excluded: 1");
+});
+
+it("renders layered conclusion and next action in Markdown and HTML without probability claims", () => {
+  const input = snapshot();
+  const item = input.runs[0];
+  if (!item) throw new Error("Missing fixture");
+  const analysis: Analysis = {
+    id: uuidV7IdGenerator.next("ana"), runId: item.run.id, snapshotId: null, parentId: null,
+    source: "rules", affectedRequirementIds: [], failureKind: "product_bug", confidence: 0.9,
+    modelCallId: null, limitations: ["Backend cause not observed"], recommendedAction: "collect_more_evidence",
+    facts: [{ text: "Creation succeeded", evidenceRefs: [] }],
+    hypotheses: [{ text: "Write may not persist", supports: [], contradicts: [], confidence: 0.9, calibrated: false, support: "partially_supported" }],
+    diagnosis: {
+      observation: { stepId: "read", operation: "assert", summary: "Created item absent", expected: "Created item", observed: "[]", absence: "empty_collection", evidenceRefs: [] },
+      chain: [], alternatives: [{ text: "Different account context", failureKind: "unknown", evidenceRefs: [] }],
+      conclusion: { status: "cause_partially_supported", text: "Expected effect absent; internal cause undetermined" },
+      nextSteps: [{ text: "Compare create and read identity and environment", source: "rules", evidenceRefs: [] }],
+      evidenceGaps: ["No server-side trace"], healing: { advice: "not_indicated", reason: "Changing assertion would hide the mismatch" },
+    },
+  };
+  item.analysis = analysis;
+  for (const output of [exportMarkdown(input), exportHtml(input)]) {
+    expect(output).toContain("Diagnosis");
+    expect(output).toContain("Expected effect absent; internal cause undetermined");
+    expect(output).toContain("Compare create and read identity and environment");
+    expect(output).toContain("partially supported");
+    expect(output).toContain("No server");
+    expect(output).not.toContain("90%");
+  }
+  expect(diagnosisSummary(analysis).fields.find((field) => field.label === "Observed")?.text).toBe("[] (empty collection)");
+  expect(JSON.parse(exportJson(input)).runs[0].analysis).toEqual(analysis);
+});
+
+it("escapes hostile diagnosis hypotheses and warns honestly for historical analyses", () => {
+  const input = snapshot();
+  const item = input.runs[0];
+  if (!item) throw new Error("Missing fixture");
+  const hostile = '<img src=x onerror="alert(1)"> [click](javascript:alert(1))\n# injected';
+  item.analysis = {
+    id: uuidV7IdGenerator.next("ana"), runId: item.run.id, snapshotId: null, parentId: null,
+    source: "rules", affectedRequirementIds: [], failureKind: "unknown", confidence: null,
+    modelCallId: null, limitations: [], recommendedAction: "collect_more_evidence",
+    facts: [{ text: "Failure observed", evidenceRefs: [] }],
+    hypotheses: [{ text: hostile, supports: [], contradicts: [], confidence: 0.99, calibrated: true }],
+  };
+  const html = exportHtml(input);
+  const md = exportMarkdown(input);
+  expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+  expect(html).not.toContain("<img");
+  expect(md).toContain("\\[click\\]\\(javascript:alert\\(1\\)\\)");
+  expect(md).not.toContain("\n# injected");
+  expect(md).not.toContain("[click](javascript:");
+  for (const output of [html, md, formatDiagnosisSummary(item.analysis)]) {
+    expect(output).toContain("layered diagnosis not recorded for this analysis");
+    expect(output).toContain("not established");
+    expect(output).not.toContain("99%");
+  }
 });

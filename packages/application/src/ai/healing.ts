@@ -3,6 +3,7 @@ import {
   ContractError,
   type ExecutablePlan,
   type HealingProposal,
+  type HealingReview,
   type Locator,
   type TestCase,
   type TestRevision,
@@ -23,7 +24,7 @@ import {
   waitStateEquivalence,
 } from "@testmaster/planner";
 import { planRiskActions, type RiskClass } from "../approvals.js";
-import type { ArtifactsService } from "../artifacts.js";
+import { type ArtifactsService, isEvidenceUnavailable } from "../artifacts.js";
 import { authoringTransaction, promoteRevisionCas } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { RunsService } from "../runs.js";
@@ -85,6 +86,24 @@ function boundedRejectionReason(reason: string): string {
   const marker = " [truncated]";
   return text.length <= 200 ? text : `${text.slice(0, 200 - marker.length)}${marker}`;
 }
+function planSteps(plan: ExecutablePlan) {
+  const steps = [...plan.steps];
+  for (let index = 0; index < steps.length; index++) {
+    const step = steps[index]!;
+    if (step.operation === "frame") steps.push(...step.input.childSteps);
+  }
+  return steps;
+}
+function reviewValue(steps: ExecutablePlan["steps"], stepId: string, path: string): HealingReview["changes"][number]["before"] {
+  let value: unknown = steps.find((step) => step.id === stepId);
+  for (const token of path.slice(1).split("/")) {
+    const key = token.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (!value || typeof value !== "object" || !Object.hasOwn(value, key))
+      throw new ContractError("PRECONDITION_FAILED", "Healing review replacement path is unavailable", { stepId, path });
+    value = (value as Record<string, unknown>)[key];
+  }
+  return structuredClone(value) as HealingReview["changes"][number]["before"];
+}
 export class HealingService {
   constructor(
     readonly ctx: ServiceContext,
@@ -97,6 +116,113 @@ export class HealingService {
     const proposal = requireEntity(this.ctx, "HealingProposal", proposalId) as Stored;
     this.runs.get(proposal.failedRunId);
     return proposal;
+  }
+  /** Read-only projection of the frozen plans and recorded evidence; never reassesses policy. */
+  async review(proposalId: string): Promise<HealingReview> {
+    const proposal = this.get(proposalId);
+    const { run, test } = this.owner(proposal);
+    this.ctx.authorize("R", String(test.projectId));
+    const base = requireEntity(this.ctx, "TestRevision", proposal.baseRevisionId) as TestRevision & EntityDocument;
+    const candidate = requireEntity(this.ctx, "TestRevision", proposal.candidateRevisionId) as TestRevision & EntityDocument;
+    if (!base.plan || !candidate.plan)
+      throw new ContractError("PRECONDITION_FAILED", "Healing review requires frozen declarative plans");
+    const baseSteps = planSteps(base.plan), candidateSteps = planSteps(candidate.plan);
+    const changes = proposal.changes.map((change) => ({
+      stepId: change.stepId,
+      path: change.path,
+      before: reviewValue(baseSteps, change.stepId, change.path),
+      after: reviewValue(candidateSteps, change.stepId, change.path),
+    }));
+    const limitations = [...proposal.limitations];
+    const identity: HealingReview["identity"] = [];
+    const identityChanges = changes.filter((change) =>
+      ["/input/locator", "/input/trigger/input/locator", "/input/source", "/input/destination", "/input/state"].includes(change.path),
+    );
+    if (identityChanges.length) {
+      const cell = run.matrixCell as Record<string, unknown>;
+      const policy = run.gatePolicy as Record<string, unknown>;
+      const comparable = (snapshot: unknown) => {
+        if (!snapshot || typeof snapshot !== "object") return null;
+        const { inputHash: _inputHash, ...identity } = snapshot as Record<string, unknown>;
+        return semanticHash(identity);
+      };
+      const baseline = this.runs.list().filter((other) => {
+        const otherCell = other.matrixCell as Record<string, unknown>;
+        return other.id !== run.id && other.testId === run.testId &&
+          other.revisionId === proposal.baseRevisionId &&
+          other.environmentRevisionId === run.environmentRevisionId &&
+          other.outcome === "passed" && other.gate === "passed" &&
+          otherCell.baseUrl === cell.baseUrl &&
+          (other.gatePolicy as Record<string, unknown>).policyHash === policy.policyHash &&
+          comparable(cell.admissionSnapshot) !== null &&
+          comparable(otherCell.admissionSnapshot) === comparable(cell.admissionSnapshot);
+      }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+      const records = async (runId: string): Promise<LocatorEvidence[] | null> => {
+        try {
+          const records = await this.locatorRecords(runId);
+          const readable = records.filter((record) => {
+            if (validLocatorEvidence(record)) return true;
+            const { evidenceHash, ...payload } = record;
+            const complete = { ...payload, truncated: false };
+            if (record.truncated && semanticHash(payload) === evidenceHash &&
+              validLocatorEvidence({ ...complete, evidenceHash: semanticHash(complete) })) {
+              limitations.push(`Locator candidate list truncated for Run ${runId}; equivalence is not established by this record`);
+              return true;
+            }
+            limitations.push(`Complete validated locator evidence unavailable for Run ${runId}`);
+            return false;
+          });
+          return readable;
+        } catch (error) {
+          if (!isEvidenceUnavailable(error) &&
+            !(error instanceof ContractError && ["NOT_FOUND", "PAYLOAD_TOO_LARGE"].includes(error.code))) throw error;
+          limitations.push(`Locator evidence unavailable for Run ${runId}`);
+          return null;
+        }
+      };
+      const failed = await records(run.id);
+      const before = baseline ? await records(baseline.id) : null;
+      if (!baseline) limitations.push("No comparable passing locator baseline recorded; equivalence unavailable");
+      for (const change of identityChanges) {
+        const candidates = (failed ?? []).filter((record) => record.stepId === change.stepId && record.phase === "before")
+          .flatMap((record) => record.candidates).map((element) => ({
+            role: element.role || null, name: element.name || null,
+            tag: element.tag || null, type: element.type || null,
+            label: element.attributes.label ?? element.attributes["aria-label"] ?? null,
+            form: element.attributes.form ?? null,
+            matched: element.matched, visible: element.visible,
+          }));
+        if (!candidates.length) limitations.push(`Locator candidates unavailable for step ${change.stepId}`);
+        if (candidates.some((element) => element.label === null)) limitations.push(`Candidate label unavailable for step ${change.stepId}`);
+        if (candidates.some((element) => element.form === null)) limitations.push(`Candidate form unavailable for step ${change.stepId}`);
+        identity.push({
+          stepId: change.stepId, previous: change.before, candidates,
+          equivalence: before && failed ? change.path === "/input/state"
+            ? waitStateEquivalence(before, failed, change.stepId, change.after as "attached" | "visible" | "hidden" | "detached")
+            : assessLocatorEquivalence(before, failed, change.stepId, change.after as Locator)
+            : null,
+        });
+      }
+    }
+    const hash = assertionsHash(candidate.plan);
+    const verification = proposal.verificationRunId ? this.runs.get(proposal.verificationRunId) : null;
+    return validate<HealingReview>("HealingReview", {
+      changes, identity,
+      automation: {
+        decision: proposal.status === "verified" && proposal.approvalMode === "policy" ? "applied_by_policy"
+          : proposal.status === "proposed" ? "manual_review_required" : "not_eligible",
+        reasons: [...proposal.limitations],
+      },
+      preservedAssertions: {
+        hash, intact: hash === proposal.preservedAssertionsHash && hash === assertionsHash(base.plan),
+        stepIds: baseSteps.filter((step) => step.kind === "assertion" ||
+          (step.operation === "waitFor" && "response" in step.input)).map((step) => step.id),
+      },
+      risk: proposal.risk,
+      verification: verification ? { runId: verification.id, outcome: verification.outcome, gate: verification.gate } : null,
+      approval: { expectedVersion: proposal.version, proposalId: proposal.id, candidateRevisionId: proposal.candidateRevisionId },
+      evidenceRefs: structuredClone(proposal.evidenceRefs), limitations: [...new Set(limitations)],
+    });
   }
   private latest(failedRunId: string): Stored | null {
     return (

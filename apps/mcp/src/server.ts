@@ -21,6 +21,8 @@ import {
   SignedCursorCodec,
 } from "@testmaster/application";
 import {
+  type Analysis,
+  type HealingReview,
   type BatchReceipt,
   type BatchRequest,
   ContractError,
@@ -31,6 +33,7 @@ import {
   validateDocument,
 } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
+import { formatDiagnosisSummary } from "@testmaster/reporting";
 
 export interface McpOptions {
   application: Application;
@@ -42,6 +45,8 @@ const readTools: Record<string, true> = {
   testmaster_capabilities: true,
   testmaster_validate_document: true,
   testmaster_get_run: true,
+  testmaster_get_analysis: true,
+  testmaster_review_healing: true,
   testmaster_get_evidence: true,
   testmaster_open_report: true,
   testmaster_compare_runs: true,
@@ -107,6 +112,7 @@ export class TestMasterMcp {
                   "testmaster_generate_plan",
                   "testmaster_generate_tests",
                   "testmaster_analyze_code",
+                  "testmaster_analyze_run",
                   "testmaster_propose_healing",
                 ].includes(tool.name)
               ? "X"
@@ -139,8 +145,28 @@ export class TestMasterMcp {
                   mimeType: "application/json",
                 }))
               : [];
+          const summary =
+            tool.name === "testmaster_analyze_run" || tool.name === "testmaster_get_analysis"
+              ? formatDiagnosisSummary(data as unknown as Analysis)
+              : tool.name === "testmaster_review_healing"
+                ? (() => {
+                    const review = data as unknown as HealingReview;
+                    return [
+                      "Healing review",
+                      `Automation: ${review.automation.decision}`,
+                      ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
+                      `Risk: ${review.risk}; assertions intact: ${review.preservedAssertions.intact}`,
+                      `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
+                      `Approval: testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
+                    ].join("\n");
+                  })()
+                : null;
           return {
-            content: [{ type: "text", text: JSON.stringify(data) }, ...links],
+            content: [
+              ...(summary ? [{ type: "text" as const, text: summary }] : []),
+              { type: "text", text: JSON.stringify(data) },
+              ...links,
+            ],
             structuredContent: data,
           };
         } catch (error) {
@@ -393,6 +419,21 @@ export class TestMasterMcp {
           );
         return this.result(String(args.runId));
       }
+      case "testmaster_get_analysis": {
+        const analysis = app.analysis.get(String(args.runId));
+        if (!analysis) throw new ContractError("NOT_FOUND", "Run analysis unavailable");
+        return analysis;
+      }
+      case "testmaster_analyze_run": {
+        const budget = object(args.budget ?? {});
+        return app.analysis.analyze(String(args.runId), {
+          model: args.model === true,
+          ...(typeof args.discoveryId === "string" ? { discoveryId: args.discoveryId } : {}),
+          ...(typeof budget.deadlineMs === "number"
+            ? { budget: { deadlineMs: budget.deadlineMs } }
+            : {}),
+        });
+      }
       case "testmaster_cancel_run":
         return app.runs.cancel(String(args.runId));
       case "testmaster_run_tests": {
@@ -597,6 +638,8 @@ export class TestMasterMcp {
             : {}),
         });
       }
+      case "testmaster_review_healing":
+        return app.healing.review(String(args.proposalId));
       case "testmaster_approve_healing":
         return app.healing.approve(String(args.proposalId), Number(args.expectedVersion));
       default:

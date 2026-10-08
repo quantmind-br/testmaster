@@ -1,8 +1,9 @@
+import { Application, scaffoldPlan } from "@testmaster/application";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "./cli.js";
 import { Runtime } from "./runtime.js";
 
@@ -10,6 +11,7 @@ const roots: string[] = [];
 const originalExitCode = process.exitCode;
 afterEach(async () => {
   process.exitCode = originalExitCode;
+  vi.restoreAllMocks();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 async function invoke(args: string[]) {
@@ -191,4 +193,48 @@ describe("CLI machine output and offline authoring", () => {
       },
     });
   });
+});
+
+it("run analyze renders useful text while JSON and read-only analysis preserve the stored record", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-cli-diagnosis-"));
+  roots.push(root);
+  const app = await Application.open({ cwd: root, home: join(root, "home"), env: {} });
+  try {
+    const init = await app.init();
+    const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+    const run = app.runs.resolve({ testId: test.id, environmentId: init.environmentId });
+    Object.assign(run, { phase: "completed", status: "failed", outcome: "failed", gate: "failed" });
+    app.context.entities.insert("Run", run);
+    const call = async (args: string[]) => {
+      let stdout = "";
+      let stderr = "";
+      const runtime = new Runtime(new Writable({ write(chunk, _encoding, callback) { stdout += String(chunk); callback(); } }), new Writable({ write(chunk, _encoding, callback) { stderr += String(chunk); callback(); } }));
+      vi.spyOn(runtime, "app").mockResolvedValue(app);
+      await runCli(args, runtime);
+      return { stdout, stderr, exit: process.exitCode };
+    };
+    const analyzed = await call(["run", "analyze", run.id]);
+    expect(analyzed.exit).toBe(0);
+    expect(analyzed.stdout).toContain("Diagnosis\nFailure:");
+    expect(analyzed.stdout).toContain("Conclusion:");
+    expect(analyzed.stdout).toContain("Next step:");
+    expect(analyzed.stdout).toContain("Automatic healing:");
+    const stored = app.analysis.get(run.id);
+    const before = app.database.all("SELECT * FROM analyses");
+    const json = await call(["--output", "json", "run", "analyze", run.id]);
+    const envelope = JSON.parse(json.stdout);
+    expect(envelope.data).toEqual(stored);
+    expect(Object.keys(envelope).sort()).toEqual(["data", "requestId", "schemaVersion", "warnings"]);
+    expect(envelope).not.toHaveProperty("text");
+    const read = await call(["run", "analysis", run.id]);
+    expect(read.stdout).toBe(analyzed.stdout);
+    expect(app.database.all("SELECT * FROM analyses")).toEqual(before);
+    const missingRun = app.runs.resolve({ testId: test.id, environmentId: init.environmentId });
+    app.context.entities.insert("Run", missingRun);
+    const missing = await call(["--json", "run", "analysis", missingRun.id]);
+    expect(JSON.parse(missing.stdout).error.code).toBe("NOT_FOUND");
+    expect(app.database.all("SELECT * FROM analyses")).toEqual(before);
+  } finally {
+    app.close();
+  }
 });

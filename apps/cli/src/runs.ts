@@ -1,5 +1,6 @@
 import { ContractError } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
+import { formatDiagnosisSummary } from "@testmaster/reporting";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
 import { integer, type Runtime, seconds, string } from "./runtime.js";
@@ -82,17 +83,22 @@ export function runCommands(program: Command, runtime: Runtime): void {
       .option("--model", "Enrich factual diagnosis using the authorized model")
       .option("--discovery <id>", "Bind source targets to an authorized frozen discovery")
       .option("--deadline-ms <milliseconds>", "Model deadline", integer),
-    async (rt, args, options) => ({
-      data: await (await rt.app()).analysis.analyze(String(args[0]), {
+    async (rt, args, options) => {
+      const analysis = await (await rt.app()).analysis.analyze(String(args[0]), {
         model: options.model === true,
         ...(typeof options.discovery === "string" ? { discoveryId: options.discovery } : {}),
         ...(typeof options.deadlineMs === "number"
           ? { budget: { deadlineMs: options.deadlineMs } }
           : {}),
-      }),
-      exit: 0,
-    }),
+      });
+      return { data: analysis, text: formatDiagnosisSummary(analysis), exit: 0 };
+    },
   );
+  runtime.bind(group.command("analysis <id>"), async (rt, args) => {
+    const analysis = (await rt.app()).analysis.get(String(args[0]));
+    if (!analysis) throw new ContractError("NOT_FOUND", "Run analysis unavailable");
+    return { data: analysis, text: formatDiagnosisSummary(analysis) };
+  });
   runtime.bind(
     group
       .command("diff <left> <right>")

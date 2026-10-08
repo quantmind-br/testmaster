@@ -1,4 +1,4 @@
-import { type TSchema, Type } from "@sinclair/typebox";
+import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
@@ -525,6 +525,8 @@ const supplemental = {
   }),
   ReportLocation: P.Obj({ location: Type.String() }),
 };
+export type HealingReview = Static<typeof supplemental.HealingReview>;
+
 const httpInputs = {
   ProjectPatchInput: Type.Partial(supplemental.ProjectInput),
   EnvironmentPatchInput: Type.Partial(supplemental.EnvironmentInput),

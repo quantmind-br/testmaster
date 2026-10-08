@@ -924,6 +924,8 @@ function dispatch(
       return app.healing.propose(id, body as Parameters<typeof app.healing.propose>[1]);
     case "GET /healing-proposals/{id}":
       return app.healing.get(id);
+    case "GET /healing-proposals/{id}/review":
+      return app.healing.review(id);
     case "POST /healing-proposals/{id}/approve":
       return app.healing.approve(id, Number(body.expectedVersion));
     case "POST /healing-proposals/{id}/reject":

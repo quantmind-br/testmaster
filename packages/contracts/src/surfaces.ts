@@ -360,6 +360,23 @@ export const mcpTools = {
     }),
     output: "RunResult",
   },
+  testmaster_get_analysis: {
+    milestone: "M3",
+    input: Obj({ runId: id("run") }),
+    output: "Analysis",
+  },
+  testmaster_analyze_run: {
+    milestone: "M3",
+    input: Obj({
+      runId: id("run"),
+      model: Type.Optional(Type.Boolean()),
+      discoveryId: Type.Optional(id("dsc")),
+      budget: Type.Optional(
+        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
+      ),
+    }),
+    output: "Analysis",
+  },
   testmaster_get_evidence: {
     milestone: "M1",
     input: Obj({

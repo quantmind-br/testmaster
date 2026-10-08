@@ -11,6 +11,9 @@ import type {
   RuntimeTiming,
   StepResult,
 } from "@testmaster/contracts";
+import { diagnosisSummary } from "./diagnosis.js";
+
+export { diagnosisSummary, formatDiagnosisSummary, type DiagnosisSummary } from "./diagnosis.js";
 
 export { coverageMetrics, executionMetrics, ratioMetric } from "./metrics.js";
 
@@ -250,6 +253,18 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
           ]
         : []),
       ...missing(item).map((reason) => `- Evidence: ${markdown(reason)}`),
+      ...(item.analysis
+        ? (() => {
+            const summary = diagnosisSummary(item.analysis);
+            return [
+              "",
+              "### Diagnosis",
+              ...summary.fields.map((field) => `**${field.label}:** ${markdown(field.text)}`),
+              ...(summary.warning ? [`Warning: ${markdown(summary.warning)}`] : []),
+              ...summary.details.map((detail) => `- ${detail.label}: ${markdown(detail.text)}`),
+            ];
+          })()
+        : []),
       ...(item.privacy
         ? [
             `Restricted raw artifacts: ${markdown(item.privacy.restrictedRawArtifacts.join(", "))}`,
@@ -277,6 +292,10 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
     lines.push(`- Excluded: ${markdown(cell.memberKey)} (${markdown(cell.reasonCode)})`);
   return `${lines.join("\n")}\n`;
 }
+function diagnosisHtml(analysis: Analysis): string {
+  const summary = diagnosisSummary(analysis);
+  return `<h3>Diagnosis</h3><dl>${summary.fields.map((field) => `<dt>${xml(field.label)}</dt><dd>${xml(field.text)}</dd>`).join("")}</dl>${summary.warning ? `<p>Warning: ${xml(summary.warning)}</p>` : ""}<ul>${summary.details.map((detail) => `<li>${xml(detail.label)}: ${xml(detail.text)}</li>`).join("")}</ul>`;
+}
 export function exportHtml(snapshot: ReportSnapshot): string {
   validateSnapshot(snapshot);
   const runs = snapshot.runs
@@ -288,7 +307,7 @@ export function exportHtml(snapshot: ReportSnapshot): string {
           .map((reason) => `<li>Evidence: ${xml(reason)}</li>`)
           .join(
             "",
-          )}${item.privacy ? `<li>Known residues: ${xml(item.privacy.knownResidues.join(" "))}; ${xml(item.privacy.limitations.join(" "))}</li>` : ""}${item.externalEffects ? `<li>External effect uncertainty: ${item.externalEffects.uncertain}; possibly affected resources: ${xml(JSON.stringify(item.externalEffects.resources))}; ${xml(item.externalEffects.limitations.join(" "))}</li>` : ""}${item.reproduction ? `<li>Reproduction: ${xml(item.reproduction.degree)}; execution: ${xml(item.reproduction.executionDegree)} (${xml(item.reproduction.limitations.join(", "))})</li>` : ""}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul></section>`,
+          )}${item.privacy ? `<li>Known residues: ${xml(item.privacy.knownResidues.join(" "))}; ${xml(item.privacy.limitations.join(" "))}</li>` : ""}${item.externalEffects ? `<li>External effect uncertainty: ${item.externalEffects.uncertain}; possibly affected resources: ${xml(JSON.stringify(item.externalEffects.resources))}; ${xml(item.externalEffects.limitations.join(" "))}</li>` : ""}${item.reproduction ? `<li>Reproduction: ${xml(item.reproduction.degree)}; execution: ${xml(item.reproduction.executionDegree)} (${xml(item.reproduction.limitations.join(", "))})</li>` : ""}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul>${item.analysis ? diagnosisHtml(item.analysis) : ""}</section>`,
     )
     .join("");
   const metricsHtml = `<section><h2>Separate coverage metrics</h2><ul>${Object.entries(
