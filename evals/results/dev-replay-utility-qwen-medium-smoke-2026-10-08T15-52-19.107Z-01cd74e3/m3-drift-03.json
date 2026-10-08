@@ -1,0 +1,321 @@
+{
+  "id": "m3-drift-03",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "proposal_possible",
+    "healingEligibility": "automatic",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {
+    "semanticCandidate": true
+  },
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "data-testid=\"password\"",
+      "after": "data-testid=\"login-password\""
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "f88bb332dd81481edf6740ead15f8a341eb28785a3b18dea9c98ef3e777a53a5"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "no-password-validation",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-03",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid_open",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "invalid_open",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "invalid_email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "invalid_password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": ""
+          }
+        }
+      },
+      {
+        "id": "invalid_submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "invalid_submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "invalid_login_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "invalid_login_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password-error"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Password is required"
+          }
+        }
+      },
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "f88bb332dd81481edf6740ead15f8a341eb28785a3b18dea9c98ef3e777a53a5"
+  },
+  "transformationSourceDigest": "2b689757c5de47d6c01334e8e9617d82de74ccdabdda1628d7d382013ab5a96e",
+  "expectedFailingStepIds": [
+    "invalid_password"
+  ],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 7919,
+    "outputTokens": 2577,
+    "reasoningTokens": 1571,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 35761,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-38vPh7",
+    "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+    "rulesAnalysisId": "ana_01a11c38-5791-7153-af91-920539850765",
+    "calls": [
+      {
+        "id": "mdl_01a11c39-0ef7-722d-b281-fbfb3f81c203",
+        "model": "qwen3.8-flash",
+        "latencyMs": 46747,
+        "createdAt": "2026-10-08T15:54:23.864Z",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 7919,
+          "outputTokens": 2577,
+          "reasoningTokens": 1571
+        },
+        "cost": "unknown"
+      }
+    ]
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_locator_candidates",
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_locator_candidates",
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

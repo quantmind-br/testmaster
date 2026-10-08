@@ -1,0 +1,657 @@
+{
+  "development": true,
+  "registered": false,
+  "holdout": false,
+  "directory": "evals/results/dev-replay-utility-qwen-medium-smoke-2026-10-08T15-52-19.107Z-01cd74e3",
+  "smoke": {
+    "calls": 8,
+    "generationCalls": 4,
+    "inventoryCalls": 4,
+    "conservativeTokens": 91422,
+    "stopped": null,
+    "wire": [
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 13549,
+        "reservation": 21741,
+        "status": 200
+      },
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 8933,
+        "reservation": 17125,
+        "status": 200
+      },
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 27569,
+        "reservation": 35761,
+        "status": 200
+      },
+      {
+        "model": "qwen3.8-flash",
+        "reasoningEffort": "medium",
+        "promptBytes": 8603,
+        "reservation": 16795,
+        "status": 200
+      }
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "m3-bug-02",
+      "modelSource": "model",
+      "conclusionPreserved": true,
+      "healingPreserved": true,
+      "rulesSteps": [
+        {
+          "text": "Inspect the creation response at step order and the read at step orders, including entity identity and environment.",
+          "source": "rules",
+          "evidenceRefs": [
+            {
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd",
+              "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9"
+            },
+            {
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741",
+              "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924"
+            },
+            {
+              "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+              "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+              "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f",
+              "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9"
+            }
+          ]
+        }
+      ],
+      "modelSteps": [],
+      "limitations": [
+        "Model enrichment abstained: INVALID_ARGUMENT: Model next step requires execution observation support."
+      ],
+      "calls": [
+        {
+          "id": "mdl_01a11c37-b5fe-72e8-bf36-0b5fa54da3d3",
+          "model": "qwen3.8-flash",
+          "latencyMs": 36126,
+          "createdAt": "2026-10-08T15:52:55.553Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 3879,
+            "outputTokens": 2251,
+            "reasoningTokens": 1604
+          },
+          "cost": "unknown"
+        }
+      ],
+      "usage": {
+        "inputTokens": 3879,
+        "outputTokens": 2251,
+        "reasoningTokens": 1604,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 21741,
+        "costs": []
+      }
+    },
+    {
+      "caseId": "m3-bug-03",
+      "modelSource": "model",
+      "conclusionPreserved": true,
+      "healingPreserved": true,
+      "rulesSteps": [
+        {
+          "text": "Compare the observed value at step business_assertion with the approved requirement before changing product code or the test.",
+          "source": "rules",
+          "evidenceRefs": [
+            {
+              "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+              "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+              "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd",
+              "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83"
+            }
+          ]
+        }
+      ],
+      "modelSteps": [],
+      "limitations": [
+        "Model enrichment abstained: INVALID_ARGUMENT: Model next step requires execution observation support."
+      ],
+      "calls": [
+        {
+          "id": "mdl_01a11c38-56c2-76ae-978c-eed6e0b7ebe1",
+          "model": "qwen3.8-flash",
+          "latencyMs": 41098,
+          "createdAt": "2026-10-08T15:53:36.706Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 2280,
+            "outputTokens": 2606,
+            "reasoningTokens": 1676
+          },
+          "cost": "unknown"
+        }
+      ],
+      "usage": {
+        "inputTokens": 2280,
+        "outputTokens": 2606,
+        "reasoningTokens": 1676,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 17125,
+        "costs": []
+      }
+    },
+    {
+      "caseId": "m3-drift-03",
+      "modelSource": "model",
+      "conclusionPreserved": true,
+      "healingPreserved": true,
+      "rulesSteps": [
+        {
+          "text": "Inspect locator candidates for step invalid_password to distinguish a changed control from a missing or ambiguous target.",
+          "source": "rules",
+          "evidenceRefs": [
+            {
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+              "artifactId": "art_01a119a8-caf3-7694-a505-bf24fc2a8ae0",
+              "relativePath": "browser/steps/invalid_password-locator-0-before.json",
+              "contentHash": "b38400296b3d16c8be31a7f5e75b427de55a834e624c10d5f0f78a94c5854d5d"
+            },
+            {
+              "runId": "run_01a119a8-50f8-713f-adb3-8f843e9a47c4",
+              "attemptId": "att_01a119a8-512f-74ab-8629-8c62d1f6a8a2",
+              "snapshotId": "snp_01a119a8-5130-747e-a491-1d62caf465b9",
+              "artifactId": "art_01a119a8-cb0f-77d6-8343-e16eabe72ecd",
+              "relativePath": "browser/steps/invalid_password-locator-0-after.json",
+              "contentHash": "db477a479f8c4d7e0c1466a1fd72d5317ffb75fc7c8403d642e16945d089cea2"
+            }
+          ]
+        }
+      ],
+      "modelSteps": [],
+      "limitations": [
+        "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.",
+        "Model enrichment abstained: INVALID_ARGUMENT: Model next step requires execution observation support."
+      ],
+      "calls": [
+        {
+          "id": "mdl_01a11c39-0ef7-722d-b281-fbfb3f81c203",
+          "model": "qwen3.8-flash",
+          "latencyMs": 46747,
+          "createdAt": "2026-10-08T15:54:23.864Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 7919,
+            "outputTokens": 2577,
+            "reasoningTokens": 1571
+          },
+          "cost": "unknown"
+        }
+      ],
+      "usage": {
+        "inputTokens": 7919,
+        "outputTokens": 2577,
+        "reasoningTokens": 1571,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 35761,
+        "costs": []
+      }
+    },
+    {
+      "caseId": "m3-healthy-01",
+      "modelSource": "model",
+      "conclusionPreserved": true,
+      "healingPreserved": true,
+      "rulesSteps": [],
+      "modelSteps": [],
+      "limitations": [
+        "Model enrichment abstained: INVALID_ARGUMENT: Model next step requires execution observation support."
+      ],
+      "calls": [
+        {
+          "id": "mdl_01a11c39-4937-7412-9d76-2cdb006f6273",
+          "model": "qwen3.8-flash",
+          "latencyMs": 14855,
+          "createdAt": "2026-10-08T15:54:38.775Z",
+          "repairAttempt": 0,
+          "transportAttempt": 0,
+          "outcome": "success",
+          "usage": {
+            "cachedInputTokens": 0,
+            "inputTokens": 2219,
+            "outputTokens": 636,
+            "reasoningTokens": 387
+          },
+          "cost": "unknown"
+        }
+      ],
+      "usage": {
+        "inputTokens": 2219,
+        "outputTokens": 636,
+        "reasoningTokens": 387,
+        "cacheTokens": 0,
+        "unknownCalls": 0,
+        "unknownCostCalls": 1,
+        "conservativeCharge": 16795,
+        "costs": []
+      }
+    }
+  ],
+  "utility": {
+    "plannedCases": 3,
+    "arms": {
+      "none": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "observedActions": 3,
+        "missingActions": 0,
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "missingHealingAdvice": 3,
+        "overclaim": {
+          "status": "insufficientData",
+          "successes": 0,
+          "n": 0,
+          "estimate": null,
+          "lower": null,
+          "upper": null
+        },
+        "missingConclusions": 3,
+        "unsupportedClaims": {
+          "count": 0,
+          "observedCases": 0,
+          "missingCases": 3
+        },
+        "tokensPerCorrectAction": {
+          "scope": "no-model-calls",
+          "knownTokens": 0,
+          "correctActions": 0,
+          "unknownTokenCases": 0,
+          "value": null
+        }
+      },
+      "rules": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "observedActions": 3,
+        "missingActions": 0,
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "missingHealingAdvice": 0,
+        "overclaim": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "missingConclusions": 0,
+        "unsupportedClaims": {
+          "count": 0,
+          "observedCases": 3,
+          "missingCases": 0
+        },
+        "tokensPerCorrectAction": {
+          "scope": "no-model-calls",
+          "knownTokens": 0,
+          "correctActions": 2,
+          "unknownTokenCases": 0,
+          "value": 0
+        }
+      },
+      "model": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "observedActions": 3,
+        "missingActions": 0,
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 2,
+          "n": 3,
+          "estimate": 0.6666666666666666,
+          "lower": 0.2076549551264879,
+          "upper": 0.9385096847238394
+        },
+        "missingHealingAdvice": 0,
+        "overclaim": {
+          "status": "measured",
+          "successes": 0,
+          "n": 3,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.5615060804490177
+        },
+        "missingConclusions": 0,
+        "unsupportedClaims": {
+          "count": 0,
+          "observedCases": 3,
+          "missingCases": 0
+        },
+        "tokensPerCorrectAction": {
+          "scope": "all-measured-pipeline-calls-in-labelled-cases",
+          "knownTokens": 19481,
+          "correctActions": 2,
+          "unknownTokenCases": 0,
+          "value": 9740.5
+        }
+      }
+    },
+    "incrementalGain": {
+      "status": "measured",
+      "n": 3,
+      "missingPairs": 0,
+      "improved": 0,
+      "regressed": 0,
+      "estimate": 0,
+      "lower": -1,
+      "upper": 1,
+      "interval": "paired-hoeffding-95-independent-sampling"
+    },
+    "missingLabels": [],
+    "labelSources": [
+      "post-hoc-scenario-design"
+    ],
+    "pendingIndependentReview": [
+      "m3-bug-02",
+      "m3-bug-03",
+      "m3-drift-03",
+      "m3-healthy-01"
+    ],
+    "disputed": {
+      "caseIds": [
+        "m3-bug-03"
+      ],
+      "plannedCases": 1,
+      "arms": {
+        "none": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 1,
+            "n": 1,
+            "estimate": 1,
+            "lower": 0.20654329147389294,
+            "upper": 1
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 1,
+            "n": 1,
+            "estimate": 1,
+            "lower": 0.20654329147389294,
+            "upper": 1
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "observedActions": 1,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingHealingAdvice": 1,
+          "overclaim": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "missingConclusions": 1,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 0,
+            "missingCases": 1
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 1,
+            "unknownTokenCases": 0,
+            "value": 0
+          }
+        },
+        "rules": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "observedActions": 1,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 1,
+            "n": 1,
+            "estimate": 1,
+            "lower": 0.20654329147389294,
+            "upper": 1
+          },
+          "missingHealingAdvice": 0,
+          "overclaim": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingConclusions": 0,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 1,
+            "missingCases": 0
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        },
+        "model": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "observedActions": 1,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 1,
+            "n": 1,
+            "estimate": 1,
+            "lower": 0.20654329147389294,
+            "upper": 1
+          },
+          "missingHealingAdvice": 0,
+          "overclaim": {
+            "status": "measured",
+            "successes": 0,
+            "n": 1,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.7934567085261071
+          },
+          "missingConclusions": 0,
+          "unsupportedClaims": {
+            "count": 1,
+            "observedCases": 1,
+            "missingCases": 0
+          },
+          "tokensPerCorrectAction": {
+            "scope": "all-measured-pipeline-calls-in-labelled-cases",
+            "knownTokens": 4886,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        }
+      },
+      "incrementalGain": {
+        "status": "measured",
+        "n": 1,
+        "missingPairs": 0,
+        "improved": 0,
+        "regressed": 0,
+        "estimate": 0,
+        "lower": -1,
+        "upper": 1,
+        "interval": "paired-hoeffding-95-independent-sampling"
+      }
+    }
+  },
+  "errors": []
+}

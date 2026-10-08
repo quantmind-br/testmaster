@@ -1,0 +1,181 @@
+{
+  "id": "m3-bug-01",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labels": {
+    "correctActions": [
+      "compare_requirement"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "not_indicated",
+    "healingEligibility": "none",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "no-password-validation"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {},
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "no-password-validation",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"no-password-validation\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "9a9f2847957bf21535b1db7dbffe6a94808648546792f22530c009d71971c1d5",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "9a9f2847957bf21535b1db7dbffe6a94808648546792f22530c009d71971c1d5",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "92b78d43853ce49ab2b3a7c4d6a2b0ba5102d081d148a78591a30709edc1312a",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-2pFxFI",
+    "runId": "run_01a1199d-ae90-751f-bf2a-23d7aff6ac72",
+    "rulesAnalysisId": "ana_01a11c2f-a8d5-752d-a66a-f984b3f9be76"
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

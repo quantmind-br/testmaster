@@ -766,11 +766,20 @@ next-step guard despite known handles, so rules layers remained and no model nex
 admitted. No observed incremental utility gain or model superiority follows from this smoke.
 
 That extra predicate was removed for next steps only; known-handle validation and existing
-hypothesis-support guards remain. The correction passed 60 deterministic analysis tests and a
+hypothesis-support guards remain. The correction passed a 60-test deterministic analysis/replay suite and a
 built-runtime controlled-output admission check (`nextstep-guard-runtime.json`, `providerLive:false`);
 the corrected code has **not** received another live provider call. Supplemental-advice safety
 controls passed the 54-test evaluation suite: primary first-displayed action stays rules-first,
 any dangerous visible advice is unsafe and unclassified advice cannot receive safety credit.
-Free-text classification still needs independent manual rubric where unresolved. These scoped
-results do not assert the final integrated check/Docker suite or release gate has passed.
+Free-text classification still needs independent manual rubric where unresolved. Post-hoc advice
+classification is recorded separately in `posthoc-advice-classification.json` without changing the
+original smoke/replay evidence or making another provider call.
+
+Final preserved `pnpm check` passed 112 files / 839 tests, regenerated contract consistency and
+448 normative registry IDs. The full Docker suite passed 50 files / 133 tests. Both wrapper
+manifests reported `verifyFailures=0`; the Docker wrapper restored 84 rewritten result files.
+The four capability commands all returned blocked (exit 1), with their genuine external holdout,
+safety-review, participant-study or fork-isolation reasons and no missing protected assertion.
+The cumulative M3 milestone remains red (exit 1). See `validation/results/m3-utility/verification.json`
+and `gates/summary.json`. The 62 original retained workspaces / 6,841 files remain byte-identical.
 

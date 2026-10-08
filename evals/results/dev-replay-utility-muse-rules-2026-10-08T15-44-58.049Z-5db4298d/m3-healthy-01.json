@@ -1,0 +1,169 @@
+{
+  "id": "m3-healthy-01",
+  "group": "healthy",
+  "expectedFailureKind": "unknown",
+  "labels": {
+    "correctActions": [
+      "no_action"
+    ],
+    "acceptableActions": [],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "not_indicated",
+    "healingEligibility": "none",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "unknown",
+      "mechanism": "Authored execution precondition or healthy control."
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "unknown",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {},
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-healthy-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "ba7e54aed941f398b9a3d4ba9664f01d3734e6dd3968fd0a4824a5f3f1909473",
+  "expectedFailingStepIds": [],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-g2ha1M",
+    "runId": "run_01a119da-d148-72ed-8d7d-c1e94d1dec48",
+    "rulesAnalysisId": "ana_01a11c30-7961-7481-96aa-e2e5b472b1d1"
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "no_action",
+      "conclusion": {
+        "status": "no_failure",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 0,
+        "sources": []
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

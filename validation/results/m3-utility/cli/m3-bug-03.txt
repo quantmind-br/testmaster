@@ -1,0 +1,28 @@
+Diagnosis
+Failure: Step business_assertion (assert) was failed: assertion_mismatch.
+Expected: "ok"
+Observed: "degraded"
+Conclusion: The expected behavior was not observed; the internal cause has not been determined. (cause partially supported)
+Next step: Compare the observed value at step business_assertion with the approved requirement before changing product code or the test. (rules)
+Automatic healing: not indicated: A test change would hide the observed behavior mismatch.
+Observation evidence: [evidence: step stp_cae064cd #0f5427b73ddc]
+Next step evidence: [evidence: step stp_cae064cd #0f5427b73ddc]
+Fact: Run finished with outcome failed and gate failed. [evidence: run_0fd19785 #69ed2257604b]
+Fact: Step health (request) was passed. [evidence: step stp_6d4f40f5 #fc3784367f62]
+Fact: Step business_assertion (assert) was failed: assertion_mismatch. [evidence: step stp_cae064cd #0f5427b73ddc]
+Fact: Persisted step.started observation. [evidence: run_0fd19785 observation 1 #8f4d2c92963c]
+Fact: Persisted step.finished observation. [evidence: run_0fd19785 observation 5 #ffc03f0bd2b0]
+Fact: Persisted step.started observation. [evidence: run_0fd19785 observation 6 #f3696d80f238]
+Fact: Persisted step.finished observation: assertion_mismatch. [evidence: run_0fd19785 observation 7 #4e5fa83d0eb1]
+Fact: Persisted runner.finished observation: assertion_mismatch. [evidence: run_0fd19785 observation 8 #be00a3a494b0]
+Fact: Persisted run.completed observation. [evidence: run_0fd19785 observation 15 #f55644b54ad7]
+Fact: Verified http artifact art_01a1199f-a61e-75e2-8afa-f94ce18aab77 is available. [evidence: http/health.json #74e14c5588a3]
+Fact: Verified log artifact art_01a1199f-a6a9-7332-9560-38ef7ed7d025 is available. [evidence: logs/container.log #e3b0c44298fc]
+Fact: Verified snapshot artifact art_01a1199f-a6aa-73f1-808c-c9b59358d93b is available. [evidence: snapshot/runtime.json #d9579500091b]
+Fact: Verified network artifact art_01a1199f-a6aa-73f1-808c-ce56b02914af is available. [evidence: logs/egress.ndjson #b93321d7b620]
+Hypothesis: A required business assertion observed a value different from its frozen expectation; this is evidence of a product behavior mismatch, not a proven source-level root cause. (partially supported) [evidence: step stp_cae064cd #0f5427b73ddc]; contradicting [evidence: step stp_6d4f40f5 #fc3784367f62]
+Alternative (not established): The expectation may be outdated after a requirement change. [evidence: step stp_cae064cd #0f5427b73ddc]
+Alternative (not established): The read may refer to another entity or context. [evidence: step stp_cae064cd #0f5427b73ddc]
+Alternative (not established): Environment state or data may differ. [evidence: step stp_cae064cd #0f5427b73ddc]
+Step: health: request, passed; Step health (request) was passed. HTTP GET /health. Observed HTTP status 200.; baseline same [evidence: step stp_6d4f40f5 #fc3784367f62; http/health.json #74e14c5588a3]
+Step: business_assertion: assert, failed; Step business_assertion (assert) was failed: assertion_mismatch.; verifies health; baseline different [evidence: step stp_cae064cd #0f5427b73ddc]

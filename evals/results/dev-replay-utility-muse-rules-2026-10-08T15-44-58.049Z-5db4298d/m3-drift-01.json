@@ -1,0 +1,313 @@
+{
+  "id": "m3-drift-01",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "proposal_possible",
+    "healingEligibility": "automatic",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {
+    "semanticCandidate": true
+  },
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "${checkoutHook}",
+      "after": "place-order"
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "a04a41fc379c81dedb7e1bdb822b00f2e1fefb377f570f08669e9078b8f42139"
+  },
+  "oracle": "orderPersistence",
+  "semanticNegative": "toast-without-persist",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-01",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "add",
+        "kind": "action",
+        "operation": "click",
+        "description": "add",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "add-p1"
+          }
+        }
+      },
+      {
+        "id": "added",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "added",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "toast"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Added to cart"
+          }
+        }
+      },
+      {
+        "id": "cart",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "cart",
+        "required": true,
+        "input": {
+          "path": "/cart"
+        }
+      },
+      {
+        "id": "checkout",
+        "kind": "action",
+        "operation": "click",
+        "description": "checkout",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "checkout-button"
+          }
+        }
+      },
+      {
+        "id": "toast",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "toast",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "toast"
+          }
+        },
+        "expectation": {
+          "predicate": "textContains",
+          "value": {
+            "literal": "Order created:"
+          }
+        }
+      },
+      {
+        "id": "orders",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "orders",
+        "required": true,
+        "input": {
+          "path": "/orders"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "order-count"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "1"
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "a04a41fc379c81dedb7e1bdb822b00f2e1fefb377f570f08669e9078b8f42139"
+  },
+  "transformationSourceDigest": "e35e270393c9495d5118a3aa11496ff982e6e95d7a6044dc72e0c95c69dda25e",
+  "expectedFailingStepIds": [
+    "checkout"
+  ],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-hA6S7J",
+    "runId": "run_01a119c6-e51c-74b7-a33e-6c95feab7422",
+    "rulesAnalysisId": "ana_01a11c30-70d1-7293-93db-51cda65fb444"
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

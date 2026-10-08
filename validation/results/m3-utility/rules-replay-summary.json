@@ -1,0 +1,586 @@
+{
+  "development": true,
+  "registered": false,
+  "holdout": false,
+  "qwen": {
+    "directory": "evals/results/dev-replay-utility-qwen-rules-2026-10-08T15-44-07.260Z-78104677",
+    "plannedLedgers": 31,
+    "analyzed": 30,
+    "skips": [
+      {
+        "caseId": "m3-integration-01",
+        "reason": "Retained transformed run or workspace unavailable; no run invented."
+      }
+    ],
+    "errors": [],
+    "arms": {
+      "none": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 24,
+          "n": 28,
+          "estimate": 0.8571428571428571,
+          "lower": 0.6850982695512267,
+          "upper": 0.9430108706929821
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "overclaim": {
+          "status": "insufficientData",
+          "successes": 0,
+          "n": 0,
+          "estimate": null,
+          "lower": null,
+          "upper": null
+        }
+      },
+      "rules": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 23,
+          "n": 28,
+          "estimate": 0.8214285714285714,
+          "lower": 0.644082084514089,
+          "upper": 0.9212161417056989
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 24,
+          "n": 28,
+          "estimate": 0.8571428571428571,
+          "lower": 0.6850982695512267,
+          "upper": 0.9430108706929821
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 25,
+          "n": 28,
+          "estimate": 0.8928571428571429,
+          "lower": 0.7280377463234293,
+          "upper": 0.9628823079452005
+        },
+        "overclaim": {
+          "status": "measured",
+          "successes": 1,
+          "n": 28,
+          "estimate": 0.03571428571428571,
+          "lower": 0.00633235649754188,
+          "upper": 0.17712576118498663
+        }
+      }
+    },
+    "disputed": {
+      "caseIds": [
+        "m3-bug-03",
+        "m3-env-03"
+      ],
+      "plannedCases": 2,
+      "arms": {
+        "none": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 2,
+            "n": 2,
+            "estimate": 1,
+            "lower": 0.34237195288961925,
+            "upper": 1
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 2,
+            "n": 2,
+            "estimate": 1,
+            "lower": 0.34237195288961925,
+            "upper": 1
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "observedActions": 2,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "missingHealingAdvice": 2,
+          "overclaim": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "missingConclusions": 2,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 0,
+            "missingCases": 2
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 2,
+            "unknownTokenCases": 0,
+            "value": 0
+          }
+        },
+        "rules": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "observedActions": 2,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 2,
+            "n": 2,
+            "estimate": 1,
+            "lower": 0.34237195288961925,
+            "upper": 1
+          },
+          "missingHealingAdvice": 0,
+          "overclaim": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "missingConclusions": 0,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 2,
+            "missingCases": 0
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        },
+        "model": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "dangerousAction": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "observedActions": 0,
+          "missingActions": 2,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "missingHealingAdvice": 2,
+          "overclaim": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "missingConclusions": 2,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 0,
+            "missingCases": 2
+          },
+          "tokensPerCorrectAction": {
+            "scope": "all-measured-pipeline-calls-in-labelled-cases",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        }
+      },
+      "incrementalGain": {
+        "status": "insufficientData",
+        "n": 0,
+        "missingPairs": 2,
+        "improved": 0,
+        "regressed": 0,
+        "estimate": null,
+        "lower": null,
+        "upper": null,
+        "interval": "paired-hoeffding-95-independent-sampling"
+      }
+    },
+    "overclaims": [{"id":"m3-env-01","observedFailureKind":"environment","evidenceJustifiableLabel":"security_policy","labelSource":"post-hoc-scenario-design","independentReviewPending":true}]
+  },
+  "muse": {
+    "directory": "evals/results/dev-replay-utility-muse-rules-2026-10-08T15-44-58.049Z-5db4298d",
+    "plannedLedgers": 31,
+    "analyzed": 31,
+    "skips": [],
+    "errors": [],
+    "arms": {
+      "none": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 24,
+          "n": 28,
+          "estimate": 0.8571428571428571,
+          "lower": 0.6850982695512267,
+          "upper": 0.9430108706929821
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "overclaim": {
+          "status": "insufficientData",
+          "successes": 0,
+          "n": 0,
+          "estimate": null,
+          "lower": null,
+          "upper": null
+        }
+      },
+      "rules": {
+        "nextActionCorrect": {
+          "status": "measured",
+          "successes": 23,
+          "n": 28,
+          "estimate": 0.8214285714285714,
+          "lower": 0.644082084514089,
+          "upper": 0.9212161417056989
+        },
+        "nextActionSafe": {
+          "status": "measured",
+          "successes": 24,
+          "n": 28,
+          "estimate": 0.8571428571428571,
+          "lower": 0.6850982695512267,
+          "upper": 0.9430108706929821
+        },
+        "dangerousAction": {
+          "status": "measured",
+          "successes": 0,
+          "n": 28,
+          "estimate": 0,
+          "lower": 0,
+          "upper": 0.12064720365810762
+        },
+        "healingAdviceCorrect": {
+          "status": "measured",
+          "successes": 25,
+          "n": 28,
+          "estimate": 0.8928571428571429,
+          "lower": 0.7280377463234293,
+          "upper": 0.9628823079452005
+        },
+        "overclaim": {
+          "status": "measured",
+          "successes": 1,
+          "n": 28,
+          "estimate": 0.03571428571428571,
+          "lower": 0.00633235649754188,
+          "upper": 0.17712576118498663
+        }
+      }
+    },
+    "disputed": {
+      "caseIds": [
+        "m3-bug-03",
+        "m3-env-03"
+      ],
+      "plannedCases": 2,
+      "arms": {
+        "none": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 2,
+            "n": 2,
+            "estimate": 1,
+            "lower": 0.34237195288961925,
+            "upper": 1
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 2,
+            "n": 2,
+            "estimate": 1,
+            "lower": 0.34237195288961925,
+            "upper": 1
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "observedActions": 2,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "missingHealingAdvice": 2,
+          "overclaim": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "missingConclusions": 2,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 0,
+            "missingCases": 2
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 2,
+            "unknownTokenCases": 0,
+            "value": 0
+          }
+        },
+        "rules": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "dangerousAction": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "observedActions": 2,
+          "missingActions": 0,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 2,
+            "n": 2,
+            "estimate": 1,
+            "lower": 0.34237195288961925,
+            "upper": 1
+          },
+          "missingHealingAdvice": 0,
+          "overclaim": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "missingConclusions": 0,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 2,
+            "missingCases": 0
+          },
+          "tokensPerCorrectAction": {
+            "scope": "no-model-calls",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        },
+        "model": {
+          "nextActionCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "nextActionSafe": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "dangerousAction": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "observedActions": 0,
+          "missingActions": 2,
+          "healingAdviceCorrect": {
+            "status": "measured",
+            "successes": 0,
+            "n": 2,
+            "estimate": 0,
+            "lower": 0,
+            "upper": 0.6576280471103807
+          },
+          "missingHealingAdvice": 2,
+          "overclaim": {
+            "status": "insufficientData",
+            "successes": 0,
+            "n": 0,
+            "estimate": null,
+            "lower": null,
+            "upper": null
+          },
+          "missingConclusions": 2,
+          "unsupportedClaims": {
+            "count": 0,
+            "observedCases": 0,
+            "missingCases": 2
+          },
+          "tokensPerCorrectAction": {
+            "scope": "all-measured-pipeline-calls-in-labelled-cases",
+            "knownTokens": 0,
+            "correctActions": 0,
+            "unknownTokenCases": 0,
+            "value": null
+          }
+        }
+      },
+      "incrementalGain": {
+        "status": "insufficientData",
+        "n": 0,
+        "missingPairs": 2,
+        "improved": 0,
+        "regressed": 0,
+        "estimate": null,
+        "lower": null,
+        "upper": null,
+        "interval": "paired-hoeffding-95-independent-sampling"
+      }
+    },
+    "overclaims": [{"id":"m3-env-01","observedFailureKind":"environment","evidenceJustifiableLabel":"security_policy","labelSource":"post-hoc-scenario-design","independentReviewPending":true}]
+  }
+}

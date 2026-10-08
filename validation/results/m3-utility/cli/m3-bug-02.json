@@ -1,0 +1,562 @@
+{
+  "affectedRequirementIds": [],
+  "confidence": 0.5,
+  "createdAt": "2026-10-08T15:47:41.738Z",
+  "diagnosis": {
+    "alternatives": [
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+          }
+        ],
+        "failureKind": "contract_violation",
+        "text": "The expectation may be outdated after a requirement change."
+      },
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+          }
+        ],
+        "failureKind": "unknown",
+        "text": "The read may refer to another entity or context."
+      },
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+          }
+        ],
+        "failureKind": "environment",
+        "text": "Environment state or data may differ."
+      }
+    ],
+    "chain": [
+      {
+        "baseline": "same",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "82f6c618929dc0f594e41ccd7828f599f9b90e671caa06f4af6e2c531941b747",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d4e-7681-bdd8-66ce4b7e25a1"
+          },
+          {
+            "artifactId": "art_01a1199e-3d4d-7632-8c18-e84f2a903e95",
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "9e3e82eafa67fa6a7ae95477e4e60811399462067345e01520d07c4f151878f6",
+            "relativePath": "http/authenticate.json",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+          }
+        ],
+        "operation": "request",
+        "status": "passed",
+        "stepId": "authenticate",
+        "summary": "Step authenticate (request) was passed. HTTP POST /api/auth/token. Observed HTTP status 200.",
+        "verifies": null
+      },
+      {
+        "baseline": "same",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "dc4e2aca94a8ed4ae50aa52d73f96a91637a226ce7f0276b34ec65c5d92bfc31",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d6f-7756-b76f-4949b82f73d3"
+          },
+          {
+            "artifactId": "art_01a1199e-3d6d-77ba-9d5d-d291fe4fafa0",
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "b6b0c428a74941d20649d06c0cb9eb7472516a5d20235447665c985203ee5bd8",
+            "relativePath": "http/cart.json",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+          }
+        ],
+        "operation": "request",
+        "status": "passed",
+        "stepId": "cart",
+        "summary": "Step cart (request) was passed. HTTP POST /api/cart. Observed HTTP status 200.",
+        "verifies": null
+      },
+      {
+        "baseline": "same",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741"
+          },
+          {
+            "artifactId": "art_01a1199e-3d71-7218-af42-af09c2f65673",
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "c9faeaaa12f4d7ca541e911f4f8066e2f0936d532d15513a5d0f59415395dbbb",
+            "relativePath": "http/order.json",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+          }
+        ],
+        "operation": "request",
+        "status": "passed",
+        "stepId": "order",
+        "summary": "Step order (request) was passed. HTTP POST /api/orders. Observed HTTP status 201.",
+        "verifies": null
+      },
+      {
+        "baseline": "same",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f"
+          },
+          {
+            "artifactId": "art_01a1199e-3d74-7056-8e12-b987210ed21a",
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "975af932d7c016a4420005797173bf96b779015da3ab4bae5ed2ad0a36f44db3",
+            "relativePath": "http/orders.json",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+          }
+        ],
+        "operation": "request",
+        "status": "passed",
+        "stepId": "orders",
+        "summary": "Step orders (request) was passed. HTTP GET /api/orders. Observed HTTP status 200.",
+        "verifies": null
+      },
+      {
+        "baseline": "different",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+          }
+        ],
+        "operation": "assert",
+        "status": "failed",
+        "stepId": "business_assertion",
+        "summary": "Step business_assertion (assert) was failed: assertion_mismatch.",
+        "verifies": "orders"
+      }
+    ],
+    "conclusion": {
+      "status": "cause_partially_supported",
+      "text": "The expected behavior was not observed; the internal cause has not been determined."
+    },
+    "evidenceGaps": [],
+    "healing": {
+      "advice": "not_indicated",
+      "reason": "A test change would hide the observed behavior mismatch."
+    },
+    "nextSteps": [
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+          },
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741"
+          },
+          {
+            "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+            "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9",
+            "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+            "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f"
+          }
+        ],
+        "source": "rules",
+        "text": "Inspect the creation response at step order and the read at step orders, including entity identity and environment."
+      }
+    ],
+    "observation": {
+      "absence": "empty_collection",
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+        }
+      ],
+      "expected": "3015",
+      "observed": "null",
+      "operation": "assert",
+      "stepId": "business_assertion",
+      "summary": "Step business_assertion (assert) was failed: assertion_mismatch."
+    }
+  },
+  "facts": [
+    {
+      "evidenceRefs": [
+        {
+          "contentHash": "7acf9237f67c20142bbf3155aee69d7c829ff9924c1ae1da25cafae809a07d01",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Run finished with outcome failed and gate failed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "82f6c618929dc0f594e41ccd7828f599f9b90e671caa06f4af6e2c531941b747",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d4e-7681-bdd8-66ce4b7e25a1"
+        }
+      ],
+      "text": "Step authenticate (request) was passed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "dc4e2aca94a8ed4ae50aa52d73f96a91637a226ce7f0276b34ec65c5d92bfc31",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d6f-7756-b76f-4949b82f73d3"
+        }
+      ],
+      "text": "Step cart (request) was passed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741"
+        }
+      ],
+      "text": "Step order (request) was passed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f"
+        }
+      ],
+      "text": "Step orders (request) was passed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+        }
+      ],
+      "text": "Step business_assertion (assert) was failed: assertion_mismatch."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "3bac9844b14581365a194f1d2a690adbd4141cdf9c4266968ce61b1bdbe188fe",
+          "observationSeq": 1,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "04ed4384d0087980fcc28cb16ce4f446329f5672116f16c4561e5a0ff804f29d",
+          "observationSeq": 2,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted variable.captured observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "8f7db352c213603af2a8fa6f9a5b4209c220bc56f306e66073d15487f120706c",
+          "observationSeq": 6,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.finished observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9d0c44d37618a963a5e34f220a40c7afb199074387566abf2388d6ae0d9fd466",
+          "observationSeq": 7,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "872a1e16a2a67c6b4b87c9cbe64cf0f7707006640b5fee6336e14a43d47b581b",
+          "observationSeq": 11,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.finished observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "8aa0b5bdd1661d8e6ad1ce7ad52975089cf5b33204fbb3e012d04d9c999b5e7d",
+          "observationSeq": 12,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "1dcb4a11935ee6008f02d770fca4a0828549cbdb03e9b78dcd48981bcc8fe2c9",
+          "observationSeq": 16,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.finished observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "b2997abe24f58a305b50e52e379ddf1a933c069451eb16842b4bbd91660f4078",
+          "observationSeq": 17,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "d59d14c97dfaefeb06bb603fca5947dc3c85782b90ac39790ff2e76f464c9a34",
+          "observationSeq": 21,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.finished observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "b2d93adc4bac4bc27fd31e3e9abbb952cbffd424211465e13a3002e477926b81",
+          "observationSeq": 22,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "08e030c550f0fd09f82748d202ef93fbe3e6f6f97eed49fe796e344cb9fcbf51",
+          "observationSeq": 23,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted step.finished observation: assertion_mismatch."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9054009359e3a338a7f5dacb294e7b81fa0ca24ca0b98a3284c6a844e9abe191",
+          "observationSeq": 24,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted runner.finished observation: assertion_mismatch."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "contentHash": "4ad4838b556bccec446bd3dfe934b4131ee7586f9c2ea685aa583d1d3deeee1e",
+          "observationSeq": 22,
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd"
+        }
+      ],
+      "text": "Persisted run.completed observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3d4d-7632-8c18-e84f2a903e95",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9e3e82eafa67fa6a7ae95477e4e60811399462067345e01520d07c4f151878f6",
+          "relativePath": "http/authenticate.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified http artifact art_01a1199e-3d4d-7632-8c18-e84f2a903e95 is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3d6d-77ba-9d5d-d291fe4fafa0",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "b6b0c428a74941d20649d06c0cb9eb7472516a5d20235447665c985203ee5bd8",
+          "relativePath": "http/cart.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified http artifact art_01a1199e-3d6d-77ba-9d5d-d291fe4fafa0 is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3d71-7218-af42-af09c2f65673",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "c9faeaaa12f4d7ca541e911f4f8066e2f0936d532d15513a5d0f59415395dbbb",
+          "relativePath": "http/order.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified http artifact art_01a1199e-3d71-7218-af42-af09c2f65673 is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3d74-7056-8e12-b987210ed21a",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "975af932d7c016a4420005797173bf96b779015da3ab4bae5ed2ad0a36f44db3",
+          "relativePath": "http/orders.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified http artifact art_01a1199e-3d74-7056-8e12-b987210ed21a is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3dca-759b-9913-5b4ba69a4851",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "relativePath": "logs/container.log",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified log artifact art_01a1199e-3dca-759b-9913-5b4ba69a4851 is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3dcb-76e7-a724-dbaefb5bd17b",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "497a4a3fbec8fbadd9aedb74b8a923115f0033bb72514bf57f77735e44c30972",
+          "relativePath": "snapshot/runtime.json",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified snapshot artifact art_01a1199e-3dcb-76e7-a724-dbaefb5bd17b is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199e-3dcb-76e7-a724-dcc290337622",
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "17c9a61d28326b358689f15e050ec5c5f63e5a9b6e3a3a05d9504bda31c8ea20",
+          "relativePath": "logs/egress.ndjson",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e"
+        }
+      ],
+      "text": "Verified network artifact art_01a1199e-3dcb-76e7-a724-dcc290337622 is available."
+    }
+  ],
+  "failureKind": "product_bug",
+  "hypotheses": [
+    {
+      "calibrated": false,
+      "confidence": 0.5,
+      "contradicts": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "82f6c618929dc0f594e41ccd7828f599f9b90e671caa06f4af6e2c531941b747",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d4e-7681-bdd8-66ce4b7e25a1"
+        },
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "dc4e2aca94a8ed4ae50aa52d73f96a91637a226ce7f0276b34ec65c5d92bfc31",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d6f-7756-b76f-4949b82f73d3"
+        },
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "081b991caf94a24436ad1a72d53aa1403ac1f3ab08b99d9c56425077d3ecf924",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d71-7218-af42-b60cfb600741"
+        },
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "121267648dd70f6abfb25fb554505d3f3a7bb924afcd2df01e3013aeae6d31f9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d74-7056-8e12-c0422107629f"
+        }
+      ],
+      "support": "partially_supported",
+      "supports": [
+        {
+          "attemptId": "att_01a1199e-3b0a-73b0-83a5-2ef3388b65aa",
+          "contentHash": "9fce2c5dba0f176c9230b5067eea0ca82c20568bbb611397374b05b7ac1232d9",
+          "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+          "stepId": "stp_01a1199e-3d75-7627-b4e8-9e46a26ed4bd"
+        }
+      ],
+      "text": "A required business assertion observed a value different from its frozen expectation; this is evidence of a product behavior mismatch, not a proven source-level root cause."
+    }
+  ],
+  "id": "ana_01a11c32-ec2a-759d-b279-210fa01b5a3e",
+  "limitations": [],
+  "modelCallId": null,
+  "parentId": null,
+  "recommendedAction": "fix_product",
+  "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+  "snapshotId": "snp_01a1199e-3b0c-770c-8df7-41c8eab6d89e",
+  "source": "rules",
+  "version": 1,
+  "workspaceId": "ws_01a1199e-36ed-7344-9aa8-0ec844218fcf"
+}

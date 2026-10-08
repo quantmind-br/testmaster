@@ -1,0 +1,169 @@
+{
+  "id": "m3-bug-05",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labels": {
+    "correctActions": [
+      "compare_requirement"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "not_indicated",
+    "healingEligibility": "none",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "orders-auth-bypass"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {},
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "orders-auth-bypass",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"orders-auth-bypass\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "5cda5c29f84bc1f47bb1279b451ca1c32a90b7cbf9936463a6ada7252b45d7d4",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "ordersAuthorization",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-05",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "unauthorized",
+        "kind": "action",
+        "operation": "request",
+        "description": "unauthorized",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "unauthorized"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "5cda5c29f84bc1f47bb1279b451ca1c32a90b7cbf9936463a6ada7252b45d7d4",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "aea46d254d996bbb578a1573a0c315b9bc19b7c9a2ba5d3581c9726eb0766490",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-XXsdS2",
+    "runId": "run_01a119c5-10d6-7735-b491-987f69509436",
+    "rulesAnalysisId": "ana_01a11c30-6fa7-749f-8333-dcd15ab7f32a"
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

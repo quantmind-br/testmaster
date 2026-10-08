@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"><title>m3-env-03</title></head><body><h1>m3-env-03</h1><p>Gate: failed</p><p>Snapshot: report:dcf3a048ac0f0b147dcb7966a2a88f47448280bf1c17e35ace56a3cff31b3147; completeness: partial</p><p>Selection: 1; not dispatched: 0; excluded: 0</p><section><h2>Separate coverage metrics</h2><ul><li>requirement: unknown</li><li>route: unknown</li><li>operation: unknown</li><li>code: unknown</li><li>execution: 1/1 (100.00%)</li></ul><h2>Execution metrics</h2><pre>{
+  &quot;counts&quot;: {
+    &quot;requested&quot;: 1,
+    &quot;accepted&quot;: 1,
+    &quot;notDispatched&quot;: 0,
+    &quot;expanded&quot;: 0,
+    &quot;allMembers&quot;: 1,
+    &quot;executed&quot;: 1,
+    &quot;attempts&quot;: 1,
+    &quot;retried&quot;: 0,
+    &quot;duplicates&quot;: 0,
+    &quot;excluded&quot;: 0,
+    &quot;passed&quot;: 0,
+    &quot;failed&quot;: 1,
+    &quot;blocked&quot;: 0,
+    &quot;cancelled&quot;: 0,
+    &quot;inconclusive&quot;: 0,
+    &quot;nonterminal&quot;: 0
+  },
+  &quot;rates&quot;: {
+    &quot;selectionCompletionRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;(N_passed + N_failed) / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;strictPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_firstAttemptPassed under strict/no-heal / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;terminalPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_passed / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;blockedRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_blocked / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;inconclusiveRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_inconclusive / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;gatePassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_requiredRunsWithGatePassed / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;retryRecoveryRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 0,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;notApplicable&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried (internal infrastructure retries only)&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;diagnosticRetryPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 0,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;notApplicable&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;firstAttemptFailureRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;artifactCompletenessRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;staleEvidenceRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;requirementMappingCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)&quot;,
+      &quot;scope&quot;: &quot;Current project requirement inventory and active accepted revisions; mapping only&quot;
+    },
+    &quot;endpointContractCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs&quot;,
+      &quot;scope&quot;: &quot;Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions&quot;
+    },
+    &quot;verifiedRequirementCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces&quot;,
+      &quot;scope&quot;: &quot;Current project requirement inventory and active accepted revisions; mapping only&quot;
+    }
+  },
+  &quot;exclusions&quot;: {
+    &quot;firstAttemptNonPassOrFail&quot;: 0,
+    &quot;expandedDependencies&quot;: 0,
+    &quot;authorizedExcluded&quot;: 0,
+    &quot;duplicateSelections&quot;: 0
+  },
+  &quot;blockedReasons&quot;: {},
+  &quot;retryPolicy&quot;: &quot;Pinned execution limits; attempts never increase selected denominator; assertion failure remains failed after diagnostic pass&quot;
+}</pre></section><section><h2>m3-env-03</h2><dl><dt>Run</dt><dd>run_01a119bb-da0b-70f7-b839-2107b143656d</dd><dt>Revision</dt><dd>rev_01a119bb-d60c-73ea-b180-f71a5dc28c2b</dd><dt>Environment</dt><dd>local</dd><dt>Outcome</dt><dd>failed</dd><dt>Gate</dt><dd>failed</dd><dt>Cleanup</dt><dd>inconclusive</dd><dt>First attempt</dt><dd>failed</dd><dt>Passed on retry</dt><dd>false</dd></dl><ul><li>Evidence: PRECONDITION_FAILED: Run evidence is missing</li><li>Context: current</li></ul><h3>Diagnosis</h3><dl><dt>Failure</dt><dd>Step business_assertion (assert) was failed: assertion_mismatch.</dd><dt>Expected</dt><dd>3015</dd><dt>Observed</dt><dd>3000 (evidence unavailable)</dd><dt>Conclusion</dt><dd>The expected behavior was not observed; the internal cause has not been determined. (cause partially supported)</dd><dt>Next step</dt><dd>Compare the observed value at step business_assertion with the approved requirement before changing product code or the test. (rules)</dd><dt>Automatic healing</dt><dd>not indicated: A test change would hide the observed behavior mismatch.</dd></dl><ul><li>Observation evidence: [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Next step evidence: [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Fact: Run finished with outcome failed and gate failed. [evidence: run_b143656d #654a7e5551ca]</li><li>Fact: Step authenticate (request) was passed. [evidence: step stp_66c0f8fa #9795dee17d84]</li><li>Fact: Step cart (request) was passed. [evidence: step stp_d20b64bc #8108fc5609ff]</li><li>Fact: Step order (request) was passed. [evidence: step stp_07ca74a1 #04ba0319abc2]</li><li>Fact: Step orders (request) was passed. [evidence: step stp_644cb196 #f96ff53718d7]</li><li>Fact: Step business_assertion (assert) was failed: assertion_mismatch. [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Fact: Persisted step.started observation. [evidence: run_b143656d observation 1 #99d35d5ff950]</li><li>Fact: Persisted variable.captured observation. [evidence: run_b143656d observation 2 #0c2ccc9babeb]</li><li>Fact: Persisted step.finished observation. [evidence: run_b143656d observation 6 #e4e3d264c6e1]</li><li>Fact: Persisted step.started observation. [evidence: run_b143656d observation 7 #1b1367289a14]</li><li>Fact: Persisted step.finished observation. [evidence: run_b143656d observation 11 #57259cf8404b]</li><li>Fact: Persisted step.started observation. [evidence: run_b143656d observation 12 #6dff9b433fef]</li><li>Fact: Persisted step.finished observation. [evidence: run_b143656d observation 16 #10a33e4254f0]</li><li>Fact: Persisted step.started observation. [evidence: run_b143656d observation 17 #858f4c27e9bb]</li><li>Fact: Persisted step.finished observation. [evidence: run_b143656d observation 21 #c03b40d3ec27]</li><li>Fact: Persisted step.started observation. [evidence: run_b143656d observation 22 #8d081842240b]</li><li>Fact: Persisted step.finished observation: assertion_mismatch. [evidence: run_b143656d observation 23 #9d86cb2049e6]</li><li>Fact: Persisted runner.finished observation: assertion_mismatch. [evidence: run_b143656d observation 24 #47e50f43f210]</li><li>Fact: Persisted run.completed observation. [evidence: run_b143656d observation 21 #4d714d30481a]</li><li>Fact: Persisted run.execution_error observation: artifact_limit_exceeded. [evidence: run_b143656d observation 22 #8fc40b572849]</li><li>Hypothesis: A required business assertion observed a value different from its frozen expectation; this is evidence of a product behavior mismatch, not a proven source-level root cause. (partially supported) [evidence: step stp_0e372ca7 #145b77ac5256]; contradicting [evidence: step stp_66c0f8fa #9795dee17d84; step stp_d20b64bc #8108fc5609ff; step stp_07ca74a1 #04ba0319abc2; step stp_644cb196 #f96ff53718d7]</li><li>Alternative (not established): The expectation may be outdated after a requirement change. [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Alternative (not established): The read may refer to another entity or context. [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Alternative (not established): Environment state or data may differ. [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Step: authenticate: request, passed; Step authenticate (request) was passed. HTTP POST /api/auth/token.; baseline same [evidence: step stp_66c0f8fa #9795dee17d84]</li><li>Step: cart: request, passed; Step cart (request) was passed. HTTP POST /api/cart.; baseline same [evidence: step stp_d20b64bc #8108fc5609ff]</li><li>Step: order: request, passed; Step order (request) was passed. HTTP POST /api/orders.; baseline same [evidence: step stp_07ca74a1 #04ba0319abc2]</li><li>Step: orders: request, passed; Step orders (request) was passed. HTTP GET /api/orders.; baseline same [evidence: step stp_644cb196 #f96ff53718d7]</li><li>Step: business_assertion: assert, failed; Step business_assertion (assert) was failed: assertion_mismatch.; verifies orders; baseline different [evidence: step stp_0e372ca7 #145b77ac5256]</li><li>Evidence gap: Committed evidence bundle is unavailable; diagnosis uses persisted execution records only.</li><li>Limitation: Committed evidence bundle is unavailable; diagnosis uses persisted execution records only.</li></ul></section><ul><li>PRECONDITION_FAILED: Run evidence is missing</li></ul></body></html>

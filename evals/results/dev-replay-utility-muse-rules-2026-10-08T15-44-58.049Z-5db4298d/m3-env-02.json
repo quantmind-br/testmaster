@@ -1,0 +1,162 @@
+{
+  "id": "m3-env-02",
+  "group": "env",
+  "expectedFailureKind": "environment",
+  "labels": {
+    "correctActions": [
+      "restore_environment"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "not_indicated",
+    "healingEligibility": "none",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "environment",
+      "mechanism": "Authored execution precondition or healthy control."
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "environment",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {
+    "unavailableTarget": true
+  },
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "serviceHealth",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-env-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "health",
+        "kind": "action",
+        "operation": "request",
+        "description": "health",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "health"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "health",
+          "jsonPointer": "/status"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "ok"
+          }
+        }
+      }
+    ]
+  },
+  "environmentFailure": "unreachable-approved-target",
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "ba7e54aed941f398b9a3d4ba9664f01d3734e6dd3968fd0a4824a5f3f1909473",
+  "expectedFailingStepIds": [],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "environment",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-K878dw",
+    "runId": "run_01a119da-1916-74ca-a54c-6587937fdc68",
+    "rulesAnalysisId": "ana_01a11c30-7943-7588-a865-c41be411be9b"
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "restore_environment",
+      "conclusion": {
+        "status": "cause_supported",
+        "failureKind": "environment"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

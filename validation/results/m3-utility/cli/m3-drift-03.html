@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"><title>m3-drift-03</title></head><body><h1>m3-drift-03</h1><p>Gate: failed</p><p>Snapshot: snp_01a119a8-5130-747e-a491-1d62caf465b9; completeness: complete</p><p>Selection: 1; not dispatched: 0; excluded: 0</p><section><h2>Separate coverage metrics</h2><ul><li>requirement: unknown</li><li>route: unknown</li><li>operation: unknown</li><li>code: unknown</li><li>execution: 1/1 (100.00%)</li></ul><h2>Execution metrics</h2><pre>{
+  &quot;counts&quot;: {
+    &quot;requested&quot;: 1,
+    &quot;accepted&quot;: 1,
+    &quot;notDispatched&quot;: 0,
+    &quot;expanded&quot;: 0,
+    &quot;allMembers&quot;: 1,
+    &quot;executed&quot;: 1,
+    &quot;attempts&quot;: 1,
+    &quot;retried&quot;: 0,
+    &quot;duplicates&quot;: 0,
+    &quot;excluded&quot;: 0,
+    &quot;passed&quot;: 0,
+    &quot;failed&quot;: 1,
+    &quot;blocked&quot;: 0,
+    &quot;cancelled&quot;: 0,
+    &quot;inconclusive&quot;: 0,
+    &quot;nonterminal&quot;: 0
+  },
+  &quot;rates&quot;: {
+    &quot;selectionCompletionRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;(N_passed + N_failed) / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;strictPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_firstAttemptPassed under strict/no-heal / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;terminalPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_passed / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;blockedRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_blocked / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;inconclusiveRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_inconclusive / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;gatePassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_requiredRunsWithGatePassed / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;retryRecoveryRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 0,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;notApplicable&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried (internal infrastructure retries only)&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;diagnosticRetryPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 0,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;notApplicable&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;firstAttemptFailureRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;artifactCompletenessRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;staleEvidenceRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;requirementMappingCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)&quot;,
+      &quot;scope&quot;: &quot;Current project requirement inventory and active accepted revisions; mapping only&quot;
+    },
+    &quot;endpointContractCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs&quot;,
+      &quot;scope&quot;: &quot;Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions&quot;
+    },
+    &quot;verifiedRequirementCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces&quot;,
+      &quot;scope&quot;: &quot;Current project requirement inventory and active accepted revisions; mapping only&quot;
+    }
+  },
+  &quot;exclusions&quot;: {
+    &quot;firstAttemptNonPassOrFail&quot;: 0,
+    &quot;expandedDependencies&quot;: 0,
+    &quot;authorizedExcluded&quot;: 0,
+    &quot;duplicateSelections&quot;: 0
+  },
+  &quot;blockedReasons&quot;: {},
+  &quot;retryPolicy&quot;: &quot;Pinned execution limits; attempts never increase selected denominator; assertion failure remains failed after diagnostic pass&quot;
+}</pre></section><section><h2>m3-drift-03</h2><dl><dt>Run</dt><dd>run_01a119a8-50f8-713f-adb3-8f843e9a47c4</dd><dt>Revision</dt><dd>rev_01a119a8-49d8-70e2-9d5a-7388664fed12</dd><dt>Environment</dt><dd>local</dd><dt>Outcome</dt><dd>failed</dd><dt>Gate</dt><dd>failed</dd><dt>Cleanup</dt><dd>not_required</dd><dt>First attempt</dt><dd>failed</dd><dt>Passed on retry</dt><dd>false</dd></dl><ul><li>Reproduction: evidence-replay; execution: strict-execution-replay (mutable-external-target, mutable-external-payload, browser-platform-rendering, repository-commit-unavailable, source-binding-unavailable, source-dependency-lock-unavailable)</li><li>Context: stale (test_revision_changed)</li></ul><h3>Diagnosis</h3><dl><dt>Failure</dt><dd>Step invalid_password (fill) was failed: assertion_timeout. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;password&quot;}.</dd><dt>Expected</dt><dd>null</dd><dt>Observed</dt><dd>null (null value)</dd><dt>Conclusion</dt><dd>The failure is localized to step invalid_password; the evidence does not establish a cause. (cause unknown)</dd><dt>Next step</dt><dd>Inspect locator candidates for step invalid_password to distinguish a changed control from a missing or ambiguous target. (rules)</dd><dt>Automatic healing</dt><dd>manual review only: Observed candidates do not establish unique baseline identity.</dd></dl><ul><li>Observation evidence: [evidence: step stp_54dabb54 #476872216519]</li><li>Next step evidence: [evidence: browser/steps/invalid_password-locator-0-before.json #b38400296b3d; browser/steps/invalid_password-locator-0-after.json #db477a479f8c]</li><li>Fact: Run finished with outcome failed and gate failed. [evidence: run_3e9a47c4 #67be8b379283]</li><li>Fact: Step invalid_open (navigate) was passed. [evidence: step stp_fcef0da0 #f346f0a10536]</li><li>Fact: Step invalid_email (fill) was passed. [evidence: step stp_0456fb59 #c403b97c4eff]</li><li>Fact: Step invalid_password (fill) was failed: assertion_timeout. [evidence: step stp_54dabb54 #476872216519]</li><li>Fact: Step invalid_submit (click) was skipped: stopped_after_failure. [evidence: step stp_da5ed611 #575202f0b41e]</li><li>Fact: Step invalid_login_assertion (assert) was skipped: stopped_after_failure. [evidence: step stp_c8b3fe9e #5f2d68e4e995]</li><li>Fact: Step open_login (navigate) was skipped: stopped_after_failure. [evidence: step stp_05ba8502 #1fa412073bff]</li><li>Fact: Step email (fill) was skipped: stopped_after_failure. [evidence: step stp_19f9e438 #b85615d424db]</li><li>Fact: Step password (fill) was skipped: stopped_after_failure. [evidence: step stp_ca96a830 #45a73b6b28bc]</li><li>Fact: Step signin (click) was skipped: stopped_after_failure. [evidence: step stp_07c4ea33 #e279becd7e64]</li><li>Fact: Step catalog_ready (assert) was skipped: stopped_after_failure. [evidence: step stp_77353ce8 #c69fe7a92efb]</li><li>Fact: Persisted step.started observation. [evidence: run_3e9a47c4 observation 1 #922ebc026d0a]</li><li>Fact: Persisted step.finished observation. [evidence: run_3e9a47c4 observation 14 #7c6657db7f96]</li><li>Fact: Persisted step.started observation. [evidence: run_3e9a47c4 observation 15 #903829763a09]</li><li>Fact: Persisted step.finished observation. [evidence: run_3e9a47c4 observation 34 #092731bdf74d]</li><li>Fact: Persisted step.started observation. [evidence: run_3e9a47c4 observation 35 #c71440e13ae6]</li><li>Fact: Persisted step.finished observation: assertion_timeout. [evidence: run_3e9a47c4 observation 54 #7a8cf25b2892]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 55 #26522f93e2bd]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 56 #cc59ec9dc54d]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 57 #f23766230571]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 58 #7e666ca2383a]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 59 #b44a8b1af190]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 60 #f8d376ff2bc1]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_3e9a47c4 observation 61 #06339b742806]</li><li>Fact: Persisted runner.finished observation: assertion_timeout. [evidence: run_3e9a47c4 observation 68 #1d72b9e4b5af]</li><li>Fact: Persisted run.completed observation. [evidence: run_3e9a47c4 observation 24 #fdbd4f027076]</li><li>Fact: Verified screenshot artifact art_01a119a8-5547-755d-b1a8-9036f80ce7a2 is available. [evidence: browser/steps/invalid_open-before.png #3878570f4a62]</li><li>Fact: Verified dom artifact art_01a119a8-5549-7512-acc6-12dfd2425ae6 is available. [evidence: browser/steps/invalid_open-before.html #a7fe83ec64bb]</li><li>Fact: Verified screenshot artifact art_01a119a8-5568-7594-b17d-823bd06c5d6c is available. [evidence: browser/steps/invalid_open-after.png #4b638e80f923]</li><li>Fact: Verified dom artifact art_01a119a8-556a-73c1-a56f-743e0647df57 is available. [evidence: browser/steps/invalid_open-after.html #55aede1e2da3]</li><li>Fact: Verified locator-evidence artifact art_01a119a8-557d-740a-88d9-aef82deda00a is available. [evidence: browser/steps/invalid_email-locator-0-before.json #466b1b8c2b53]</li><li>Fact: Verified screenshot artifact art_01a119a8-5599-70d2-a4b8-396883fb7769 is available. [evidence: browser/steps/invalid_email-before.png #4b638e80f923]</li><li>Fact: Verified dom artifact art_01a119a8-559b-74f5-bd70-bb19ad826ded is available. [evidence: browser/steps/invalid_email-before.html #55aede1e2da3]</li><li>Fact: Verified locator-evidence artifact art_01a119a8-55a5-7249-b16b-13d1e15dba53 is available. [evidence: browser/steps/invalid_email-locator-0-after.json #dda923e6a1f7]</li><li>Fact: Verified screenshot artifact art_01a119a8-55ba-709b-92ba-d529da7783cb is available. [evidence: browser/steps/invalid_email-after.png #15b592306d57]</li><li>Fact: Verified dom artifact art_01a119a8-55bc-75b5-b80a-1447a68a5ee6 is available. [evidence: browser/steps/invalid_email-after.html #55aede1e2da3]</li><li>Fact: Verified locator-evidence artifact art_01a119a8-caf3-7694-a505-bf24fc2a8ae0 is available. [evidence: browser/steps/invalid_password-locator-0-before.json #b38400296b3d]</li><li>Fact: Verified screenshot artifact art_01a119a8-cb0b-7201-bf4a-9fac7ed1b645 is available. [evidence: browser/steps/invalid_password-before.png #15b592306d57]</li><li>Fact: Verified dom artifact art_01a119a8-cb0c-754e-bc55-0afd8038c170 is available. [evidence: browser/steps/invalid_password-before.html #55aede1e2da3]</li><li>Fact: Verified locator-evidence artifact art_01a119a8-cb0f-77d6-8343-e16eabe72ecd is available. [evidence: browser/steps/invalid_password-locator-0-after.json #db477a479f8c]</li><li>Fact: Verified screenshot artifact art_01a119a8-cb2b-7088-985b-65fad8b83b0f is available. [evidence: browser/steps/invalid_password-after.png #15b592306d57]</li><li>Fact: Verified dom artifact art_01a119a8-cb2c-7255-a884-b01be517e596 is available. [evidence: browser/steps/invalid_password-after.html #55aede1e2da3]</li><li>Fact: Verified console artifact art_01a119a8-cb31-711a-abbe-25c883ca7984 is available. [evidence: browser/console.json #9ef1588ed14e]</li><li>Fact: Verified network artifact art_01a119a8-cb32-7410-9f40-458d3b4d54de is available. [evidence: browser/network.json #e241a6a61403]</li><li>Fact: Verified log artifact art_01a119a8-cca4-7631-ba42-6a235f462323 is available. [evidence: logs/container.log #e3b0c44298fc]</li><li>Fact: Verified snapshot artifact art_01a119a8-cca4-7631-ba42-6cb4dcd5486f is available. [evidence: snapshot/runtime.json #40cc6f7d70df]</li><li>Fact: Verified network artifact art_01a119a8-cca5-734b-87d4-c384a7f71902 is available. [evidence: logs/egress.ndjson #0f13314c927f]</li><li>Alternative (not established): The target may be changed, removed, or ambiguous.</li><li>Step: invalid_open: navigate, passed; Step invalid_open (navigate) was passed.; baseline same [evidence: step stp_fcef0da0 #f346f0a10536]</li><li>Step: invalid_email: fill, passed; Step invalid_email (fill) was passed. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;email&quot;}.; baseline same [evidence: step stp_0456fb59 #c403b97c4eff]</li><li>Step: invalid_password: fill, failed; Step invalid_password (fill) was failed: assertion_timeout. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;password&quot;}.; baseline different [evidence: step stp_54dabb54 #476872216519]</li><li>Step: invalid_submit: click, skipped; Step invalid_submit (click) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;role&quot;,&quot;exact&quot;:true,&quot;name&quot;:&quot;Sign in&quot;,&quot;role&quot;:&quot;button&quot;}.; baseline different [evidence: step stp_da5ed611 #575202f0b41e]</li><li>Step: invalid_login_assertion: assert, skipped; Step invalid_login_assertion (assert) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;password-error&quot;}.; baseline different [evidence: step stp_c8b3fe9e #5f2d68e4e995]</li><li>Step: open_login: navigate, skipped; Step open_login (navigate) was skipped: stopped_after_failure.; baseline different [evidence: step stp_05ba8502 #1fa412073bff]</li><li>Step: email: fill, skipped; Step email (fill) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;email&quot;}.; baseline different [evidence: step stp_19f9e438 #b85615d424db]</li><li>Step: password: fill, skipped; Step password (fill) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;password&quot;}.; baseline different [evidence: step stp_ca96a830 #45a73b6b28bc]</li><li>Step: signin: click, skipped; Step signin (click) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;role&quot;,&quot;exact&quot;:true,&quot;name&quot;:&quot;Sign in&quot;,&quot;role&quot;:&quot;button&quot;}.; baseline different [evidence: step stp_07c4ea33 #e279becd7e64]</li><li>Step: catalog_ready: assert, skipped; Step catalog_ready (assert) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;catalog-ready&quot;}.; baseline different [evidence: step stp_77353ce8 #c69fe7a92efb]</li><li>Evidence gap: Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.</li><li>Limitation: Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.</li></ul></section><ul></ul></body></html>

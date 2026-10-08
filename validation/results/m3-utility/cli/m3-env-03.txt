@@ -1,0 +1,40 @@
+Diagnosis
+Failure: Step business_assertion (assert) was failed: assertion_mismatch.
+Expected: 3015
+Observed: 3000 (evidence unavailable)
+Conclusion: The expected behavior was not observed; the internal cause has not been determined. (cause partially supported)
+Next step: Compare the observed value at step business_assertion with the approved requirement before changing product code or the test. (rules)
+Automatic healing: not indicated: A test change would hide the observed behavior mismatch.
+Observation evidence: [evidence: step stp_0e372ca7 #145b77ac5256]
+Next step evidence: [evidence: step stp_0e372ca7 #145b77ac5256]
+Fact: Run finished with outcome failed and gate failed. [evidence: run_b143656d #654a7e5551ca]
+Fact: Step authenticate (request) was passed. [evidence: step stp_66c0f8fa #9795dee17d84]
+Fact: Step cart (request) was passed. [evidence: step stp_d20b64bc #8108fc5609ff]
+Fact: Step order (request) was passed. [evidence: step stp_07ca74a1 #04ba0319abc2]
+Fact: Step orders (request) was passed. [evidence: step stp_644cb196 #f96ff53718d7]
+Fact: Step business_assertion (assert) was failed: assertion_mismatch. [evidence: step stp_0e372ca7 #145b77ac5256]
+Fact: Persisted step.started observation. [evidence: run_b143656d observation 1 #99d35d5ff950]
+Fact: Persisted variable.captured observation. [evidence: run_b143656d observation 2 #0c2ccc9babeb]
+Fact: Persisted step.finished observation. [evidence: run_b143656d observation 6 #e4e3d264c6e1]
+Fact: Persisted step.started observation. [evidence: run_b143656d observation 7 #1b1367289a14]
+Fact: Persisted step.finished observation. [evidence: run_b143656d observation 11 #57259cf8404b]
+Fact: Persisted step.started observation. [evidence: run_b143656d observation 12 #6dff9b433fef]
+Fact: Persisted step.finished observation. [evidence: run_b143656d observation 16 #10a33e4254f0]
+Fact: Persisted step.started observation. [evidence: run_b143656d observation 17 #858f4c27e9bb]
+Fact: Persisted step.finished observation. [evidence: run_b143656d observation 21 #c03b40d3ec27]
+Fact: Persisted step.started observation. [evidence: run_b143656d observation 22 #8d081842240b]
+Fact: Persisted step.finished observation: assertion_mismatch. [evidence: run_b143656d observation 23 #9d86cb2049e6]
+Fact: Persisted runner.finished observation: assertion_mismatch. [evidence: run_b143656d observation 24 #47e50f43f210]
+Fact: Persisted run.completed observation. [evidence: run_b143656d observation 21 #4d714d30481a]
+Fact: Persisted run.execution_error observation: artifact_limit_exceeded. [evidence: run_b143656d observation 22 #8fc40b572849]
+Hypothesis: A required business assertion observed a value different from its frozen expectation; this is evidence of a product behavior mismatch, not a proven source-level root cause. (partially supported) [evidence: step stp_0e372ca7 #145b77ac5256]; contradicting [evidence: step stp_66c0f8fa #9795dee17d84; step stp_d20b64bc #8108fc5609ff; step stp_07ca74a1 #04ba0319abc2; step stp_644cb196 #f96ff53718d7]
+Alternative (not established): The expectation may be outdated after a requirement change. [evidence: step stp_0e372ca7 #145b77ac5256]
+Alternative (not established): The read may refer to another entity or context. [evidence: step stp_0e372ca7 #145b77ac5256]
+Alternative (not established): Environment state or data may differ. [evidence: step stp_0e372ca7 #145b77ac5256]
+Step: authenticate: request, passed; Step authenticate (request) was passed. HTTP POST /api/auth/token.; baseline same [evidence: step stp_66c0f8fa #9795dee17d84]
+Step: cart: request, passed; Step cart (request) was passed. HTTP POST /api/cart.; baseline same [evidence: step stp_d20b64bc #8108fc5609ff]
+Step: order: request, passed; Step order (request) was passed. HTTP POST /api/orders.; baseline same [evidence: step stp_07ca74a1 #04ba0319abc2]
+Step: orders: request, passed; Step orders (request) was passed. HTTP GET /api/orders.; baseline same [evidence: step stp_644cb196 #f96ff53718d7]
+Step: business_assertion: assert, failed; Step business_assertion (assert) was failed: assertion_mismatch.; verifies orders; baseline different [evidence: step stp_0e372ca7 #145b77ac5256]
+Evidence gap: Committed evidence bundle is unavailable; diagnosis uses persisted execution records only.
+Limitation: Committed evidence bundle is unavailable; diagnosis uses persisted execution records only.

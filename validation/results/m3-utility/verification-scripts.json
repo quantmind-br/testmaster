@@ -1,0 +1,18 @@
+{
+  "purpose": "Development runtime verification commands; temporary scripts are removed after execution.",
+  "registered": false,
+  "holdout": false,
+  "commands": [
+    "m3 replay round3-qwen-results utility-qwen-rules",
+    "m3 replay round3-muse-results utility-muse-rules",
+    "m3 replay round3-qwen-results utility-qwen-medium-smoke --model m3-bug-02 m3-bug-03 m3-drift-03 m3-healthy-01",
+    "run analyze RUN_ID; run analysis RUN_ID --output json; report export RUN_ID --format markdown|html",
+    "heal review PROPOSAL_ID; heal review PROPOSAL_ID --output json",
+    "assessAssistedCandidate on disposable source copies for drift-07/08/12",
+    "controlsM3 with synthetic physical HTTP driver and two development controls",
+    "check --capability-gate m3-assistive-diagnosis|m3-automatic-healing|m3-assisted-healing|m3-ci-integration",
+    "check --milestone-gate M3"
+  ],
+  "preservationWrapper": "/home/diogo/.local/state/testmaster-preservation/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/run.mjs",
+  "paidSmokeAfterGuardCorrection": false
+}

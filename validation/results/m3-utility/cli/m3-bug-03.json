@@ -1,0 +1,311 @@
+{
+  "affectedRequirementIds": [],
+  "confidence": 0.5,
+  "createdAt": "2026-10-08T15:47:45.856Z",
+  "diagnosis": {
+    "alternatives": [
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+          }
+        ],
+        "failureKind": "contract_violation",
+        "text": "The expectation may be outdated after a requirement change."
+      },
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+          }
+        ],
+        "failureKind": "unknown",
+        "text": "The read may refer to another entity or context."
+      },
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+          }
+        ],
+        "failureKind": "environment",
+        "text": "Environment state or data may differ."
+      }
+    ],
+    "chain": [
+      {
+        "baseline": "same",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "fc3784367f628da9a8c219c1e28b97b16751e992b95e679615ba020496351bb2",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "stepId": "stp_01a1199f-a61f-7274-ab96-9e856d4f40f5"
+          },
+          {
+            "artifactId": "art_01a1199f-a61e-75e2-8afa-f94ce18aab77",
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "74e14c5588a354b4c1fd5f728231e77264769e655e18b10bf6260e28bbd3ece3",
+            "relativePath": "http/health.json",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+          }
+        ],
+        "operation": "request",
+        "status": "passed",
+        "stepId": "health",
+        "summary": "Step health (request) was passed. HTTP GET /health. Observed HTTP status 200.",
+        "verifies": null
+      },
+      {
+        "baseline": "different",
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+          }
+        ],
+        "operation": "assert",
+        "status": "failed",
+        "stepId": "business_assertion",
+        "summary": "Step business_assertion (assert) was failed: assertion_mismatch.",
+        "verifies": "health"
+      }
+    ],
+    "conclusion": {
+      "status": "cause_partially_supported",
+      "text": "The expected behavior was not observed; the internal cause has not been determined."
+    },
+    "evidenceGaps": [],
+    "healing": {
+      "advice": "not_indicated",
+      "reason": "A test change would hide the observed behavior mismatch."
+    },
+    "nextSteps": [
+      {
+        "evidenceRefs": [
+          {
+            "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+            "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+            "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+            "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+          }
+        ],
+        "source": "rules",
+        "text": "Compare the observed value at step business_assertion with the approved requirement before changing product code or the test."
+      }
+    ],
+    "observation": {
+      "absence": null,
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+        }
+      ],
+      "expected": "\"ok\"",
+      "observed": "\"degraded\"",
+      "operation": "assert",
+      "stepId": "business_assertion",
+      "summary": "Step business_assertion (assert) was failed: assertion_mismatch."
+    }
+  },
+  "facts": [
+    {
+      "evidenceRefs": [
+        {
+          "contentHash": "69ed2257604b831dce0bf7ffe1fbf0b7a10ba971ac72c9d876e968b169a916fe",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Run finished with outcome failed and gate failed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "fc3784367f628da9a8c219c1e28b97b16751e992b95e679615ba020496351bb2",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "stepId": "stp_01a1199f-a61f-7274-ab96-9e856d4f40f5"
+        }
+      ],
+      "text": "Step health (request) was passed."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+        }
+      ],
+      "text": "Step business_assertion (assert) was failed: assertion_mismatch."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "8f4d2c92963ccd446e4c55884e07af9f46a7a1749902d71556448656dd16949d",
+          "observationSeq": 1,
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "ffc03f0bd2b054ad8ede9543b3be595a3e24c823dd7cd2099adba2846564f397",
+          "observationSeq": 5,
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Persisted step.finished observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "f3696d80f238528fba1c7b797bcfb8f3955196ea660fae904d51fbc31a5c7460",
+          "observationSeq": 6,
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Persisted step.started observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "4e5fa83d0eb181b1b7824afbcc6c3f49171ab7c3e79ff43ae93a579a27f71f73",
+          "observationSeq": 7,
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Persisted step.finished observation: assertion_mismatch."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "be00a3a494b0a46ac994e4c930b0c0f320b4aae210813a8b86c0c2b536d820e8",
+          "observationSeq": 8,
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Persisted runner.finished observation: assertion_mismatch."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "contentHash": "f55644b54ad75cd296dc9a71d0d29b141b4aecacb37f8e2f916131972ed6c8c2",
+          "observationSeq": 15,
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785"
+        }
+      ],
+      "text": "Persisted run.completed observation."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199f-a61e-75e2-8afa-f94ce18aab77",
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "74e14c5588a354b4c1fd5f728231e77264769e655e18b10bf6260e28bbd3ece3",
+          "relativePath": "http/health.json",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+        }
+      ],
+      "text": "Verified http artifact art_01a1199f-a61e-75e2-8afa-f94ce18aab77 is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199f-a6a9-7332-9560-38ef7ed7d025",
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "relativePath": "logs/container.log",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+        }
+      ],
+      "text": "Verified log artifact art_01a1199f-a6a9-7332-9560-38ef7ed7d025 is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199f-a6aa-73f1-808c-c9b59358d93b",
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "d9579500091b101acb4958f7ff252a623e0d554c2d6204b7170c6a861d85cc4a",
+          "relativePath": "snapshot/runtime.json",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+        }
+      ],
+      "text": "Verified snapshot artifact art_01a1199f-a6aa-73f1-808c-c9b59358d93b is available."
+    },
+    {
+      "evidenceRefs": [
+        {
+          "artifactId": "art_01a1199f-a6aa-73f1-808c-ce56b02914af",
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "b93321d7b620e09270f4deff659d34ea8522f36a3e1f872ed29f7c2c3934316c",
+          "relativePath": "logs/egress.ndjson",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d"
+        }
+      ],
+      "text": "Verified network artifact art_01a1199f-a6aa-73f1-808c-ce56b02914af is available."
+    }
+  ],
+  "failureKind": "product_bug",
+  "hypotheses": [
+    {
+      "calibrated": false,
+      "confidence": 0.5,
+      "contradicts": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "fc3784367f628da9a8c219c1e28b97b16751e992b95e679615ba020496351bb2",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "stepId": "stp_01a1199f-a61f-7274-ab96-9e856d4f40f5"
+        }
+      ],
+      "support": "partially_supported",
+      "supports": [
+        {
+          "attemptId": "att_01a1199f-a3da-726c-9780-c35238ed0b11",
+          "contentHash": "0f5427b73ddc7f453a21badd274a70768271071ef7f371be4ebcd00d7d0e5c83",
+          "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+          "stepId": "stp_01a1199f-a620-7644-ba7a-fe91cae064cd"
+        }
+      ],
+      "text": "A required business assertion observed a value different from its frozen expectation; this is evidence of a product behavior mismatch, not a proven source-level root cause."
+    }
+  ],
+  "id": "ana_01a11c32-fc40-73eb-ba77-97f256dbfdcb",
+  "limitations": [],
+  "modelCallId": null,
+  "parentId": null,
+  "recommendedAction": "fix_product",
+  "runId": "run_01a1199f-a3af-752d-8758-c3bc0fd19785",
+  "snapshotId": "snp_01a1199f-a3dc-71bf-9a71-032606fed99d",
+  "source": "rules",
+  "version": 1,
+  "workspaceId": "ws_01a1199f-9fb9-7154-a123-f495b6c14074"
+}

@@ -1,0 +1,278 @@
+{
+  "id": "m3-bug-02",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labels": {
+    "correctActions": [
+      "inspect_persistence"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "not_indicated",
+    "healingEligibility": "none",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "toast-without-persist"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {},
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "toast-without-persist",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"toast-without-persist\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "2a357221e3d05f114aa2f42b61b2249a1830db1f5843e43062f9a9fba77d42ef",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "orderPersistence",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": "correct-password"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-m3-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "cart",
+        "kind": "action",
+        "operation": "request",
+        "description": "cart",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "cart"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "productId": "p1",
+                "quantity": 3
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "order",
+        "kind": "action",
+        "operation": "request",
+        "description": "order",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "idempotency-key": {
+              "literal": "m3-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "orders",
+        "kind": "action",
+        "operation": "request",
+        "description": "orders",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "orders"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "orders",
+          "jsonPointer": "/items/0/totalCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 3015
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "2a357221e3d05f114aa2f42b61b2249a1830db1f5843e43062f9a9fba77d42ef",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "86f74ac5c8d42e1a6170dc74f27e5112c85184b8108a994837459d3028bf7ab1",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "observed",
+  "stages": {},
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "retainedWorkspace": "/tmp/tm-m3-tFUyNC",
+    "runId": "run_01a1199e-3adc-74f2-92c8-cd6627b775bd",
+    "rulesAnalysisId": "ana_01a11c2f-a8eb-773b-a59b-271be0105c88"
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_persistence",
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

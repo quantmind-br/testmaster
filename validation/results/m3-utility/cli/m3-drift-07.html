@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"><title>m3-drift-07</title></head><body><h1>m3-drift-07</h1><p>Gate: failed</p><p>Snapshot: snp_01a119b0-b8fd-7640-b121-3aa13d48f239; completeness: complete</p><p>Selection: 1; not dispatched: 0; excluded: 0</p><section><h2>Separate coverage metrics</h2><ul><li>requirement: unknown</li><li>route: unknown</li><li>operation: unknown</li><li>code: unknown</li><li>execution: 1/1 (100.00%)</li></ul><h2>Execution metrics</h2><pre>{
+  &quot;counts&quot;: {
+    &quot;requested&quot;: 1,
+    &quot;accepted&quot;: 1,
+    &quot;notDispatched&quot;: 0,
+    &quot;expanded&quot;: 0,
+    &quot;allMembers&quot;: 1,
+    &quot;executed&quot;: 1,
+    &quot;attempts&quot;: 1,
+    &quot;retried&quot;: 0,
+    &quot;duplicates&quot;: 0,
+    &quot;excluded&quot;: 0,
+    &quot;passed&quot;: 0,
+    &quot;failed&quot;: 1,
+    &quot;blocked&quot;: 0,
+    &quot;cancelled&quot;: 0,
+    &quot;inconclusive&quot;: 0,
+    &quot;nonterminal&quot;: 0
+  },
+  &quot;rates&quot;: {
+    &quot;selectionCompletionRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;(N_passed + N_failed) / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;strictPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_firstAttemptPassed under strict/no-heal / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;terminalPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_passed / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;blockedRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_blocked / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;inconclusiveRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_inconclusive / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;gatePassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_requiredRunsWithGatePassed / N_selected&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;retryRecoveryRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 0,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;notApplicable&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried (internal infrastructure retries only)&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;diagnosticRetryPassRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 0,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;notApplicable&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;firstAttemptFailureRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;artifactCompletenessRate&quot;: {
+      &quot;numerator&quot;: 1,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 1,
+      &quot;definition&quot;: &quot;N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;staleEvidenceRate&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: 1,
+      &quot;denominatorState&quot;: &quot;known&quot;,
+      &quot;state&quot;: &quot;available&quot;,
+      &quot;value&quot;: 0,
+      &quot;definition&quot;: &quot;N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)&quot;,
+      &quot;scope&quot;: &quot;Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator&quot;
+    },
+    &quot;requirementMappingCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)&quot;,
+      &quot;scope&quot;: &quot;Current project requirement inventory and active accepted revisions; mapping only&quot;
+    },
+    &quot;endpointContractCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs&quot;,
+      &quot;scope&quot;: &quot;Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions&quot;
+    },
+    &quot;verifiedRequirementCoverage&quot;: {
+      &quot;numerator&quot;: 0,
+      &quot;denominator&quot;: null,
+      &quot;denominatorState&quot;: &quot;unknown&quot;,
+      &quot;state&quot;: &quot;insufficientData&quot;,
+      &quot;value&quot;: null,
+      &quot;definition&quot;: &quot;N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces&quot;,
+      &quot;scope&quot;: &quot;Current project requirement inventory and active accepted revisions; mapping only&quot;
+    }
+  },
+  &quot;exclusions&quot;: {
+    &quot;firstAttemptNonPassOrFail&quot;: 0,
+    &quot;expandedDependencies&quot;: 0,
+    &quot;authorizedExcluded&quot;: 0,
+    &quot;duplicateSelections&quot;: 0
+  },
+  &quot;blockedReasons&quot;: {},
+  &quot;retryPolicy&quot;: &quot;Pinned execution limits; attempts never increase selected denominator; assertion failure remains failed after diagnostic pass&quot;
+}</pre></section><section><h2>m3-drift-07</h2><dl><dt>Run</dt><dd>run_01a119b0-b8c5-72c2-be98-7f7ec70c795f</dd><dt>Revision</dt><dd>rev_01a119b0-b1fe-72db-bbce-830678b5ca1e</dd><dt>Environment</dt><dd>local</dd><dt>Outcome</dt><dd>failed</dd><dt>Gate</dt><dd>failed</dd><dt>Cleanup</dt><dd>not_required</dd><dt>First attempt</dt><dd>failed</dd><dt>Passed on retry</dt><dd>false</dd></dl><ul><li>Reproduction: evidence-replay; execution: strict-execution-replay (mutable-external-target, mutable-external-payload, browser-platform-rendering, repository-commit-unavailable, source-binding-unavailable, source-dependency-lock-unavailable)</li><li>Context: current</li></ul><h3>Diagnosis</h3><dl><dt>Failure</dt><dd>Step checkout (click) was failed: assertion_timeout. Locator {&quot;by&quot;:&quot;role&quot;,&quot;exact&quot;:true,&quot;name&quot;:&quot;Checkout&quot;,&quot;role&quot;:&quot;button&quot;}.</dd><dt>Expected</dt><dd>null</dd><dt>Observed</dt><dd>null (null value)</dd><dt>Conclusion</dt><dd>The failure is localized to step checkout; the evidence does not establish a cause. (cause unknown)</dd><dt>Next step</dt><dd>Inspect locator candidates for step checkout to distinguish a changed control from a missing or ambiguous target. (rules)</dd><dt>Automatic healing</dt><dd>manual review only: Observed candidates do not establish unique baseline identity.</dd></dl><ul><li>Observation evidence: [evidence: step stp_75b31ec2 #a863436392db]</li><li>Next step evidence: [evidence: browser/steps/checkout-locator-0-before.json #e8f2249b07e0; browser/steps/checkout-locator-0-after.json #32133f0f3fe2]</li><li>Fact: Run finished with outcome failed and gate failed. [evidence: run_c70c795f #45f673076886]</li><li>Fact: Step open_login (navigate) was passed. [evidence: step stp_a0897cbc #504d426a1872]</li><li>Fact: Step email (fill) was passed. [evidence: step stp_9be11080 #69067fe42d26]</li><li>Fact: Step password (fill) was passed. [evidence: step stp_4b590629 #e06a1abaa64c]</li><li>Fact: Step signin (click) was passed. [evidence: step stp_9791e446 #e7fc617539d7]</li><li>Fact: Step catalog_ready (assert) was passed. [evidence: step stp_a2ea02fc #c563d465bedc]</li><li>Fact: Step add (click) was passed. [evidence: step stp_908e7fde #46e0db91c4cc]</li><li>Fact: Step added (assert) was passed. [evidence: step stp_b6cf0751 #7e99794cd70f]</li><li>Fact: Step cart (navigate) was passed. [evidence: step stp_266347c2 #324c01b177ad]</li><li>Fact: Step checkout (click) was failed: assertion_timeout. [evidence: step stp_75b31ec2 #a863436392db]</li><li>Fact: Step toast (assert) was skipped: stopped_after_failure. [evidence: step stp_b14d5c9f #d234a0768cee]</li><li>Fact: Step orders (navigate) was skipped: stopped_after_failure. [evidence: step stp_ae27a33c #d00d3c3772bc]</li><li>Fact: Step business_assertion (assert) was skipped: stopped_after_failure. [evidence: step stp_79297ad7 #8ce2a63a0e9a]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 1 #6802ccc99155]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 14 #5c93a29c7ee4]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 15 #361e71973897]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 34 #33526536b65f]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 35 #b88b83bc383b]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 54 #8f5c2f59ba6b]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 55 #d7ccb3db6ffd]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 74 #eff5f06de14e]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 75 #4abc3621cea6]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 94 #81e81d79a865]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 95 #073ca0026530]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 114 #e0cfdb8944e0]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 115 #32544409e6ad]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 134 #c460b04bdaa1]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 135 #5196283c65c2]</li><li>Fact: Persisted step.finished observation. [evidence: run_c70c795f observation 148 #9f3a3ea5d198]</li><li>Fact: Persisted step.started observation. [evidence: run_c70c795f observation 149 #b16154b519c2]</li><li>Fact: Persisted step.finished observation: assertion_timeout. [evidence: run_c70c795f observation 168 #8cc3a18fd3c6]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_c70c795f observation 169 #19c478bdec86]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_c70c795f observation 170 #487b268f9c9b]</li><li>Fact: Persisted step.finished observation: stopped_after_failure. [evidence: run_c70c795f observation 171 #8c2e86b86269]</li><li>Fact: Persisted runner.finished observation: assertion_timeout. [evidence: run_c70c795f observation 178 #70d680b8528b]</li><li>Fact: Persisted run.completed observation. [evidence: run_c70c795f observation 32 #d34a12342c24]</li><li>Fact: Verified screenshot artifact art_01a119b0-bb42-7656-a5c5-c6f7dfcd3c5e is available. [evidence: browser/steps/open_login-before.png #3878570f4a62]</li><li>Fact: Verified dom artifact art_01a119b0-bb45-73a3-b41d-08640252ccc3 is available. [evidence: browser/steps/open_login-before.html #a7fe83ec64bb]</li><li>Fact: Verified screenshot artifact art_01a119b0-bb73-7595-a46c-31690a1732f1 is available. [evidence: browser/steps/open_login-after.png #4b638e80f923]</li><li>Fact: Verified dom artifact art_01a119b0-bb75-714a-9160-c81ceee6f027 is available. [evidence: browser/steps/open_login-after.html #4cf1dfadf247]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bb85-7599-973d-d5d9c0a07869 is available. [evidence: browser/steps/email-locator-0-before.json #bed7cbf05094]</li><li>Fact: Verified screenshot artifact art_01a119b0-bb94-70c7-8e2d-a65c8e5cb7f8 is available. [evidence: browser/steps/email-before.png #4b638e80f923]</li><li>Fact: Verified dom artifact art_01a119b0-bb95-7429-8caa-ec37cbf76fac is available. [evidence: browser/steps/email-before.html #4cf1dfadf247]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bb9d-75e8-9370-071847ff4dfd is available. [evidence: browser/steps/email-locator-0-after.json #4b0edc222006]</li><li>Fact: Verified screenshot artifact art_01a119b0-bbb5-7086-b096-2fa5ceeb3095 is available. [evidence: browser/steps/email-after.png #15b592306d57]</li><li>Fact: Verified dom artifact art_01a119b0-bbb6-7007-8cdf-c4098af28cc6 is available. [evidence: browser/steps/email-after.html #4cf1dfadf247]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bbbc-737a-8cd7-d7529c661cc1 is available. [evidence: browser/steps/password-locator-0-before.json #8ef286001d62]</li><li>Fact: Verified screenshot artifact art_01a119b0-bbd6-7003-84c6-9d0d5e342b15 is available. [evidence: browser/steps/password-before.png #15b592306d57]</li><li>Fact: Verified dom artifact art_01a119b0-bbd7-7677-bf3a-40929cfc1ccc is available. [evidence: browser/steps/password-before.html #4cf1dfadf247]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bbdf-7160-81a3-bee58b3e5fcb is available. [evidence: browser/steps/password-locator-0-after.json #16ef473d6428]</li><li>Fact: Verified screenshot artifact art_01a119b0-bbf7-7400-a153-b6054d516b9b is available. [evidence: browser/steps/password-after.png #8c5c29fcb0be]</li><li>Fact: Verified dom artifact art_01a119b0-bbf8-73e9-815d-abf376dc567e is available. [evidence: browser/steps/password-after.html #4cf1dfadf247]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bbff-73bd-8487-9793be102b11 is available. [evidence: browser/steps/signin-locator-0-before.json #371d3330e0a3]</li><li>Fact: Verified screenshot artifact art_01a119b0-bc19-7045-afb4-00870bedd6b3 is available. [evidence: browser/steps/signin-before.png #8c5c29fcb0be]</li><li>Fact: Verified dom artifact art_01a119b0-bc1a-70c9-a07d-7e4f10145bf7 is available. [evidence: browser/steps/signin-before.html #4cf1dfadf247]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bc39-742c-9e4e-1823f4eb8aa0 is available. [evidence: browser/steps/signin-locator-0-after.json #2a43940f3042]</li><li>Fact: Verified screenshot artifact art_01a119b0-bc4b-7541-b4d9-56606676ae70 is available. [evidence: browser/steps/signin-after.png #876e2c30e869]</li><li>Fact: Verified dom artifact art_01a119b0-bc4c-7558-b323-a59207f350ce is available. [evidence: browser/steps/signin-after.html #ac839e992690]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bc50-7309-9810-a1b7b0dbdcd0 is available. [evidence: browser/steps/catalog_ready-locator-0-before.json #e0c7035ad151]</li><li>Fact: Verified screenshot artifact art_01a119b0-bc6b-72e2-a392-b24dd8665ea9 is available. [evidence: browser/steps/catalog_ready-before.png #e91b0bff1cc7]</li><li>Fact: Verified dom artifact art_01a119b0-bc6c-7722-b2ac-c8b7755cbf23 is available. [evidence: browser/steps/catalog_ready-before.html #ac839e992690]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bc88-74ab-bf52-891a98228d63 is available. [evidence: browser/steps/catalog_ready-locator-0-after.json #425af7043a57]</li><li>Fact: Verified screenshot artifact art_01a119b0-bca0-7567-8b96-1f0b2afac573 is available. [evidence: browser/steps/catalog_ready-after.png #b2970f874169]</li><li>Fact: Verified dom artifact art_01a119b0-bca1-7149-b9d0-09455809a4e4 is available. [evidence: browser/steps/catalog_ready-after.html #ac18d180c22f]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bca8-70bd-8c4d-1ba285d57bd3 is available. [evidence: browser/steps/add-locator-0-before.json #19738f6df867]</li><li>Fact: Verified screenshot artifact art_01a119b0-bcc1-73bc-baa9-7724425679e6 is available. [evidence: browser/steps/add-before.png #b2970f874169]</li><li>Fact: Verified dom artifact art_01a119b0-bcc3-74c1-a831-a3790a2a6b85 is available. [evidence: browser/steps/add-before.html #ac18d180c22f]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bcdf-70ab-ad81-93e5dfd7add3 is available. [evidence: browser/steps/add-locator-0-after.json #ee41c12084ff]</li><li>Fact: Verified screenshot artifact art_01a119b0-bcf3-77fa-8e01-1f22691c6808 is available. [evidence: browser/steps/add-after.png #67026a8ea661]</li><li>Fact: Verified dom artifact art_01a119b0-bcf5-77f6-bc04-253cb48b97cf is available. [evidence: browser/steps/add-after.html #2b0ff22f4cc4]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bcf9-7791-bb72-bb5e2e0cf8ea is available. [evidence: browser/steps/added-locator-0-before.json #1a2f13d1e503]</li><li>Fact: Verified screenshot artifact art_01a119b0-bd14-7607-973a-07b89dc05bf2 is available. [evidence: browser/steps/added-before.png #4a2c43a25a11]</li><li>Fact: Verified dom artifact art_01a119b0-bd17-707c-8a07-2fb4e08a448c is available. [evidence: browser/steps/added-before.html #2b0ff22f4cc4]</li><li>Fact: Verified locator-evidence artifact art_01a119b0-bd1d-735c-abba-7cbb684a0c96 is available. [evidence: browser/steps/added-locator-0-after.json #98e34862dbe4]</li><li>Fact: Verified screenshot artifact art_01a119b0-bd35-726a-93f3-cec958a728aa is available. [evidence: browser/steps/added-after.png #4a2c43a25a11]</li><li>Fact: Verified dom artifact art_01a119b0-bd37-72c9-aa7b-41fdbc5cc875 is available. [evidence: browser/steps/added-after.html #2b0ff22f4cc4]</li><li>Fact: Verified screenshot artifact art_01a119b0-bd46-70c5-ad81-b18f69673255 is available. [evidence: browser/steps/cart-before.png #4a2c43a25a11]</li><li>Fact: Verified dom artifact art_01a119b0-bd47-73c9-bb36-8f7b3d0c8aaa is available. [evidence: browser/steps/cart-before.html #2b0ff22f4cc4]</li><li>Fact: Verified screenshot artifact art_01a119b0-bd65-75b9-b7c8-7cdfe5ac254d is available. [evidence: browser/steps/cart-after.png #6f45ff81de92]</li><li>Fact: Verified dom artifact art_01a119b0-bd66-7397-b516-2141a18d1418 is available. [evidence: browser/steps/cart-after.html #cd889754c502]</li><li>Fact: Verified locator-evidence artifact art_01a119b1-32a2-726e-8d59-953a4f4ea500 is available. [evidence: browser/steps/checkout-locator-0-before.json #e8f2249b07e0]</li><li>Fact: Verified screenshot artifact art_01a119b1-32b6-7272-8615-094470e0b2c0 is available. [evidence: browser/steps/checkout-before.png #35cc71db21b7]</li><li>Fact: Verified dom artifact art_01a119b1-32b8-75f0-9dfb-f3c0e13b3914 is available. [evidence: browser/steps/checkout-before.html #37a93a968dbb]</li><li>Fact: Verified locator-evidence artifact art_01a119b1-32bb-728b-a19f-64d18f724f38 is available. [evidence: browser/steps/checkout-locator-0-after.json #32133f0f3fe2]</li><li>Fact: Verified screenshot artifact art_01a119b1-32d7-7042-8cab-80615036a98d is available. [evidence: browser/steps/checkout-after.png #35cc71db21b7]</li><li>Fact: Verified dom artifact art_01a119b1-32d9-77e9-9ca2-721b1025bf76 is available. [evidence: browser/steps/checkout-after.html #37a93a968dbb]</li><li>Fact: Verified console artifact art_01a119b1-32dc-7095-9941-83b8c0696ec2 is available. [evidence: browser/console.json #9ef1588ed14e]</li><li>Fact: Verified network artifact art_01a119b1-32dc-7095-9941-844a56c744d3 is available. [evidence: browser/network.json #5e5a7795a763]</li><li>Fact: Verified log artifact art_01a119b1-3460-7696-8a1b-609dca6d1bd9 is available. [evidence: logs/container.log #e3b0c44298fc]</li><li>Fact: Verified snapshot artifact art_01a119b1-3461-766c-ba3f-7e154bd009de is available. [evidence: snapshot/runtime.json #7358e4d7e0b8]</li><li>Fact: Verified network artifact art_01a119b1-3462-70ad-96f7-2039f8c39dfe is available. [evidence: logs/egress.ndjson #0eccbb5f9dfd]</li><li>Alternative (not established): The target may be changed, removed, or ambiguous.</li><li>Step: open_login: navigate, passed; Step open_login (navigate) was passed.; baseline same [evidence: step stp_a0897cbc #504d426a1872]</li><li>Step: email: fill, passed; Step email (fill) was passed. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;email&quot;}.; baseline same [evidence: step stp_9be11080 #69067fe42d26]</li><li>Step: password: fill, passed; Step password (fill) was passed. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;password&quot;}.; baseline same [evidence: step stp_4b590629 #e06a1abaa64c]</li><li>Step: signin: click, passed; Step signin (click) was passed. Locator {&quot;by&quot;:&quot;role&quot;,&quot;exact&quot;:true,&quot;name&quot;:&quot;Sign in&quot;,&quot;role&quot;:&quot;button&quot;}.; baseline same [evidence: step stp_9791e446 #e7fc617539d7]</li><li>Step: catalog_ready: assert, passed; Step catalog_ready (assert) was passed. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;catalog-ready&quot;}.; baseline same [evidence: step stp_a2ea02fc #c563d465bedc]</li><li>Step: add: click, passed; Step add (click) was passed. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;add-p1&quot;}.; baseline same [evidence: step stp_908e7fde #46e0db91c4cc]</li><li>Step: added: assert, passed; Step added (assert) was passed. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;toast&quot;}.; baseline same [evidence: step stp_b6cf0751 #7e99794cd70f]</li><li>Step: cart: navigate, passed; Step cart (navigate) was passed.; baseline same [evidence: step stp_266347c2 #324c01b177ad]</li><li>Step: checkout: click, failed; Step checkout (click) was failed: assertion_timeout. Locator {&quot;by&quot;:&quot;role&quot;,&quot;exact&quot;:true,&quot;name&quot;:&quot;Checkout&quot;,&quot;role&quot;:&quot;button&quot;}.; baseline different [evidence: step stp_75b31ec2 #a863436392db]</li><li>Step: toast: assert, skipped; Step toast (assert) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;toast&quot;}.; baseline different [evidence: step stp_b14d5c9f #d234a0768cee]</li><li>Step: orders: navigate, skipped; Step orders (navigate) was skipped: stopped_after_failure.; baseline different [evidence: step stp_ae27a33c #d00d3c3772bc]</li><li>Step: business_assertion: assert, skipped; Step business_assertion (assert) was skipped: stopped_after_failure. Locator {&quot;by&quot;:&quot;testId&quot;,&quot;value&quot;:&quot;order-count&quot;}.; baseline different [evidence: step stp_79297ad7 #8ce2a63a0e9a]</li><li>Evidence gap: Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.</li><li>Limitation: Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.</li></ul></section><ul></ul></body></html>

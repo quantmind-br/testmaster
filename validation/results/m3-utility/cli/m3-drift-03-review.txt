@@ -1,0 +1,63 @@
+Healing review: hea_01a119aa-0010-779c-bfa0-bbd5c038d0a7
+Candidate revision: rev_01a119aa-0010-779c-bfa0-bc82ebed6b5c
+Automation: applied_by_policy
+Risk: write
+
+Step | Path | Before | After
+--- | --- | --- | ---
+invalid_password | /input/locator | {"by":"testId","value":"password"} | {"by":"testId","value":"login-password"}
+password | /input/locator | {"by":"testId","value":"password"} | {"by":"testId","value":"login-password"}
+
+Identity: invalid_password
+Previous: {"by":"testId","value":"password"}
+Role | Name | Tag | Type | Label | Form | Matched | Visible
+--- | --- | --- | --- | --- | --- | --- | ---
+null | null | "html" | null | null | null | false | true
+null | null | "head" | null | null | null | false | false
+null | null | "meta" | null | null | null | false | false
+null | null | "meta" | null | null | null | false | false
+null | null | "title" | null | null | null | false | false
+null | null | "style" | null | null | null | false | false
+null | null | "body" | null | null | null | false | true
+null | null | "h1" | null | null | null | false | true
+null | "Shop" | "nav" | null | "Shop" | null | false | true
+"link" | "Login" | "a" | null | null | null | false | true
+"link" | "Catalog" | "a" | null | null | null | false | true
+"link" | "Cart" | "a" | null | null | null | false | true
+"link" | "Orders" | "a" | null | null | null | false | true
+"link" | "Profile" | "a" | null | null | null | false | true
+"link" | "Terms" | "a" | null | null | null | false | true
+null | null | "main" | null | null | null | false | true
+null | null | "h2" | null | null | null | false | true
+null | null | "form" | null | null | null | false | true
+null | null | "label" | null | null | null | false | true
+"textbox" | "Email" | "input" | "email" | null | null | false | true
+null | null | "label" | null | null | null | false | true
+null | "Password" | "input" | "password" | null | null | false | true
+"alert" | null | "p" | null | null | null | false | false
+"button" | "Sign in" | "button" | "submit" | null | null | false | true
+"status" | null | "p" | null | null | null | false | false
+null | null | "script" | "module" | null | null | false | false
+Equivalence: supported
+- Unique recorded semantic identity and replacement locator match
+
+Identity: password
+Previous: {"by":"testId","value":"password"}
+Role | Name | Tag | Type | Label | Form | Matched | Visible
+--- | --- | --- | --- | --- | --- | --- | ---
+No recorded candidates available.
+Equivalence: not established
+- Missing complete unique semantic identity, original absence, or provable replacement selection
+
+Preserved assertions: intact
+Assertion hash: 3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6
+Assertion steps: invalid_login_assertion, catalog_ready
+Verification: run_01a119aa-005c-7464-ae8e-a856985df992 — passed/passed
+
+Approval is bound to this proposal, candidate revision and expected version:
+testmaster heal approve hea_01a119aa-0010-779c-bfa0-bbd5c038d0a7 --expected-version 5
+
+Limitations:
+- Candidate label unavailable for step invalid_password
+- Candidate form unavailable for step invalid_password
+- Locator candidates unavailable for step password
