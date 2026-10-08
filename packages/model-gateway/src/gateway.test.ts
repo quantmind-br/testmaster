@@ -244,6 +244,8 @@ describe("policy-controlled model requests", () => {
       recommendedAction: "collect_more_evidence",
       fixTargetHandle: null,
       limitations: [limitation],
+      nextSteps: [],
+      evidenceGaps: [],
     });
     const f = await fixture((_req, res, _body, n) =>
       res.end(

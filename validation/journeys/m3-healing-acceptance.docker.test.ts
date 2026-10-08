@@ -616,6 +616,8 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
                   recommendedAction: "collect_more_evidence",
                   fixTargetHandle: source?.evidenceId ?? null,
                   limitations: [],
+                  nextSteps: [],
+                  evidenceGaps: [],
                 }),
               },
               finish_reason: "stop",

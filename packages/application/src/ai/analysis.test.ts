@@ -1,4 +1,5 @@
 import {
+  type Analysis,
   ContractError,
   type ExecutablePlan,
   type Run,
@@ -32,6 +33,8 @@ async function fixture(
     missing?: boolean;
     source?: boolean;
     unbound?: boolean;
+    plan?: ExecutablePlan;
+    step?: Partial<StepResult>;
   } = {},
 ) {
   const db = PersistenceDatabase.memory();
@@ -58,7 +61,7 @@ async function fixture(
   const ws = String(get("Workspace").dto.id);
   const principal = String(get("Principal").dto.id);
   const revision = get("TestRevision");
-  const plan: ExecutablePlan = {
+  const plan: ExecutablePlan = options.plan ?? {
     schemaVersion: "1.0.0",
     kind: "executable",
     name: "Frozen business contract",
@@ -177,6 +180,7 @@ async function fixture(
     error: null,
     durationMs: 1,
     evidenceRefs: [],
+    ...options.step,
   };
   ctx.entities.insert("StepResult", { ...step, workspaceId: ws });
   const complete = vi.fn(async (_input: unknown) => {
@@ -261,6 +265,9 @@ it("passed execution abstains without inventing a failure hypothesis", async () 
     parentId: null,
     recommendedAction: "collect_more_evidence",
   });
+  expect(analysis.diagnosis?.conclusion.status).toBe("no_failure");
+  expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
+  expect(analysis.diagnosis?.nextSteps).toEqual([]);
 });
 it("HTTP 500 request response is not locator drift or a certain product cause", async () => {
   const f = await fixture({ requestOnly: true });
@@ -558,6 +565,7 @@ it("missing bundle preserves null snapshot with a disclosed evidence limitation"
   const analysis = await f.service.analyze(f.run.id, {});
   expect(analysis.snapshotId).toBeNull();
   expect(analysis.limitations).not.toHaveLength(0);
+  expect(analysis.diagnosis?.observation?.absence).toBe("evidence_unavailable");
 });
 it("model failure retains byte-identical immutable factual predecessor and does not retry identical requests", async () => {
   const f = await fixture();
@@ -587,6 +595,8 @@ it("schema-valid enrichment that contradicts the rules cause abstains and names 
       recommendedAction: "fix_test",
       fixTargetHandle: null,
       limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
     },
   }));
   const enriched = await f.service.analyze(f.run.id, { model: true });
@@ -652,6 +662,11 @@ it("approved-schema mismatch takes precedence over generic business mismatch", a
   expect(await f.service.analyze(f.run.id, {})).toMatchObject({
     failureKind: "contract_violation",
     recommendedAction: "review_contract",
+    diagnosis: {
+      conclusion: { status: "cause_partially_supported" },
+      healing: { advice: "not_indicated" },
+    },
+    hypotheses: [expect.objectContaining({ support: "partially_supported" })],
   });
 });
 it("affected requirements come from the frozen revision, not the active test", async () => {
@@ -734,6 +749,8 @@ it("authorized frozen source handle persists exact snapshot path and content bin
         recommendedAction: "fix_product",
         fixTargetHandle: data.measurements.find((item) => item.kind === "source")!.evidenceId,
         limitations: [],
+        nextSteps: [],
+        evidenceGaps: [],
       },
     };
   });
@@ -775,6 +792,8 @@ it("execution handles cannot be promoted to source fix targets", async () => {
       recommendedAction: "fix_product",
       fixTargetHandle: "E2",
       limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
     },
   }));
   const result = await f.service.analyze(f.run.id, { model: true });
@@ -818,6 +837,8 @@ it.each([
           recommendedAction: "fix_product",
           fixTargetHandle: null,
           limitations: [],
+          nextSteps: [],
+          evidenceGaps: [],
         },
       };
     });
@@ -847,6 +868,8 @@ it("an under-supported alternative is dropped with a disclosure while a supporte
       recommendedAction: "fix_product",
       fixTargetHandle: null,
       limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
     },
   }));
   const result = await f.service.analyze(f.run.id, { model: true });
@@ -866,6 +889,8 @@ it("a model abstention does not erase the cause the rules established from obser
       recommendedAction: "collect_more_evidence",
       fixTargetHandle: null,
       limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
     },
   }));
   const result = await f.service.analyze(f.run.id, { model: true });
@@ -873,6 +898,8 @@ it("a model abstention does not erase the cause the rules established from obser
   expect(result.failureKind).toBe("product_bug");
   expect(result.hypotheses.length).toBeGreaterThan(0);
   expect(result.recommendedAction).toBe("fix_product");
+  expect(result.diagnosis).toEqual(factual.diagnosis);
+  expect(result.hypotheses[0]?.support).toBe("partially_supported");
 });
 it("unknown model handles reject the entire enrichment and preserve the factual predecessor", async () => {
   const f = await fixture();
@@ -887,6 +914,8 @@ it("unknown model handles reject the entire enrichment and preserve the factual 
       recommendedAction: "fix_product",
       fixTargetHandle: null,
       limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
     },
   }));
   const result = await f.service.analyze(f.run.id, { model: true });
@@ -912,6 +941,8 @@ it("stale source identity is refused before dispatch and unbound Runs disclose m
       recommendedAction: "collect_more_evidence",
       fixTargetHandle: null,
       limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
     },
   }));
   const result = await unbound.service.analyze(unbound.run.id, {
@@ -920,4 +951,492 @@ it("stale source identity is refused before dispatch and unbound Runs disclose m
   });
   expect(result.fixTarget).toBeUndefined();
   expect(result.limitations).toContain("Frozen Run is unbound; no source targets supplied.");
+});
+
+const persistencePlan: ExecutablePlan = {
+  schemaVersion: "1.0.0",
+  kind: "executable",
+  name: "Creation and read",
+  type: "backend",
+  runner: "http",
+  requirementRefs: [],
+  steps: [
+    {
+      id: "create",
+      kind: "action",
+      operation: "request",
+      input: { method: "POST", pathSegments: [{ literal: "items" }] },
+    },
+    {
+      id: "read",
+      kind: "action",
+      operation: "request",
+      input: { method: "GET", pathSegments: [{ literal: "items" }] },
+    },
+    {
+      id: "price",
+      kind: "assertion",
+      operation: "assert",
+      required: true,
+      input: { responseStepId: "read", jsonPointer: "/items/0/price" },
+      expectation: { predicate: "jsonEquals", value: { literal: 10 } },
+    },
+  ],
+};
+
+it("a passed creation followed by an empty collection recommends persistence inspection without healing", async () => {
+  const diagnostic = {
+    deepestPrefix: "/items",
+    type: "array",
+    length: 0,
+    firstUnresolvedToken: "0",
+  };
+  const f = await fixture({
+    plan: persistencePlan,
+    missing: true,
+    step: {
+      index: 2,
+      error: {
+        code: "RuntimeError",
+        message: `HTTP jsonEquals expectation was not satisfied; missing JSON pointer: ${JSON.stringify(diagnostic)}`,
+      },
+    },
+  });
+  for (const [index, id] of ["create", "read"].entries())
+    f.ctx.entities.insert("StepResult", {
+      ...f.step,
+      id: `stp_00000000-0000-4000-8000-0000000000${index + 10}`,
+      workspaceId: f.ctx.workspaceId,
+      planStepId: id,
+      index,
+      status: "passed",
+      reasonCode: undefined,
+      expected: null,
+      observed: 200,
+      error: null,
+    });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.diagnosis?.observation?.absence).toBe("empty_collection");
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_partially_supported");
+  expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(
+    "Inspect the creation response at step create and the read at step read, including entity identity and environment.",
+  );
+  expect(analysis.diagnosis?.chain.map((item) => [item.stepId, item.verifies])).toEqual([
+    ["create", null],
+    ["read", null],
+    ["price", "read"],
+  ]);
+  expect(analysis.hypotheses[0]?.support).toBe("partially_supported");
+});
+
+it.each([
+  {
+    diagnostic: {
+      deepestPrefix: "/items/0",
+      type: "object",
+      keys: ["price"],
+      unlistedKeyCount: 0,
+      firstUnresolvedToken: "priceCents",
+    },
+    absence: "missing_field",
+  },
+  {
+    diagnostic: { deepestPrefix: "/items/0", type: "null", firstUnresolvedToken: "price" },
+    absence: "null_value",
+  },
+])(
+  "missing pointer $absence remains an observation rather than an approved contract claim",
+  async ({ diagnostic, absence }) => {
+    const f = await fixture({
+      missing: true,
+      step: {
+        error: {
+          code: "RuntimeError",
+          message: `HTTP jsonEquals expectation was not satisfied; missing JSON pointer: ${JSON.stringify(diagnostic)}`,
+        },
+      },
+    });
+    const analysis = await f.service.analyze(f.run.id);
+    expect(analysis.diagnosis?.observation?.absence).toBe(absence);
+    expect(analysis.failureKind).toBe("unknown");
+    expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
+  },
+);
+
+it("new persistence requires layered diagnosis and support without breaking historical reads", async () => {
+  const f = await fixture();
+  const analysis = await f.service.analyze(f.run.id);
+  const {
+    id: _id,
+    workspaceId: _workspace,
+    createdAt: _created,
+    version: _version,
+    extensions: _extensions,
+    diagnosis: _diagnosis,
+    ...legacy
+  } = analysis;
+  const persist = f.service as unknown as {
+    persist(
+      fields: Omit<Analysis, "id" | "workspaceId" | "createdAt" | "version" | "extensions">,
+    ): unknown;
+  };
+  expect(() => persist.persist(legacy)).toThrow(
+    "New analysis requires layered diagnosis and hypothesis support",
+  );
+  expect(() =>
+    persist.persist({
+      ...legacy,
+      diagnosis: analysis.diagnosis,
+      hypotheses: analysis.hypotheses.map(({ support: _support, ...hypothesis }) => hypothesis),
+    }),
+  ).toThrow("New analysis requires layered diagnosis and hypothesis support");
+  const historical = {
+    ...analysis,
+    id: "ana_00000000-0000-4000-8000-000000000098",
+    createdAt: "2099-01-01T00:00:00.000Z",
+    diagnosis: undefined,
+  };
+  f.ctx.entities.insert("Analysis", historical);
+  const before = f.db.get("SELECT data_json FROM analyses WHERE id=?", historical.id)!.data_json;
+  expect(f.service.get(f.run.id)?.diagnosis).toBeUndefined();
+  expect(f.db.get("SELECT data_json FROM analyses WHERE id=?", historical.id)!.data_json).toBe(
+    before,
+  );
+});
+
+it("model next steps enrich evidence without overriding code-owned conclusion and healing", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.8 },
+      ],
+      recommendedAction: "fix_test",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [{ text: "Review whether a healing proposal is appropriate", evidence: ["E2"] }],
+      evidenceGaps: ["Source cause is unavailable"],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.modelCallId).toBe(f.modelCallId);
+  expect(analysis.diagnosis?.conclusion).toEqual(factual.diagnosis?.conclusion);
+  expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);
+  expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
+  expect(analysis.diagnosis?.nextSteps[0]?.source).toBe("rules");
+  expect(analysis.diagnosis?.nextSteps[1]).toMatchObject({
+    source: "model",
+    evidenceRefs: [expect.objectContaining({ stepId: f.step.id })],
+  });
+  expect(analysis.diagnosis?.evidenceGaps).toContain("Source cause is unavailable");
+  expect(analysis.hypotheses[0]?.support).toBe("partially_supported");
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { observation: unknown; chain: unknown[] };
+  };
+  expect(request.data.observation).toMatchObject({ stepId: "price", supports: ["E2"] });
+  expect(request.data.chain).toContainEqual(
+    expect.objectContaining({ stepId: "price", verifies: "request", supports: ["E2"] }),
+  );
+});
+
+it.each([
+  { handle: "E999", rejection: "unknown execution evidence" },
+  { handle: "E1", rejection: "Model next step requires execution observation support" },
+])(
+  "model next step citing $handle rejects enrichment and preserves rules layers",
+  async ({ handle, rejection }) => {
+    const f = await fixture();
+    const factual = await f.service.analyze(f.run.id);
+    f.complete.mockImplementationOnce(async () => ({
+      modelCallId: f.modelCallId,
+      output: {
+        failureKind: "product_bug",
+        hypotheses: [
+          { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.5 },
+        ],
+        recommendedAction: "fix_product",
+        fixTargetHandle: null,
+        limitations: [],
+        nextSteps: [{ text: "Inspect the response", evidence: [handle] }],
+        evidenceGaps: [],
+      },
+    }));
+    const analysis = await f.service.analyze(f.run.id, { model: true });
+    expect(analysis.modelCallId).toBeNull();
+    expect(analysis.diagnosis).toEqual(factual.diagnosis);
+    expect(analysis.limitations.some((limitation) => limitation.includes(rejection))).toBe(true);
+  },
+);
+
+it("relational chain caps at 64 while retaining the failed step and its early response", async () => {
+  const plan: ExecutablePlan = {
+    ...persistencePlan,
+    steps: [
+      ...Array.from({ length: 70 }, (_, index) => ({
+        id: `read-${index}`,
+        kind: "action" as const,
+        operation: "request" as const,
+        input: { method: "GET" as const, pathSegments: [{ literal: "items" }] },
+      })),
+      {
+        id: "price",
+        kind: "assertion",
+        operation: "assert",
+        input: { responseStepId: "read-0" },
+        expectation: { predicate: "jsonEquals", value: { literal: 10 } },
+      },
+    ],
+  };
+  const f = await fixture({ plan, step: { index: 70 } });
+  for (let index = 0; index < 70; index++)
+    f.ctx.entities.insert("StepResult", {
+      ...f.step,
+      id: `stp_00000000-0000-4000-8000-${String(index + 100).padStart(12, "0")}`,
+      workspaceId: f.ctx.workspaceId,
+      planStepId: `read-${index}`,
+      index,
+      status: "passed",
+      reasonCode: undefined,
+      expected: null,
+      observed: 200,
+      error: null,
+    });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.diagnosis?.chain).toHaveLength(64);
+  expect(analysis.diagnosis?.chain.map((item) => item.stepId)).toContain("read-0");
+  expect(analysis.diagnosis?.chain.map((item) => item.stepId)).toContain("price");
+  expect(analysis.diagnosis?.evidenceGaps).toContain(
+    "Relational chain truncated: 7 step results omitted; failed and referenced steps are prioritized.",
+  );
+});
+
+it("relational baseline compares latest compatible passing run without dynamic action value noise", async () => {
+  const f = await fixture({ plan: persistencePlan, step: { index: 2 } });
+  const request: StepResult = {
+    ...f.step,
+    id: "stp_00000000-0000-4000-8000-000000000010",
+    planStepId: "read",
+    index: 1,
+    status: "passed",
+    reasonCode: undefined,
+    observed: { id: "dynamic-current" },
+    expected: null,
+    error: null,
+  };
+  f.ctx.entities.insert("StepResult", { ...request, workspaceId: f.ctx.workspaceId });
+  const otherEnvironment = {
+    ...f.ctx.entities.get("EnvironmentRevision", f.ctx.workspaceId, f.run.environmentRevisionId)!,
+    workspaceId: f.ctx.workspaceId,
+    id: "evr_00000000-0000-4000-8000-000000000098",
+  };
+  const environmentRow = f.db.get(
+    "SELECT environment_id FROM environment_revisions WHERE workspace_id=? AND id=?",
+    f.ctx.workspaceId,
+    f.run.environmentRevisionId,
+  )!;
+  f.ctx.entities.insert("EnvironmentRevision", otherEnvironment, {
+    environmentId: String(environmentRow.environment_id),
+  });
+  for (const [index, environment, assertionValue] of [
+    [1, f.run.environmentRevisionId, 10],
+    [2, f.run.environmentRevisionId, 12],
+    [3, otherEnvironment.id, 11],
+  ] as const) {
+    const baseline = {
+      ...f.run,
+      workspaceId: f.ctx.workspaceId,
+      environmentRevisionId: environment,
+      id: `run_00000000-0000-4000-8000-0000000000${index + 70}`,
+      createdAt: `2026-10-0${index + 1}T00:00:00.000Z`,
+      outcome: "passed",
+      status: "passed",
+      gate: "passed",
+    };
+    f.ctx.entities.insert("Run", baseline);
+    const fixture = relationalFixtures(f.db).find((item) => item.kind === "Attempt")!;
+    const attemptId = `att_00000000-0000-4000-8000-0000000000${index + 70}`;
+    Object.assign(fixture.dto, {
+      id: attemptId,
+      runId: baseline.id,
+      phase: "completed",
+      outcome: "passed",
+    });
+    Object.assign(fixture.row, {
+      id: attemptId,
+      run_id: baseline.id,
+      phase: "completed",
+      outcome: "passed",
+      fence: index + 1,
+      job_id: f.db.get("SELECT job_id FROM attempts WHERE id=?", f.step.attemptId)!.job_id,
+      data_json: canonicalJson(fixture.dto),
+    });
+    const insert = fixtureInsert(fixture);
+    f.db.run(insert.sql, ...insert.values);
+    f.ctx.entities.insert("StepResult", {
+      ...request,
+      id: `stp_00000000-0000-4000-8000-0000000000${index + 70}`,
+      attemptId,
+      workspaceId: f.ctx.workspaceId,
+      status: index === 2 ? "passed" : "failed",
+      reasonCode: index === 2 ? undefined : "assertion_mismatch",
+      observed: { id: `dynamic-${index}` },
+    });
+    f.ctx.entities.insert("StepResult", {
+      ...f.step,
+      id: `stp_00000000-0000-4000-8000-0000000000${index + 80}`,
+      attemptId,
+      workspaceId: f.ctx.workspaceId,
+      status: "passed",
+      reasonCode: undefined,
+      observed: assertionValue,
+    });
+  }
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.diagnosis?.chain.find((item) => item.stepId === "read")?.baseline).toBe("same");
+  expect(analysis.diagnosis?.chain.find((item) => item.stepId === "price")?.baseline).toBe(
+    "different",
+  );
+});
+
+it("latest attempt evidence excludes obsolete failures and historical analyses receive immutable successors", async () => {
+  const f = await fixture();
+  const legacy = {
+    ...relationalFixtures(f.db).find((item) => item.kind === "Analysis")!.dto,
+    workspaceId: f.ctx.workspaceId,
+  };
+  f.ctx.entities.insert("Analysis", legacy as never);
+  const before = f.db.get(
+    "SELECT data_json FROM analyses WHERE id=?",
+    String(legacy.id),
+  )!.data_json;
+  const attemptFixture = relationalFixtures(f.db).find((item) => item.kind === "Attempt")!;
+  const attemptId = "att_00000000-0000-4000-8000-000000000098";
+  Object.assign(attemptFixture.dto, {
+    id: attemptId,
+    number: 2,
+    phase: "completed",
+    outcome: "passed",
+  });
+  Object.assign(attemptFixture.row, {
+    id: attemptId,
+    number: 2,
+    phase: "completed",
+    outcome: "passed",
+    fence: 2,
+    data_json: canonicalJson(attemptFixture.dto),
+  });
+  const insert = fixtureInsert(attemptFixture);
+  f.db.run(insert.sql, ...insert.values);
+  f.ctx.entities.insert("StepResult", {
+    ...f.step,
+    workspaceId: f.ctx.workspaceId,
+    id: "stp_00000000-0000-4000-8000-000000000098",
+    attemptId,
+    status: "passed",
+    reasonCode: undefined,
+    observed: 10,
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.diagnosis).toBeDefined();
+  expect(analysis.diagnosis?.chain).toHaveLength(1);
+  expect(analysis.diagnosis?.chain[0]?.status).toBe("passed");
+  expect(analysis.failureKind).toBe("unknown");
+  expect(analysis.id).not.toBe(legacy.id);
+  expect(f.db.get("SELECT data_json FROM analyses WHERE id=?", String(legacy.id))!.data_json).toBe(
+    before,
+  );
+});
+
+it("rejected model response records actual unsupported hypothesis count without accepting its cause", async () => {
+  const f = await fixture();
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "test_fragility",
+      hypotheses: [
+        { text: "Ungrounded drift", supports: ["E1"], contradicts: [], confidence: 0.9 },
+      ],
+      recommendedAction: "fix_test",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.modelCallId).toBeNull();
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(
+    f.service.jobs
+      .forTarget(f.ctx.workspaceId, "analysis", f.run.id)
+      .find((job) => job.payload.operation === "model")?.progress.unsupportedClaims,
+  ).toBe(1);
+});
+
+it("observed network failure supports environment restoration rather than healing", async () => {
+  const f = await fixture({
+    requestOnly: true,
+    step: { error: { code: "ECONNREFUSED", message: "Connection refused" } },
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("environment");
+  expect(analysis.hypotheses[0]?.support).toBe("supported");
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_supported");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(
+    "Restore the observed environment or network condition and rerun the unchanged test.",
+  );
+  expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
+});
+
+it("ambiguous locator candidates produce manual-only advice without a supported cause", async () => {
+  const f = await fixture({
+    plan: {
+      ...persistencePlan,
+      type: "frontend",
+      runner: "playwright",
+      steps: [
+        {
+          id: "price",
+          kind: "action",
+          operation: "click",
+          input: { locator: { by: "role", role: "button", name: "Old checkout", exact: true } },
+        },
+      ],
+    },
+    step: { reasonCode: "assertion_timeout", observed: null, expected: null },
+  });
+  await attachLocatorEvidence(f, 2);
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("unknown");
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
+  expect(analysis.diagnosis?.healing.advice).toBe("manual_review_only");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("Inspect locator candidates");
+});
+
+it("layered observations remain bounded and scrubbed while retaining immutable evidence references", async () => {
+  vi.stubEnv("TESTMASTER_DIAGNOSIS_SECRET", "sentinel-private-value");
+  try {
+    const f = await fixture({
+      step: {
+        observed: {
+          password: "sentinel-private-value",
+          visible: "sentinel-private-value",
+          text: "x".repeat(513),
+        },
+      },
+    });
+    const analysis = await f.service.analyze(f.run.id);
+    expect(JSON.stringify(analysis.diagnosis)).not.toContain("sentinel-private-value");
+    expect(analysis.diagnosis?.observation?.observed).toContain("string_limit");
+    expect(analysis.diagnosis?.observation?.observed?.length).toBeLessThanOrEqual(2000);
+    expect(analysis.diagnosis?.observation?.evidenceRefs).toContainEqual(
+      expect.objectContaining({ stepId: f.step.id }),
+    );
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
