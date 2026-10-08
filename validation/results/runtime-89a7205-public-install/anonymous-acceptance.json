@@ -1,0 +1,1178 @@
+{
+  "sourceCommit": "89a72050b20d89f66eb548f548efb66d67505f0b",
+  "modelCalls": 0,
+  "requests": 2,
+  "healthy": {
+    "schemaVersion": "1.0.0",
+    "requestId": "cli_0095899d-4c45-4f0c-baf7-08c88f32fa0b",
+    "data": {
+      "receipt": {
+        "runId": "run_01a11d7c-7e6d-725e-a308-27c01473cb51",
+        "status": "queued",
+        "revisionId": "rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32",
+        "environmentRevisionId": "evr_01a11d7c-728b-74c3-8730-3f29ee49b42a",
+        "acceptedAt": "2026-10-08T21:47:40.525Z",
+        "links": {
+          "self": "/v1/runs/run_01a11d7c-7e6d-725e-a308-27c01473cb51",
+          "events": "/v1/runs/run_01a11d7c-7e6d-725e-a308-27c01473cb51/events",
+          "bundle": "/v1/runs/run_01a11d7c-7e6d-725e-a308-27c01473cb51/bundle"
+        },
+        "idempotencyKey": "bae44a47-4dff-4518-896b-c34e72549df4",
+        "ownership": "ephemeral"
+      },
+      "run": {
+        "analysisStatus": "not_requested",
+        "batchId": null,
+        "cleanupOutcome": "not_required",
+        "createdAt": "2026-10-08T21:47:40.525Z",
+        "environmentRevisionId": "evr_01a11d7c-728b-74c3-8730-3f29ee49b42a",
+        "gate": "passed",
+        "gatePolicy": {
+          "cleanupRequired": false,
+          "executor": "docker",
+          "ownership": "ephemeral",
+          "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+          "policySatisfied": true,
+          "requiredDependenciesPassed": true,
+          "requiredEvidenceComplete": true
+        },
+        "id": "run_01a11d7c-7e6d-725e-a308-27c01473cb51",
+        "matrixCell": {
+          "admissionSnapshot": {
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+            "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+            "configuredModelHash": null,
+            "dependenciesLockHash": null,
+            "environmentHash": "0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+                "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a",
+                "imageId": "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [],
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "http"
+            ],
+            "revisionHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+            "runnerImageDigest": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "seed": 0,
+            "sourceRevisions": []
+          },
+          "admissionSnapshotHash": "d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19",
+          "baseUrl": "http://127.0.0.1:39855",
+          "correlationId": "cli_0095899d-4c45-4f0c-baf7-08c88f32fa0b",
+          "effectiveConfig": {
+            "config": {
+              "artifacts": {
+                "httpBodies": "off",
+                "retentionDays": 30,
+                "trace": "off",
+                "video": "off"
+              },
+              "browser": {
+                "name": "chromium",
+                "testIdAttributes": [
+                  "data-testid"
+                ],
+                "viewport": {
+                  "height": 720,
+                  "width": 1280
+                }
+              },
+              "environment": {
+                "baseUrl": "http://127.0.0.1:3000",
+                "locale": "en-US",
+                "networkProfile": "local-loopback",
+                "timezone": "UTC"
+              },
+              "execution": {
+                "analysisGraceMs": 60000,
+                "artifactBytes": 67108864,
+                "attemptArtifactBytes": 268435456,
+                "attemptTimeoutMs": 300000,
+                "bodyBytes": 10485760,
+                "collectionGraceMs": 60000,
+                "concurrency": 2,
+                "executionTimeoutMs": 1800000,
+                "executor": "docker",
+                "logBytes": 10485760,
+                "maxAttempts": 2,
+                "mode": "replay",
+                "networkRequestTimeoutMs": 30000,
+                "preparationTimeoutMs": 120000,
+                "stepTimeoutMs": 30000
+              },
+              "healing": {
+                "mode": "off"
+              },
+              "project": {
+                "id": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+                "name": "release-smoke"
+              },
+              "schemaVersion": "1.0.0",
+              "telemetry": {
+                "enabled": false
+              }
+            },
+            "origins": {
+              "artifacts.httpBodies": "project",
+              "artifacts.retentionDays": "project",
+              "artifacts.trace": "project",
+              "artifacts.video": "project",
+              "browser.name": "project",
+              "browser.testIdAttributes": "project",
+              "browser.viewport.height": "project",
+              "browser.viewport.width": "project",
+              "environment.baseUrl": "project",
+              "environment.locale": "project",
+              "environment.networkProfile": "project",
+              "environment.timezone": "project",
+              "execution.analysisGraceMs": "project",
+              "execution.artifactBytes": "project",
+              "execution.attemptArtifactBytes": "project",
+              "execution.attemptTimeoutMs": "project",
+              "execution.bodyBytes": "project",
+              "execution.collectionGraceMs": "project",
+              "execution.concurrency": "project",
+              "execution.executionTimeoutMs": "project",
+              "execution.executor": "project",
+              "execution.logBytes": "project",
+              "execution.maxAttempts": "project",
+              "execution.mode": "project",
+              "execution.networkRequestTimeoutMs": "project",
+              "execution.preparationTimeoutMs": "project",
+              "execution.stepTimeoutMs": "project",
+              "healing.mode": "environment",
+              "project.id": "project",
+              "project.name": "project",
+              "schemaVersion": "project",
+              "telemetry.enabled": "project"
+            },
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1"
+          },
+          "environmentId": "env_01a11d7c-728b-74c3-8730-407b6f6c0d5f",
+          "environmentName": "local",
+          "executor": "docker",
+          "healingPolicy": "off",
+          "limits": {
+            "analysisGraceMs": 60000,
+            "artifactBytes": 67108864,
+            "attemptArtifactBytes": 268435456,
+            "attemptTimeoutMs": 300000,
+            "bodyBytes": 10485760,
+            "collectionGraceMs": 60000,
+            "executionTimeoutMs": 1800000,
+            "logBytes": 10485760,
+            "maxAttempts": 2,
+            "networkRequestTimeoutMs": 30000,
+            "preparationTimeoutMs": 120000,
+            "stepTimeoutMs": 30000
+          },
+          "maxConcurrency": 2,
+          "ownership": "ephemeral",
+          "planHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+          "seed": 0
+        },
+        "mode": "replay",
+        "origin": "cli",
+        "outcome": "passed",
+        "phase": "completed",
+        "revisionId": "rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32",
+        "status": "passed",
+        "testId": "tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd",
+        "version": 2,
+        "workspaceId": "ws_01a11d7c-7277-7766-b103-5777633f797e"
+      }
+    },
+    "warnings": []
+  },
+  "negative": {
+    "schemaVersion": "1.0.0",
+    "requestId": "cli_aacab68f-9551-408d-ae7d-49b9ef903894",
+    "data": {
+      "receipt": {
+        "runId": "run_01a11d7c-907f-7365-820f-92cd63712788",
+        "status": "queued",
+        "revisionId": "rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32",
+        "environmentRevisionId": "evr_01a11d7c-728b-74c3-8730-3f29ee49b42a",
+        "acceptedAt": "2026-10-08T21:47:45.151Z",
+        "links": {
+          "self": "/v1/runs/run_01a11d7c-907f-7365-820f-92cd63712788",
+          "events": "/v1/runs/run_01a11d7c-907f-7365-820f-92cd63712788/events",
+          "bundle": "/v1/runs/run_01a11d7c-907f-7365-820f-92cd63712788/bundle"
+        },
+        "idempotencyKey": "b376cb8d-9063-4f95-8330-48c53ad5f2a3",
+        "ownership": "ephemeral"
+      },
+      "run": {
+        "analysisStatus": "not_requested",
+        "batchId": null,
+        "cleanupOutcome": "not_required",
+        "createdAt": "2026-10-08T21:47:45.151Z",
+        "environmentRevisionId": "evr_01a11d7c-728b-74c3-8730-3f29ee49b42a",
+        "gate": "failed",
+        "gatePolicy": {
+          "cleanupRequired": false,
+          "executor": "docker",
+          "ownership": "ephemeral",
+          "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+          "policySatisfied": true,
+          "requiredDependenciesPassed": true,
+          "requiredEvidenceComplete": true
+        },
+        "id": "run_01a11d7c-907f-7365-820f-92cd63712788",
+        "matrixCell": {
+          "admissionSnapshot": {
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+            "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+            "configuredModelHash": null,
+            "dependenciesLockHash": null,
+            "environmentHash": "0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+                "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a",
+                "imageId": "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [],
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "http"
+            ],
+            "revisionHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+            "runnerImageDigest": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "seed": 0,
+            "sourceRevisions": []
+          },
+          "admissionSnapshotHash": "d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19",
+          "baseUrl": "http://127.0.0.1:39855",
+          "correlationId": "cli_aacab68f-9551-408d-ae7d-49b9ef903894",
+          "effectiveConfig": {
+            "config": {
+              "artifacts": {
+                "httpBodies": "off",
+                "retentionDays": 30,
+                "trace": "off",
+                "video": "off"
+              },
+              "browser": {
+                "name": "chromium",
+                "testIdAttributes": [
+                  "data-testid"
+                ],
+                "viewport": {
+                  "height": 720,
+                  "width": 1280
+                }
+              },
+              "environment": {
+                "baseUrl": "http://127.0.0.1:3000",
+                "locale": "en-US",
+                "networkProfile": "local-loopback",
+                "timezone": "UTC"
+              },
+              "execution": {
+                "analysisGraceMs": 60000,
+                "artifactBytes": 67108864,
+                "attemptArtifactBytes": 268435456,
+                "attemptTimeoutMs": 300000,
+                "bodyBytes": 10485760,
+                "collectionGraceMs": 60000,
+                "concurrency": 2,
+                "executionTimeoutMs": 1800000,
+                "executor": "docker",
+                "logBytes": 10485760,
+                "maxAttempts": 2,
+                "mode": "replay",
+                "networkRequestTimeoutMs": 30000,
+                "preparationTimeoutMs": 120000,
+                "stepTimeoutMs": 30000
+              },
+              "healing": {
+                "mode": "off"
+              },
+              "project": {
+                "id": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+                "name": "release-smoke"
+              },
+              "schemaVersion": "1.0.0",
+              "telemetry": {
+                "enabled": false
+              }
+            },
+            "origins": {
+              "artifacts.httpBodies": "project",
+              "artifacts.retentionDays": "project",
+              "artifacts.trace": "project",
+              "artifacts.video": "project",
+              "browser.name": "project",
+              "browser.testIdAttributes": "project",
+              "browser.viewport.height": "project",
+              "browser.viewport.width": "project",
+              "environment.baseUrl": "project",
+              "environment.locale": "project",
+              "environment.networkProfile": "project",
+              "environment.timezone": "project",
+              "execution.analysisGraceMs": "project",
+              "execution.artifactBytes": "project",
+              "execution.attemptArtifactBytes": "project",
+              "execution.attemptTimeoutMs": "project",
+              "execution.bodyBytes": "project",
+              "execution.collectionGraceMs": "project",
+              "execution.concurrency": "project",
+              "execution.executionTimeoutMs": "project",
+              "execution.executor": "project",
+              "execution.logBytes": "project",
+              "execution.maxAttempts": "project",
+              "execution.mode": "project",
+              "execution.networkRequestTimeoutMs": "project",
+              "execution.preparationTimeoutMs": "project",
+              "execution.stepTimeoutMs": "project",
+              "healing.mode": "environment",
+              "project.id": "project",
+              "project.name": "project",
+              "schemaVersion": "project",
+              "telemetry.enabled": "project"
+            },
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1"
+          },
+          "environmentId": "env_01a11d7c-728b-74c3-8730-407b6f6c0d5f",
+          "environmentName": "local",
+          "executor": "docker",
+          "healingPolicy": "off",
+          "limits": {
+            "analysisGraceMs": 60000,
+            "artifactBytes": 67108864,
+            "attemptArtifactBytes": 268435456,
+            "attemptTimeoutMs": 300000,
+            "bodyBytes": 10485760,
+            "collectionGraceMs": 60000,
+            "executionTimeoutMs": 1800000,
+            "logBytes": 10485760,
+            "maxAttempts": 2,
+            "networkRequestTimeoutMs": 30000,
+            "preparationTimeoutMs": 120000,
+            "stepTimeoutMs": 30000
+          },
+          "maxConcurrency": 2,
+          "ownership": "ephemeral",
+          "planHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+          "seed": 0
+        },
+        "mode": "replay",
+        "origin": "cli",
+        "outcome": "failed",
+        "phase": "completed",
+        "revisionId": "rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32",
+        "status": "failed",
+        "testId": "tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd",
+        "version": 2,
+        "workspaceId": "ws_01a11d7c-7277-7766-b103-5777633f797e"
+      }
+    },
+    "warnings": []
+  },
+  "runs": {
+    "schemaVersion": "1.0.0",
+    "requestId": "cli_d7170b3a-dcef-4dc2-a68e-9594694afe04",
+    "data": [
+      {
+        "analysisStatus": "not_requested",
+        "batchId": null,
+        "cleanupOutcome": "not_required",
+        "createdAt": "2026-10-08T21:47:45.151Z",
+        "environmentRevisionId": "evr_01a11d7c-728b-74c3-8730-3f29ee49b42a",
+        "gate": "failed",
+        "gatePolicy": {
+          "cleanupRequired": false,
+          "executor": "docker",
+          "ownership": "ephemeral",
+          "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+          "policySatisfied": true,
+          "requiredDependenciesPassed": true,
+          "requiredEvidenceComplete": true
+        },
+        "id": "run_01a11d7c-907f-7365-820f-92cd63712788",
+        "matrixCell": {
+          "admissionSnapshot": {
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+            "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+            "configuredModelHash": null,
+            "dependenciesLockHash": null,
+            "environmentHash": "0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+                "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a",
+                "imageId": "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [],
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "http"
+            ],
+            "revisionHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+            "runnerImageDigest": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "seed": 0,
+            "sourceRevisions": []
+          },
+          "admissionSnapshotHash": "d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19",
+          "baseUrl": "http://127.0.0.1:39855",
+          "correlationId": "cli_aacab68f-9551-408d-ae7d-49b9ef903894",
+          "effectiveConfig": {
+            "config": {
+              "artifacts": {
+                "httpBodies": "off",
+                "retentionDays": 30,
+                "trace": "off",
+                "video": "off"
+              },
+              "browser": {
+                "name": "chromium",
+                "testIdAttributes": [
+                  "data-testid"
+                ],
+                "viewport": {
+                  "height": 720,
+                  "width": 1280
+                }
+              },
+              "environment": {
+                "baseUrl": "http://127.0.0.1:3000",
+                "locale": "en-US",
+                "networkProfile": "local-loopback",
+                "timezone": "UTC"
+              },
+              "execution": {
+                "analysisGraceMs": 60000,
+                "artifactBytes": 67108864,
+                "attemptArtifactBytes": 268435456,
+                "attemptTimeoutMs": 300000,
+                "bodyBytes": 10485760,
+                "collectionGraceMs": 60000,
+                "concurrency": 2,
+                "executionTimeoutMs": 1800000,
+                "executor": "docker",
+                "logBytes": 10485760,
+                "maxAttempts": 2,
+                "mode": "replay",
+                "networkRequestTimeoutMs": 30000,
+                "preparationTimeoutMs": 120000,
+                "stepTimeoutMs": 30000
+              },
+              "healing": {
+                "mode": "off"
+              },
+              "project": {
+                "id": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+                "name": "release-smoke"
+              },
+              "schemaVersion": "1.0.0",
+              "telemetry": {
+                "enabled": false
+              }
+            },
+            "origins": {
+              "artifacts.httpBodies": "project",
+              "artifacts.retentionDays": "project",
+              "artifacts.trace": "project",
+              "artifacts.video": "project",
+              "browser.name": "project",
+              "browser.testIdAttributes": "project",
+              "browser.viewport.height": "project",
+              "browser.viewport.width": "project",
+              "environment.baseUrl": "project",
+              "environment.locale": "project",
+              "environment.networkProfile": "project",
+              "environment.timezone": "project",
+              "execution.analysisGraceMs": "project",
+              "execution.artifactBytes": "project",
+              "execution.attemptArtifactBytes": "project",
+              "execution.attemptTimeoutMs": "project",
+              "execution.bodyBytes": "project",
+              "execution.collectionGraceMs": "project",
+              "execution.concurrency": "project",
+              "execution.executionTimeoutMs": "project",
+              "execution.executor": "project",
+              "execution.logBytes": "project",
+              "execution.maxAttempts": "project",
+              "execution.mode": "project",
+              "execution.networkRequestTimeoutMs": "project",
+              "execution.preparationTimeoutMs": "project",
+              "execution.stepTimeoutMs": "project",
+              "healing.mode": "environment",
+              "project.id": "project",
+              "project.name": "project",
+              "schemaVersion": "project",
+              "telemetry.enabled": "project"
+            },
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1"
+          },
+          "environmentId": "env_01a11d7c-728b-74c3-8730-407b6f6c0d5f",
+          "environmentName": "local",
+          "executor": "docker",
+          "healingPolicy": "off",
+          "limits": {
+            "analysisGraceMs": 60000,
+            "artifactBytes": 67108864,
+            "attemptArtifactBytes": 268435456,
+            "attemptTimeoutMs": 300000,
+            "bodyBytes": 10485760,
+            "collectionGraceMs": 60000,
+            "executionTimeoutMs": 1800000,
+            "logBytes": 10485760,
+            "maxAttempts": 2,
+            "networkRequestTimeoutMs": 30000,
+            "preparationTimeoutMs": 120000,
+            "stepTimeoutMs": 30000
+          },
+          "maxConcurrency": 2,
+          "ownership": "ephemeral",
+          "planHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+          "seed": 0
+        },
+        "mode": "replay",
+        "origin": "cli",
+        "outcome": "failed",
+        "phase": "completed",
+        "revisionId": "rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32",
+        "status": "failed",
+        "testId": "tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd",
+        "version": 2,
+        "workspaceId": "ws_01a11d7c-7277-7766-b103-5777633f797e"
+      },
+      {
+        "analysisStatus": "not_requested",
+        "batchId": null,
+        "cleanupOutcome": "not_required",
+        "createdAt": "2026-10-08T21:47:40.525Z",
+        "environmentRevisionId": "evr_01a11d7c-728b-74c3-8730-3f29ee49b42a",
+        "gate": "passed",
+        "gatePolicy": {
+          "cleanupRequired": false,
+          "executor": "docker",
+          "ownership": "ephemeral",
+          "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+          "policySatisfied": true,
+          "requiredDependenciesPassed": true,
+          "requiredEvidenceComplete": true
+        },
+        "id": "run_01a11d7c-7e6d-725e-a308-27c01473cb51",
+        "matrixCell": {
+          "admissionSnapshot": {
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+            "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+            "configuredModelHash": null,
+            "dependenciesLockHash": null,
+            "environmentHash": "0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838",
+                "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a",
+                "imageId": "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [],
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "http"
+            ],
+            "revisionHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+            "runnerImageDigest": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "seed": 0,
+            "sourceRevisions": []
+          },
+          "admissionSnapshotHash": "d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19",
+          "baseUrl": "http://127.0.0.1:39855",
+          "correlationId": "cli_0095899d-4c45-4f0c-baf7-08c88f32fa0b",
+          "effectiveConfig": {
+            "config": {
+              "artifacts": {
+                "httpBodies": "off",
+                "retentionDays": 30,
+                "trace": "off",
+                "video": "off"
+              },
+              "browser": {
+                "name": "chromium",
+                "testIdAttributes": [
+                  "data-testid"
+                ],
+                "viewport": {
+                  "height": 720,
+                  "width": 1280
+                }
+              },
+              "environment": {
+                "baseUrl": "http://127.0.0.1:3000",
+                "locale": "en-US",
+                "networkProfile": "local-loopback",
+                "timezone": "UTC"
+              },
+              "execution": {
+                "analysisGraceMs": 60000,
+                "artifactBytes": 67108864,
+                "attemptArtifactBytes": 268435456,
+                "attemptTimeoutMs": 300000,
+                "bodyBytes": 10485760,
+                "collectionGraceMs": 60000,
+                "concurrency": 2,
+                "executionTimeoutMs": 1800000,
+                "executor": "docker",
+                "logBytes": 10485760,
+                "maxAttempts": 2,
+                "mode": "replay",
+                "networkRequestTimeoutMs": 30000,
+                "preparationTimeoutMs": 120000,
+                "stepTimeoutMs": 30000
+              },
+              "healing": {
+                "mode": "off"
+              },
+              "project": {
+                "id": "prj_01a11d7c-7284-70f5-9826-06fc1f5f713b",
+                "name": "release-smoke"
+              },
+              "schemaVersion": "1.0.0",
+              "telemetry": {
+                "enabled": false
+              }
+            },
+            "origins": {
+              "artifacts.httpBodies": "project",
+              "artifacts.retentionDays": "project",
+              "artifacts.trace": "project",
+              "artifacts.video": "project",
+              "browser.name": "project",
+              "browser.testIdAttributes": "project",
+              "browser.viewport.height": "project",
+              "browser.viewport.width": "project",
+              "environment.baseUrl": "project",
+              "environment.locale": "project",
+              "environment.networkProfile": "project",
+              "environment.timezone": "project",
+              "execution.analysisGraceMs": "project",
+              "execution.artifactBytes": "project",
+              "execution.attemptArtifactBytes": "project",
+              "execution.attemptTimeoutMs": "project",
+              "execution.bodyBytes": "project",
+              "execution.collectionGraceMs": "project",
+              "execution.concurrency": "project",
+              "execution.executionTimeoutMs": "project",
+              "execution.executor": "project",
+              "execution.logBytes": "project",
+              "execution.maxAttempts": "project",
+              "execution.mode": "project",
+              "execution.networkRequestTimeoutMs": "project",
+              "execution.preparationTimeoutMs": "project",
+              "execution.stepTimeoutMs": "project",
+              "healing.mode": "environment",
+              "project.id": "project",
+              "project.name": "project",
+              "schemaVersion": "project",
+              "telemetry.enabled": "project"
+            },
+            "policyHash": "eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1"
+          },
+          "environmentId": "env_01a11d7c-728b-74c3-8730-407b6f6c0d5f",
+          "environmentName": "local",
+          "executor": "docker",
+          "healingPolicy": "off",
+          "limits": {
+            "analysisGraceMs": 60000,
+            "artifactBytes": 67108864,
+            "attemptArtifactBytes": 268435456,
+            "attemptTimeoutMs": 300000,
+            "bodyBytes": 10485760,
+            "collectionGraceMs": 60000,
+            "executionTimeoutMs": 1800000,
+            "logBytes": 10485760,
+            "maxAttempts": 2,
+            "networkRequestTimeoutMs": 30000,
+            "preparationTimeoutMs": 120000,
+            "stepTimeoutMs": 30000
+          },
+          "maxConcurrency": 2,
+          "ownership": "ephemeral",
+          "planHash": "38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976",
+          "seed": 0
+        },
+        "mode": "replay",
+        "origin": "cli",
+        "outcome": "passed",
+        "phase": "completed",
+        "revisionId": "rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32",
+        "status": "passed",
+        "testId": "tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd",
+        "version": 2,
+        "workspaceId": "ws_01a11d7c-7277-7766-b103-5777633f797e"
+      }
+    ],
+    "warnings": []
+  },
+  "commands": [
+    {
+      "args": [
+        "--json",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "release-smoke",
+        "--base-url",
+        "http://127.0.0.1:39855"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_9a4cd2e3-5155-4606-855c-7bd59368cb04\",\"data\":{\"workspaceId\":\"ws_01a11d7c-7277-7766-b103-5777633f797e\",\"principalId\":\"usr_01a11d7c-7277-7766-b103-5af8680f8b95\",\"projectId\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"environmentId\":\"env_01a11d7c-728b-74c3-8730-407b6f6c0d5f\",\"sessionOnly\":true,\"notice\":\"User profile cannot be persisted; session-only setup\"},\"warnings\":[\"User profile cannot be persisted; session-only setup\"]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--json",
+        "doctor"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_b17a5e06-0382-4aff-807e-859c11147729\",\"data\":{\"status\":\"PASS\",\"checks\":{\"runtime\":{\"status\":\"PASS\",\"available\":true,\"mode\":\"rootful\",\"seccomp\":true,\"cgroupVersion\":\"2\",\"diagnostics\":[]},\"images\":{\"status\":\"PASS\"},\"storage\":{\"status\":\"PASS\",\"availableBytes\":124759457792},\"secrets\":{\"status\":\"PASS\",\"backend\":\"secret-tool\",\"writable\":true},\"config\":{\"status\":\"PASS\",\"effectiveConfig\":{\"config\":{\"schemaVersion\":\"1.0.0\",\"project\":{\"name\":\"release-smoke\",\"id\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\"},\"execution\":{\"executor\":\"docker\",\"mode\":\"replay\",\"concurrency\":2,\"executionTimeoutMs\":1800000,\"attemptTimeoutMs\":300000,\"stepTimeoutMs\":30000,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":2,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"networkProfile\":\"local-loopback\",\"locale\":\"en-US\",\"timezone\":\"UTC\"},\"browser\":{\"name\":\"chromium\",\"viewport\":{\"width\":1280,\"height\":720},\"testIdAttributes\":[\"data-testid\"]},\"healing\":{\"mode\":\"off\"},\"artifacts\":{\"trace\":\"off\",\"video\":\"off\",\"httpBodies\":\"off\",\"retentionDays\":30},\"telemetry\":{\"enabled\":false}},\"origins\":{\"schemaVersion\":\"project\",\"project.name\":\"project\",\"execution.executor\":\"project\",\"execution.mode\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.logBytes\":\"project\",\"environment.baseUrl\":\"project\",\"environment.networkProfile\":\"project\",\"environment.locale\":\"project\",\"environment.timezone\":\"project\",\"browser.name\":\"project\",\"browser.viewport.width\":\"project\",\"browser.viewport.height\":\"project\",\"browser.testIdAttributes\":\"project\",\"healing.mode\":\"environment\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"artifacts.httpBodies\":\"project\",\"artifacts.retentionDays\":\"project\",\"telemetry.enabled\":\"project\",\"project.id\":\"project\"},\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\"}},\"target\":{\"status\":\"NOT_CHECKED\"},\"model\":{\"status\":\"ABSENT\",\"diagnostics\":[\"model_not_configured\"],\"requiredForReplay\":false}}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--json",
+        "test",
+        "scaffold",
+        "--type",
+        "backend"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_5017b028-d44a-4cab-9e50-04c870cfde43\",\"data\":{\"schemaVersion\":\"1.0.0\",\"kind\":\"executable\",\"name\":\"Read service health\",\"type\":\"backend\",\"runner\":\"http\",\"requirementRefs\":[],\"steps\":[{\"id\":\"get-health\",\"kind\":\"action\",\"operation\":\"request\",\"description\":\"Read the controlled health endpoint\",\"required\":true,\"input\":{\"method\":\"GET\",\"pathSegments\":[{\"literal\":\"health\"}],\"query\":[],\"headers\":{}},\"timeoutMs\":30000},{\"id\":\"check-status\",\"kind\":\"assertion\",\"operation\":\"assert\",\"description\":\"Require HTTP 200\",\"required\":true,\"input\":{\"responseStepId\":\"get-health\"},\"expectation\":{\"predicate\":\"statusIn\",\"values\":[200]},\"timeoutMs\":30000},{\"id\":\"check-health\",\"kind\":\"assertion\",\"operation\":\"assert\",\"description\":\"Require a healthy service state\",\"required\":true,\"input\":{\"responseStepId\":\"get-health\",\"jsonPointer\":\"/status\"},\"expectation\":{\"predicate\":\"jsonEquals\",\"value\":{\"literal\":\"ok\"}},\"timeoutMs\":30000}],\"dependsOn\":[],\"cleanup\":[],\"tags\":[],\"priority\":\"normal\"},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--json",
+        "test",
+        "create",
+        "--plan",
+        "health.plan.json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_41d4949e-bec7-426a-bcf2-241c9c0fe93e\",\"data\":{\"id\":\"tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd\",\"workspaceId\":\"ws_01a11d7c-7277-7766-b103-5777633f797e\",\"createdAt\":\"2026-10-08T21:47:39.092Z\",\"version\":2,\"projectId\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"name\":\"Read service health\",\"activeRevisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"tags\":[],\"priority\":\"normal\",\"archivedAt\":null},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--json",
+        "test",
+        "run",
+        "tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd",
+        "--wait"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_0095899d-4c45-4f0c-baf7-08c88f32fa0b\",\"data\":{\"receipt\":{\"runId\":\"run_01a11d7c-7e6d-725e-a308-27c01473cb51\",\"status\":\"queued\",\"revisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"environmentRevisionId\":\"evr_01a11d7c-728b-74c3-8730-3f29ee49b42a\",\"acceptedAt\":\"2026-10-08T21:47:40.525Z\",\"links\":{\"self\":\"/v1/runs/run_01a11d7c-7e6d-725e-a308-27c01473cb51\",\"events\":\"/v1/runs/run_01a11d7c-7e6d-725e-a308-27c01473cb51/events\",\"bundle\":\"/v1/runs/run_01a11d7c-7e6d-725e-a308-27c01473cb51/bundle\"},\"idempotencyKey\":\"bae44a47-4dff-4518-896b-c34e72549df4\",\"ownership\":\"ephemeral\"},\"run\":{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-08T21:47:40.525Z\",\"environmentRevisionId\":\"evr_01a11d7c-728b-74c3-8730-3f29ee49b42a\",\"gate\":\"passed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a11d7c-7e6d-725e-a308-27c01473cb51\",\"matrixCell\":{\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"capabilityManifestHash\":\"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57\",\"configuredModelHash\":null,\"dependenciesLockHash\":null,\"environmentHash\":\"0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a\",\"imageId\":\"sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[],\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"http\"],\"revisionHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"runnerImageDigest\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19\",\"baseUrl\":\"http://127.0.0.1:39855\",\"correlationId\":\"cli_0095899d-4c45-4f0c-baf7-08c88f32fa0b\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"off\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":2,\"executionTimeoutMs\":1800000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":2,\"mode\":\"replay\",\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"healing\":{\"mode\":\"off\"},\"project\":{\"id\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"name\":\"release-smoke\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"project\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"environment\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"project\"},\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\"},\"environmentId\":\"env_01a11d7c-728b-74c3-8730-407b6f6c0d5f\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"off\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":1800000,\"logBytes\":10485760,\"maxAttempts\":2,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"maxConcurrency\":2,\"ownership\":\"ephemeral\",\"planHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"passed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"status\":\"passed\",\"testId\":\"tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd\",\"version\":2,\"workspaceId\":\"ws_01a11d7c-7277-7766-b103-5777633f797e\"}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--json",
+        "test",
+        "run",
+        "tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd",
+        "--wait"
+      ],
+      "exitCode": 1,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_aacab68f-9551-408d-ae7d-49b9ef903894\",\"data\":{\"receipt\":{\"runId\":\"run_01a11d7c-907f-7365-820f-92cd63712788\",\"status\":\"queued\",\"revisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"environmentRevisionId\":\"evr_01a11d7c-728b-74c3-8730-3f29ee49b42a\",\"acceptedAt\":\"2026-10-08T21:47:45.151Z\",\"links\":{\"self\":\"/v1/runs/run_01a11d7c-907f-7365-820f-92cd63712788\",\"events\":\"/v1/runs/run_01a11d7c-907f-7365-820f-92cd63712788/events\",\"bundle\":\"/v1/runs/run_01a11d7c-907f-7365-820f-92cd63712788/bundle\"},\"idempotencyKey\":\"b376cb8d-9063-4f95-8330-48c53ad5f2a3\",\"ownership\":\"ephemeral\"},\"run\":{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-08T21:47:45.151Z\",\"environmentRevisionId\":\"evr_01a11d7c-728b-74c3-8730-3f29ee49b42a\",\"gate\":\"failed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a11d7c-907f-7365-820f-92cd63712788\",\"matrixCell\":{\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"capabilityManifestHash\":\"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57\",\"configuredModelHash\":null,\"dependenciesLockHash\":null,\"environmentHash\":\"0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a\",\"imageId\":\"sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[],\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"http\"],\"revisionHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"runnerImageDigest\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19\",\"baseUrl\":\"http://127.0.0.1:39855\",\"correlationId\":\"cli_aacab68f-9551-408d-ae7d-49b9ef903894\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"off\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":2,\"executionTimeoutMs\":1800000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":2,\"mode\":\"replay\",\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"healing\":{\"mode\":\"off\"},\"project\":{\"id\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"name\":\"release-smoke\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"project\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"environment\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"project\"},\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\"},\"environmentId\":\"env_01a11d7c-728b-74c3-8730-407b6f6c0d5f\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"off\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":1800000,\"logBytes\":10485760,\"maxAttempts\":2,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"maxConcurrency\":2,\"ownership\":\"ephemeral\",\"planHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"failed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"status\":\"failed\",\"testId\":\"tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd\",\"version\":2,\"workspaceId\":\"ws_01a11d7c-7277-7766-b103-5777633f797e\"}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--json",
+        "run",
+        "list"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_d7170b3a-dcef-4dc2-a68e-9594694afe04\",\"data\":[{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-08T21:47:45.151Z\",\"environmentRevisionId\":\"evr_01a11d7c-728b-74c3-8730-3f29ee49b42a\",\"gate\":\"failed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a11d7c-907f-7365-820f-92cd63712788\",\"matrixCell\":{\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"capabilityManifestHash\":\"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57\",\"configuredModelHash\":null,\"dependenciesLockHash\":null,\"environmentHash\":\"0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a\",\"imageId\":\"sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[],\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"http\"],\"revisionHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"runnerImageDigest\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19\",\"baseUrl\":\"http://127.0.0.1:39855\",\"correlationId\":\"cli_aacab68f-9551-408d-ae7d-49b9ef903894\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"off\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":2,\"executionTimeoutMs\":1800000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":2,\"mode\":\"replay\",\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"healing\":{\"mode\":\"off\"},\"project\":{\"id\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"name\":\"release-smoke\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"project\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"environment\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"project\"},\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\"},\"environmentId\":\"env_01a11d7c-728b-74c3-8730-407b6f6c0d5f\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"off\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":1800000,\"logBytes\":10485760,\"maxAttempts\":2,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"maxConcurrency\":2,\"ownership\":\"ephemeral\",\"planHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"failed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"status\":\"failed\",\"testId\":\"tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd\",\"version\":2,\"workspaceId\":\"ws_01a11d7c-7277-7766-b103-5777633f797e\"},{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-08T21:47:40.525Z\",\"environmentRevisionId\":\"evr_01a11d7c-728b-74c3-8730-3f29ee49b42a\",\"gate\":\"passed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a11d7c-7e6d-725e-a308-27c01473cb51\",\"matrixCell\":{\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"capabilityManifestHash\":\"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57\",\"configuredModelHash\":null,\"dependenciesLockHash\":null,\"environmentHash\":\"0004be40226738a70301e60a0ad96f5bdbb025d0e45236cd550d419a0a05420a\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"ca313cc997663af8865344a3f4eaf0de9c31a674e2840433656f5328df4c0838\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"792ae8035135586871dbce2c1ef551075d1f373a2164bf4bbfda44adc814438a\",\"imageId\":\"sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"7ead57b63d554abce757f3f46139ceeced49f7935dd8309819b7232ad714ab06\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[],\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"http\"],\"revisionHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"runnerImageDigest\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"d8d854393aae2a238dccf2961d90b13fa0ce02ad5a121b0fb231032ee4e3db19\",\"baseUrl\":\"http://127.0.0.1:39855\",\"correlationId\":\"cli_0095899d-4c45-4f0c-baf7-08c88f32fa0b\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"off\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":2,\"executionTimeoutMs\":1800000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":2,\"mode\":\"replay\",\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"healing\":{\"mode\":\"off\"},\"project\":{\"id\":\"prj_01a11d7c-7284-70f5-9826-06fc1f5f713b\",\"name\":\"release-smoke\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"project\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"environment\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"project\"},\"policyHash\":\"eeff1ce7196a444a79bdbcea05a033d1a8907871c43e20c59961a97c9decd6c1\"},\"environmentId\":\"env_01a11d7c-728b-74c3-8730-407b6f6c0d5f\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"off\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":300000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":1800000,\"logBytes\":10485760,\"maxAttempts\":2,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":30000},\"maxConcurrency\":2,\"ownership\":\"ephemeral\",\"planHash\":\"38c778309d0cf4796781bc7cd940378cf8ed4e6d1e5b2e8b94c02943998f8976\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"passed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a11d7c-78d8-76ac-901b-bf7a74aaed32\",\"status\":\"passed\",\"testId\":\"tst_01a11d7c-78d3-7295-84d1-c1c9f31a84fd\",\"version\":2,\"workspaceId\":\"ws_01a11d7c-7277-7766-b103-5777633f797e\"}],\"warnings\":[]}\n",
+      "stderr": ""
+    }
+  ]
+}
