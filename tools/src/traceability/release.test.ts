@@ -189,3 +189,257 @@ it("critical security defects block release despite every numeric score passing"
   checkReleaseDecision(release, unmeasured);
   expect(unmeasured.join()).toContain("unmeasured");
 });
+
+it("passes a measured capability independently of blocked milestone areas", async () => {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const release = decision();
+  const area = release.areas[0];
+  if (!area) throw new Error("Missing area fixture");
+  release.areas.push({
+    ...area,
+    area: "fork-isolation",
+    decision: "blocked",
+    reason: "Second GitHub identity unavailable",
+  });
+  release.capabilityGates = [
+    {
+      id: "assistive",
+      requiredAreas: ["security"],
+      requiredItems: [item.id],
+      nonNegotiable: [item.id],
+    },
+  ];
+  const registry: Registry = { items: [item], release };
+  const scoped = await checkRegistry(
+    root,
+    definitions,
+    registry,
+    undefined,
+    [],
+    Date.now(),
+    "assistive",
+  );
+  expect(scoped.ok).toBe(true);
+  expect(scoped.capabilityGate).toEqual({ id: "assistive", status: "passed", reasons: [] });
+  const milestone = await checkRegistry(root, definitions, registry, "M3");
+  expect(milestone.ok).toBe(false);
+  expect(milestone.errors.join()).toContain("Second GitHub identity unavailable");
+});
+
+it("blocks a capability with the genuine missing evidence reason without unrelated milestone failures", async () => {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const release = decision();
+  const area = release.areas[0];
+  if (!area) throw new Error("Missing area fixture");
+  area.decision = "blocked";
+  area.approvedTarget = null;
+  area.observation = null;
+  area.interval = null;
+  area.n = 0;
+  area.reason = "Independent holdout with reviewed action labels has not been authored";
+  release.areas.push({
+    ...area,
+    area: "fork-isolation",
+    reason: "Second GitHub identity unavailable",
+  });
+  release.capabilityGates = [
+    {
+      id: "assistive",
+      requiredAreas: ["security"],
+      requiredItems: [item.id],
+      nonNegotiable: [item.id],
+    },
+  ];
+  const scoped = await checkRegistry(
+    root,
+    definitions,
+    { items: [item], release },
+    undefined,
+    [],
+    Date.now(),
+    "assistive",
+  );
+  expect(scoped.ok).toBe(false);
+  expect(scoped.capabilityGate?.status).toBe("blocked");
+  expect(scoped.errors).toEqual([
+    "Release area security: blocked (Independent holdout with reviewed action labels has not been authored)",
+  ]);
+});
+
+it("does not accept waived invariants or removed critical controls for a capability", async () => {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const release = decision();
+  release.capabilityGates = [
+    {
+      id: "healing",
+      requiredAreas: ["security"],
+      requiredItems: [item.id],
+      nonNegotiable: [item.id],
+    },
+  ];
+  const registry: Registry = { items: [item], release };
+  await writeFile(
+    join(root, "acceptance.test.ts"),
+    'it("healthy", () => {}); it("mutant", () => {});',
+  );
+  const removed = await checkRegistry(
+    root,
+    definitions,
+    registry,
+    undefined,
+    [],
+    Date.now(),
+    "healing",
+  );
+  expect(removed.errors.join()).toContain("protected critical assertion missing");
+  item.status = "implemented";
+  item.blockedReason = "Independent safety review unavailable";
+  const unverified = await checkRegistry(
+    root,
+    definitions,
+    registry,
+    undefined,
+    [],
+    Date.now(),
+    "healing",
+  );
+  expect(unverified.capabilityGate?.reasons).toContain(
+    "VAL-019: capability evidence not verified (Independent safety review unavailable)",
+  );
+  item.status = "waived";
+  delete item.blockedReason;
+  item.waiver = {
+    severity: "low",
+    owner: "release-owner",
+    expiresAt: "2099-01-01T00:00:00Z",
+    requirement: item.id,
+    reason: "Limited profile coverage",
+    capabilityEffect: "Unverified profile remains unsupported",
+  };
+  const waived = await checkRegistry(
+    root,
+    definitions,
+    registry,
+    undefined,
+    [],
+    Date.now(),
+    "healing",
+  );
+  expect(waived.capabilityGate?.reasons).toContain(
+    "VAL-019: capability evidence not verified (waived)",
+  );
+});
+
+it("rejects unknown gates and missing referenced areas rather than silently passing", async () => {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const registry: Registry = { items: [item], release: decision() };
+  const unknown = await checkRegistry(
+    root,
+    definitions,
+    registry,
+    undefined,
+    [],
+    Date.now(),
+    "missing",
+  );
+  expect(unknown.capabilityGate).toEqual({
+    id: "missing",
+    status: "blocked",
+    reasons: ["Capability gate missing: unknown gate"],
+  });
+  if (!registry.release) throw new Error("Missing release fixture");
+  registry.release.capabilityGates = [
+    {
+      id: "healing",
+      requiredAreas: ["missing-area"],
+      requiredItems: [item.id],
+      nonNegotiable: [item.id],
+    },
+  ];
+  const malformed = await checkRegistry(
+    root,
+    definitions,
+    registry,
+    undefined,
+    [],
+    Date.now(),
+    "healing",
+  );
+  expect(malformed.ok).toBe(false);
+  expect(malformed.errors.join()).toContain("requiredAreas requires unique existing references");
+});
+
+it("blocks a required critical finding despite passed numeric capability targets", async () => {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const release = decision();
+  release.capabilityGates = [
+    {
+      id: "healing",
+      requiredAreas: ["security"],
+      requiredItems: [item.id],
+      nonNegotiable: [item.id],
+    },
+  ];
+  release.findings.push({
+    id: "unsafe-autoapply",
+    severity: "critical",
+    status: "open",
+    requirement: item.id,
+  });
+  const result = await checkRegistry(
+    root,
+    definitions,
+    { items: [item], release },
+    undefined,
+    [],
+    Date.now(),
+    "healing",
+  );
+  expect(result.ok).toBe(false);
+  expect(result.errors).toContain("Release blocked by critical finding unsafe-autoapply (VAL-019)");
+});

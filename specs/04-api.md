@@ -86,9 +86,10 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | GET `/runs/{id}/events` | SSE/cursor monotônico | runs:R | M1 |
 | GET `/runs/{id}/bundle` | manifest do snapshot exato, signed urls limitadas | artifacts:R | M1 |
 | GET `/artifacts/{id}` | stream, range bytes, etag hash | artifacts:R | M1 |
-| GET `/runs/{id}/analysis` | rules+model hypothesis, evidence refs | runs:R | M3 |
+| GET `/runs/{id}/analysis` | análise existente com camadas, hipóteses e refs; sem nova chamada de modelo | runs:R | M3 |
 | POST `/runs/{id}/analysis` | job explícito/reanálise, budget | analysis:X | M3 |
 | POST `/runs/{id}/healing-proposals` | candidate policy/budget | healing:W | M3 |
+| GET `/healing-proposals/{id}/review` | HealingReview read-only, before/after, identidade, bloqueios, assertions, aprovação e verificação | healing:R | M3 |
 | POST `/healing-proposals/{id}/approve` | candidate version, reviewer; verify Run | healing:approve | M3 |
 | POST `/healing-proposals/{id}/reject` | reason | healing:approve | M3 |
 | POST `/run-comparisons` | leftRunId/rightRunId, comparability warnings | runs:R | M3 |

@@ -21,6 +21,17 @@ export interface CapabilityLink {
   requirements: string[];
   gate: string;
 }
+export interface CapabilityGate {
+  id: string;
+  requiredAreas: string[];
+  requiredItems: string[];
+  nonNegotiable: string[];
+}
+export interface CapabilityGateDecision {
+  id: string;
+  status: "passed" | "blocked";
+  reasons: string[];
+}
 export interface ReleaseDecision {
   findings: {
     id: string;
@@ -38,6 +49,7 @@ export interface ReleaseDecision {
     decision: "passed" | "failed" | "blocked";
     reason: string;
   }[];
+  capabilityGates?: CapabilityGate[];
 }
 export interface CapabilitySummary extends Omit<CapabilityLink, "milestone"> {
   milestone: Milestone | null;
@@ -248,4 +260,78 @@ export function checkReleaseDecision(release: ReleaseDecision | undefined, error
     if (area.decision !== "passed")
       errors.push(`Release area ${area.area}: ${area.decision} (${area.reason})`);
   }
+}
+
+export function checkCapabilityGateDefinitions(registry: Registry, errors: string[]): void {
+  const gates = registry.release?.capabilityGates;
+  if (gates === undefined) return;
+  if (!Array.isArray(gates)) {
+    errors.push("Capability gates: expected an array");
+    return;
+  }
+  if (!Array.isArray(registry.release?.areas) || !Array.isArray(registry.release?.findings)) {
+    errors.push("Capability gates: release areas and findings arrays required");
+    return;
+  }
+  const ids = new Set<string>();
+  const areas = new Set(registry.release?.areas?.map((area) => area.area));
+  const items = new Set(registry.items.map((item) => item.id));
+  if (areas.size !== registry.release.areas.length)
+    errors.push("Capability gates: duplicate release area references");
+  for (const gate of gates) {
+    if (!gate || typeof gate.id !== "string" || !gate.id.trim()) {
+      errors.push("Capability gate: non-empty id required");
+      continue;
+    }
+    if (ids.has(gate.id)) errors.push(`Capability gate ${gate.id}: duplicate id`);
+    ids.add(gate.id);
+    for (const field of ["requiredAreas", "requiredItems", "nonNegotiable"] as const) {
+      const values = gate[field];
+      const known = field === "requiredAreas" ? areas : items;
+      if (
+        !Array.isArray(values) ||
+        !values.length ||
+        values.some((value) => typeof value !== "string" || !known.has(value)) ||
+        new Set(values).size !== values.length
+      )
+        errors.push(`Capability gate ${gate.id}: ${field} requires unique existing references`);
+    }
+  }
+}
+
+export async function checkCapabilityGate(
+  root: string,
+  registry: Registry,
+  id: string,
+  now: number,
+): Promise<CapabilityGateDecision> {
+  const reasons: string[] = [];
+  checkCapabilityGateDefinitions(registry, reasons);
+  const gate = Array.isArray(registry.release?.capabilityGates)
+    ? registry.release.capabilityGates.find((entry) => entry?.id === id)
+    : undefined;
+  if (!gate) reasons.push(`Capability gate ${id}: unknown gate`);
+  if (!gate || reasons.length) return { id, status: "blocked", reasons };
+  const required = new Set([...gate.requiredItems, ...gate.nonNegotiable]);
+  for (const itemId of required) {
+    const item = registry.items.find((entry) => entry.id === itemId);
+    if (!item) continue; // Definition validation reports unknown references.
+    if (item.status !== "verified") {
+      reasons.push(
+        `${itemId}: capability evidence not verified (${item.blockedReason ?? item.note ?? item.status})`,
+      );
+      continue;
+    }
+    await checkReleaseItem(root, item, reasons, now);
+  }
+  const release = registry.release;
+  if (release)
+    checkReleaseDecision(
+      {
+        findings: release.findings.filter((finding) => required.has(finding.requirement)),
+        areas: release.areas.filter((area) => gate.requiredAreas.includes(area.area)),
+      },
+      reasons,
+    );
+  return { id, status: reasons.length ? "blocked" : "passed", reasons };
 }

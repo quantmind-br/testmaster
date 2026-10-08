@@ -99,6 +99,21 @@ M3a é trilha interna de M3, não marco extra. Design de UI/integrações pode o
 
 **Gate M3:** inventory consistency, scoped deterministic acceptance, model-pilot decision and cumulative/public-GA release approval are separate gates. J11 remains strict replay with one Attempt; a separate diagnostic pass never erases the first failure, and no in-Run assertion retries are introduced. J08 advanced matrix, J12 installed App/preview/tunnel and VAL-033 webhook scopes remain M4/M5 obligations. AI healing is not required for ordinary CI. Independent label/safety review and holdout families remain explicit prerequisites, not automated sign-off. Historical round-1 release decisions are preserved: its Wilson-lower >=0.8 wording at n=12 is unreachable even at 12/12 (lower bound about 0.758), not a reachable pilot graduation gate. Published evidence must omit credentials, PII and private source.
 
+**M3 utility extension (2026-10-08, implementation—not homologation):** layered observation/
+relational chain/conclusion/next-step/healing advice, shared user presentation and read-only
+healing review are additive local surfaces. Utility evaluation distinguishes none/rules/model,
+automatic coverage from predeclared eligibility, and isolated manual candidates. Regression
+labels stay post-hoc and pending independent review; disputed labels are separate. Holdout and
+human task-study formats are prepared for external authors/participants, not executed studies.
+
+The registry's additive capability gates are explicitly blocked: `m3-assistive-diagnosis` lacks
+reviewed external-family holdout and measured utility/overclaim/incremental gain;
+`m3-automatic-healing` lacks predeclared-eligibility holdout and independent safety sign-off;
+`m3-assisted-healing` lacks participant review/verification study; `m3-ci-integration` lacks real
+cross-owner fork-token isolation requiring a second GitHub identity. They are checked individually
+with `check --capability-gate ID`, do not compensate critical failures and do not replace the red
+`--milestone-gate M3`. Automatic identity/policy guards and original failed evidence are unchanged.
+
 ## 7. M4 — Servidor, portal, equipes e automação
 
 - [ ] **M4-01 — Servidor e tenancy** (`Core`, `Security`). Fastify/API, PG, S3/filesystem, identidade local/sessões/tokens, workspace/membership/RBAC, audit e artifact gateway. **Dep.:** M3/M0-03. **Prova:** tenant A não consulta B por IDs/cache/blob; loopback também autenticado; tombstone revoga leitura pelo gateway.

@@ -34,8 +34,9 @@ Schema público `1.0.0`; IDs `<prefix>_<uuid>`; UUIDv7 preferido, v4 permitido n
 | ResourceRecord `res` | creatorAttemptId, resourceType, handleRef, cleanupPlan, state, ownerProof | somente recurso comprovadamente criado; orphan state persistente |
 | Artifact `art` | runId, attemptId, revisionId, snapshotId, kind, hash, bytes, mime, storageKey, state, redactionStatus | scoped tenant; state available/missing/expired/partial; redactionStatus redacted/restrictedRaw/not_applicable |
 | Snapshot `snp` | runId, attemptId, revisionId, manifestHash, committedAt, redactionPolicyHash | seal imutável; metadata publicada por último |
-| Analysis `ana` | runId, snapshotId, facts, hypotheses, failureKind, confidence, modelCallId | revisão de análise separada de Run; não altera outcome |
+| Analysis `ana` | runId, snapshotId, facts, hypotheses/support, failureKind, confidence, modelCallId, diagnosis | revisão separada de Run; diagnosis obrigatório em novas escritas, opcional só no legado; camadas e suporte não alteram outcome |
 | HealingProposal `hea` | failedRunId, baseRevisionId, candidateRevisionId, diff, preservedAssertionsHash, status | proposed/approved/rejected/verified; promotion por CAS |
+| HealingReview (projeção, sem ID novo) | proposalId, changes, identity, automation, preservedAssertions, risk, verification, approval, evidenceRefs, limitations | derivada de planos/evidências imutáveis; scoped por projeto; leitura não aplica cura nem enfraquece CAS/policy |
 | Schedule `sch` | targetId, cron, timezone, nextFireAt, overlapPolicy, budget, state | firing único por scheduledAt; história não apagada ao pausar |
 | ModelCall `mdl` | purpose, provider, model, promptHash, inputRefs, tokens, cost, latency, outcome | prompt bruto somente opt-in/redacted; unknown usage preservado |
 | AuditEvent `aud` | actor, action, resourceId, requestId, beforeHash, afterHash, timestamp | append-only, sem secrets; retenção independente |

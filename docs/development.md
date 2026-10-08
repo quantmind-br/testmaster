@@ -688,3 +688,50 @@ duplicate roleless fingerprint). `m3-bug-03` and `m3-env-03` are labelled `unkno
 they score as misses; labels were not changed. Recall/precision (8/9) and healing (9/12) stay
 below their proposed 0.9/0.8 pilot point targets; the M3 milestone gate stays red.
 
+### M3 layered utility and capability decisions
+
+New analyses require the layered diagnosis and hypothesis support at persistence. Rules own the
+conclusion and healing advice; model enrichment contributes evidence-bound next steps without
+changing either. `run analyze RUN` renders Failure / Expected / Observed / Conclusion / Next step /
+Automatic healing in text mode, while `--output json` retains the structured response. Read a
+stored analysis without enrichment using `run analysis RUN`. Markdown/HTML reports and MCP
+include the same diagnosis summary; legacy records explicitly identify missing layered diagnosis.
+
+`heal review PROPOSAL` is a read-only projection of base/candidate plans and retained evidence.
+It exposes before/after values, control identity and candidate equivalence, policy-blocking reasons,
+preserved assertion integrity, risk, verification and the exact version-bound approval command.
+REST uses `GET /v1/healing-proposals/{id}/review` with `healing:R`; MCP exposes the same review.
+Missing label/form evidence is null with a limitation. Nothing changes automatic identity guards,
+policy application, promotion CAS or the immutable original failure.
+
+Utility scoring separates `none`, `rules` and `model` arms with corpus-derived denominators;
+next-action correctness/safety, dangerous actions, healing advice and overclaim are primary utility
+signals. Cause/recall/precision remain secondary. Report automatic coverage separately from
+predeclared automatic eligibility and isolated manual-candidate correctness. Regression action
+labels are post-hoc scenario-design labels pending independent review; disputed labels remain
+separate. Development replay or limited smoke is neither a registered round nor holdout evidence.
+External holdout and participant task-session formats validate declared provenance/review and
+data consistency; validators cannot prove human independence and no real study is claimed.
+
+The registry adds `release.capabilityGates` with `requiredAreas`, `requiredItems` and
+`nonNegotiable` requirement references. All four initial decisions are blocked:
+
+| Command suffix | Missing evidence |
+|---|---|
+| `--capability-gate m3-assistive-diagnosis` | Reviewed external-family holdout and utility/overclaim targets plus measured incremental gain over rules; no fork prerequisite. |
+| `--capability-gate m3-automatic-healing` | Predeclared-eligibility holdout and independent security sign-off. |
+| `--capability-gate m3-assisted-healing` | Participant review/verification task sessions and measured decision time/workload. |
+| `--capability-gate m3-ci-integration` | Real cross-owner fork-token isolation with a second GitHub identity; same-repo hosted acceptance already exists. |
+
+Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
+the selected decision and concrete reasons, validates its referenced evidence and refuses missing
+targets/controls, waived invariants or critical/high findings. It does not require unrelated release
+areas, but the full normative inventory still applies. `check --milestone-gate M3` remains the
+cumulative red gate; a future scoped pass cannot silently graduate M3 or GA.
+
+Plan/ID reconciliation: VAL-053 and VAL-054 already existed in the normative corpus (registry
+completeness and immutable/versioned release evidence). They were extended additively for utility
+provenance and scoped capability decisions, not reassigned as new IDs or stripped of prior controls.
+AI-005 and HEAL-003 are the new layered-diagnosis and healing-review requirements. New test source
+links record implementation controls, not external holdout, human-study or security homologation.
+

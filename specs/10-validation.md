@@ -80,6 +80,23 @@ Denominador zero produz `notApplicable` ou `insufficientData`, nunca 0%, 100% ou
 
 `TP_defect`: caso rotulado defeituoso corretamente acusado e sustentado pela observação requerida. `FN_defect`: defeito elegível não detectado, inclusive passed falso ou inconclusive end-to-end. `FP_defect`: baseline saudável acusado de defeito ou causa ambiental acusada como defeito quando o objetivo é classificação de produto. Rótulos de detecção e classificação devem ser separados para não penalizar uma assertion válida por nome errado e, simultaneamente, não declarar diagnóstico correto.
 
+Para utilidade M3, publicar braços `none` (ação implícita `collect_more_evidence`), `rules` e `model` pareados sobre casos planejados do manifesto. Denominadores vêm dos rótulos/casos elegíveis, não de constantes de um corpus histórico. Causa, recall e precisão permanecem secundários/descritivos; não substituem uma próxima ação segura.
+
+| Métrica de utilidade | Definição / denominador | Limite |
+|---|---|---|
+| `nextActionCorrect` | ação em `correctActions` / casos planejados com rótulo de ação | não deriva o rótulo da saída |
+| `nextActionSafe` / `dangerousAction` | ação correta ou aceitável e não perigosa / ação em `dangerousActions`, por caso planejado | perigosa nunca ganha crédito por acerto de causa |
+| `healingAdviceCorrect` | conselho igual a `expectedHealingAdvice` / casos com rótulo | proposta possível não significa autoapply elegível |
+| `overclaim` | conclusão `cause_supported` com causa diferente da justificável / casos de diagnóstico rotulados | verdade conhecida pelo autor não equivale ao que a evidência sustenta |
+| `unsupportedClaims` | hipóteses descartadas por falta de suporte, por braço/caso | registrar rejeição sem promover hipótese |
+| `incrementalGain` | diferença pareada model − rules em próxima ação correta, com intervalo | considerar correlação por família; nenhuma superioridade a partir de smoke |
+| `automaticCoverage` | drift com aplicação e verificação / todos os drifts planejados | inclui manual-only sem mudar policy |
+| `eligibleSuccess` | cura aplicada e verificada / drift rotulado `healingEligibility:automatic` antes da execução | elegibilidade independente da saída |
+| `assistedCandidateCorrect` | candidata manual passa oracle de drift e falha no negativo semântico / candidatas manuais revisadas em replay isolado | sem promoção nem aplicação implícita |
+| `reviewLoad` | propostas exigindo revisão e mudanças por proposta | não é estudo de tempo humano |
+
+Registrar latência por chamada, primeira tentativa inválida, tokens por ação correta e custo desconhecido explicitamente. Denominador zero não é sucesso. Rótulos de regressão pós-hoc usam `labelSource:post-hoc-scenario-design` e `pending-independent-review`; casos disputados (incluindo bug-03/env-03 históricos) são reportados separadamente. Replays do corpus de desenvolvimento não são holdout.
+
 ### 2.4 Tempo, recursos e custo
 
 Medir `queueDuration`, `preparationDuration`, `executionDuration`, `collectionDuration`, `analysisDuration` e `wallClockDuration` por boundaries instrumentados. `executionDuration` não inclui geração/análise LLM; relatório “tempo até resultado” usa wall clock. Publish p50/p95/p99 somente com n adequado: percentil de 20 amostras não suporta conclusão robusta sobre p99. Registrar CPU/memória/IO, tamanho artifacts, rede, browser cold/warm, concurrency, host, limits e versão. Throughput = células verificadas por segundo da janela definida; canceled e queued não viram trabalho concluído.
@@ -263,6 +280,12 @@ Avaliar separadamente discovery/mapeamento, normalização PRD, proposal generat
 
 Rubrica de proposta: alinhamento à intenção, observabilidade da assertion, dados/prerequisitos, isolamento/teardown, determinismo, segurança e capacidade de matar defeito-alvo. Rubrica de diagnóstico: causa correta, evidência citada verificável, causalidade em vez de correlação, alternativa/abstention, ação segura. Rubrica de healing: assertion idêntica semanticamente e conforme policy, patch mínimo selector/wait, ausência de ampliação de escopo e prova nova com controle negativo. Scores ordinais podem ajudar review, mas aprovação crítica é binária por invariáveis publicadas; média alta não compensa unsafe patch.
 
+Rubrica de utilidade: separar observação/ausência, causa parcialmente sustentada, alternativas não estabelecidas e próxima ação que distingue hipóteses. Avaliar segurança da ação mesmo quando a causa estiver errada; cura de assertion divergente é perigosa, não remediação. Comparar nenhum diagnóstico, regras e modelo; evidência indisponível exige lacuna e conselho conservador. Enriquecimento nunca redefine conclusão, conselho de cura ou identidade automática.
+
+Holdout externo usa famílias com autoria/data/proveniência declaradas, driver versionado, plano/variante, verdade conhecida pelo autor separada da causa justificável, conjuntos de ações, conselho e elegibilidade, revisão e selo de hashes. Revisor deve diferir do autor; homologação requer todos os casos `independently-reviewed` e famílias fora da equipe de implementação. A ferramenta valida declaração e consistência, não comprova independência humana. O formato pronto sem casos externos não constitui evidência de generalização.
+
+Estudo de tarefas registra participante, braço, ordem alternada, decisão, tempo até decisão e trabalho manual. Validador/agregação prontos sem sessões reais não satisfazem homologação de cura assistida. Revisão de segurança independente e estudo humano não podem ser substituídos por judge LLM ou casos sintéticos de teste.
+
 ### 8.2 Desenho proposto
 
 - Rodada exploratória: pelo menos 30 famílias/casos por capability para localizar falhas, sem claim de taxa rara. Escolher número por cobertura de estratos, não por desejo de significância.
@@ -373,8 +396,9 @@ Todos os alvos desta seção são **propostos e não medidos**. M0 define protoc
 | Segurança | Zero critical/high abertas que afetem release scope, zero leaks/cross-tenant/policy bypass na suite. | Scanner zero findings não prova segurança; manual review/threat model requeridos. |
 | Flake critical plataforma | Zero flakes observadas na série planejada e limite unilateral <=1% quando claim <1% for feito. | Pelo menos 299–300 repetições independentes por célula/coorte para esse claim; n total entre células não prova cada célula. |
 | Geração LLM | Validity >=95%, useful intent coverage >=80%, rubric precision >=90% no holdout. | Publish interval/n e strata; objetivo inicial, não garantia universal. |
-| Diagnóstico LLM | Defect recall >=90%, precision >=90%, top1 cause accuracy >=80% no holdout. | Cause ambiguity/abstention e infra confusion reportadas; auto-fix exige gate próprio. |
-| Healing | Zero unsafe auto-applied patches; zero false repair de defeito crítico; safe success >=80% em drift eligible. | Confidence estatística rara exige n; assertions intactas e independent verification obrigatórias. |
+| Diagnóstico assistivo | Próxima ação correta >=80%, segura >=95%, zero ações perigosas críticas; overclaim <=5%; ganho model − rules positivo com intervalo pareado que exclui zero no holdout revisado. | Metas propostas a aprovar antes da coleta; causa/recall/precisão são secundários; não exige isolamento de token em fork. |
+| Healing automático | Zero unsafe auto-applied patches; zero false repair de defeito crítico; `eligibleSuccess` >=80% no holdout pré-rotulado. | Assertions intactas, controle negativo, verificação e revisão de segurança independente obrigatórios; publicar cobertura sobre todos os drifts separadamente. |
+| Healing assistido | Candidata validada em replay isolado e estudo humano de decisão/verificação com tempo e trabalho manual. | Metas/participantes pré-registrados; formato pronto não é estudo executado. |
 | Mutation útil | >=90% global não equivalente; 100% para invariantes críticas e defeitos explicitamente prometidos. | Sobrevivente fora de scope documentado não vira killed; ampliar caso antes de claim. |
 | Web/a11y | Critical journeys por teclado; zero serious/critical automáticas; review WCAG 2.2 AA de critérios in-scope. | Sem claim de conformidade integral a partir de scanner. |
 | Visual/cross-browser | Mutants visuais críticos detectados; zero diferenças não revisadas em baselines pinadas. | Threshold por região calibrado antes de gate. |
@@ -386,6 +410,19 @@ Todos os alvos desta seção são **propostos e não medidos**. M0 define protoc
 | VAL-050 | Gate registra target proposto/aprovado, observação, intervalo, n e decisão por área, sem score único compensatório. | “Fail security + pass performance” continua fail; target não medido não recebe check concluído. |
 | VAL-051 | Waiver só existe para risco não crítico delimitado, com owner, prazo, requisito e efeito público de capability. | Não há waiver para false passed, secret escape, assertion weakening automático, tenant leak ou immutable rewrite. |
 | VAL-052 | Capability suportada precisa de matriz de versões e evidência em profiles declarados. | PostgreSQL/S3/OS/provider não exercitados são experimental/unsupported, sem afirmar cobertura Linux Docker extrapolada. |
+
+### 12.1 Homologação aditiva por capacidade M3
+
+`registry.release.capabilityGates[{id,requiredAreas,requiredItems,nonNegotiable}]` referencia áreas medidas e requisitos existentes. `check --capability-gate <id>` avalia só essas áreas/requisitos e findings associados, sem exigir áreas não relacionadas; invariantes não negociáveis exigem status verified, controles positivos/negativos e assertions críticas protegidas, nunca waiver. Referência ausente, gate desconhecido ou alvo sem amostra/intervalo não passa. O inventário continua cobrindo todos os IDs; gate de capability não remove nem substitui `--milestone-gate M3` cumulativo.
+
+| Gate | Prova requerida | Estado inicial e motivo genuíno |
+|---|---|---|
+| `m3-assistive-diagnosis` | holdout revisado, próxima ação/overclaim nas metas e ganho sobre regras | bloqueado: holdout externo revisado e ganho de utilidade ainda não medidos; fork não é prerequisite |
+| `m3-automatic-healing` | zero inseguro/false repair, eligibleSuccess no holdout e revisão independente de segurança | bloqueado: holdout de elegibilidade e sign-off independente ausentes |
+| `m3-assisted-healing` | estudo de tarefas de revisão e verificação | bloqueado: participantes e sessões reais de estudo ausentes |
+| `m3-ci-integration` | aceite hospedado e isolamento de token em fork | bloqueado: aceite same-repo público existe, prova cross-owner/fork requer segunda identidade GitHub |
+
+Nenhuma linha afirma homologação. Resultados históricos falhos permanecem intactos e o milestone M3 continua vermelho.
 
 ## 13. Gates M0–M6 e rastreabilidade
 
@@ -409,8 +446,8 @@ Cada registro deve conter `requirementId`, `milestone`, `implementationRefs`, `s
 
 | ID | Requisito | Aceitação |
 |---|---|---|
-| VAL-053 | Trace registry cobre todos IDs normativos e capabilities anunciadas com cenário/oracle/gate; gaps são bloqueios explícitos. | Nenhuma capacidade advanced desaparece na release summary; campo verified sem evidence é inválido. |
-| VAL-054 | Release evidence é imutável/versionada e reproduzível: commit/tag, manifests, reports, metrics, exceptions e sign-off. | Atualização posterior cria nova release evaluation; não sobrescreve resultados falhos. |
+| VAL-053 | Trace registry cobre todos IDs normativos e capabilities anunciadas com cenário/oracle/gate; gaps são bloqueios explícitos. Inclui proveniência de rótulos de utilidade/holdout e protocolo de tarefas sem equiparar formato a estudo. | Nenhuma capacidade advanced desaparece na release summary; campo verified sem evidence é inválido; independência declarada/revisão e casos disputados são explícitos. |
+| VAL-054 | Release evidence é imutável/versionada e reproduzível: commit/tag, manifests, reports, metrics, exceptions e sign-off. Gates por capacidade são aditivos e preservam bloqueios genuínos e invariantes não negociáveis. | Atualização posterior cria nova release evaluation; não sobrescreve resultados falhos; capability passa apenas com áreas/requisitos medidos próprios e não libera milestone cumulativo bloqueado. |
 | VAL-055 | Publicação GA informa scope, supported profiles, licenças/SBOM, limitações, migração/rollback, security policy e modo sem LLM. | Não anuncia performance/paridade sem prova; install/import/restore/documentation completam a jornada OSS. |
 
 ## 14. Relatório de avaliação e política de publicação

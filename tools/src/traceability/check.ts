@@ -2,9 +2,12 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { type Definition, extractSpecifications } from "./extract.js";
 import {
+  type CapabilityGateDecision,
   type CapabilityLink,
   type CapabilitySummary,
   type Coverage,
+  checkCapabilityGate,
+  checkCapabilityGateDefinitions,
   checkReleaseDecision,
   checkReleaseItem,
   type ReleaseDecision,
@@ -39,6 +42,7 @@ export interface CheckResult {
   definitionCount: number;
   errors: string[];
   capabilitySummary?: CapabilitySummary[];
+  capabilityGate?: CapabilityGateDecision;
 }
 
 const statuses: Record<RegistryItem["status"], true> = {
@@ -56,6 +60,7 @@ export async function checkRegistry(
   gate?: Milestone,
   advertisedCapabilities: readonly string[] = [],
   now = Date.now(),
+  capabilityGate?: string,
 ): Promise<CheckResult> {
   const errors: string[] = [];
   const expected = new Map(definitions.map((item) => [item.id, item]));
@@ -123,6 +128,17 @@ export async function checkRegistry(
       errors.push(
         `Missing registry ID ${definition.id} (${definition.sourceFile}:${definition.sourceLine})`,
       );
+  if (capabilityGate) {
+    const decision = await checkCapabilityGate(canonicalRoot, registry, capabilityGate, now);
+    errors.push(...decision.reasons);
+    return {
+      ok: errors.length === 0,
+      definitionCount: definitions.length,
+      errors,
+      capabilityGate: decision,
+    };
+  }
+  checkCapabilityGateDefinitions(registry, errors);
   if (gate) {
     const capabilitySummary = releaseSummary(registry, advertisedCapabilities, errors);
     checkReleaseDecision(registry.release, errors);
@@ -136,7 +152,11 @@ export async function checkRegistry(
   return { ok: errors.length === 0, definitionCount: definitions.length, errors };
 }
 
-export async function checkRepository(root: string, gate?: Milestone): Promise<CheckResult> {
+export async function checkRepository(
+  root: string,
+  gate?: Milestone,
+  capabilityGate?: string,
+): Promise<CheckResult> {
   const registry: unknown = JSON.parse(
     await readFile(resolve(root, "traceability/registry.json"), "utf8"),
   );
@@ -165,5 +185,7 @@ export async function checkRepository(root: string, gate?: Milestone): Promise<C
     registry as Registry,
     gate,
     advertised,
+    Date.now(),
+    capabilityGate,
   );
 }

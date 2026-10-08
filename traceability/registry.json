@@ -2077,7 +2077,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
-            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");"
+            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect((await app.healing.reconcile(verification.id)).status).toBe(\"verified\");"
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
@@ -2097,7 +2097,7 @@
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
-            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
+            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect((await app.healing.reconcile(verification.id)).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
@@ -2171,7 +2171,7 @@
           },
           {
             "path": "packages/application/src/ai/healing.test.ts",
-            "assertion": "expect(() => f.app.healing.reconcile(f.verification.id)).toThrow(ContractError);"
+            "assertion": "await expect(f.app.healing.reconcile(f.verification.id)).rejects.toThrow(ContractError);"
           },
           {
             "path": "packages/application/src/ai/healing.test.ts",
@@ -18071,30 +18071,49 @@
     },
     {
       "id": "VAL-053",
-      "title": "Trace registry cobre todos IDs normativos e capabilities anunciadas com cenário/oracle/gate; gaps são bloqueios explícitos.",
+      "title": "Trace registry cobre IDs normativos e capabilities com cenário/oracle/gate; inclui proveniência de utilidade e holdout sem equiparar formato a estudo.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M0",
       "ownerRole": "Quality",
       "status": "verified",
       "scenario": [
-        "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate"
+        "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate",
+        "tools/src/evals/m3-scoring.test.ts::scores correct safe dangerous actions and layered advice for every arm",
+        "tools/src/evals/m3-scoring.test.ts::requires isolated paired candidate runs and does not mistake a proposal for automatic healing",
+        "tools/src/evals/m3-scoring.test.ts::derives denominators from external cases without inventing legacy labels",
+        "tools/src/evals/holdout.test.ts::accepts a sealed externally reviewed manifest without proving provenance or utility",
+        "tools/src/evals/holdout.test.ts::rejects author self-review and missing presealed healing eligibility",
+        "tools/src/evals/holdout.test.ts::rejects changed sealed labels and transitive driver inputs",
+        "tools/src/evals/user-tasks.test.ts::aggregates counterbalanced participant decisions and manual review work",
+        "tools/src/evals/user-tasks.test.ts::rejects studies without participants or independent arm ordering"
       ],
       "oracle": [
         "Uncovered release items/capability mappings produce exact errors instead of a green reduced inventory."
       ],
-      "evidence": ["tools/src/traceability/release.test.ts"],
+      "evidence": ["tools/src/traceability/release.test.ts", "tools/src/evals/m3-scoring.test.ts", "tools/src/evals/holdout.test.ts", "tools/src/evals/user-tasks.test.ts"],
       "code": [
         "tools/src/traceability/check.ts",
         "tools/src/traceability/release.ts",
-        "tools/src/traceability/cli.ts"
+        "tools/src/traceability/cli.ts",
+        "tools/src/evals/m3-scoring.ts",
+        "tools/src/evals/holdout.ts",
+        "tools/src/evals/user-tasks.ts"
       ],
-      "note": "All 446 normative IDs and all 65 advertised capability mappings are present. Real releaseSummary controls preserve unavailable capabilities and reject missing mappings; no numeric performance or public-release claim.",
+      "note": "Normative IDs and advertised capabilities remain inventoried; real releaseSummary controls preserve unavailable capabilities and reject missing mappings. Utility controls use planned-case labels, reject missing evidence and isolated-candidate false credit. This is implementation evidence, not holdout, participant-study, independent-security or public-release homologation.",
       "coverage": {
         "positive": [
-          "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate"
+          "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate",
+          "tools/src/evals/m3-scoring.test.ts::scores correct safe dangerous actions and layered advice for every arm",
+          "tools/src/evals/holdout.test.ts::accepts a sealed externally reviewed manifest without proving provenance or utility",
+          "tools/src/evals/user-tasks.test.ts::aggregates counterbalanced participant decisions and manual review work"
         ],
         "negative": [
-          "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate"
+          "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate",
+          "tools/src/evals/m3-scoring.test.ts::requires isolated paired candidate runs and does not mistake a proposal for automatic healing",
+          "tools/src/evals/m3-scoring.test.ts::derives denominators from external cases without inventing legacy labels",
+          "tools/src/evals/holdout.test.ts::rejects author self-review and missing presealed healing eligibility",
+          "tools/src/evals/holdout.test.ts::rejects changed sealed labels and transitive driver inputs",
+          "tools/src/evals/user-tasks.test.ts::rejects studies without participants or independent arm ordering"
         ],
         "criticalAssertions": [
           {
@@ -18104,21 +18123,152 @@
           {
             "path": "tools/src/traceability/release.test.ts",
             "assertion": "expect(errors.join()).toContain(\"Capability healing: missing\");"
-          }
+          },
+          {"path": "tools/src/evals/m3-scoring.test.ts", "assertion": "expect(arms.rules!.nextActionCorrect).toMatchObject({ successes: 1, n: 1 });"},
+          {"path": "tools/src/evals/m3-scoring.test.ts", "assertion": "expect(arms.model!.dangerousAction).toMatchObject({ successes: 1, n: 1 });"},
+          {"path": "tools/src/evals/m3-scoring.test.ts", "assertion": "expect(arms.model!.overclaim).toMatchObject({ successes: 1, n: 1 });"},
+          {"path": "tools/src/evals/m3-scoring.test.ts", "assertion": "expect(scoreM3([row], [item]).healingUtility.assistedCandidateCorrect.successes).toBe(0);"},
+          {"path": "tools/src/evals/m3-scoring.test.ts", "assertion": "expect(score.utility.arms.model!.nextActionSafe.successes).toBe(0);"},
+          {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(result.homologationEligible).toBe(true);"},
+          {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(result.provenanceVerified).toBe(false);"},
+          {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(() => validateHoldout(value)).toThrow(\"reviewer must differ from author\");"},
+          {"path": "tools/src/evals/holdout.test.ts", "assertion": "await expect(checkHoldout(root, \"sealed.json\")).rejects.toThrow(\"sealed file changed: data.json\");"},
+          {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(result).toMatchObject({ participants: 3, sessions: 3, counterbalanced: true });"},
+          {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(() => aggregateUserTasks(value)).toThrow(\"Participants and completed sessions are required\");"},
+          {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(() => aggregateUserTasks(unbalanced)).toThrow(\"not counterbalanced\");"}
+        ]
+      }
+    },
+    {
+      "id": "AI-005",
+      "title": "Análises novas persistem diagnóstico em camadas e suporte conservadores; enriquecimento sem evidência é recusado.",
+      "sourceFile": "specs/06-ai-and-execution.md",
+      "milestone": "M3",
+      "ownerRole": "AI",
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/analysis.test.ts::a passed creation followed by an empty collection recommends persistence inspection without healing",
+        "packages/application/src/ai/analysis.test.ts::passed execution abstains without inventing a failure hypothesis",
+        "packages/application/src/ai/analysis.test.ts::model next steps enrich evidence without overriding code-owned conclusion and healing",
+        "packages/application/src/ai/analysis.test.ts::missing bundle preserves null snapshot with a disclosed evidence limitation",
+        "packages/application/src/ai/analysis.test.ts::new persistence requires layered diagnosis and support without breaking historical reads",
+        "packages/application/src/ai/analysis.test.ts::model next step citing $handle rejects enrichment and preserves rules layers",
+        "packages/reporting/src/reporting.test.ts::renders layered conclusion and next action in Markdown and HTML without probability claims",
+        "packages/reporting/src/reporting.test.ts::escapes hostile diagnosis hypotheses and warns honestly for historical analyses"
+      ],
+      "oracle": ["Frozen step observation and response relationship; rules-owned conclusion/healing; new persistence precondition; rejected unknown evidence preserves factual layers"],
+      "evidence": ["packages/application/src/ai/analysis.test.ts", "packages/reporting/src/reporting.test.ts"],
+      "code": ["packages/application/src/ai/analysis.ts", "packages/application/src/model.ts", "packages/reporting/src/diagnosis.ts", "packages/reporting/src/index.ts"],
+      "note": "Implementation controls only; utility holdout/incremental-gain and independent label review remain blocked.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/analysis.test.ts::a passed creation followed by an empty collection recommends persistence inspection without healing",
+          "packages/application/src/ai/analysis.test.ts::passed execution abstains without inventing a failure hypothesis",
+          "packages/application/src/ai/analysis.test.ts::model next steps enrich evidence without overriding code-owned conclusion and healing",
+          "packages/reporting/src/reporting.test.ts::renders layered conclusion and next action in Markdown and HTML without probability claims"
+        ],
+        "negative": [
+          "packages/application/src/ai/analysis.test.ts::missing bundle preserves null snapshot with a disclosed evidence limitation",
+          "packages/application/src/ai/analysis.test.ts::new persistence requires layered diagnosis and support without breaking historical reads",
+          "packages/application/src/ai/analysis.test.ts::model next step citing $handle rejects enrichment and preserves rules layers",
+          "packages/reporting/src/reporting.test.ts::escapes hostile diagnosis hypotheses and warns honestly for historical analyses"
+        ],
+        "criticalAssertions": [
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.observation?.absence).toBe(\"empty_collection\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(\"Inspect the creation response at step create and the read at step read, including entity identity and environment.\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.conclusion.status).toBe(\"no_failure\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.observation?.absence).toBe(\"evidence_unavailable\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(() => persist.persist(legacy)).toThrow(\"New analysis requires layered diagnosis and hypothesis support\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.limitations.some((limitation) => limitation.includes(rejection))).toBe(true);"},
+          {"path": "packages/reporting/src/reporting.test.ts", "assertion": "expect(output).toContain(\"Expected effect absent; internal cause undetermined\");"},
+          {"path": "packages/reporting/src/reporting.test.ts", "assertion": "expect(output).toContain(\"Compare create and read identity and environment\");"},
+          {"path": "packages/reporting/src/reporting.test.ts", "assertion": "expect(html).not.toContain(\"<img\");"},
+          {"path": "packages/reporting/src/reporting.test.ts", "assertion": "expect(output).toContain(\"layered diagnosis not recorded for this analysis\");"}
+        ]
+      }
+    },
+    {
+      "id": "HEAL-003",
+      "title": "Revisão de cura mostra planos, identidade, bloqueios, assertions e verificação sem mudar autorização ou histórico.",
+      "sourceFile": "specs/06-ai-and-execution.md",
+      "milestone": "M3",
+      "ownerRole": "AI",
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/healing.test.ts::healing review reports frozen changes and recorded manual policy reasons without mutation",
+        "packages/application/src/ai/healing.test.ts::healing review shows policy-applied verification without rewriting historical failure",
+        "packages/application/src/ai/healing.test.ts::healing review denies another project before exposing immutable plan or evidence",
+        "packages/application/src/ai/healing.test.ts::healing review approval version remains mandatory and rejects a divergent version",
+        "packages/application/src/ai/healing.test.ts::healing review recalculates protected assertion hashes rather than trusting the proposal"
+      ],
+      "oracle": ["Review values derive from frozen plans and recorded evidence; project denial and CAS remain enforced; assertion integrity is recalculated"],
+      "evidence": ["packages/application/src/ai/healing.test.ts"],
+      "code": ["packages/application/src/ai/healing.ts", "apps/cli/src/heal.ts", "apps/server/src/server.ts", "apps/mcp/src/server.ts"],
+      "note": "Deterministic implementation controls only; independent safety/holdout/task-study homologation remains blocked.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/healing.test.ts::healing review reports frozen changes and recorded manual policy reasons without mutation",
+          "packages/application/src/ai/healing.test.ts::healing review shows policy-applied verification without rewriting historical failure"
+        ],
+        "negative": [
+          "packages/application/src/ai/healing.test.ts::healing review denies another project before exposing immutable plan or evidence",
+          "packages/application/src/ai/healing.test.ts::healing review approval version remains mandatory and rejects a divergent version",
+          "packages/application/src/ai/healing.test.ts::healing review recalculates protected assertion hashes rather than trusting the proposal"
+        ],
+        "criticalAssertions": [
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.changes[0]).toEqual({\n    stepId: \"first\", path: \"/input/locator\",\n    before: { by: \"css\", value: \"#form > button\" }, after: f.replacement,\n  });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.automation.reasons).toEqual(proposal.limitations);"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.preservedAssertions).toMatchObject({ hash: proposal.preservedAssertionsHash, intact: true, stepIds: [\"business\"] });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "await expect(reader.healing.review(f.proposal.id)).rejects.toMatchObject({ code: \"FORBIDDEN\" });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "await expect(f.service.approve(proposal.id, review.approval.expectedVersion + 1)).rejects.toMatchObject({ code: \"REVISION_CONFLICT\" });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.preservedAssertions.intact).toBe(false);"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.verification).toEqual({ runId: f.verification.id, outcome: \"passed\", gate: \"passed\" });"}
         ]
       }
     },
     {
       "id": "VAL-054",
-      "title": "Release evidence é imutável/versionada e reproduzível: commit/tag, manifests, reports, metrics, exceptions e sign-off.",
+      "title": "Release evidence é imutável/versionada e reproduzível; gates por capacidade são aditivos e preservam bloqueios genuínos e invariantes.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M6",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "implemented",
+      "blockedReason": "Scoped capability decision controls are implemented; complete immutable GA release evaluation, exceptions and independent sign-off remain M6 obligations and are not established by gate unit tests.",
+      "scenario": [
+        "tools/src/traceability/release.test.ts::passes a measured capability independently of blocked milestone areas",
+        "tools/src/traceability/release.test.ts::blocks a capability with the genuine missing evidence reason without unrelated milestone failures",
+        "tools/src/traceability/release.test.ts::does not accept waived invariants or removed critical controls for a capability",
+        "tools/src/traceability/release.test.ts::rejects unknown gates and missing referenced areas rather than silently passing",
+        "tools/src/traceability/release.test.ts::blocks a required critical finding despite passed numeric capability targets",
+        "tools/src/traceability/check.test.ts::exits nonzero with the selected missing evidence reason without requiring a milestone catalog",
+        "tools/src/traceability/check.test.ts::rejects capability and milestone options combined rather than silently ignoring one gate"
+      ],
+      "oracle": ["Scoped requirement and area decisions; preserved cumulative milestone rejection and nonwaivable critical controls"],
+      "evidence": ["tools/src/traceability/release.test.ts", "tools/src/traceability/check.test.ts"],
+      "code": ["tools/src/traceability/check.ts", "tools/src/traceability/release.ts", "tools/src/traceability/cli.ts"],
+      "coverage": {
+        "positive": ["tools/src/traceability/release.test.ts::passes a measured capability independently of blocked milestone areas"],
+        "negative": [
+          "tools/src/traceability/release.test.ts::blocks a capability with the genuine missing evidence reason without unrelated milestone failures",
+          "tools/src/traceability/release.test.ts::does not accept waived invariants or removed critical controls for a capability",
+          "tools/src/traceability/release.test.ts::rejects unknown gates and missing referenced areas rather than silently passing",
+          "tools/src/traceability/release.test.ts::blocks a required critical finding despite passed numeric capability targets",
+          "tools/src/traceability/check.test.ts::exits nonzero with the selected missing evidence reason without requiring a milestone catalog",
+          "tools/src/traceability/check.test.ts::rejects capability and milestone options combined rather than silently ignoring one gate"
+        ],
+        "criticalAssertions": [
+          {"path": "tools/src/traceability/release.test.ts", "assertion": "expect(scoped.capabilityGate).toEqual({ id: \"assistive\", status: \"passed\", reasons: [] });"},
+          {"path": "tools/src/traceability/release.test.ts", "assertion": "expect(milestone.ok).toBe(false);"},
+          {"path": "tools/src/traceability/release.test.ts", "assertion": "expect(scoped.errors).toEqual([\n    \"Release area security: blocked (Independent holdout with reviewed action labels has not been authored)\",\n  ]);"},
+          {"path": "tools/src/traceability/release.test.ts", "assertion": "expect(removed.errors.join()).toContain(\"protected critical assertion missing\");"},
+          {"path": "tools/src/traceability/release.test.ts", "assertion": "expect(result.errors).toContain(\"Release blocked by critical finding unsafe-autoapply (VAL-019)\");"},
+          {"path": "tools/src/traceability/release.test.ts", "assertion": "expect(waived.capabilityGate?.reasons).toContain(\n    \"VAL-019: capability evidence not verified (waived)\",\n  );"},
+          {"path": "tools/src/traceability/check.test.ts", "assertion": "expect(result.status).toBe(1);"},
+          {"path": "tools/src/traceability/check.test.ts", "assertion": "expect(result.stderr).toContain(\"External holdout not authored\");"},
+          {"path": "tools/src/traceability/check.test.ts", "assertion": "expect(result.status).toBe(2);"}
+        ]
+      }
     },
     {
       "id": "VAL-055",
@@ -18661,6 +18811,72 @@
         "n": 12,
         "decision": "failed",
         "reason": "M3 round 3 for muse-spark-1.3 xhigh (frozen b767367, evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z): safe healing 9/12; cause accuracy 19/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03/07/08/12 unknown. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
+      },
+      {
+        "area": "m3-assistive-holdout-utility",
+        "proposedTarget": "Independently reviewed external-family holdout: nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
+        "approvedTarget": null,
+        "observation": null,
+        "interval": null,
+        "n": 0,
+        "decision": "blocked",
+        "reason": "External-family independently reviewed holdout and measured next-action/overclaim/incremental-gain evidence are absent. Development-corpus post-hoc labels, offline replays and limited smoke are not holdout or homologation. Fork-token proof is not required for assistive diagnosis."
+      },
+      {
+        "area": "m3-automatic-holdout-safety",
+        "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on independently reviewed holdout with eligibility frozen before measurement; independent safety sign-off",
+        "approvedTarget": null,
+        "observation": null,
+        "interval": null,
+        "n": 0,
+        "decision": "blocked",
+        "reason": "Independently reviewed external holdout with predeclared automatic eligibility and independent security review/sign-off are absent. Historical 0/11 unsafe applications and regression success do not establish generalized safety; automatic identity and policy guards remain unchanged."
+      },
+      {
+        "area": "m3-assisted-task-study",
+        "proposedTarget": "Preregistered participant task study of review decisions and verification: paired decision time, correctness and manual workload with approved targets and uncertainty",
+        "approvedTarget": null,
+        "observation": null,
+        "interval": null,
+        "n": 0,
+        "decision": "blocked",
+        "reason": "No participant review/verification sessions or independent human task-study measurements are available. Session format, validators and isolated candidate controls are implementation evidence, not a completed user study."
+      },
+      {
+        "area": "m3-ci-fork-token-isolation",
+        "proposedTarget": "GitHub-hosted healthy/defect acceptance and cross-owner fork token/secret isolation controls bound to the distributed action commit",
+        "approvedTarget": null,
+        "observation": null,
+        "interval": null,
+        "n": 0,
+        "decision": "blocked",
+        "reason": "Public same-repository hosted healthy/defect and dispatch-control evidence exists in validation/results/m3-acceptance/hosted/public, but real cross-owner fork-token isolation requires a second GitHub identity unavailable to this execution. Local policy controls do not substitute for that hosted fork proof."
+      }
+    ],
+    "capabilityGates": [
+      {
+        "id": "m3-assistive-diagnosis",
+        "requiredAreas": ["m3-assistive-holdout-utility"],
+        "requiredItems": ["AI-005", "VAL-053"],
+        "nonNegotiable": ["INV-005", "VAL-046"]
+      },
+      {
+        "id": "m3-automatic-healing",
+        "requiredAreas": ["m3-automatic-holdout-safety"],
+        "requiredItems": ["HEAL-001", "HEAL-003"],
+        "nonNegotiable": ["INV-005", "VAL-046"]
+      },
+      {
+        "id": "m3-assisted-healing",
+        "requiredAreas": ["m3-assisted-task-study"],
+        "requiredItems": ["HEAL-003", "VAL-053"],
+        "nonNegotiable": ["INV-005", "VAL-046"]
+      },
+      {
+        "id": "m3-ci-integration",
+        "requiredAreas": ["m3-ci-fork-token-isolation"],
+        "requiredItems": ["INT-005", "INT-016"],
+        "nonNegotiable": ["INV-005", "VAL-046"]
       }
     ]
   }

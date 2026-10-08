@@ -36,8 +36,8 @@ Executável `testmaster`. Comandos abaixo são contratos futuros, não instalaç
 | Run | `run get/list/wait/cancel <runId>` | leitura exata, cancel idempotente, reattach |
 | Run | `run events <runId> --format ndjson` | event cursor e backpressure |
 | Evidence | `run steps <runId> [--attempt ID]`, `artifact get <runId> --out PATH` | snapshot exato, não latest moving target |
-| Analysis | `run analyze <runId>`, `run diff LEFT RIGHT [--limit N] [--cursor C]` | Grounded diagnosis; paginated Run/Batch comparison (1–100 rows, default 50), cursor bound to both immutable inputs. Mixed IDs refuse; reported differences exit 0. |
-| Healing | `heal propose/approve/reject <id>` | origem e candidate revision, verification Run |
+| Analysis | `run analyze <runId>`, `run analysis <runId>`, `run diff LEFT RIGHT [--limit N] [--cursor C]` | análise em camadas e resumo textual; leitura não enriquece; JSON preserva contrato; comparação paginada (1–100, default 50), inputs imutáveis, IDs mistos recusados |
+| Healing | `heal propose/get/review/approve/reject <id>` | review read-only com before/after, candidatos, bloqueio, risco e verificação; aprovação explícita com `--expected-version`, sem mudar policy |
 | Quality | `test flaky <id> --runs N --env NAME [--seed N] [--include-study ID]` | 2–100 serial fresh strict first-attempt samples, healing off/maxAttempts 1. Compatible studies accumulate deduplicated Run IDs; missing source/runtime provenance prevents statistical classification. Report conditional failure, bilateral Wilson 95%, exact one-sided zero-failure bound, exclusions and correlation limitations; never auto-confirm flakiness from sample count. |
 | Quality | `test quarantine <id> --reason TEXT --expires-at UTC [--expected-version N]`, `test unquarantine <id> [--expected-version N]`, `test quarantine-list` | Project writer authority; nonempty reason/future expiry, owner/audit/outbox and version CAS. Expired records are inactive; quarantine never rewrites historical Runs. |
 | Reports | `report export <runId\|batchId> --format json\|markdown\|html\|junit\|allure --out PATH` | derivado do mesmo snapshot; sanitized |
@@ -125,10 +125,13 @@ Usar SDK oficial e versão do protocolo **negociada**, pinada no release testado
 | `testmaster_generate_tests` | proposalIds/revisionIds, budget | candidatas, validation errors; não passed |
 | `testmaster_run_tests` | testIds/suiteId, environmentId, mode, limits | run/batch receipt, requires explicit authority for mutations |
 | `testmaster_get_run` | runId | status/outcome/gate/evidence refs |
+| `testmaster_get_analysis` | runId | Analysis existente e resumo textual; leitura `runs:R`, sem chamada de modelo |
+| `testmaster_analyze_run` | runId, model?, discoveryId?, budget.deadlineMs? | Analysis em camadas e resumo; `analysis:X`, enriquecimento opcional sem alterar Run |
 | `testmaster_get_evidence` | runId, attemptId, failedOnly, maxBytes | summary/resources, integrity status, nunca video base64 gigante |
 | `testmaster_cancel_run` | runId, reason | cancel receipt |
 | `testmaster_compare_runs` | left/right | diff e comparability |
 | `testmaster_propose_healing` | failedRunId, budget | diff/candidate/evidence; sem autoapply |
+| `testmaster_review_healing` | proposalId | HealingReview read-only e resumo textual; `healing:R`; não aplica candidata |
 | `testmaster_approve_healing` | proposalId, expectedVersion | só role de aprovador; verificationRunId |
 | `testmaster_open_report` | runId | URL/path autorizado; não abrir browser obrigatório |
 

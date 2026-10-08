@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { checkRegistry, checkRepository, type RegistryItem } from "./check.js";
 import { type Definition, extractDocument } from "./extract.js";
@@ -135,5 +137,81 @@ describe("traceability release denials", () => {
       ],
     });
     expect(result.errors.filter((error) => error.includes("evidence path"))).toHaveLength(4);
+  });
+});
+
+describe("capability gate CLI", () => {
+  it("exits nonzero with the selected missing evidence reason without requiring a milestone catalog", async () => {
+    const root = await temp();
+    await mkdir(join(root, "specs"));
+    await mkdir(join(root, "traceability"));
+    await writeFile(join(root, "SPEC.md"), "SEC-001: Threat model.\n");
+    await writeFile(join(root, "ROADMAP.md"), "Reference SEC-001\n");
+    await writeFile(
+      join(root, "traceability/registry.json"),
+      JSON.stringify({
+        items: [
+          item({ status: "implemented", blockedReason: "Independent safety reviewer unavailable" }),
+        ],
+        release: {
+          findings: [],
+          areas: [
+            {
+              area: "holdout",
+              proposedTarget: "Reviewed holdout",
+              approvedTarget: null,
+              observation: null,
+              interval: null,
+              n: 0,
+              decision: "blocked",
+              reason: "External holdout not authored",
+            },
+          ],
+          capabilityGates: [
+            {
+              id: "assistive",
+              requiredAreas: ["holdout"],
+              requiredItems: ["SEC-001"],
+              nonNegotiable: ["SEC-001"],
+            },
+          ],
+        },
+      }),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../../dist/traceability/cli.js", import.meta.url)),
+        "check",
+        "--capability-gate",
+        "assistive",
+      ],
+      { cwd: root, encoding: "utf8" },
+    );
+    expect(result.status).toBe(1);
+    expect(JSON.parse(result.stdout).capabilityGate).toMatchObject({
+      id: "assistive",
+      status: "blocked",
+    });
+    expect(result.stderr).toContain("Independent safety reviewer unavailable");
+    expect(result.stderr).toContain("External holdout not authored");
+    expect(result.stderr).not.toContain("Cannot discover public capability catalog");
+  });
+
+  it("rejects capability and milestone options combined rather than silently ignoring one gate", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../../dist/traceability/cli.js", import.meta.url)),
+        "check",
+        "--capability-gate",
+        "assistive",
+        "--milestone-gate",
+        "M3",
+      ],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("Usage:");
   });
 });

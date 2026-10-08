@@ -117,10 +117,15 @@ Aprovação automática opt-in (`--accept-generated`) só fora CI, com policy e 
 Pipeline rules-first: preflight/worker/network/auth → failing assertion/call → evidence consistency → classify candidate → LLM explanation opcional. Analysis inclui:
 
 - `facts[]` com evidenceRef e texto factual;
-- `hypotheses[]` com confidence não calibrada explicitamente, supporting/contradicting refs;
+- `hypotheses[]` com `support` (`supported|partially_supported`), confidence não calibrada e supporting/contradicting refs; confidence numérica nunca é exibida como probabilidade de causa;
 - `failureKind`, `affectedRequirementIds`, `recommendedAction` (`fix_product|fix_test|fix_environment|review_contract|collect_more_evidence`);
 - `recommendedFixTarget` só path/symbol se grounded em CodeSnapshot; sem arquivo inventado;
 - `limitations`, `modelCallId`, `snapshotId`.
+- `diagnosis` com observação direta (`expected`, `observed`, ausência classificada e refs), cadeia relacional de até 64 passos (`verifies` referencia o passo HTTP lido; baseline `same|different|unavailable`), até 10 alternativas não estabelecidas, conclusão (`no_failure|cause_supported|cause_partially_supported|cause_unknown`), até 10 próximos passos com origem `rules|model`, até 20 lacunas e conselho de cura (`not_indicated|proposal_possible|manual_review_only`).
+
+`diagnosis` e suporte de hipótese são opcionais no schema apenas para leitura de registros históricos; toda escrita nova de análise os exige. O baseline é o Run passado compatível mais recente, na mesma revisão e ambiente; compara status/motivo e valores apenas em assertions, sem comparar IDs dinâmicos de ações. Truncamento da cadeia e bundle indisponível entram nas lacunas. Ausência distingue campo faltante, null, coleção vazia e evidência indisponível. Uma ação passada seguida de coleção vazia comprova efeito não observado, não a causa interna de persistência; a próxima ação deve comparar criação e leitura, incluindo identidade e ambiente, sem curar a assertion.
+
+Conclusão e conselho de cura são calculados por regras, nunca alterados pelo modelo. Enriquecimento usa catálogo limitado com cadeia/observação e handles de evidência; próximos passos exigem handles conhecidos e hipóteses do modelo recebem suporte parcial. Abstenção preserva as camadas determinísticas. O texto separa falha, esperado, observado, conclusão, próxima ação e cura; registros antigos mostram o aviso de diagnóstico em camadas não registrado. Nenhuma análise muda outcome/gate do Run.
 
 Exemplos: locator ausente + botão equivalente com mesma função pode indicar drift; botão existe e retorna 500 não é locator drift; login bloqueado sem credencial é environment/blocked; schema mudou contra spec aprovado é contract violation, não healing automático. Um trace incompleto pode comprovar assertion failed, mas não sustentar root cause.
 
@@ -139,6 +144,10 @@ Exemplos: locator ausente + botão equivalente com mesma função pode indicar d
 
 Preservar first failure e gerar verificationRun. Aprovação da revisão ativa usa CAS: se baseRevision mudou, stale proposal. Verificação exige repetir caso curado e controle negativo com defeito semântico conhecido no corpus de avaliação; runtime produção não injeta defeitos. Publicar `healed=true` e cadeia failed→candidate→verification, não só pass. Até autoapply seguro falhar retorna proposta/review, sem ciclos ilimitados (máximo 1 candidate aplicado por execução de heal).
 
+`HealingReview` é uma projeção de leitura dos registros imutáveis, sem alterar `HealingProposal`: mudanças com `stepId/path/before/after` dos planos base/candidato; identidade anterior e candidatos (`role`, `name`, `tag`, `type`, `label`, `form`, `matched`, `visible`); equivalência calculada contra baselines; decisão/motivos de automação derivados das limitações; hash e passos das assertions preservadas; risco; Run/outcome/gate de verificação quando houver; refs e limitações. `label/form` ausentes são null com indisponibilidade declarada, não identidade inferida.
+
+A resposta também informa `approval{expectedVersion,proposalId,candidateRevisionId}` para aprovação explícita presa à proposta/revisão. REST `GET /healing-proposals/{id}/review` exige `healing:R`; CLI `heal review <proposalId>` e MCP equivalente são consultas sem aplicar patch. A CLI apresenta before/after, candidatos, bloqueio, risco, verificação e comando de aprovação com `--expected-version`. Sinais novos ajudam só a revisão manual: guards de identidade, `assessPolicy`, autoapply e CAS permanecem inalterados.
+
 ## 10. Memória de projeto (M5)
 
 Persistir aprendizados aprovados: routes, test hooks, auth workflow, domain terms, false-positive triage e fixture ownership. Cada item tem fonte/version/validFrom/TTL/approval, scope projeto/workspace e tombstone. Recuperação textual primeiro; embedding opcional com orçamento e capacidade local. Mudar app/env/source invalida fatos afetados; conteúdo de página nunca é regra privilegiada. Esquecer fonte elimina índices e derivados segundo retention. Não memorizar credencial ou dados pessoais de run.
@@ -146,3 +155,7 @@ Persistir aprendizados aprovados: routes, test hooks, auth workflow, domain term
 ## 11. Aceite e avaliações
 
 AI-001: requisito errado inferido do código entra em conflito com PRD, não substitui PRD. AI-002: structured-output inválido esgota retry bounded e nenhum teste ativo é criado. AI-003: provider fora da allowlist não recebe source. AI-004: replay de revisão exportada funciona sem modelo. EXEC-001: app com bug de persistência pós-reload falha por assertion real; EXEC-002: 401 esperado e 401 inesperado têm outcomes diferentes conforme oracle. HEAL-001: renomear seletor preserva negócio e permite candidata; alterar preço/permission não vira verde por healing. HEAL-002: reviewer concorrente não perde alteração. DISC-005: source/diff atualizado invalida cache descendente. Ver corpus, tamanho amostral e gates em [10-validation](10-validation.md).
+
+AI-005: análises novas persistem observação, cadeia, conclusão, suporte, próxima ação e conselho de cura conservadores; análise legada continua legível e enriquecimento com evidência desconhecida é rejeitado sem alterar o veredito.
+
+HEAL-003: revisão de cura mostra before/after, identidade/candidatos, bloqueios, assertions preservadas, risco, versão exigida e verificação a partir de registros imutáveis; consulta entre projetos é negada e aprovação stale permanece recusada.

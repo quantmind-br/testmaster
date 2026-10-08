@@ -27,7 +27,7 @@ Gate avalia a política requerida além das assertions. Um Run com `outcome=pass
 | Fontes | UploadRequest, SourceRevision, CodeSnapshot, EvidenceRef | hash e proveniência; referência externa não dispara download implícito |
 | Descoberta | Requirement, FeatureMap, DiscoveryRequest/Result, ProposalBatch | conflito/partial/needs_input explícitos; fingerprint impede resume stale |
 | Execução | RunRequest/Receipt/Result, BatchRequest/Receipt/Result, Attempt, StepResult | um reducer central de estados/gates; dados de worker validados no supervisor |
-| Evidências | ArtifactManifest, BundleMeta, Analysis, HealingProposal | IDs/snapshot/hash coerentes; ausência de artifact tem motivo |
+| Evidências | ArtifactManifest, BundleMeta, Analysis, HealingProposal, HealingReview | IDs/snapshot/hash coerentes; ausência de artifact tem motivo; Review é projeção de leitura scoped sem mutação da proposta |
 | Controle | Approval, AuthCheckpoint, JobLease, CancelReceipt | TTL, ator, recurso, fence; nenhum token secreto em resposta de consulta |
 | Integração | Schedule, ScheduledFire, Delivery, IntegrationEvent | idempotência por evento; rerun separado de retry de entrega |
 | Operação | DeletionOperation, BackupManifest, RestoreRequest, UsageEntry | etapas duráveis; segredo ausente; unknown não é zero |
@@ -201,6 +201,8 @@ SQL de M0 deve definir foreign keys compostas por workspace onde aplicável, uni
 | MemoryEntry `mry` | projectId, text, sourceRefs, validFrom, expiresAt, approval, version, tombstoneAt | dado com origem, nunca instrução de autoridade |
 | VisualBaseline `vbl` | revisionId, matrixDigest, artifactId, maskPolicyHash, thresholdVersion, approval | somente reviewer promove; execução não atualiza baseline |
 | Evaluation `evl` | corpusDigest, cohort/trialRefs, oracleVersion, metrics, decision, limitations | target proposto separado de valor observado |
+| Analysis `ana` | runId, snapshotId, facts, hypotheses/support, failureKind, recommendedAction, diagnosis, limitations | toda escrita nova exige diagnosis e suporte; legado permanece legível; conclusão/cura são rules-owned e análise nunca reabre Run |
+| HealingReview (resposta) | proposalId, changes{stepId,path,before,after}, identity, automation, preservedAssertions{hash,intact,stepIds}, risk, verification, approval{expectedVersion,proposalId,candidateRevisionId}, evidenceRefs, limitations | planos base/candidato e evidências imutáveis; candidatos sem label/form declaram ausência; consulta não altera autoapply/CAS |
 
 Rotas estão no [catálogo API](04-api.md). SSO/SCIM seguem protocolos próprios e não reaproveitam token de execução. Approval de produção não equivale a permissão geral de administrador.
 
