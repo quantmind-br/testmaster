@@ -1,0 +1,347 @@
+{
+  "id": "m3-drift-07",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": ">Checkout</button>",
+      "after": ">Place order</button>"
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "c3e452a9cbc97555964954489d1541c10bfc5de985102c7f439a33f8e3812a05"
+  },
+  "oracle": "orderPersistence",
+  "semanticNegative": "toast-without-persist",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-07",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "add",
+        "kind": "action",
+        "operation": "click",
+        "description": "add",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "add-p1"
+          }
+        }
+      },
+      {
+        "id": "added",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "added",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "toast"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Added to cart"
+          }
+        }
+      },
+      {
+        "id": "cart",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "cart",
+        "required": true,
+        "input": {
+          "path": "/cart"
+        }
+      },
+      {
+        "id": "checkout",
+        "kind": "action",
+        "operation": "click",
+        "description": "checkout",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Checkout",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "toast",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "toast",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "toast"
+          }
+        },
+        "expectation": {
+          "predicate": "textContains",
+          "value": {
+            "literal": "Order created:"
+          }
+        }
+      },
+      {
+        "id": "orders",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "orders",
+        "required": true,
+        "input": {
+          "path": "/orders"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "order-count"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "1"
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "c3e452a9cbc97555964954489d1541c10bfc5de985102c7f439a33f8e3812a05"
+  },
+  "transformationSourceDigest": "19fff16c01470426b6f1b385b3faab8a311361b61400ec9c923335b23a57a8fa",
+  "expectedFailingStepIds": [
+    "checkout"
+  ],
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 22787,
+    "outputTokens": 4212,
+    "reasoningTokens": 3370,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 26999,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-RJpzpn",
+    "baseRevision": {
+      "id": "rev_01a119b0-b1fe-72db-bbce-830678b5ca1e",
+      "protectedHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a"
+    },
+    "healthy": {
+      "runId": "run_01a119b0-b249-7222-8b1d-fb8dba6148d4",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a119b0-b8c5-72c2-be98-7f7ec70c795f",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a119b1-3502-730b-b393-7c4970d56ae4",
+      "hash": "9bc1af0dad9db4b6fade61215ba31b29f5a47785d91981a3a8fed9267789cfa5",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a119b1-f3a9-7421-821d-9556d14f8663",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "a8c377dc5cae5f47b60d7554325e0421a817bdb7d8cb69fb47d196e5b3d1151d",
+        "responseHash": "dcfb6a7d846f9886c08c590a25e27ab999e36e16e80f0c8bcd5a00b8a48cd502",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 11127,
+          "outputTokens": 3026,
+          "reasoningTokens": 2380
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a119b2-4445-776a-9778-cc1aae0295d8",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "0322fbfa19257d1b55a78bc15945c2ae2f6cd34982fa19283a7baa651380a71c",
+        "responseHash": "65ff9ab52f9e5cdc76a1ad323ab8e98b876230d20a0deba84264b9f28849791a",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 2048,
+          "inputTokens": 11660,
+          "outputTokens": 1186,
+          "reasoningTokens": 990
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a119b1-f3aa-7590-95d3-519c89abbca3",
+      "hash": "6d78d9187be7ebc573aa62d4f0e11819cbba3b2504b3e2deef220db6ae95b005"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a119b0-b1fe-72db-bbce-830678b5ca1e",
+      "candidateRevisionId": "rev_01a119b2-44df-76cb-9bb0-659759988f97",
+      "baseHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a",
+      "candidateHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a119b2-44dd-748b-841d-8ab2ebf6779a",
+      "hash": "b5ff218388ec749d2be85d6f6113d72a68d2adc1a639041f785a50fb09b52662",
+      "status": "proposed",
+      "approvalMode": null
+    }
+  }
+}

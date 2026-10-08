@@ -1,0 +1,366 @@
+{
+  "id": "m3-integration-01",
+  "group": "integration",
+  "expectedFailureKind": "product_bug",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "products-update-ignored",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"products-update-ignored\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "92e9d97953b497e64b4d56f91173d86ed4e273cc143cce4c44022058d70fa78f",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "productWorkflow",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-integration-01",
+    "type": "integration",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": "correct-password"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-m3-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "create",
+        "kind": "action",
+        "operation": "request",
+        "description": "create",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "name": "Workflow original",
+                "priceCents": 123
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "product_id",
+              "from": "jsonPointer",
+              "pointer": "/id",
+              "valueType": "string",
+              "sensitive": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "read",
+        "kind": "action",
+        "operation": "request",
+        "description": "read",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            },
+            {
+              "variableRef": "create.product_id"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "initial_value",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "initial_value",
+        "required": true,
+        "input": {
+          "responseStepId": "read",
+          "jsonPointer": "/priceCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 123
+          }
+        }
+      },
+      {
+        "id": "update",
+        "kind": "action",
+        "operation": "request",
+        "description": "update",
+        "required": true,
+        "input": {
+          "method": "PUT",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            },
+            {
+              "variableRef": "create.product_id"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "name": "Workflow updated",
+                "priceCents": 456
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "query",
+        "kind": "action",
+        "operation": "request",
+        "description": "query",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            },
+            {
+              "variableRef": "create.product_id"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "query",
+          "jsonPointer": "/priceCents"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 456
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "92e9d97953b497e64b4d56f91173d86ed4e273cc143cce4c44022058d70fa78f",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "b243989e7cf9bd14790d16e7c6fad3aab7104a554b4e1ae54c8a30fae0ab7516",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "transformedOracle": true,
+    "mutantDetected": true
+  },
+  "diagnosis": null,
+  "healing": {
+    "offered": false,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": false,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": false,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 16970,
+    "outputTokens": 18434,
+    "reasoningTokens": 16237,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 35404,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-SS5xXo",
+    "baseRevision": {
+      "id": "rev_01a119db-6015-7613-964d-3522c34324eb",
+      "protectedHash": "cfd42d891a0823b762fad9a49b91964fb30b66d63eb4ce8c9d187f7a9438bbdd"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a119dc-0a67-7307-a4c8-5997962934d3",
+        "model": "muse-spark-1.3",
+        "provider": "quantforge",
+        "promptHash": "3822c2259c22eab9d739b4fdb572782d5ee78ff2866c0b484415efe119e4e65b",
+        "responseHash": "47123f4ff3896b493b6c487a2cbee89701700dfb86f27a92fc29a8fe5f004a9b",
+        "modelConfigHash": "d2e3ac4add83517bf699527c3a15d84a7db8ad6b707ae5549629515988b25eb3",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "invalid",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 8448,
+          "outputTokens": 8807,
+          "reasoningTokens": 7697
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a119dc-d84a-72b7-bbcb-7621f7b23f43",
+        "model": "muse-spark-1.3",
+        "provider": "quantforge",
+        "promptHash": "1d95a877a74fb30736a2a02163efbd72cf8c1e22d126a966e1670b10ac18f4f2",
+        "responseHash": "3d43fa760ae9c574222e9bd6d74e5e13b5fd59a041b1dd32648f9a63359da37e",
+        "modelConfigHash": "d2e3ac4add83517bf699527c3a15d84a7db8ad6b707ae5549629515988b25eb3",
+        "repairAttempt": 1,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 8433,
+          "inputTokens": 8522,
+          "outputTokens": 9627,
+          "reasoningTokens": 8540
+        },
+        "cost": "unknown"
+      }
+    ],
+    "healthy": {
+      "runId": "run_01a119dc-d99c-7408-af6e-91ca5f50d150",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "healthyOracle": {
+      "healthy": true,
+      "defective": false,
+      "observed": {
+        "storedName": "Workflow updated",
+        "storedPrice": 456,
+        "responsePrice": 456
+      }
+    },
+    "transformed": {
+      "runId": "run_01a119dc-e00b-7220-b2e9-a641744c30ae",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "transformedOracle": {
+      "healthy": false,
+      "defective": true,
+      "observed": {
+        "storedName": "Workflow original",
+        "storedPrice": 123,
+        "responsePrice": 123
+      }
+    },
+    "generatedRevision": {
+      "id": "rev_01a119dc-d935-72a4-9969-560775daa672",
+      "hash": "1e7fcb97c5b948495f747cbd1acf367cbd3b630029d2d14c71095e8937d584c3",
+      "acceptance": "scripted-operator-not-independent-human-intent-review"
+    }
+  }
+}

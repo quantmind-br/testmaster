@@ -1,0 +1,330 @@
+{
+  "id": "m3-drift-10",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "<button type=\"submit\">Sign in</button>",
+      "after": "<section><button type=\"submit\">Sign in</button></section>"
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "45b248a01dd19a5964602344bf5c5c6813889c43a7fa5bb3df692a7c4d571bf2"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "no-password-validation",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-10",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid_open",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "invalid_open",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "invalid_email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "invalid_password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": ""
+          }
+        }
+      },
+      {
+        "id": "invalid_submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "invalid_submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#view > form > button"
+          }
+        }
+      },
+      {
+        "id": "invalid_login_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "invalid_login_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password-error"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Password is required"
+          }
+        }
+      },
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#view > form > button"
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "45b248a01dd19a5964602344bf5c5c6813889c43a7fa5bb3df692a7c4d571bf2"
+  },
+  "transformationSourceDigest": "b9089e4ea4ebab19a1f00ba2df9c7a5ea478be3734ad8b470e5ac23622c9f484",
+  "expectedFailingStepIds": [
+    "invalid_submit"
+  ],
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true
+  },
+  "usage": {
+    "inputTokens": 19667,
+    "outputTokens": 3547,
+    "reasoningTokens": 2623,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 23214,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-J269iZ",
+    "baseRevision": {
+      "id": "rev_01a119b6-2f9f-7338-8590-e94d2111db61",
+      "protectedHash": "3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6"
+    },
+    "healthy": {
+      "runId": "run_01a119b6-2feb-7591-ac65-6551806120b4",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a119b6-35eb-7641-8f4f-dfe8011779fa",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a119b6-b0e4-766b-9c73-3e3c8bd797d6",
+      "hash": "7ad29ae32bb8159e51822451c97a5920d9a6717d3a68ae57898db8f45fa143f7",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a119b7-1b95-724d-91fe-06bd6fd92983",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "83967dca624030c3453166595cfec311e0648d346461485cfc9ad9cb44c8ec61",
+        "responseHash": "669dd77683f2830ab0188239617a96bc4e8fbe681ead478805ac0feac8b4351c",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 1024,
+          "inputTokens": 7905,
+          "outputTokens": 1599,
+          "reasoningTokens": 954
+        },
+        "cost": "unknown"
+      },
+      {
+        "id": "mdl_01a119b7-a047-7084-8356-bc601bc13744",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "27c78a59ba09f1dbd0181bf63e53c962721907fdd3cf14f9e38ba29bd5e830b2",
+        "responseHash": "51bc7b0bffb70da4fb2a53b89de0e5406d1ea391ef41cd98612c3bfeb55ee0db",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 4096,
+          "inputTokens": 11762,
+          "outputTokens": 1948,
+          "reasoningTokens": 1669
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a119b7-1b95-724d-91fe-0b219775943c",
+      "hash": "7eea2c4449bcad60ce485365e7f638a04051168f5039e6335ec9d75c5780747c"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a119b6-2f9f-7338-8590-e94d2111db61",
+      "candidateRevisionId": "rev_01a119b7-a0ad-725a-8628-6b8dcbd3317f",
+      "baseHash": "3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6",
+      "candidateHash": "3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a119b7-a0ab-75e2-9832-178c9d467f50",
+      "hash": "ddb123c1767750d949e6eea5dbe2eeae4890d40cb5b0f6a893b8b26e16b930fd",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a119b6-2f9f-7338-8590-e94d2111db61",
+      "candidateRevisionId": "rev_01a119b7-a0ad-725a-8628-6b8dcbd3317f",
+      "baseHash": "3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6",
+      "candidateHash": "3aac29da7e831e3dba76a26ac48026138fc8350dded7c2ac498848659f872fa6",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a119b7-a7e2-77dd-adda-b840e8931c2d",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  }
+}

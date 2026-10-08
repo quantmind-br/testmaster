@@ -1,0 +1,197 @@
+{
+  "id": "m3-bug-07",
+  "group": "bug",
+  "expectedFailureKind": "product_bug",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "pagination-skip",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "index.js",
+      "before": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"healthy\",",
+      "after": "  mutant = process.env.REFERENCE_SHOP_MUTANT ?? \"pagination-skip\","
+    }
+  ],
+  "resultDigests": {
+    "index.js": "f8dc9ee3a4b09fe08706eb259e7ff09e34ad5a0f4fd2b7f7611956f9cceac853",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "paginationContinuity",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-bug-07",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "page",
+        "kind": "action",
+        "operation": "request",
+        "description": "page",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "products"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "offset"
+              },
+              "value": {
+                "literal": "2"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "page",
+          "jsonPointer": "/items/0/id"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "p3"
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "f8dc9ee3a4b09fe08706eb259e7ff09e34ad5a0f4fd2b7f7611956f9cceac853",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "496327d8380397898d4e9ca0d6d4a9222264a2ad7836a7e3ca773c4247f5790f",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 1791,
+    "outputTokens": 5009,
+    "reasoningTokens": 4684,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 6800,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-MnTFQU",
+    "baseRevision": {
+      "id": "rev_01a119c5-fee2-7069-897e-71e17b7c43aa",
+      "protectedHash": "ddb22c5787f21eb812ea4c7656e730b3fb3ea8b52ae2efa12af05034ded38107"
+    },
+    "healthy": {
+      "runId": "run_01a119c5-ff1d-7207-9808-7f57376b5447",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a119c6-0247-7606-88a5-f4134a66bbcf",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a119c6-0533-77c1-b3a0-cfe512caca6c",
+      "hash": "0ee7436d3fc831cb205d3433b612bcaf37ff6bd196cc9afdd3d07700155e0406",
+      "failureKind": "product_bug"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a119c6-7978-7567-a395-31a1017f8a0d",
+        "model": "muse-spark-1.3",
+        "provider": "quantforge",
+        "promptHash": "90f98ba412f36ab00ae8ef4e18d4a89f16cffcb0bbb438e56cd30e5c99253c6e",
+        "responseHash": "992bb6bebddcc3be09d4ff469491f3408ab788e6db9e9be7e0f5100bb8cc90ce",
+        "modelConfigHash": "d2e3ac4add83517bf699527c3a15d84a7db8ad6b707ae5549629515988b25eb3",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 753,
+          "inputTokens": 1791,
+          "outputTokens": 5009,
+          "reasoningTokens": 4684
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a119c6-7979-7277-b49f-674aa8d312d6",
+      "hash": "22d05a423a21e0ea75f25adec037085063f644ec1e51baefa8b2de72ba2e3fc1"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "semantic_failure",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a119c6-7983-7118-a86b-03387cefabb3",
+      "job": {
+        "state": "completed",
+        "result": {
+          "reason": "semantic_failure",
+          "refused": true
+        }
+      }
+    }
+  }
+}

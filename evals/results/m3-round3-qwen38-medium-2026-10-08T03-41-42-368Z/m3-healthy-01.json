@@ -1,0 +1,182 @@
+{
+  "id": "m3-healthy-01",
+  "group": "healthy",
+  "expectedFailureKind": "unknown",
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "oracle": "passwordValidation",
+  "semanticNegative": "healthy",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-healthy-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "demo@example.test",
+                "password": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "transformationSourceDigest": "ba7e54aed941f398b9a3d4ba9664f01d3734e6dd3968fd0a4824a5f3f1909473",
+  "expectedFailingStepIds": [],
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 1965,
+    "outputTokens": 253,
+    "reasoningTokens": 172,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 2218,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-Il1gWi",
+    "baseRevision": {
+      "id": "rev_01a119bc-5d2c-758a-84c6-9c26216aec04",
+      "protectedHash": "a3934916e6390d18fb2d9affd91d248fd3631a60aa44b0dd35adacfd2330cb7c"
+    },
+    "healthy": {
+      "runId": "run_01a119bc-5d75-7096-9268-b55268bca052",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a119bc-6125-739b-9874-41c7747ae82e",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "rules": {
+      "id": "ana_01a119bc-65b2-72a3-9183-e08ac99200ed",
+      "hash": "77bd3c8f17b92656d7cc44277c1e7393536ba91c77544cb902af280d9071196f",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a119bc-8854-74a7-9d97-d3cc51ee972c",
+        "model": "qwen3.8-flash",
+        "provider": "quantforge",
+        "promptHash": "86b90c9a1063e351e712a0e1b3643622559e616010e9758eaf21f7bb7ee3d360",
+        "responseHash": "6ffe03d6d05db2975bb4cb7c1f2c754dad41ff37cd08bd1341a8a21401beabd8",
+        "modelConfigHash": "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 1965,
+          "outputTokens": 253,
+          "reasoningTokens": 172
+        },
+        "cost": "unknown"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a119bc-8854-74a7-9d97-d4aaeb8b7231",
+      "hash": "3ba31a06e0ea3226805c035d5d7551c1d359adb5fd70fd462021443bf2e76ed4"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "not_failed",
+      "messageHash": "cceecb584eea682acbbf8b32d89d28148223b9e6b26803514204aac60758eed0",
+      "detail": "PRECONDITION_FAILED: Healing requires a terminal failed Run"
+    }
+  }
+}

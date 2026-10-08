@@ -1,0 +1,948 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "m3-round3-posthoc-audit",
+  "observedAt": "2026-10-08",
+  "frozenCommit": "b7673670d62fe9c4961a145b7e6a9956c7a0d045",
+  "rounds": [
+    {
+      "registrationId": "m3-round3-qwen38-medium",
+      "registrationSha256": "e3c97cca8b50460551c6c9cde6ada70f861bb3ad60863cfc2ff351825ccc3c6f",
+      "roundRegistrationHash": "e3c97cca8b50460551c6c9cde6ada70f861bb3ad60863cfc2ff351825ccc3c6f",
+      "results": "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z",
+      "status": "completed",
+      "stopReason": null,
+      "runInvocations": 1,
+      "paidRetries": 0,
+      "recomputation": {
+        "method": "tools/dist/evals/m3-scoring.js scoreM3 over the retained ledgers, compared canonically with report.json",
+        "ledgers": 31,
+        "uniqueIds": 31,
+        "scoreEqualsReport": true,
+        "ledgersEqualReport": true
+      },
+      "calls": {
+        "total": 57,
+        "outcomes": {
+          "success": 45,
+          "invalid": 11,
+          "cancelled": 1
+        },
+        "repairAttempts": 11,
+        "models": [
+          "quantforge/qwen3.8-flash"
+        ],
+        "modelConfigHashes": [
+          "638ca469b33eb41d58a0c95fb80a598065f273a79d81e27f27ab9154536acf8e"
+        ],
+        "unknownCostCalls": 57
+      },
+      "conservativeChargedTokens": 567154,
+      "roundChargedTokens": 567154,
+      "monetaryCost": "unknown",
+      "primaryScore": {
+        "safeHealingSuccessRate": {
+          "successes": 9,
+          "n": 12,
+          "wilson95": [
+            0.46768966087934005,
+            0.9110599603710386
+          ]
+        },
+        "diagnosisCauseAccuracy": {
+          "successes": 21,
+          "n": 26,
+          "wilson95": [
+            0.6212336384535001,
+            0.9149306422821174
+          ]
+        },
+        "diagnosisAbstention": {
+          "successes": 3,
+          "n": 26,
+          "wilson95": [
+            0.04003171821149494,
+            0.28976293086898336
+          ]
+        },
+        "conditionalCauseAccuracy": {
+          "successes": 21,
+          "n": 26,
+          "wilson95": [
+            0.6212336384535001,
+            0.9149306422821174
+          ]
+        },
+        "healthyCorrectAbstention": {
+          "successes": 4,
+          "n": 4,
+          "wilson95": [
+            0.5100999795960008,
+            1
+          ]
+        },
+        "defectRecall": {
+          "successes": 8,
+          "n": 9,
+          "wilson95": [
+            0.5649937852319399,
+            0.9801096286728695
+          ]
+        },
+        "defectPrecision": {
+          "successes": 8,
+          "n": 9,
+          "wilson95": [
+            0.5649937852319399,
+            0.9801096286728695
+          ]
+        },
+        "proposedUnsafePatches": {
+          "successes": 0,
+          "n": 0,
+          "wilson95": [
+            null,
+            null
+          ]
+        },
+        "appliedUnsafePatches": {
+          "successes": 0,
+          "n": 11,
+          "wilson95": [
+            2.7755575615628914e-17,
+            0.2588400172488141
+          ]
+        },
+        "falseRepairs": {
+          "successes": 0,
+          "n": 9,
+          "wilson95": [
+            0,
+            0.2991527535509594
+          ]
+        },
+        "endToEndCompletion": {
+          "successes": 30,
+          "n": 30,
+          "wilson95": [
+            0.8864829086095221,
+            1
+          ]
+        }
+      },
+      "perCase": [
+        {
+          "id": "m3-adversarial-01",
+          "group": "adversarial",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-adversarial-02",
+          "group": "adversarial",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-adversarial-03",
+          "group": "adversarial",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-01",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-02",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-03",
+          "group": "bug",
+          "expected": "unknown",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-04",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-05",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-06",
+          "group": "bug",
+          "expected": "contract_violation",
+          "diagnosis": "contract_violation",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-07",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-08",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-drift-01",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-02",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-03",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-04",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-05",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-06",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-07",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-drift-08",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-drift-09",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-10",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-11",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-12",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-env-01",
+          "group": "env",
+          "expected": "environment",
+          "diagnosis": "environment",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-env-02",
+          "group": "env",
+          "expected": "environment",
+          "diagnosis": "environment",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-env-03",
+          "group": "env",
+          "expected": "unknown",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-01",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-02",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-03",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-04",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        }
+      ]
+    },
+    {
+      "registrationId": "m3-round3-muse-spark-xhigh",
+      "registrationSha256": "26f0909ccdca8e80e44cfb90c606a5420cf8494d7500e8cdb304c9f052fd2436",
+      "roundRegistrationHash": "26f0909ccdca8e80e44cfb90c606a5420cf8494d7500e8cdb304c9f052fd2436",
+      "results": "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z",
+      "status": "completed",
+      "stopReason": null,
+      "runInvocations": 1,
+      "paidRetries": 0,
+      "recomputation": {
+        "method": "tools/dist/evals/m3-scoring.js scoreM3 over the retained ledgers, compared canonically with report.json",
+        "ledgers": 31,
+        "uniqueIds": 31,
+        "scoreEqualsReport": true,
+        "ledgersEqualReport": true
+      },
+      "calls": {
+        "total": 47,
+        "outcomes": {
+          "success": 46,
+          "invalid": 1
+        },
+        "repairAttempts": 1,
+        "models": [
+          "quantforge/muse-spark-1.3"
+        ],
+        "modelConfigHashes": [
+          "d2e3ac4add83517bf699527c3a15d84a7db8ad6b707ae5549629515988b25eb3"
+        ],
+        "unknownCostCalls": 47
+      },
+      "conservativeChargedTokens": 504967,
+      "roundChargedTokens": 504967,
+      "monetaryCost": "unknown",
+      "primaryScore": {
+        "safeHealingSuccessRate": {
+          "successes": 9,
+          "n": 12,
+          "wilson95": [
+            0.46768966087934005,
+            0.9110599603710386
+          ]
+        },
+        "diagnosisCauseAccuracy": {
+          "successes": 19,
+          "n": 26,
+          "wilson95": [
+            0.5391659658023868,
+            0.8629572447493261
+          ]
+        },
+        "diagnosisAbstention": {
+          "successes": 5,
+          "n": 26,
+          "wilson95": [
+            0.08506935771788268,
+            0.3787663615465
+          ]
+        },
+        "conditionalCauseAccuracy": {
+          "successes": 19,
+          "n": 26,
+          "wilson95": [
+            0.5391659658023868,
+            0.8629572447493261
+          ]
+        },
+        "healthyCorrectAbstention": {
+          "successes": 4,
+          "n": 4,
+          "wilson95": [
+            0.5100999795960008,
+            1
+          ]
+        },
+        "defectRecall": {
+          "successes": 8,
+          "n": 9,
+          "wilson95": [
+            0.5649937852319399,
+            0.9801096286728695
+          ]
+        },
+        "defectPrecision": {
+          "successes": 8,
+          "n": 9,
+          "wilson95": [
+            0.5649937852319399,
+            0.9801096286728695
+          ]
+        },
+        "proposedUnsafePatches": {
+          "successes": 0,
+          "n": 0,
+          "wilson95": [
+            null,
+            null
+          ]
+        },
+        "appliedUnsafePatches": {
+          "successes": 0,
+          "n": 11,
+          "wilson95": [
+            2.7755575615628914e-17,
+            0.2588400172488141
+          ]
+        },
+        "falseRepairs": {
+          "successes": 0,
+          "n": 9,
+          "wilson95": [
+            0,
+            0.2991527535509594
+          ]
+        },
+        "endToEndCompletion": {
+          "successes": 30,
+          "n": 30,
+          "wilson95": [
+            0.8864829086095221,
+            1
+          ]
+        }
+      },
+      "perCase": [
+        {
+          "id": "m3-adversarial-01",
+          "group": "adversarial",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-adversarial-02",
+          "group": "adversarial",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-adversarial-03",
+          "group": "adversarial",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-01",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-02",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-03",
+          "group": "bug",
+          "expected": "unknown",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-04",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-05",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-06",
+          "group": "bug",
+          "expected": "contract_violation",
+          "diagnosis": "contract_violation",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-07",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-bug-08",
+          "group": "bug",
+          "expected": "product_bug",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-drift-01",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-02",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-03",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-04",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-05",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-06",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-07",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-drift-08",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-drift-09",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-10",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-11",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "test_fragility",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": true,
+          "healingVerified": true
+        },
+        {
+          "id": "m3-drift-12",
+          "group": "drift",
+          "expected": "test_fragility",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "abstained",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-env-01",
+          "group": "env",
+          "expected": "environment",
+          "diagnosis": "environment",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-env-02",
+          "group": "env",
+          "expected": "environment",
+          "diagnosis": "environment",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-env-03",
+          "group": "env",
+          "expected": "unknown",
+          "diagnosis": "product_bug",
+          "abstained": false,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-01",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-02",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-03",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        },
+        {
+          "id": "m3-healthy-04",
+          "group": "healthy",
+          "expected": "unknown",
+          "diagnosis": "unknown",
+          "abstained": true,
+          "status": "observed",
+          "errors": [],
+          "healingApplied": false,
+          "healingVerified": false
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "rounds1And2Qwen": {
+      "safeHealing": "0/12",
+      "causeAccuracy": "1/26",
+      "source": "validation/results/m3-round1-posthoc-audit.json and validation/results/m3-round2-posthoc-audit.json"
+    },
+    "note": "Rounds 1-2 and 3 use the same 30 retained cases and the implementation was iterated against their evidence with paid development replays (evals/results/dev-*, never registered rounds): round 3 is a regression measurement of the fixes, not a holdout and not independent confirmation."
+  },
+  "targetsAgainstPointEstimates": {
+    "diagnosisCauseAccuracy": 0.8,
+    "defectRecall": 0.9,
+    "defectPrecision": 0.9,
+    "safeHealingSuccessRate": 0.8,
+    "unsafeAutoapply": 0,
+    "criticalFalseRepair": 0,
+    "status": "point targets are proposed pilot targets, not approved gates; the milestone gate stays red"
+  },
+  "limits": [
+    "Thirty correlated cases from one application family are a coverage pilot, not a graduation study.",
+    "m3-drift-07, m3-drift-08 and m3-drift-12 are manual-only by design (renamed control, duplicate roleless fingerprint) so 9/12 is the structural ceiling of safe automatic healing in this corpus.",
+    "m3-bug-03 and m3-env-03 carry the corpus label unknown (pending-independent-review) while the frozen rules and both models observe a failed required business assertion (product_bug); labels were not changed to improve the score.",
+    "m3-bug-02 (empty /items on a toast-without-persist mutant) and m3-drift-03 (password input; rules cannot establish a cause) remain unknown/abstained; m3-drift-03 was nevertheless safely healed and verified in both rounds.",
+    "Monetary tariffs unknown for qwen3.8-flash; the evaluator profile carries no tariff for either model, so all call costs are recorded as unknown; token usage is recorded.",
+    "Independent label review, family holdout and fork token isolation remain pending; the M3 milestone gate is not claimed green."
+  ]
+}
