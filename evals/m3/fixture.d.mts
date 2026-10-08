@@ -1,13 +1,16 @@
+import type { ExecutablePlan } from "@testmaster/contracts";
 export interface FixturePatch {
   file: string;
   before: string;
   after: string;
 }
 export interface FixtureCase {
-  mutant: string;
-  baselinePatches: FixturePatch[];
-  patches: FixturePatch[];
-  semanticNegative: string;
+  mutant?: string;
+  baselinePatches?: FixturePatch[];
+  patches?: FixturePatch[];
+  semanticNegative?: string;
+  controls?: FixtureControls;
+  variant?: unknown;
 }
 export interface FixtureCorpus {
   semanticPatches: Record<string, FixturePatch[]>;
@@ -42,3 +45,25 @@ export function executedProductOracle(
   shop: FixtureShop,
   token: string,
 ): Promise<{ healthy: boolean; defective: boolean; observed: unknown }>;
+export interface FixtureControls {
+  unavailableTarget?: boolean;
+  collectionFailure?: boolean;
+  missingCredential?: boolean;
+  semanticCandidate?: boolean;
+  integrationWorkflow?: { requirementPath: string };
+}
+export interface FixtureDriver {
+  startCase: typeof startCase;
+  materialize: typeof materialize;
+  independentOracle: typeof independentOracle;
+  executedProductOracle: typeof executedProductOracle;
+  caseControls?: (item: FixtureCase & { id: string; group: string }) => FixtureControls;
+  validateCase?: (root: string, corpus: FixtureCorpus, item: FixtureCase) => Promise<void>;
+  authoredCandidate?: (item: FixtureCase & { id: string }, plan: ExecutablePlan) => ExecutablePlan;
+}
+export function caseControls(item: FixtureCase & { id: string; group: string }): FixtureControls;
+export function validateCase(root: string, corpus: FixtureCorpus, item: FixtureCase): Promise<void>;
+export function authoredCandidate(
+  item: FixtureCase & { id: string },
+  plan: ExecutablePlan,
+): ExecutablePlan;

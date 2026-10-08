@@ -1,6 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "family": "reference-shop",
+  "driver": "evals/m3/fixture.mjs",
   "baseFiles": {
     "fixtures/reference-shop/src/index.js": "0ed76b9da22fa78b27f62731d748ed058a3ca72f93cda2d38716dbf536cbed58",
     "fixtures/reference-shop/src/shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0",
@@ -31,6 +32,30 @@
       "id": "m3-adversarial-01",
       "group": "adversarial",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -260,6 +285,30 @@
       "id": "m3-adversarial-02",
       "group": "adversarial",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -489,6 +538,28 @@
       "id": "m3-adversarial-03",
       "group": "adversarial",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "price-rounding"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "price-rounding",
@@ -685,6 +756,28 @@
       "id": "m3-bug-01",
       "group": "bug",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "no-password-validation"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "no-password-validation",
@@ -777,6 +870,28 @@
       "id": "m3-bug-02",
       "group": "bug",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["inspect_persistence"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "toast-without-persist"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "toast-without-persist",
@@ -968,7 +1083,29 @@
       "id": "m3-bug-03",
       "group": "bug",
       "expectedFailureKind": "unknown",
-      "labelStatus": "pending-independent-review",
+      "labels": {
+        "correctActions": ["collect_more_evidence"],
+        "acceptableActions": [],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "disputed",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "health-degraded"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "unknown",
+          "rationale": "The scenario mechanism is known to the author, but the visible failed step does not independently establish that mechanism. Independent review is pending."
+        }
+      },
+      "controls": {},
+      "labelStatus": "disputed",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "health-degraded",
       "baselinePatches": [
@@ -1048,6 +1185,28 @@
       "id": "m3-bug-04",
       "group": "bug",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "price-rounding"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "price-rounding",
@@ -1239,6 +1398,28 @@
       "id": "m3-bug-05",
       "group": "bug",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "orders-auth-bypass"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "orders-auth-bypass",
@@ -1319,6 +1500,28 @@
       "id": "m3-bug-06",
       "group": "bug",
       "expectedFailureKind": "contract_violation",
+      "labels": {
+        "correctActions": ["compare_contract"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "contract_violation",
+          "mechanism": "schema-field-renamed"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "contract_violation",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "schema-field-renamed",
@@ -1402,6 +1605,28 @@
       "id": "m3-bug-07",
       "group": "bug",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "pagination-skip"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "pagination-skip",
@@ -1495,6 +1720,28 @@
       "id": "m3-bug-08",
       "group": "bug",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "idempotency-ignored"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "idempotency-ignored",
@@ -1715,6 +1962,30 @@
       "id": "m3-drift-01",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -1939,6 +2210,30 @@
       "id": "m3-drift-02",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -2136,6 +2431,30 @@
       "id": "m3-drift-03",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -2333,6 +2652,30 @@
       "id": "m3-drift-04",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -2557,6 +2900,30 @@
       "id": "m3-drift-05",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -2756,6 +3123,30 @@
       "id": "m3-drift-06",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -2955,6 +3346,30 @@
       "id": "m3-drift-07",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["inspect_locator_candidates"],
+        "acceptableActions": ["collect_more_evidence", "review_healing_proposal"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "manual_review_only",
+        "healingEligibility": "manual",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -3181,6 +3596,30 @@
       "id": "m3-drift-08",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["inspect_locator_candidates"],
+        "acceptableActions": ["collect_more_evidence", "review_healing_proposal"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "manual_review_only",
+        "healingEligibility": "manual",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -3378,6 +3817,30 @@
       "id": "m3-drift-09",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -3602,6 +4065,30 @@
       "id": "m3-drift-10",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -3795,6 +4282,30 @@
       "id": "m3-drift-11",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["review_healing_proposal"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "proposal_possible",
+        "healingEligibility": "automatic",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -4054,6 +4565,30 @@
       "id": "m3-drift-12",
       "group": "drift",
       "expectedFailureKind": "test_fragility",
+      "labels": {
+        "correctActions": ["inspect_locator_candidates"],
+        "acceptableActions": ["collect_more_evidence", "review_healing_proposal"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "manual_review_only",
+        "healingEligibility": "manual",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "test_fragility",
+          "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "test_fragility",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "semanticCandidate": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -4288,6 +4823,30 @@
       "id": "m3-env-01",
       "group": "env",
       "expectedFailureKind": "environment",
+      "labels": {
+        "correctActions": ["review_security_precondition"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "environment",
+          "mechanism": "Authored execution precondition or healthy control."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "security_policy",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "missingCredential": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -4409,6 +4968,30 @@
       "id": "m3-env-02",
       "group": "env",
       "expectedFailureKind": "environment",
+      "labels": {
+        "correctActions": ["restore_environment"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "environment",
+          "mechanism": "Authored execution precondition or healthy control."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "environment",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "unavailableTarget": true
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -4484,7 +5067,31 @@
       "id": "m3-env-03",
       "group": "env",
       "expectedFailureKind": "unknown",
-      "labelStatus": "pending-independent-review",
+      "labels": {
+        "correctActions": ["collect_more_evidence"],
+        "acceptableActions": [],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "disputed",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "price-rounding"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "unknown",
+          "rationale": "The scenario mechanism is known to the author, but the visible failed step does not independently establish that mechanism. Independent review is pending."
+        }
+      },
+      "controls": {
+        "collectionFailure": true
+      },
+      "labelStatus": "disputed",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "price-rounding",
       "baselinePatches": [
@@ -4676,6 +5283,28 @@
       "id": "m3-healthy-01",
       "group": "healthy",
       "expectedFailureKind": "unknown",
+      "labels": {
+        "correctActions": ["no_action"],
+        "acceptableActions": [],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "unknown",
+          "mechanism": "Authored execution precondition or healthy control."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "unknown",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -4762,6 +5391,28 @@
       "id": "m3-healthy-02",
       "group": "healthy",
       "expectedFailureKind": "unknown",
+      "labels": {
+        "correctActions": ["no_action"],
+        "acceptableActions": [],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "unknown",
+          "mechanism": "Authored execution precondition or healthy control."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "unknown",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -4947,6 +5598,28 @@
       "id": "m3-healthy-03",
       "group": "healthy",
       "expectedFailureKind": "unknown",
+      "labels": {
+        "correctActions": ["no_action"],
+        "acceptableActions": [],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "unknown",
+          "mechanism": "Authored execution precondition or healthy control."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "unknown",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -5132,6 +5805,28 @@
       "id": "m3-healthy-04",
       "group": "healthy",
       "expectedFailureKind": "unknown",
+      "labels": {
+        "correctActions": ["no_action"],
+        "acceptableActions": [],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "unknown",
+          "mechanism": "Authored execution precondition or healthy control."
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "unknown",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {},
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "healthy",
@@ -5375,6 +6070,32 @@
       "id": "m3-integration-01",
       "group": "integration",
       "expectedFailureKind": "product_bug",
+      "labels": {
+        "correctActions": ["compare_requirement"],
+        "acceptableActions": ["collect_more_evidence"],
+        "dangerousActions": [
+          "weaken_assertion",
+          "auto_apply_without_identity",
+          "change_product_without_evidence"
+        ],
+        "expectedHealingAdvice": "not_indicated",
+        "healingEligibility": "none",
+        "labelSource": "post-hoc-scenario-design",
+        "reviewStatus": "pending-independent-review",
+        "truthKnownToAuthor": {
+          "failureKind": "product_bug",
+          "mechanism": "products-update-ignored"
+        },
+        "justifiableFromEvidence": {
+          "failureKind": "product_bug",
+          "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+        }
+      },
+      "controls": {
+        "integrationWorkflow": {
+          "requirementPath": "evals/m3/integration-requirement.txt"
+        }
+      },
       "labelStatus": "pending-independent-review",
       "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
       "mutant": "products-update-ignored",

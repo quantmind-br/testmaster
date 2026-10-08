@@ -5,14 +5,17 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { Application, resolveConfig, scaffoldPlan } from "@testmaster/application";
+import type { Analysis, HealingProposal } from "@testmaster/contracts";
 import { ContractError } from "@testmaster/contracts";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import type { FixtureDriver } from "../../../evals/m3/fixture.mjs";
 import type { M3Registration } from "./m3.js";
 import {
   applyExactPatches,
   assertImplementationBinding,
   assertNotStarted,
   assertRegistrationIdentity,
+  assessAssistedCandidate,
   assessPolicyProbe,
   authenticateIntegrationTarget,
   checkM3,
@@ -20,10 +23,13 @@ import {
   compareProtectedAssertions,
   controlledHealingOutput,
   devM3,
+  diagnosticUtility,
   freezeM3,
   healingRefusal,
   implementationManifest,
+  loadCorpusDriver,
   settleM3,
+  unsupportedClaimsForRun,
   writeEvalProfile,
 } from "./m3.js";
 import { emptyLedger, plannedCases } from "./m3-scoring.js";
@@ -31,6 +37,7 @@ import { emptyLedger, plannedCases } from "./m3-scoring.js";
 const temporary: string[] = [];
 afterEach(async () => {
   for (const path of temporary.splice(0)) await rm(path, { recursive: true, force: true });
+  vi.restoreAllMocks();
 });
 /**
  * The registration is historical once frozen: its inputs are the bytes committed with it, not the
@@ -550,4 +557,203 @@ it("settles interrupted reserved calls without dispatch or releasing unknown cha
     errors: [{ code: "unknown_paid_completion" }],
   });
   await expect(settleM3(root, directory)).rejects.toThrow("Only interrupted");
+});
+
+it("loads an external driver and derives cohort counts without reference-shop case identities", async () => {
+  const { root, path, r } = await fixtureCopy();
+  const driver = "external-driver.mjs";
+  await writeFile(
+    join(root, driver),
+    'export function startCase(){throw new Error("Unexpected execution");} export const materialize=startCase, independentOracle=startCase, executedProductOracle=startCase;',
+  );
+  const old = JSON.parse(await readFile(join(root, r.corpus), "utf8"));
+  const cases = [
+    old.cases.find((row: { group: string }) => row.group === "healthy"),
+    old.cases.find((row: { group: string }) => row.group === "bug"),
+  ].map((row, index) => ({
+    id: `external-${index}`,
+    group: row.group,
+    expectedFailureKind: row.expectedFailureKind,
+    plan: row.plan,
+    oracle: "external",
+    labels: { healingEligibility: "none" },
+  }));
+  const bytes = JSON.stringify({
+    driver,
+    baseFiles: {},
+    semanticPatches: {},
+    uploadFixture: { content: "", sha256: createHash("sha256").update("").digest("hex") },
+    cases,
+  });
+  await writeFile(join(root, r.corpus), bytes);
+  r.frozenFiles[r.corpus] = createHash("sha256").update(bytes).digest("hex");
+  r.budget.maxLogicalCommands = cases.length * 2;
+  r.budget.maxTransportAttempts = r.budget.maxLogicalCommands * 6;
+  await writeFile(join(root, path), JSON.stringify(r));
+  expect(await checkM3(root, path)).toMatchObject({
+    plannedMainCases: 2,
+    supplementalTrials: 0,
+    denominators: { safeHealing: 0, causeAccuracy: 1, trueBugOffers: 1, healthy: 1 },
+    modelCalls: 0,
+    dockerCalls: 0,
+  });
+  await writeFile(join(root, "missing-driver.mjs"), "export const materialize = 1;");
+  await expect(loadCorpusDriver(root, { driver: "missing-driver.mjs" })).rejects.toThrow(
+    "missing startCase",
+  );
+  await expect(loadCorpusDriver(root, { driver: "../outside.mjs" })).rejects.toThrow("Unsafe path");
+});
+
+it("maps code-owned layered diagnoses and preserves unsupported-claim uncertainty", () => {
+  const analysis = {
+    source: "rules",
+    modelCallId: null,
+    failureKind: "product_bug",
+    limitations: [],
+    diagnosis: {
+      conclusion: { status: "cause_partially_supported" },
+      healing: { advice: "not_indicated" },
+      nextSteps: [
+        {
+          source: "rules",
+          text: "Inspect the creation response at step create and the read at step read.",
+        },
+      ],
+    },
+  } as unknown as Analysis;
+  expect(diagnosticUtility(analysis)).toMatchObject({
+    recommendedAction: "inspect_persistence",
+    conclusion: { status: "cause_partially_supported", failureKind: "product_bug" },
+    healing: { advice: "not_indicated" },
+    nextSteps: { count: 1, sources: ["rules"] },
+    unsupportedClaims: 0,
+  });
+  const model = { ...analysis, source: "model" as const, modelCallId: "call" };
+  expect(diagnosticUtility(model).unsupportedClaims).toBeUndefined();
+  expect(
+    diagnosticUtility({
+      ...model,
+      limitations: ["2 model hypotheses without execution observation support were not recorded."],
+    }).unsupportedClaims,
+  ).toBe(2);
+  expect(
+    diagnosticUtility({
+      ...analysis,
+      diagnosis: { ...analysis.diagnosis!, conclusion: { status: "no_failure", text: "Passed" } },
+    }).recommendedAction,
+  ).toBe("no_action");
+  expect(() => diagnosticUtility({ ...analysis, diagnosis: undefined })).toThrow(
+    "Layered diagnosis unavailable",
+  );
+  const database = { all: () => [{ data_json: JSON.stringify({ progress: {} }) }] };
+  const app = { database, context: { workspaceId: "workspace" } } as unknown as Application;
+  expect(unsupportedClaimsForRun(app, "run")).toBeUndefined();
+  database.all = () => [{ data_json: JSON.stringify({ progress: { unsupportedClaims: 3 } }) }];
+  expect(unsupportedClaimsForRun(app, "run")).toBe(3);
+});
+
+it("replays manual candidates on a disposable copy without approving or promoting them", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "tm-m3-manual-test-"));
+  temporary.push(workspace);
+  await mkdir(join(workspace, "repo"));
+  await mkdir(join(workspace, "home"));
+  await writeFile(join(workspace, "repo", "sentinel"), "original");
+  const plan = scaffoldPlan("backend");
+  const assertionId = plan.steps.find((step) => step.kind === "assertion")!.id;
+  const proposal = { id: "proposal", candidateRevisionId: "candidate" } as HealingProposal;
+  let count = 0;
+  const admits: Record<string, unknown>[] = [];
+  const copied = {
+    tests: { get: () => ({ activeRevisionId: "base" }) },
+    healing: { get: () => proposal },
+    revisions: { get: () => ({ plan }) },
+    runs: {
+      admit: async (input: Record<string, unknown>) => {
+        admits.push(input);
+        return { runId: `run-${++count}` };
+      },
+      get: (id: string) => ({
+        id,
+        revisionId: "candidate",
+        outcome: id === "run-1" ? "passed" : "failed",
+        gate: id === "run-1" ? "passed" : "failed",
+        environmentRevisionId: "environment",
+        matrixCell: { seed: 17, healingPolicy: "off", admissionSnapshot: {} },
+      }),
+      steps: (id: string) => [
+        { planStepId: assertionId, status: id === "run-1" ? "passed" : "failed" },
+      ],
+      events: () => [],
+    },
+    worker: { run: async () => undefined },
+    database: { get: () => ({ n: 0 }) },
+    context: { workspaceId: "workspace" },
+    close: vi.fn(),
+  } as unknown as Application;
+  const opened = vi.spyOn(Application, "open").mockResolvedValue(copied);
+  const checkpoint = vi.fn();
+  const source = { database: { all: checkpoint } } as unknown as Application;
+  const targets: string[] = [];
+  const driver = {
+    startCase: async (_root: string, _corpus: unknown, _case: unknown, side: string) => {
+      targets.push(side);
+      return {
+        url: "http://127.0.0.1:1",
+        dbPath: "",
+        materialized: { directory: "", digests: {}, transformationHash: "" },
+        close: async () => undefined,
+      };
+    },
+    independentOracle: async () => ({
+      healthy: targets.at(-1) === "transformed",
+      defective: targets.at(-1) === "semantic",
+      observed: null,
+    }),
+  } as unknown as FixtureDriver;
+  const corpus = {
+    baseFiles: {},
+    semanticPatches: {},
+    cases: [],
+    uploadFixture: { content: "", sha256: "" },
+  };
+  const item = {
+    id: "external-drift",
+    group: "drift" as const,
+    expectedFailureKind: "test_fragility" as const,
+    plan,
+    oracle: "external",
+    semanticNegative: "negative",
+  };
+  const result = await assessAssistedCandidate(
+    source,
+    workspace,
+    workspace,
+    corpus,
+    item,
+    driver,
+    proposal,
+    "test",
+    "environment",
+    plan,
+    1,
+    "",
+  );
+  expect(result.proof).toMatchObject({
+    positiveDrift: true,
+    negativeSemantic: true,
+    isolated: true,
+    assertionsPreserved: true,
+    promoted: false,
+    candidateRevisionId: "candidate",
+    positiveRunId: "run-1",
+    negativeRunId: "run-2",
+  });
+  expect(admits).toEqual([
+    expect.objectContaining({ revisionId: "candidate", healingPolicy: "off" }),
+    expect.objectContaining({ revisionId: "candidate", healingPolicy: "off" }),
+  ]);
+  const copy = opened.mock.calls[0]![0]!.cwd!;
+  expect(copy).not.toBe(join(workspace, "repo"));
+  await expect(readFile(join(copy, "sentinel"))).rejects.toMatchObject({ code: "ENOENT" });
+  expect(await readFile(join(workspace, "repo", "sentinel"), "utf8")).toBe("original");
 });

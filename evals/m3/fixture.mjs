@@ -163,3 +163,87 @@ export async function executedProductOracle(shop, token) {
     db.close();
   }
 }
+
+// Historical frozen corpora lack flags; compatibility is confined to this driver.
+export function caseControls(item) {
+  return (
+    item.controls ?? {
+      missingCredential: item.id === "m3-env-01",
+      unavailableTarget: item.id === "m3-env-02",
+      collectionFailure: item.id === "m3-env-03",
+      semanticCandidate:
+        item.group === "drift" || ["m3-adversarial-01", "m3-adversarial-02"].includes(item.id),
+      ...(item.group === "integration"
+        ? { integrationWorkflow: { requirementPath: "evals/m3/integration-requirement.txt" } }
+        : {}),
+    }
+  );
+}
+
+export async function validateCase(root, corpus, item) {
+  const digest = (value) => createHash("sha256").update(value).digest("hex");
+  for (const file of ["index.js", "shop.html"]) {
+    const bytes = await readFile(join(root, "fixtures/reference-shop/src", file), "utf8");
+    const baseline = applyPatches(bytes, item.baselinePatches, file);
+    const output = applyPatches(baseline, item.patches, file);
+    const semantic = applyPatches(
+      output,
+      corpus.semanticPatches[item.semanticNegative] ?? [],
+      file,
+    );
+    if (
+      digest(baseline) !== item.baselineDigests[file] ||
+      digest(output) !== item.resultDigests[file] ||
+      digest(semantic) !== item.semanticDigests[file]
+    )
+      throw new Error(`Result digest mismatch: ${item.id}/${file}`);
+  }
+  if (
+    digest(
+      JSON.stringify({
+        baseline: item.baselinePatches,
+        transformed: item.patches,
+        semantic: corpus.semanticPatches[item.semanticNegative] ?? [],
+        mutant: item.mutant,
+        semanticNegative: item.semanticNegative,
+      }),
+    ) !== item.transformationSourceDigest
+  )
+    throw new Error(`Transformation source digest mismatch: ${item.id}`);
+}
+
+export function authoredCandidate(item, plan) {
+  const candidate = structuredClone(plan);
+  const hookChanges = {
+    "m3-drift-01": { "checkout-button": "place-order" },
+    "m3-drift-02": { email: "login-email" },
+    "m3-drift-03": { password: "login-password" },
+    "m3-drift-04": { "add-p1": "basket-p1" },
+    "m3-drift-05": { "profile-upload": "profile-file-input" },
+    "m3-adversarial-01": { "checkout-button": "place-order" },
+    "m3-adversarial-02": { "checkout-button": "place-order" },
+  };
+  const roleChanges = {
+    "m3-drift-07": { Checkout: "Place order" },
+    "m3-drift-08": { "Sign in": "Authenticate" },
+  };
+  for (const step of candidate.steps) {
+    if (["fill", "click", "upload"].includes(step.operation)) {
+      const locator = step.input.locator;
+      if (locator.by === "testId" && hookChanges[item.id]?.[locator.value])
+        locator.value = hookChanges[item.id][locator.value];
+      if (
+        step.operation === "click" &&
+        locator.by === "role" &&
+        roleChanges[item.id]?.[locator.name]
+      )
+        locator.name = roleChanges[item.id][locator.name];
+      if (locator.by === "css") locator.value = locator.value.replaceAll(" > ", " ");
+    }
+    if (step.operation === "download" && item.id === "m3-drift-06")
+      step.input.trigger.input.locator = { by: "testId", value: "profile-file-download" };
+    if (step.operation === "waitFor" && "state" in step.input && step.id === "loading_finished")
+      step.input.state = "hidden";
+  }
+  return candidate;
+}

@@ -4,16 +4,20 @@ import { mkdir, mkdtemp, readdir, readFile, rename, writeFile } from "node:fs/pr
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Application, entity } from "@testmaster/application";
-import type { ExecutablePlan, HealingProposal, Requirement } from "@testmaster/contracts";
+import type { Analysis, ExecutablePlan, HealingProposal, Requirement } from "@testmaster/contracts";
 import { defaults, reasoningEfforts, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { assertionsHash } from "@testmaster/planner";
-import * as fixture from "../../../evals/m3/fixture.mjs";
+import type { FixtureControls, FixtureDriver } from "../../../evals/m3/fixture.mjs";
+import * as referenceShopDriver from "../../../evals/m3/fixture.mjs";
 import { assertFrozenFiles, assertRegistrationUnchanged, committedRegistration } from "./freeze.js";
-import type { M3Ledger, PlannedCase } from "./m3-scoring.js";
+import { checkHoldout, loadHoldout, sealHoldout } from "./holdout.js";
+import type { M3Ledger, PlannedCase, UtilityObservation } from "./m3-scoring.js";
 import { emptyLedger, plannedCases, scoreM3 } from "./m3-scoring.js";
+import { replayM3, withRetainedCopy } from "./replay.js";
+import { checkUserTasks } from "./user-tasks.js";
 
 interface Patch {
   file: string;
@@ -21,21 +25,24 @@ interface Patch {
   after: string;
 }
 interface Case extends PlannedCase {
-  mutant: string;
-  patches: Patch[];
-  baselinePatches: Patch[];
-  baselineDigests: Record<string, string>;
-  semanticDigests: Record<string, string>;
-  transformationSourceDigest: string;
-  resultDigests: Record<string, string>;
-  semanticNegative: string;
+  mutant?: string;
+  patches?: Patch[];
+  baselinePatches?: Patch[];
+  baselineDigests?: Record<string, string>;
+  semanticDigests?: Record<string, string>;
+  transformationSourceDigest?: string;
+  resultDigests?: Record<string, string>;
+  semanticNegative?: string;
   oracle: string;
   plan: ExecutablePlan;
   healthyPlan?: ExecutablePlan;
-  authoredPlanLabel: string;
-  expectedFailingStepIds: string[];
+  authoredPlanLabel?: string;
+  expectedFailingStepIds?: string[];
+  controls?: FixtureControls;
+  variant?: unknown;
 }
 interface Corpus {
+  driver?: string;
   baseFiles: Record<string, string>;
   semanticPatches: Record<string, Patch[]>;
   cases: Case[];
@@ -80,6 +87,43 @@ export interface M3Registration {
     implementationFrozen: boolean;
   };
 }
+export async function loadCorpusDriver(
+  root: string,
+  corpus: { driver?: string },
+): Promise<FixtureDriver> {
+  if (corpus.driver === undefined) return referenceShopDriver;
+  // Drivers are runtime-selected by the sealed corpus, not known at author time.
+  const path = corpus.driver ?? "evals/m3/fixture.mjs";
+  const driver = (await import(pathToFileURL(confined(root, path)).href)) as FixtureDriver;
+  for (const name of [
+    "startCase",
+    "materialize",
+    "independentOracle",
+    "executedProductOracle",
+  ] as const)
+    if (typeof driver[name] !== "function") throw new Error(`Corpus driver is missing ${name}`);
+  return driver;
+}
+function caseControls(driver: FixtureDriver, item: Case): FixtureControls {
+  return item.controls ?? driver.caseControls?.(item) ?? {};
+}
+export async function loadM3Corpus(root: string, path: string): Promise<Corpus> {
+  const input = JSON.parse(await readFile(confined(root, path), "utf8"));
+  if (Array.isArray(input.families)) {
+    const holdout = await loadHoldout(root, path);
+    return {
+      driver: holdout.manifest.driver,
+      baseFiles: {},
+      semanticPatches: {},
+      uploadFixture: { content: "", sha256: hash("") },
+      cases: holdout.cases.map(({ semanticNegative, ...item }) => ({
+        ...item,
+        ...(semanticNegative === undefined ? {} : { semanticNegative }),
+      })),
+    };
+  }
+  return input as Corpus;
+}
 interface Round {
   registrationId: string;
   registrationHash: string;
@@ -94,6 +138,7 @@ interface Round {
   stopReason: string | null;
   pending: { caseId: string; reservation: number } | null;
   development?: true;
+  planned?: PlannedCase[];
 }
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 /**
@@ -264,44 +309,50 @@ function validateMeasurementInputs(registration: M3Registration, corpus: Corpus)
   if (
     !corpus ||
     !Array.isArray(corpus.cases) ||
-    corpus.cases.length !== 31 ||
-    new Set(corpus.cases.map((row) => row.id)).size !== 31 ||
+    corpus.cases.length === 0 ||
+    new Set(corpus.cases.map((row) => row.id)).size !== corpus.cases.length ||
     !corpus.baseFiles ||
     !corpus.semanticPatches ||
     typeof corpus.uploadFixture?.content !== "string" ||
+    (corpus.driver !== undefined && (typeof corpus.driver !== "string" || !corpus.driver)) ||
     hash(corpus.uploadFixture.content) !== corpus.uploadFixture.sha256
   )
     throw new Error("Invalid M3 corpus");
-  const labels: PlannedCase[] = [
-    ...plannedCases(),
-    { id: "m3-integration-01", group: "integration", expectedFailureKind: "product_bug" },
-  ];
-  for (const label of labels) {
-    const item = corpus.cases.find((row) => row.id === label.id);
+  for (const item of corpus.cases) {
     if (
       !item ||
-      item.group !== label.group ||
-      item.expectedFailureKind !== label.expectedFailureKind ||
-      typeof item.mutant !== "string" ||
-      typeof item.semanticNegative !== "string" ||
+      typeof item.id !== "string" ||
+      !/^[a-z0-9][a-z0-9-]*$/.test(item.id) ||
+      !["healthy", "bug", "drift", "env", "adversarial", "integration"].includes(item.group) ||
+      ![
+        "product_bug",
+        "contract_violation",
+        "test_fragility",
+        "environment",
+        "security_policy",
+        "unknown",
+      ].includes(item.expectedFailureKind) ||
+      ((item.labels?.healingEligibility ?? "automatic") !== "none" &&
+        typeof item.semanticNegative !== "string") ||
       typeof item.oracle !== "string" ||
-      !Array.isArray(item.expectedFailingStepIds) ||
+      (item.expectedFailingStepIds !== undefined && !Array.isArray(item.expectedFailingStepIds)) ||
       item.plan?.kind !== "executable" ||
       !Array.isArray(item.plan.steps) ||
       (item.healthyPlan !== undefined &&
         (item.healthyPlan.kind !== "executable" || !Array.isArray(item.healthyPlan.steps))) ||
       ![item.patches, item.baselinePatches].every(
         (patches) =>
-          Array.isArray(patches) &&
-          patches.every(
-            (patch) =>
-              typeof patch.file === "string" &&
-              typeof patch.before === "string" &&
-              typeof patch.after === "string",
-          ),
+          patches === undefined ||
+          (Array.isArray(patches) &&
+            patches.every(
+              (patch) =>
+                typeof patch.file === "string" &&
+                typeof patch.before === "string" &&
+                typeof patch.after === "string",
+            )),
       )
     )
-      throw new Error(`Invalid corpus case: ${label.id}`);
+      throw new Error(`Invalid corpus case: ${item.id}`);
   }
 }
 // Models the operator has approved for registered rounds.
@@ -310,7 +361,7 @@ export async function checkM3(root: string, registrationPath: string) {
   const registration = JSON.parse(
     await readFile(confined(root, registrationPath), "utf8"),
   ) as M3Registration;
-  const corpus = JSON.parse(await readFile(confined(root, registration.corpus), "utf8")) as Corpus;
+  const corpus = await loadM3Corpus(root, registration.corpus);
   validateMeasurementInputs(registration, corpus);
   assertRegistrationIdentity(registration.id, registrationPath);
   if (registration.status !== "preregistered-not-executed")
@@ -331,71 +382,45 @@ export async function checkM3(root: string, registrationPath: string) {
     b.maxTokens !== 10000000 ||
     b.maxWallTimeMs !== 7200000 ||
     b.commandDeadlineMs !== 180000 ||
-    b.maxLogicalCommands !== 61 ||
-    b.maxTransportAttempts !== 366 ||
+    b.maxLogicalCommands !==
+      corpus.cases.filter((row) => row.group !== "integration").length * 2 +
+        corpus.cases.filter((row) => row.group === "integration").length ||
+    b.maxTransportAttempts !== b.maxLogicalCommands * 6 ||
     b.outputReservation !== 8192 ||
     b.maxInputTokens !== 100000
   )
     throw new Error("Unapproved round budget");
-  const expected = plannedCases();
-  if (corpus.cases.length !== 31 || new Set(corpus.cases.map((row) => row.id)).size !== 31)
-    throw new Error("Expected 30 main cases and one supplemental trial");
-  for (const label of expected) {
-    const row = corpus.cases.find((item) => item.id === label.id);
-    if (!row || row.group !== label.group || row.expectedFailureKind !== label.expectedFailureKind)
-      throw new Error(`Frozen label mismatch: ${label.id}`);
-  }
-  if (
-    corpus.cases
-      .filter((row) => row.group === "integration")
-      .map((row) => row.id)
-      .join() !== "m3-integration-01"
-  )
-    throw new Error("Unexpected supplemental trial");
+  const driver = await loadCorpusDriver(root, corpus);
   await assertFrozenFiles(root, corpus.baseFiles);
   await assertFrozenFiles(root, registration.frozenFiles);
   for (const item of corpus.cases) {
-    if (item.authoredPlanLabel !== "approved-preregistered-fixture-not-model-generated")
-      throw new Error("Authored fixture provenance missing");
-    for (const file of ["index.js", "shop.html"]) {
-      const bytes = await readFile(join(root, "fixtures/reference-shop/src", file), "utf8");
-      const baseline = applyExactPatches(bytes, item.baselinePatches, file);
-      const output = applyExactPatches(baseline, item.patches, file);
-      const semantic = applyExactPatches(
-        output,
-        corpus.semanticPatches[item.semanticNegative] ?? [],
-        file,
-      );
-      if (
-        hash(baseline) !== item.baselineDigests[file] ||
-        hash(output) !== item.resultDigests[file] ||
-        hash(semantic) !== item.semanticDigests[file]
-      )
-        throw new Error(`Result digest mismatch: ${item.id}/${file}`);
-    }
     if (
-      hash(
-        JSON.stringify({
-          baseline: item.baselinePatches,
-          transformed: item.patches,
-          semantic: corpus.semanticPatches[item.semanticNegative] ?? [],
-          mutant: item.mutant,
-          semanticNegative: item.semanticNegative,
-        }),
-      ) !== item.transformationSourceDigest
+      (corpus.driver === undefined || corpus.driver === "evals/m3/fixture.mjs") &&
+      item.authoredPlanLabel !== "approved-preregistered-fixture-not-model-generated"
     )
-      throw new Error(`Transformation source digest mismatch: ${item.id}`);
+      throw new Error("Authored fixture provenance missing");
+    await driver.validateCase?.(root, corpus, item);
     if (item.group === "drift" && (!item.semanticNegative || item.semanticNegative === "healthy"))
       throw new Error("Missing semantic negative");
   }
   if (hash(corpus.uploadFixture.content) !== corpus.uploadFixture.sha256)
     throw new Error("Upload fixture hash mismatch");
   return {
-    plannedMainCases: 30,
-    supplementalTrials: 1,
+    plannedMainCases: corpus.cases.filter((row) => row.group !== "integration").length,
+    supplementalTrials: corpus.cases.filter((row) => row.group === "integration").length,
     modelCalls: 0,
     dockerCalls: 0,
-    denominators: { safeHealing: 12, causeAccuracy: 26, trueBugOffers: 9, healthy: 4 },
+    denominators: {
+      safeHealing: corpus.cases.filter((row) => row.group === "drift").length,
+      causeAccuracy: corpus.cases.filter((row) => !["healthy", "integration"].includes(row.group))
+        .length,
+      trueBugOffers: corpus.cases.filter(
+        (row) =>
+          row.group === "bug" ||
+          (row.expectedFailureKind === "product_bug" && row.group !== "integration"),
+      ).length,
+      healthy: corpus.cases.filter((row) => row.group === "healthy").length,
+    },
     readyForLive:
       registration.readiness.implementationFrozen &&
       registration.readiness.controlsPath !== null &&
@@ -503,14 +528,12 @@ function assessControl(item: Case, e: ControlEvidence) {
   if (
     !e.transformed ||
     !e.transformed.imageIds.length ||
-    (item.expectedFailingStepIds.length &&
-      !failures(e.transformed).some((step) => item.expectedFailingStepIds.includes(step.id)))
+    (item.expectedFailingStepIds?.length &&
+      !failures(e.transformed).some((step) => item.expectedFailingStepIds!.includes(step.id)))
   )
     return false;
   if (
-    (item.group === "drift" ||
-      item.id === "m3-adversarial-01" ||
-      item.id === "m3-adversarial-02") &&
+    item.controls?.semanticCandidate &&
     (e.candidateDrift?.outcome !== "passed" || e.candidateDrift.gate !== "passed")
   )
     return false;
@@ -520,27 +543,31 @@ function assessControl(item: Case, e: ControlEvidence) {
       e.transformed.gate === "passed" &&
       e.transformedOracle?.healthy === true
     );
-  if (item.id === "m3-env-01")
+  if (item.controls?.missingCredential)
     return (
       ["blocked", "inconclusive"].includes(e.transformed.outcome ?? "") &&
       e.transformed.reasonCodes
         .concat(e.transformed.steps.flatMap((step) => (step.reasonCode ? [step.reasonCode] : [])))
         .some((code) => /credential|secret|security_precondition/.test(code))
     );
-  if (item.id === "m3-env-02")
+  if (item.controls?.unavailableTarget)
     return (
       e.transformed.outcome !== "passed" &&
       e.transformed.steps.some((step) =>
         ["ECONNREFUSED", "ENOTFOUND", "EHOSTUNREACH", "ENETUNREACH"].includes(step.errorCode ?? ""),
       )
     );
-  if (item.id === "m3-env-03")
+  if (item.controls?.collectionFailure)
     return (
-      failures(e.transformed).some((step) => step.id === "business_assertion") &&
+      failures(e.transformed).some((step) =>
+        e.boundPlan!.steps.some(
+          (original) => original.id === step.id && original.kind === "assertion",
+        ),
+      ) &&
       e.transformed.reasonCodes.includes("artifact_limit_exceeded") &&
       e.transformed.snapshotCount === 0
     );
-  if (item.group === "drift" || item.id === "m3-adversarial-01" || item.id === "m3-adversarial-02")
+  if (item.controls?.semanticCandidate)
     return (
       failures(e.transformed).some((step) =>
         e.boundPlan!.steps.some(
@@ -550,7 +577,9 @@ function assessControl(item: Case, e: ControlEvidence) {
       e.transformedOracle?.healthy === true &&
       e.semantic?.outcome === "failed" &&
       failures(e.semantic).some((step) =>
-        ["business_assertion", "invalid_login_assertion"].includes(step.id),
+        e.semanticPlan!.steps.some(
+          (original) => original.id === step.id && original.kind === "assertion",
+        ),
       ) &&
       e.semanticOracle?.defective === true &&
       e.semanticPlan !== null &&
@@ -565,41 +594,6 @@ function assessControl(item: Case, e: ControlEvidence) {
     ) &&
     e.transformedOracle?.defective === true
   );
-}
-export function authoredCandidate(item: Pick<Case, "id">, plan: ExecutablePlan) {
-  const candidate = structuredClone(plan);
-  const hookChanges: Record<string, Record<string, string>> = {
-    "m3-drift-01": { "checkout-button": "place-order" },
-    "m3-drift-02": { email: "login-email" },
-    "m3-drift-03": { password: "login-password" },
-    "m3-drift-04": { "add-p1": "basket-p1" },
-    "m3-drift-05": { "profile-upload": "profile-file-input" },
-    "m3-adversarial-01": { "checkout-button": "place-order" },
-    "m3-adversarial-02": { "checkout-button": "place-order" },
-  };
-  for (const step of candidate.steps) {
-    if (step.operation === "fill" || step.operation === "click" || step.operation === "upload") {
-      const locator = step.input.locator;
-      if (locator.by === "testId" && hookChanges[item.id]?.[locator.value])
-        locator.value = hookChanges[item.id]![locator.value]!;
-      // Mirror the product patch: only buttons whose accessible name was renamed change.
-      const roleChanges: Record<string, Record<string, string>> = {
-        "m3-drift-07": { Checkout: "Place order" },
-        "m3-drift-08": { "Sign in": "Authenticate" },
-      };
-      if (step.operation === "click" && locator.by === "role") {
-        const role = locator as typeof locator & { name?: string };
-        const renamed = role.name && roleChanges[item.id]?.[role.name];
-        if (renamed) role.name = renamed;
-      }
-      if (locator.by === "css") locator.value = locator.value.replaceAll(" > ", " ");
-    }
-    if (step.operation === "download" && item.id === "m3-drift-06")
-      step.input.trigger.input.locator = { by: "testId", value: "profile-file-download" };
-    if (step.operation === "waitFor" && "state" in step.input && step.id === "loading_finished")
-      step.input.state = "hidden";
-  }
-  return candidate;
 }
 const freezeTrees = [
   "packages/contracts/src",
@@ -621,6 +615,9 @@ const freezeInputs = [
   "packages/planner/src/agent/index.ts",
   "packages/planner/src/agent/locator-evidence.ts",
   "tools/src/evals/m3.ts",
+  "tools/src/evals/replay.ts",
+  "tools/src/evals/holdout.ts",
+  "tools/src/evals/user-tasks.ts",
   "tools/src/evals/m3-scoring.ts",
   "tools/src/evals/freeze.ts",
   "pnpm-lock.yaml",
@@ -636,6 +633,9 @@ const freezeInputs = [
 ];
 export async function implementationManifest(root: string, r: M3Registration) {
   const paths = new Set([...r.requiredFreezeFiles, ...freezeInputs, r.corpus]);
+  const corpusInput = JSON.parse(await readFile(confined(root, r.corpus), "utf8"));
+  if (corpusInput.driver) paths.add(corpusInput.driver);
+  for (const input of corpusInput.inputs ?? []) paths.add(input);
   const visit = async (path: string): Promise<void> => {
     for (const entry of await readdir(confined(root, path), { withFileTypes: true })) {
       const child = `${path}/${entry.name}`;
@@ -671,7 +671,8 @@ export function assertImplementationBinding(
 export async function controlsM3(root: string, path: string, outDir: string) {
   await checkM3(root, path);
   const r = JSON.parse(await readFile(confined(root, path), "utf8")) as M3Registration;
-  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  const corpus = await loadM3Corpus(root, r.corpus);
+  const fixture = await loadCorpusDriver(root, corpus);
   const output = confined(root, outDir);
   await mkdir(output, { recursive: false, mode: 0o700 });
   let requests = 0;
@@ -712,6 +713,7 @@ export async function controlsM3(root: string, path: string, outDir: string) {
   };
   try {
     for (const item of corpus.cases) {
+      item.controls = caseControls(fixture, item);
       const e: ControlEvidence = {
         id: item.id,
         status: "blocked",
@@ -773,23 +775,21 @@ export async function controlsM3(root: string, path: string, outDir: string) {
         }
         await shop.close();
         shop = await fixture.startCase(root, corpus, item, "transformed", port);
-        if (item.id === "m3-env-02") await shop.close();
+        if (item.controls?.unavailableTarget) await shop.close();
         const transformed = await replay(
           app,
           test.id,
           s.environmentId,
           "off",
           test.activeRevisionId!,
-          item.id === "m3-env-03" ? bindCollectionFailure().limits : undefined,
+          item.controls?.collectionFailure ? bindCollectionFailure().limits : undefined,
           credential?.remove,
         );
         e.transformed = captureControl(app, transformed.id, plan);
-        if (
-          item.group === "drift" ||
-          item.id === "m3-adversarial-01" ||
-          item.id === "m3-adversarial-02"
-        ) {
-          const candidate = authoredCandidate(item, plan);
+        if (item.controls?.semanticCandidate) {
+          if (!fixture.authoredCandidate)
+            throw new Error("Driver semantic controls require an authoredCandidate hook");
+          const candidate = fixture.authoredCandidate(item, plan);
           e.semanticPlan = candidate;
           const revision = app.revisions.create(test.id, candidate);
           await shop.close();
@@ -941,7 +941,8 @@ interface PolicyProbesManifest {
 export async function policyProbesM3(root: string, path: string, outDir: string) {
   await checkM3(root, path);
   const r = JSON.parse(await readFile(confined(root, path), "utf8")) as M3Registration;
-  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  const corpus = await loadM3Corpus(root, r.corpus);
+  const fixture = await loadCorpusDriver(root, corpus);
   const output = confined(root, outDir);
   await mkdir(output, { recursive: false, mode: 0o700 });
   const manifest: PolicyProbesManifest = {
@@ -1036,7 +1037,9 @@ export async function policyProbesM3(root: string, path: string, outDir: string)
         shop = await fixture.startCase(root, corpus, item, "transformed", port);
         const failed = await replay(app, test.id, s.environmentId, "apply", test.activeRevisionId!);
         e.transformed = captureControl(app, failed.id, base);
-        answer = controlledHealingOutput(base, authoredCandidate(item, base));
+        if (!fixture.authoredCandidate)
+          throw new Error("Driver policy probes require an authoredCandidate hook");
+        answer = controlledHealingOutput(base, fixture.authoredCandidate(item, base));
         await app.analysis.analyze(failed.id, { model: false });
         try {
           e.proposal = await app.healing.propose(failed.id, {
@@ -1074,7 +1077,7 @@ export async function policyProbesM3(root: string, path: string, outDir: string)
   assertImplementationBinding(await implementationManifest(root, r), manifest.implementation);
   if (
     manifest.remoteRequests ||
-    manifest.cases.length !== 12 ||
+    manifest.cases.length !== corpus.cases.filter((row) => row.group === "drift").length ||
     manifest.cases.some((row) => row.status !== "passed")
   )
     throw new Error("Deterministic policy probes blocked; inspect retained evidence");
@@ -1089,7 +1092,8 @@ export async function freezeM3(
   await checkM3(root, path);
   const r = JSON.parse(await readFile(confined(root, path), "utf8")) as M3Registration;
   await assertNotStarted(root, r.id);
-  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  const corpus = await loadM3Corpus(root, r.corpus);
+  const fixture = await loadCorpusDriver(root, corpus);
   const controls = JSON.parse(
     await readFile(confined(root, controlsPath), "utf8"),
   ) as ControlsManifest;
@@ -1099,8 +1103,8 @@ export async function freezeM3(
     controls.modelCalls !== 0 ||
     controls.providerGuard?.requests !== 0 ||
     controls.providerGuard.positiveControlRequests !== 1 ||
-    controls.cases?.length !== 31 ||
-    new Set(controls.cases.map((row) => row.id)).size !== 31
+    controls.cases?.length !== corpus.cases.length ||
+    new Set(controls.cases.map((row) => row.id)).size !== corpus.cases.length
   )
     throw new Error("Invalid evidence-backed controls manifest");
   const implementation = await implementationManifest(root, r);
@@ -1114,8 +1118,8 @@ export async function freezeM3(
     probes.label !== "deterministic-local-provider-policy-acceptance" ||
     probes.registrationId !== r.id ||
     probes.remoteRequests !== 0 ||
-    probes.cases.length !== 12 ||
-    new Set(probes.cases.map((row) => row.id)).size !== 12
+    probes.cases.length !== corpus.cases.filter((row) => row.group === "drift").length ||
+    new Set(probes.cases.map((row) => row.id)).size !== probes.cases.length
   )
     throw new Error("Invalid policy probes manifest");
   for (const item of corpus.cases.filter((row) => row.group === "drift")) {
@@ -1131,6 +1135,7 @@ export async function freezeM3(
   }
   r.frozenFiles[probesPath] = hash(await readFile(confined(root, probesPath)));
   for (const item of corpus.cases) {
+    item.controls = caseControls(fixture, item);
     const row = controls.cases.find((value) => value.id === item.id);
     if (!row?.path || !row.sha256 || row.status !== "passed")
       throw new Error(`Pre-freeze control blocked: ${item.id}`);
@@ -1164,7 +1169,7 @@ export async function freezeM3(
     )
       throw new Error(`Control plan binding mismatch: ${item.id}`);
     if (
-      ["m3-drift-05", "m3-drift-06", "m3-drift-12"].includes(item.id) &&
+      JSON.stringify(item.plan).includes("@UPLOAD_ARTIFACT@") &&
       !/^art_/.test(evidence.uploadArtifactId ?? "")
     )
       throw new Error(`Unbound upload artifact: ${item.id}`);
@@ -1353,7 +1358,7 @@ async function setup(
   };
   config.healing = { mode: modelFree ? "off" : "apply" };
   config.telemetry = { enabled: false };
-  if (item.id === "m3-env-03") config.artifacts = bindCollectionFailure().artifacts;
+  if (item.controls?.collectionFailure) config.artifacts = bindCollectionFailure().artifacts;
   await writeFile(configPath, JSON.stringify(config));
   const app = await Application.open({ cwd, home, env });
   const project = app.projects.list()[0]!;
@@ -1430,6 +1435,182 @@ function grounded(analysis: { facts: unknown[]; hypotheses: unknown[]; failureKi
     (analysis.failureKind === "unknown" || analysis.hypotheses.length > 0)
   );
 }
+/** Utility classifications come from code-owned layers, never from corpus expected labels. */
+export function diagnosticUtility(analysis: Analysis): UtilityObservation {
+  const diagnosis = analysis.diagnosis;
+  if (!diagnosis) throw new Error("Layered diagnosis unavailable for utility measurement");
+  const status = diagnosis.conclusion.status;
+  const advice = diagnosis.healing.advice;
+  if (
+    status !== "no_failure" &&
+    status !== "cause_supported" &&
+    status !== "cause_partially_supported" &&
+    status !== "cause_unknown"
+  )
+    throw new Error("Invalid diagnosis conclusion for utility measurement");
+  if (
+    advice !== "not_indicated" &&
+    advice !== "proposal_possible" &&
+    advice !== "manual_review_only"
+  )
+    throw new Error("Invalid healing advice for utility measurement");
+  const ruleSteps = diagnosis.nextSteps.filter((step) => step.source === "rules");
+  const action =
+    diagnosis.conclusion.status === "no_failure"
+      ? "no_action"
+      : analysis.failureKind === "security_policy"
+        ? "review_security_precondition"
+        : analysis.failureKind === "environment"
+          ? "restore_environment"
+          : analysis.failureKind === "contract_violation"
+            ? "compare_contract"
+            : ruleSteps.some((step) => step.text.startsWith("Inspect the creation response"))
+              ? "inspect_persistence"
+              : diagnosis.healing.advice === "proposal_possible"
+                ? "review_healing_proposal"
+                : diagnosis.healing.advice === "manual_review_only"
+                  ? "inspect_locator_candidates"
+                  : ruleSteps.some((step) =>
+                        /approved requirement|current requirement|expected behavior/i.test(
+                          step.text,
+                        ),
+                      )
+                    ? "compare_requirement"
+                    : "collect_more_evidence";
+  const rejected = analysis.limitations
+    .map((text) =>
+      /^(\d+) model hypotheses without execution observation support were not recorded\.$/.exec(
+        text,
+      ),
+    )
+    .find(Boolean);
+  return {
+    recommendedAction: action,
+    conclusion: { status, failureKind: analysis.failureKind },
+    healing: { advice },
+    nextSteps: {
+      count: diagnosis.nextSteps.length,
+      sources: diagnosis.nextSteps.map((step) => step.source),
+    },
+    ...(rejected
+      ? { unsupportedClaims: Number(rejected[1]) }
+      : analysis.source === "rules"
+        ? { unsupportedClaims: 0 }
+        : {}),
+  };
+}
+export function unsupportedClaimsForRun(app: Application, runId: string): number | undefined {
+  const jobs = app.database.all<{ data_json: string }>(
+    "SELECT data_json FROM job_leases WHERE workspace_id=? AND queue='analysis' AND json_extract(data_json,'$.payload.targetId')=? ORDER BY created_at DESC,id DESC",
+    app.context.workspaceId,
+    runId,
+  );
+  for (const row of jobs) {
+    const job = JSON.parse(row.data_json);
+    const count = job.progress?.unsupportedClaims;
+    if (Number.isSafeInteger(count) && count >= 0) return count;
+  }
+  return undefined;
+}
+
+/** Isolated evaluation never approves, reconciles or promotes the candidate. */
+export async function assessAssistedCandidate(
+  source: Application,
+  workspace: string,
+  root: string,
+  corpus: Corpus,
+  item: Case,
+  driver: FixtureDriver,
+  proposal: HealingProposal,
+  testId: string,
+  environmentId: string,
+  basePlan: ExecutablePlan,
+  port: number,
+  canary: string,
+) {
+  // This is a newly authored harness workspace, not a retained prior-round original.
+  source.database.all("PRAGMA wal_checkpoint(TRUNCATE)");
+  return withRetainedCopy(workspace, async (copy) => {
+    const cwd = join(copy, "repo"),
+      home = join(copy, "home");
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      HOME: home,
+      XDG_CONFIG_HOME: join(home, ".config"),
+      XDG_DATA_HOME: join(home, ".local/share"),
+      TESTMASTER_DATA_DIR: join(cwd, ".testmaster"),
+    };
+    for (const key of [
+      "TESTMASTER_PROJECT_ID",
+      "TESTMASTER_ENDPOINT",
+      "TESTMASTER_API_KEY",
+      "TESTMASTER_PROFILE",
+    ])
+      delete env[key];
+    const app = await Application.open({ cwd, home, env });
+    let target: Shop | undefined;
+    try {
+      const active = app.tests.get(testId).activeRevisionId;
+      const proposalBefore = hash(JSON.stringify(app.healing.get(proposal.id)));
+      const candidate = app.revisions.get(proposal.candidateRevisionId).plan!;
+      const preserved = assertionsHash(basePlan) === assertionsHash(candidate);
+      const runs: Record<string, ControlRun> = {};
+      const oracles: Record<string, unknown> = {};
+      let positiveDrift = false,
+        negativeSemantic = false;
+      for (const side of ["transformed", "semantic"] as const) {
+        target = await driver.startCase(root, corpus, item, side, port, canary);
+        const run = await replay(app, testId, environmentId, "off", proposal.candidateRevisionId);
+        const captured = captureControl(app, run.id, candidate);
+        runs[side] = captured;
+        const oracle = await driver.startCase(root, corpus, item, side, 0, canary);
+        try {
+          const verdict = await driver.independentOracle(oracle, item.oracle);
+          oracles[side] = verdict;
+          if (side === "transformed")
+            positiveDrift = run.outcome === "passed" && run.gate === "passed" && verdict.healthy;
+          else
+            negativeSemantic =
+              run.outcome === "failed" &&
+              captured.steps.some(
+                (step) =>
+                  step.status === "failed" &&
+                  candidate.steps.some(
+                    (original) => original.kind === "assertion" && original.id === step.id,
+                  ),
+              ) &&
+              verdict.defective;
+        } finally {
+          await oracle.close();
+        }
+        await target.close();
+        target = undefined;
+      }
+      if (
+        app.tests.get(testId).activeRevisionId !== active ||
+        hash(JSON.stringify(app.healing.get(proposal.id))) !== proposalBefore
+      )
+        throw new Error("Isolated candidate evaluation promoted or changed the proposal");
+      return {
+        proof: {
+          positiveDrift,
+          negativeSemantic,
+          isolated: true,
+          assertionsPreserved: preserved,
+          promoted: false as const,
+          candidateRevisionId: proposal.candidateRevisionId,
+          positiveRunId: runs.transformed!.runId,
+          negativeRunId: runs.semantic!.runId,
+        },
+        runs,
+        oracles,
+      };
+    } finally {
+      app.close();
+      await target?.close();
+    }
+  });
+}
 async function report(root: string, round: Round, ledgers: M3Ledger[]) {
   if (round.development) {
     await atomic(join(root, round.directory, "summary.json"), {
@@ -1456,7 +1637,10 @@ async function report(root: string, round: Round, ledgers: M3Ledger[]) {
         },
       })),
     });
-    if (ledgers.filter((ledger) => ledger.group !== "integration").length !== 30) {
+    if (
+      ledgers.filter((ledger) => ledger.group !== "integration").length !==
+      (round.planned ?? plannedCases()).filter((row) => row.group !== "integration").length
+    ) {
       await atomic(join(root, round.directory, "round.json"), round);
       await atomic(join(root, round.directory, "report.json"), {
         development: true,
@@ -1470,7 +1654,7 @@ async function report(root: string, round: Round, ledgers: M3Ledger[]) {
       return;
     }
   }
-  const score = scoreM3(ledgers);
+  const score = scoreM3(ledgers, round.planned);
   await atomic(join(root, round.directory, "round.json"), round);
   await atomic(join(root, round.directory, "report.json"), {
     ...(round.development ? { development: true } : {}),
@@ -1480,14 +1664,14 @@ async function report(root: string, round: Round, ledgers: M3Ledger[]) {
   });
   await writeFile(
     join(root, round.directory, "report.md"),
-    `${round.development ? "# M3 development probe (not a registered round)" : "# M3 coverage pilot"}\n\nStatus: ${round.status}; stop: ${round.stopReason ?? "none"}.\n\nSafe healing: ${score.safeHealingSuccessRate.successes}/12. Cause accuracy: ${score.diagnosisCauseAccuracy.successes}/26. Completion: ${score.endToEndCompletion.successes}/30.\n\n${score.limitations.join("\n\n")}\n${round.development ? "\nDevelopment probes never count toward a milestone gate.\n" : ""}`,
+    `${round.development ? "# M3 development probe (not a registered round)" : "# M3 coverage pilot"}\n\nStatus: ${round.status}; stop: ${round.stopReason ?? "none"}.\n\nSafe healing: ${score.safeHealingSuccessRate.successes}/${score.safeHealingSuccessRate.n}. Cause accuracy: ${score.diagnosisCauseAccuracy.successes}/${score.diagnosisCauseAccuracy.n}. Completion: ${score.endToEndCompletion.successes}/${score.endToEndCompletion.n}.\n\n${score.limitations.join("\n\n")}\n${round.development ? "\nDevelopment probes never count toward a milestone gate.\n" : ""}`,
   );
 }
 export async function settleM3(root: string, directory: string) {
   const path = confined(root, directory);
   const round = JSON.parse(await readFile(join(path, "round.json"), "utf8")) as Round;
   if (round.status !== "started") throw new Error("Only interrupted started rounds may be settled");
-  const labels: PlannedCase[] = [
+  const labels: PlannedCase[] = round.planned ?? [
     ...plannedCases(),
     { id: "m3-integration-01", group: "integration", expectedFailureKind: "product_bug" },
   ];
@@ -1571,7 +1755,7 @@ export async function runM3(root: string, commit: string, path: string) {
     assertRegistrationUnchanged(current, await committedRegistration(root, commit, file));
   }
   await assertFrozenFiles(root, r.frozenFiles);
-  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  const corpus = await loadM3Corpus(root, r.corpus);
   const directory = `evals/results/${r.id}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   await mkdir(join(root, "evals/results"), { recursive: true });
   await claimStart(root, r.id);
@@ -1605,7 +1789,7 @@ export async function devM3(
   const r = JSON.parse(bytes.toString()) as M3Registration;
   if (typeof r.corpus !== "string" || !r.corpus)
     throw new Error("Invalid development registration");
-  const corpus = JSON.parse(await readFile(confined(root, r.corpus), "utf8")) as Corpus;
+  const corpus = await loadM3Corpus(root, r.corpus);
   validateMeasurementInputs(r, corpus);
   const allCases = orderedCases(corpus);
   if (caseIds !== undefined) {
@@ -1649,6 +1833,19 @@ async function executeRound(
   round: Round,
   ordered: Case[],
 ) {
+  const fixture = await loadCorpusDriver(root, corpus);
+  round.planned = corpus.cases.map(
+    ({ id, group, expectedFailureKind, labels, defect, familyId, review }) => ({
+      id,
+      group,
+      expectedFailureKind,
+      ...(labels ? { labels } : {}),
+      ...(defect === undefined ? {} : { defect }),
+      ...(familyId ? { familyId } : {}),
+      ...(review ? { review } : {}),
+    }),
+  );
+  for (const item of ordered) item.controls = caseControls(fixture, item);
   const ledgers = ordered.map(emptyLedger);
   const flush = async () => {
     await atomic(join(root, directory, "round.json"), round);
@@ -1713,6 +1910,12 @@ async function executeRound(
             ledger.usage.unknownCalls++;
           if (call.cost === "unknown") ledger.usage.unknownCostCalls++;
           else ledger.usage.costs.push(call.cost);
+          const timing = app!.database.get<{ latency: number; created_at: string }>(
+            "SELECT latency,created_at FROM model_calls WHERE workspace_id=? AND project_id=? AND id=?",
+            app!.context.workspaceId,
+            setupResult.projectId,
+            call.id,
+          );
           stored.push({
             id: call.id,
             model: call.model,
@@ -1725,6 +1928,8 @@ async function executeRound(
             outcome: call.outcome,
             usage: call.usage,
             cost: call.cost,
+            latencyMs: timing?.latency ?? null,
+            createdAt: timing?.created_at ?? null,
           });
         }
         ledger.records.calls = stored;
@@ -1798,14 +2003,16 @@ async function executeRound(
           await flush();
         }
       };
-      if (item.group === "integration") {
+      if (item.controls?.integrationWorkflow) {
         phase = "integration-source";
         const authentication = await authenticateIntegrationTarget(app, shop.url);
         const secret = authentication.secret;
         const sourcePath = join(setupResult.temporary, "repo", "integration.txt");
         const sourceText =
-          (await readFile(join(root, "evals/m3/integration-requirement.txt"), "utf8")) +
-          `\nAuthorized authentication reference: ${secret.id}.`;
+          (await readFile(
+            confined(root, item.controls.integrationWorkflow.requirementPath),
+            "utf8",
+          )) + `\nAuthorized authentication reference: ${secret.id}.`;
         await writeFile(sourcePath, sourceText);
         const source = await app.sources.add({
           projectId: setupResult.projectId,
@@ -1946,14 +2153,14 @@ async function executeRound(
       }
       await shop.close();
       shop = await fixture.startCase(root, corpus, item, "transformed", port, canary);
-      if (item.id === "m3-env-02") await shop.close();
+      if (item.controls?.unavailableTarget) await shop.close();
       const transformed = await replay(
         app,
         test.id,
         setupResult.environmentId,
         "apply",
         baseRevisionId,
-        item.id === "m3-env-03" ? bindCollectionFailure().limits : undefined,
+        item.controls?.collectionFailure ? bindCollectionFailure().limits : undefined,
         credential?.remove,
       );
       ledger.records.transformed = {
@@ -1962,10 +2169,12 @@ async function executeRound(
         gate: transformed.gate,
       };
       ledger.stages.transformed = true;
-      if (item.id === "m3-env-03") {
+      if (item.controls?.collectionFailure) {
         const steps = app.runs.steps(transformed.id);
         const mismatch = steps.some(
-          (row) => row.planStepId === "business_assertion" && row.status === "failed",
+          (row) =>
+            plan.steps.some((step) => step.id === row.planStepId && step.kind === "assertion") &&
+            row.status === "failed",
         );
         const limited = JSON.stringify(app.runs.events(transformed.id)).includes(
           "artifact_limit_exceeded",
@@ -1990,6 +2199,7 @@ async function executeRound(
         hash: hash(JSON.stringify(rules)),
         failureKind: rules.failureKind,
       };
+      ledger.utility = { rules: diagnosticUtility(rules) };
       ledger.stages.rules = true;
       phase = "model-diagnosis";
       let diagnosis = rules;
@@ -2010,6 +2220,12 @@ async function executeRound(
           });
       } catch (error) {
         ledger.errors.push({ phase, code: "diagnosis_error", ...errorRecord(error, forbidden) });
+      }
+      if (diagnosis !== rules) ledger.utility.model = diagnosticUtility(diagnosis);
+      const unsupportedClaims = unsupportedClaimsForRun(app, transformed.id);
+      if (unsupportedClaims !== undefined) {
+        ledger.utility.model ??= { ...diagnosticUtility(diagnosis) };
+        ledger.utility.model.unsupportedClaims = unsupportedClaims;
       }
       ledger.diagnosis = {
         failureKind: diagnosis.failureKind,
@@ -2053,6 +2269,8 @@ async function executeRound(
       }
       ledger.stages.healing = proposal !== null;
       if (proposal) {
+        ledger.healing.manualReviewRequired = proposal.approvalMode !== "policy";
+        ledger.healing.changeCount = proposal.changes.length;
         ledger.healing.proposed = true;
         const candidatePlan = app.revisions.get(proposal.candidateRevisionId).plan!;
         const protectedProposal = compareProtectedAssertions(
@@ -2092,7 +2310,7 @@ async function executeRound(
             verified.outcome === "passed" && verified.gate === "passed";
           ledger.healing.falseRepair =
             ledger.healing.verificationPassed &&
-            (item.group === "bug" || item.id === "m3-adversarial-03");
+            (item.defect ?? (item.group === "bug" || item.expectedFailureKind === "product_bug"));
           if (ledger.healing.falseRepair) throw new Error("false_repair");
           await app.healing.reconcile(verified.id);
           ledger.healing.applied =
@@ -2135,11 +2353,7 @@ async function executeRound(
               proposal.candidateRevisionId,
             );
             const assertionIds = plan.steps
-              .filter(
-                (step) =>
-                  step.kind === "assertion" &&
-                  ["business_assertion", "invalid_login_assertion"].includes(step.id),
-              )
+              .filter((step) => step.kind === "assertion")
               .map((step) => step.id);
             const steps = app.runs.steps(negative.id);
             ledger.healing.semanticAssertionReached = steps.some(
@@ -2177,6 +2391,27 @@ async function executeRound(
               ledger.healing.semanticAssertionFailed &&
               ledger.healing.semanticOracle;
           }
+        }
+        if (proposal.approvalMode !== "policy" && item.group === "drift") {
+          await shop.close();
+          const candidate = await assessAssistedCandidate(
+            app,
+            setupResult.temporary,
+            root,
+            corpus,
+            item,
+            fixture,
+            proposal,
+            test.id,
+            setupResult.environmentId,
+            basePlan,
+            port,
+            canary,
+          );
+          ledger.healing.assistedCandidate = candidate.proof;
+          ledger.records.assistedCandidate = candidate;
+          ledger.stages.assistedCandidate =
+            candidate.proof.positiveDrift && candidate.proof.negativeSemantic;
         }
       }
       if (
@@ -2226,8 +2461,24 @@ async function executeRound(
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
   const [mode, ...args] = process.argv.slice(2);
-  const command =
-    mode === "check" && args.length === 1
+  const replayCaseIds = args.slice(2).filter((arg) => arg !== "--model");
+  const extraCommand =
+    mode === "replay" && args.length >= 2
+      ? replayM3(root, args[0]!, args[1]!, {
+          model: args.includes("--model"),
+          ...(replayCaseIds.length ? { caseIds: replayCaseIds } : {}),
+        })
+      : mode === "holdout-check" &&
+          (args.length === 1 || (args.length === 2 && args[1] === "--homologation"))
+        ? checkHoldout(root, args[0]!, args[1] === "--homologation")
+        : mode === "holdout-seal" && args.length === 2
+          ? sealHoldout(root, args[0]!, args[1]!)
+          : mode === "task-check" && args.length === 1
+            ? checkUserTasks(root, args[0]!)
+            : null;
+  const command = extraCommand
+    ? extraCommand.then((result) => console.log(JSON.stringify(result, null, 2)))
+    : mode === "check" && args.length === 1
       ? checkM3(root, args[0]!).then((result) => console.log(JSON.stringify(result, null, 2)))
       : mode === "controls" && args.length === 2
         ? controlsM3(root, args[0]!, args[1]!)
@@ -2243,7 +2494,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
                   ? freezeM3(root, args[0]!, args[1]!, args[2]!)
                   : Promise.reject(
                       new Error(
-                        "Usage: m3 check REGISTRATION | controls REGISTRATION OUT_DIR | policy-probes REGISTRATION OUT_DIR | run COMMIT REGISTRATION | dev REGISTRATION OUT_LABEL [CASE_ID...] | settle RESULTS | freeze REGISTRATION CONTROLS POLICY_PROBES",
+                        "Usage: m3 check REGISTRATION | controls REGISTRATION OUT_DIR | policy-probes REGISTRATION OUT_DIR | run COMMIT REGISTRATION | dev REGISTRATION OUT_LABEL [CASE_ID...] | replay RESULTS_DIR OUT_LABEL [--model] [CASE_ID...] | holdout-check MANIFEST [--homologation] | holdout-seal MANIFEST OUT | task-check FILE | settle RESULTS | freeze REGISTRATION CONTROLS POLICY_PROBES",
                       ),
                     );
   command.catch((error) => {

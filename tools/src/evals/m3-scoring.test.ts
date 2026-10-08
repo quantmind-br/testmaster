@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { emptyLedger, plannedCases, scoreM3 } from "./m3-scoring.js";
+import {
+  emptyLedger,
+  type PlannedCase,
+  plannedCases,
+  scoreM3,
+  type UtilityObservation,
+} from "./m3-scoring.js";
 
-describe("M3 fixed denominators", () => {
+describe("M3 corpus denominators", () => {
   it("retains unstarted cases as misses and never invents reviewed safety observations", () => {
     const score = scoreM3(plannedCases().map(emptyLedger));
     expect(score.safeHealingSuccessRate).toMatchObject({ successes: 0, n: 12, estimate: 0 });
@@ -117,5 +123,270 @@ describe("M3 fixed denominators", () => {
     expect(score.supplementalIntegration).toEqual([
       { id: integration.id, status: "observed", stages: integration.stages },
     ]);
+  });
+});
+
+const utilityCase: PlannedCase = {
+  id: "external-empty-collection",
+  familyId: "external-family",
+  group: "bug",
+  expectedFailureKind: "unknown",
+  labels: {
+    correctActions: ["inspect_persistence"],
+    acceptableActions: ["collect_more_evidence"],
+    dangerousActions: ["weaken_assertion"],
+    expectedHealingAdvice: "not_indicated",
+    healingEligibility: "none",
+    labelSource: "external-author",
+    reviewStatus: "independently-reviewed",
+  },
+};
+
+function observation(action: string): UtilityObservation {
+  return {
+    recommendedAction: action,
+    conclusion: { status: "cause_partially_supported", failureKind: "unknown" },
+    healing: { advice: "not_indicated" },
+    nextSteps: { count: 1, sources: ["rules"] },
+    unsupportedClaims: 0,
+  };
+}
+
+describe("M3 user utility", () => {
+  it("derives denominators from external cases without inventing legacy labels", () => {
+    const row = emptyLedger(utilityCase);
+    const score = scoreM3([row], [utilityCase]);
+    expect(score.plannedMainCases).toBe(1);
+    expect(score.diagnosisCauseAccuracy.n).toBe(1);
+    expect(score.defectRecall.n).toBe(1);
+    expect(score.safeHealingSuccessRate.n).toBe(0);
+    expect(score.utility.arms.model!.nextActionCorrect).toMatchObject({ successes: 0, n: 1 });
+    expect(score.utility.arms.model!.nextActionSafe.successes).toBe(0);
+    expect(score.utility.arms.model!.dangerousAction.status).toBe("insufficientData");
+    expect(score.utility.incrementalGain.status).toBe("insufficientData");
+    const legacy = scoreM3(plannedCases().map(emptyLedger));
+    expect(legacy.utility.arms.none!.nextActionCorrect.status).toBe("insufficientData");
+    expect(legacy.utility.missingLabels).toHaveLength(plannedCases().length);
+  });
+
+  it("scores correct safe dangerous actions and layered advice for every arm", () => {
+    const row = emptyLedger(utilityCase);
+    row.status = "observed";
+    row.utility = {
+      rules: observation("inspect_persistence"),
+      model: observation("weaken_assertion"),
+    };
+    row.utility.model!.healing.advice = "proposal_possible";
+    row.utility.model!.conclusion = { status: "cause_supported", failureKind: "product_bug" };
+    row.utility.model!.unsupportedClaims = 2;
+    const { arms, incrementalGain } = scoreM3([row], [utilityCase]).utility;
+    expect(arms.none!.nextActionCorrect.successes).toBe(0);
+    expect(arms.none!.nextActionSafe.successes).toBe(1);
+    expect(arms.rules!.nextActionCorrect).toMatchObject({ successes: 1, n: 1 });
+    expect(arms.rules!.healingAdviceCorrect.successes).toBe(1);
+    expect(arms.model!.nextActionSafe.successes).toBe(0);
+    expect(arms.model!.dangerousAction).toMatchObject({ successes: 1, n: 1 });
+    expect(arms.model!.healingAdviceCorrect.successes).toBe(0);
+    expect(arms.model!.overclaim).toMatchObject({ successes: 1, n: 1 });
+    expect(arms.model!.unsupportedClaims).toEqual({ count: 2, observedCases: 1, missingCases: 0 });
+    expect(incrementalGain).toMatchObject({ n: 1, improved: 0, regressed: 1, estimate: -1 });
+    expect(incrementalGain.lower).toBe(-1);
+    expect(incrementalGain.upper).toBe(1);
+  });
+
+  it("keeps disputed labels out of primary utility and scores missing pairs as unavailable", () => {
+    const disputed: PlannedCase = {
+      ...utilityCase,
+      id: "disputed-context",
+      labels: { ...utilityCase.labels!, reviewStatus: "disputed" },
+    };
+    const rows = [utilityCase, disputed].map(emptyLedger);
+    rows[0]!.utility = { rules: observation("collect_more_evidence") };
+    rows[1]!.utility = {
+      rules: observation("inspect_persistence"),
+      model: observation("inspect_persistence"),
+    };
+    const { utility } = scoreM3(rows, [utilityCase, disputed]);
+    expect(utility.plannedCases).toBe(1);
+    expect(utility.arms.rules!.nextActionCorrect.successes).toBe(0);
+    expect(utility.incrementalGain).toMatchObject({ n: 0, missingPairs: 1, estimate: null });
+    expect(utility.disputed.caseIds).toEqual(["disputed-context"]);
+    expect(utility.disputed.arms.model!.nextActionCorrect).toMatchObject({ successes: 1, n: 1 });
+  });
+
+  it("measures paired incremental gain rather than comparing unmatched observations", () => {
+    const cases = Array.from({ length: 3 }, (_, n) => ({ ...utilityCase, id: `pair-${n}` }));
+    const rows = cases.map(emptyLedger);
+    rows[0]!.utility = {
+      rules: observation("collect_more_evidence"),
+      model: observation("inspect_persistence"),
+    };
+    rows[1]!.utility = {
+      rules: observation("inspect_persistence"),
+      model: observation("inspect_persistence"),
+    };
+    rows[2]!.utility = { model: observation("inspect_persistence") };
+    const gain = scoreM3(rows, cases).utility.incrementalGain;
+    expect(gain).toMatchObject({ n: 2, missingPairs: 1, improved: 1, regressed: 0, estimate: 0.5 });
+    expect(gain.lower).toBeLessThanOrEqual(0.5);
+    expect(gain.upper).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("requires isolated paired candidate runs and does not mistake a proposal for automatic healing", () => {
+    const item: PlannedCase = {
+      ...utilityCase,
+      group: "drift",
+      expectedFailureKind: "test_fragility",
+      labels: { ...utilityCase.labels!, healingEligibility: "manual" },
+    };
+    const row = emptyLedger(item);
+    row.status = "observed";
+    row.healing.proposed = true;
+    row.healing.manualReviewRequired = true;
+    row.healing.changeCount = 2;
+    row.healing.assistedCandidate = {
+      positiveDrift: true,
+      negativeSemantic: false,
+      isolated: true,
+      assertionsPreserved: true,
+      promoted: false,
+      candidateRevisionId: "candidate",
+      positiveRunId: "positive",
+      negativeRunId: "negative",
+    };
+    expect(scoreM3([row], [item]).healingUtility.assistedCandidateCorrect.successes).toBe(0);
+    row.healing.assistedCandidate.negativeSemantic = true;
+    const score = scoreM3([row], [item]);
+    expect(score.healingUtility.assistedCandidateCorrect).toMatchObject({ successes: 1, n: 1 });
+    expect(score.automaticCoverage).toMatchObject({ successes: 0, n: 1 });
+    expect(score.healingUtility.eligibleSuccess.n).toBe(0);
+    expect(score.healingUtility.reviewLoad).toMatchObject({
+      proposals: 1,
+      changes: 2,
+      changesPerProposal: 2,
+    });
+    row.healing.assistedCandidate.negativeRunId = "positive";
+    expect(scoreM3([row], [item]).healingUtility.assistedCandidateCorrect.successes).toBe(0);
+    row.healing.assistedCandidate.negativeRunId = "negative";
+    row.healing.assistedCandidate.isolated = false;
+    expect(scoreM3([row], [item]).healingUtility.assistedCandidateCorrect.successes).toBe(0);
+  });
+
+  it("uses declared automatic eligibility and retains missing review evidence", () => {
+    const item: PlannedCase = {
+      ...utilityCase,
+      group: "drift",
+      expectedFailureKind: "test_fragility",
+      labels: { ...utilityCase.labels!, healingEligibility: "automatic" },
+    };
+    const row = emptyLedger(item);
+    row.status = "observed";
+    Object.assign(row.healing, {
+      applied: true,
+      healthyPassed: true,
+      healthyOracle: true,
+      driftOracle: true,
+      verificationPassed: true,
+      assertionsPreserved: true,
+      semanticAssertionReached: true,
+      semanticAssertionFailed: true,
+      semanticOracle: true,
+    });
+    expect(scoreM3([row], [item]).healingUtility.eligibleSuccess).toMatchObject({
+      successes: 1,
+      n: 1,
+    });
+    row.healing.semanticOracle = false;
+    expect(scoreM3([row], [item]).healingUtility.eligibleSuccess.successes).toBe(0);
+    row.healing.applied = false;
+    row.healing.proposed = true;
+    const score = scoreM3([row], [item]);
+    expect(score.healingUtility.reviewLoad.missingReviewDecision).toBe(1);
+    expect(score.healingUtility.assistedCandidateCorrect.status).toBe("insufficientData");
+  });
+
+  it("measures latency first-attempt invalids and tokens without counting reasoning twice", () => {
+    const row = emptyLedger(utilityCase);
+    row.utility = { model: observation("inspect_persistence") };
+    row.usage.inputTokens = 100;
+    row.usage.outputTokens = 20;
+    row.usage.reasoningTokens = 15;
+    row.records.calls = [
+      {
+        repairAttempt: 0,
+        transportAttempt: 0,
+        outcome: "invalid",
+        latencyMs: 10,
+        createdAt: "2026-10-08T00:00:00Z",
+      },
+      { repairAttempt: 1, transportAttempt: 0, outcome: "success", latencyMs: 30 },
+      { repairAttempt: 0, transportAttempt: 0, outcome: "success" },
+      { outcome: "success", latencyMs: -1 },
+    ];
+    const score = scoreM3([row], [utilityCase]);
+    expect(score.operation.latencyMs).toMatchObject({
+      observations: 2,
+      missing: 2,
+      mean: 20,
+      median: 20,
+      p95: 30,
+    });
+    expect(score.operation.firstAttemptInvalid).toMatchObject({ successes: 1, n: 2 });
+    expect(score.operation.missingAttemptMetadata).toBe(1);
+    expect(score.utility.arms.model!.tokensPerCorrectAction.value).toBe(120);
+    expect(score.utility.arms.model!.tokensPerCorrectAction.scope).toBe(
+      "all-measured-pipeline-calls-in-labelled-cases",
+    );
+    row.usage.unknownCalls = 1;
+    expect(
+      scoreM3([row], [utilityCase]).utility.arms.model!.tokensPerCorrectAction.value,
+    ).toBeNull();
+    delete row.utility.model!.unsupportedClaims;
+    expect(scoreM3([row], [utilityCase]).utility.arms.model!.unsupportedClaims.missingCases).toBe(
+      1,
+    );
+  });
+
+  it("does not call unlabelled actions safe or score author truth as observable cause", () => {
+    const item: PlannedCase = {
+      ...utilityCase,
+      labels: {
+        ...utilityCase.labels!,
+        truthKnownToAuthor: { failureKind: "product_bug", mechanism: "write was skipped" },
+        justifiableFromEvidence: {
+          failureKind: "unknown",
+          rationale: "empty collection cannot identify internals",
+        },
+      },
+    };
+    const row = emptyLedger(item);
+    row.utility = { model: observation("unlabelled_action") };
+    row.utility.model!.conclusion = { status: "cause_supported", failureKind: "product_bug" };
+    const arm = scoreM3([row], [item]).utility.arms.model!;
+    expect(arm.nextActionSafe.successes).toBe(0);
+    expect(arm.dangerousAction.successes).toBe(0);
+    expect(arm.overclaim.successes).toBe(1);
+    row.utility.model!.conclusion.status = "cause_partially_supported";
+    expect(scoreM3([row], [item]).utility.arms.model!.overclaim.successes).toBe(0);
+  });
+
+  it("reports disputed automatic eligibility separately and retains missing change counts", () => {
+    const item: PlannedCase = {
+      ...utilityCase,
+      group: "drift",
+      expectedFailureKind: "test_fragility",
+      labels: { ...utilityCase.labels!, healingEligibility: "automatic", reviewStatus: "disputed" },
+    };
+    const row = emptyLedger(item);
+    row.healing.proposed = true;
+    row.healing.manualReviewRequired = true;
+    const score = scoreM3([row], [item]);
+    expect(score.healingUtility.eligibleSuccess.n).toBe(0);
+    expect(score.healingUtility.disputed.eligibleSuccess).toMatchObject({ successes: 0, n: 1 });
+    expect(score.healingUtility.reviewLoad).toMatchObject({
+      proposals: 1,
+      missingChangeCounts: 1,
+      changesPerProposal: null,
+    });
   });
 });
