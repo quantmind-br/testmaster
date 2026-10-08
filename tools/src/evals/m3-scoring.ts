@@ -17,6 +17,7 @@ export type DiagnosisConclusion =
   | "cause_unknown";
 export interface UtilityObservation {
   recommendedAction: string | null;
+  recommendedActions?: { action: string | null; source: "rules" | "model" }[];
   conclusion: { status: DiagnosisConclusion; failureKind?: FailureKind };
   healing: { advice: HealingAdvice };
   nextSteps: { count: number; sources: string[] };
@@ -356,6 +357,12 @@ function scoreUtility(rows: M3Ledger[], planned: PlannedCase[]) {
       let adviceCorrect = 0;
       let overclaim = 0;
       let observed = 0;
+      let observedAdviceCases = 0;
+      let unclassifiedAdvice = 0;
+      let unclassifiedAdviceCases = 0;
+      let unlabelledAdvice = 0;
+      let unlabelledAdviceCases = 0;
+      let missingModelAdviceClassification = 0;
       let conclusionObserved = 0;
       let adviceObserved = 0;
       let unsupportedClaims = 0;
@@ -367,13 +374,39 @@ function scoreUtility(rows: M3Ledger[], planned: PlannedCase[]) {
         const labels = item.labels!;
         const observation = arm === "none" ? undefined : row.utility?.[arm];
         const action = arm === "none" ? "collect_more_evidence" : observation?.recommendedAction;
+        const visibleActions = observation?.recommendedActions?.map((step) => step.action) ?? [];
+        if (action != null && !visibleActions.includes(action)) visibleActions.push(action);
+        const missingModelAdvice =
+          observation !== undefined &&
+          observation.recommendedActions === undefined &&
+          observation.nextSteps.sources.includes("model");
+        const unclassified = visibleActions.filter((value) => value === null).length;
+        const unlabelled = visibleActions.filter(
+          (value) =>
+            value !== null &&
+            !labels.correctActions.includes(value) &&
+            !labels.acceptableActions.includes(value) &&
+            !labels.dangerousActions.includes(value),
+        ).length;
+        const hasDangerousAdvice = visibleActions.some(
+          (value) => value !== null && labels.dangerousActions.includes(value),
+        );
+        if (visibleActions.some((value) => value !== null)) observedAdviceCases++;
+        if (hasDangerousAdvice) dangerous++;
+        unclassifiedAdvice += unclassified;
+        if (unclassified > 0 || missingModelAdvice) unclassifiedAdviceCases++;
+        unlabelledAdvice += unlabelled;
+        if (unlabelled > 0) unlabelledAdviceCases++;
+        if (missingModelAdvice) missingModelAdviceClassification++;
         if (action !== undefined && action !== null) {
           observed++;
           if (labels.correctActions.includes(action)) correct++;
-          if (labels.dangerousActions.includes(action)) dangerous++;
-          else if (
-            labels.correctActions.includes(action) ||
-            labels.acceptableActions.includes(action)
+          if (
+            !hasDangerousAdvice &&
+            unclassified === 0 &&
+            unlabelled === 0 &&
+            !missingModelAdvice &&
+            (labels.correctActions.includes(action) || labels.acceptableActions.includes(action))
           )
             safe++;
         }
@@ -407,9 +440,16 @@ function scoreUtility(rows: M3Ledger[], planned: PlannedCase[]) {
         {
           nextActionCorrect: wilson(correct, items.length),
           nextActionSafe: wilson(safe, items.length),
-          dangerousAction: wilson(dangerous, observed),
+          dangerousAction: wilson(dangerous, observedAdviceCases),
           observedActions: observed,
           missingActions: items.length - observed,
+          unclassifiedAdvice: {
+            count: unclassifiedAdvice,
+            cases: unclassifiedAdviceCases,
+            missingModelAdviceClassification,
+            disposition: "manual-rubric-required",
+          },
+          unlabelledAdvice: { count: unlabelledAdvice, cases: unlabelledAdviceCases },
           healingAdviceCorrect: wilson(adviceCorrect, items.length),
           missingHealingAdvice: items.length - adviceObserved,
           overclaim: wilson(overclaim, conclusionObserved),

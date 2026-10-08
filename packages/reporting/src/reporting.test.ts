@@ -3,12 +3,12 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, it } from "vitest";
 import {
+  diagnosisSummary,
   exportAllure,
   exportHtml,
   exportJson,
   exportJunit,
   exportMarkdown,
-  diagnosisSummary,
   formatDiagnosisSummary,
   type ReportSnapshot,
   reportGate,
@@ -231,17 +231,55 @@ it("renders layered conclusion and next action in Markdown and HTML without prob
   const item = input.runs[0];
   if (!item) throw new Error("Missing fixture");
   const analysis: Analysis = {
-    id: uuidV7IdGenerator.next("ana"), runId: item.run.id, snapshotId: null, parentId: null,
-    source: "rules", affectedRequirementIds: [], failureKind: "product_bug", confidence: 0.9,
-    modelCallId: null, limitations: ["Backend cause not observed"], recommendedAction: "collect_more_evidence",
+    id: uuidV7IdGenerator.next("ana"),
+    runId: item.run.id,
+    snapshotId: null,
+    parentId: null,
+    source: "rules",
+    affectedRequirementIds: [],
+    failureKind: "product_bug",
+    confidence: 0.9,
+    modelCallId: null,
+    limitations: ["Backend cause not observed"],
+    recommendedAction: "collect_more_evidence",
     facts: [{ text: "Creation succeeded", evidenceRefs: [] }],
-    hypotheses: [{ text: "Write may not persist", supports: [], contradicts: [], confidence: 0.9, calibrated: false, support: "partially_supported" }],
+    hypotheses: [
+      {
+        text: "Write may not persist",
+        supports: [],
+        contradicts: [],
+        confidence: 0.9,
+        calibrated: false,
+        support: "partially_supported",
+      },
+    ],
     diagnosis: {
-      observation: { stepId: "read", operation: "assert", summary: "Created item absent", expected: "Created item", observed: "[]", absence: "empty_collection", evidenceRefs: [] },
-      chain: [], alternatives: [{ text: "Different account context", failureKind: "unknown", evidenceRefs: [] }],
-      conclusion: { status: "cause_partially_supported", text: "Expected effect absent; internal cause undetermined" },
-      nextSteps: [{ text: "Compare create and read identity and environment", source: "rules", evidenceRefs: [] }],
-      evidenceGaps: ["No server-side trace"], healing: { advice: "not_indicated", reason: "Changing assertion would hide the mismatch" },
+      observation: {
+        stepId: "read",
+        operation: "assert",
+        summary: "Created item absent",
+        expected: "Created item",
+        observed: "[]",
+        absence: "empty_collection",
+        evidenceRefs: [],
+      },
+      chain: [],
+      alternatives: [
+        { text: "Different account context", failureKind: "unknown", evidenceRefs: [] },
+      ],
+      conclusion: {
+        status: "cause_partially_supported",
+        text: "Expected effect absent; internal cause undetermined",
+      },
+      nextSteps: [
+        {
+          text: "Compare create and read identity and environment",
+          source: "rules",
+          evidenceRefs: [],
+        },
+      ],
+      evidenceGaps: ["No server-side trace"],
+      healing: { advice: "not_indicated", reason: "Changing assertion would hide the mismatch" },
     },
   };
   item.analysis = analysis;
@@ -253,7 +291,9 @@ it("renders layered conclusion and next action in Markdown and HTML without prob
     expect(output).toContain("No server");
     expect(output).not.toContain("90%");
   }
-  expect(diagnosisSummary(analysis).fields.find((field) => field.label === "Observed")?.text).toBe("[] (empty collection)");
+  expect(diagnosisSummary(analysis).fields.find((field) => field.label === "Observed")?.text).toBe(
+    "[] (empty collection)",
+  );
   expect(JSON.parse(exportJson(input)).runs[0].analysis).toEqual(analysis);
 });
 
@@ -263,11 +303,21 @@ it("escapes hostile diagnosis hypotheses and warns honestly for historical analy
   if (!item) throw new Error("Missing fixture");
   const hostile = '<img src=x onerror="alert(1)"> [click](javascript:alert(1))\n# injected';
   item.analysis = {
-    id: uuidV7IdGenerator.next("ana"), runId: item.run.id, snapshotId: null, parentId: null,
-    source: "rules", affectedRequirementIds: [], failureKind: "unknown", confidence: null,
-    modelCallId: null, limitations: [], recommendedAction: "collect_more_evidence",
+    id: uuidV7IdGenerator.next("ana"),
+    runId: item.run.id,
+    snapshotId: null,
+    parentId: null,
+    source: "rules",
+    affectedRequirementIds: [],
+    failureKind: "unknown",
+    confidence: null,
+    modelCallId: null,
+    limitations: [],
+    recommendedAction: "collect_more_evidence",
     facts: [{ text: "Failure observed", evidenceRefs: [] }],
-    hypotheses: [{ text: hostile, supports: [], contradicts: [], confidence: 0.99, calibrated: true }],
+    hypotheses: [
+      { text: hostile, supports: [], contradicts: [], confidence: 0.99, calibrated: true },
+    ],
   };
   const html = exportHtml(input);
   const md = exportMarkdown(input);

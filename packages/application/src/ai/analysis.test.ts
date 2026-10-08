@@ -1143,10 +1143,7 @@ it("model next steps enrich evidence without overriding code-owned conclusion an
   );
 });
 
-it.each([
-  { handle: "E999", rejection: "unknown execution evidence" },
-  { handle: "E1", rejection: "Model next step requires execution observation support" },
-])(
+it.each([{ handle: "E999", rejection: "unknown execution evidence" }])(
   "model next step citing $handle rejects enrichment and preserves rules layers",
   async ({ handle, rejection }) => {
     const f = await fixture();
@@ -1171,6 +1168,34 @@ it.each([
     expect(analysis.limitations.some((limitation) => limitation.includes(rejection))).toBe(true);
   },
 );
+
+it("model next steps may cite a verified Run handle without establishing a hypothesis cause", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.5 },
+      ],
+      recommendedAction: "fix_product",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [{ text: "Collect context for this Run", evidence: ["E1"] }],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.modelCallId).toBe(f.modelCallId);
+  expect(analysis.diagnosis?.nextSteps.at(-1)).toEqual({
+    text: "Collect context for this Run",
+    source: "model",
+    evidenceRefs: factual.facts[0]!.evidenceRefs,
+  });
+  expect(analysis.diagnosis?.conclusion).toEqual(factual.diagnosis?.conclusion);
+  expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);
+});
 
 it("relational chain caps at 64 while retaining the failed step and its early response", async () => {
   const plan: ExecutablePlan = {

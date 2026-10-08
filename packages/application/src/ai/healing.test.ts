@@ -881,11 +881,17 @@ it("long reviewer rejection reasons are stored as explicitly truncated limitatio
 it("healing review reports frozen changes and recorded manual policy reasons without mutation", async () => {
   const f = await deferredFixture(true);
   const proposal = await f.service.propose(f.failed.id);
-  const before = semanticHash({ proposal, failed: f.app.runs.get(f.failed.id), test: f.app.tests.get(f.test.id) });
+  const before = semanticHash({
+    proposal,
+    failed: f.app.runs.get(f.failed.id),
+    test: f.app.tests.get(f.test.id),
+  });
   const review = await f.service.review(proposal.id);
   expect(review.changes[0]).toEqual({
-    stepId: "first", path: "/input/locator",
-    before: { by: "css", value: "#form > button" }, after: f.replacement,
+    stepId: "first",
+    path: "/input/locator",
+    before: { by: "css", value: "#form > button" },
+    after: f.replacement,
   });
   expect(review.automation.decision).toBe("manual_review_required");
   expect(review.automation.reasons).toEqual(proposal.limitations);
@@ -895,36 +901,73 @@ it("healing review reports frozen changes and recorded manual policy reasons wit
   expect(review.identity[0]!.candidates[0]).toMatchObject({ label: null, form: null });
   expect(review.limitations).toContain("Candidate label unavailable for step first");
   expect(review.limitations).toContain("Candidate form unavailable for step first");
-  expect(review.preservedAssertions).toMatchObject({ hash: proposal.preservedAssertionsHash, intact: true, stepIds: ["business"] });
-  expect(review.approval).toEqual({ expectedVersion: proposal.version, proposalId: proposal.id, candidateRevisionId: proposal.candidateRevisionId });
-  expect(semanticHash({ proposal: f.service.get(proposal.id), failed: f.app.runs.get(f.failed.id), test: f.app.tests.get(f.test.id) })).toBe(before);
+  expect(review.preservedAssertions).toMatchObject({
+    hash: proposal.preservedAssertionsHash,
+    intact: true,
+    stepIds: ["business"],
+  });
+  expect(review.approval).toEqual({
+    expectedVersion: proposal.version,
+    proposalId: proposal.id,
+    candidateRevisionId: proposal.candidateRevisionId,
+  });
+  expect(
+    semanticHash({
+      proposal: f.service.get(proposal.id),
+      failed: f.app.runs.get(f.failed.id),
+      test: f.app.tests.get(f.test.id),
+    }),
+  ).toBe(before);
 });
 
 it("healing review resolves nested download replacement pointers from both immutable plans", async () => {
   const plan = browser();
   plan.steps.push({
-    id: "download", kind: "action", operation: "download", description: "Download invoice",
-    input: { trigger: { operation: "click", input: { locator: { by: "testId", value: "invoice-old" } } }, outputName: "invoice" },
+    id: "download",
+    kind: "action",
+    operation: "download",
+    description: "Download invoice",
+    input: {
+      trigger: { operation: "click", input: { locator: { by: "testId", value: "invoice-old" } } },
+      outputName: "invoice",
+    },
   });
   const replacement = { by: "testId", value: "invoice-new" };
   const f = await fixture("passed", false, plan);
-  const healedPlan = applyHealingPatch(plan, patch("download", "/input/trigger/input/locator", replacement)).plan;
+  const healedPlan = applyHealingPatch(
+    plan,
+    patch("download", "/input/trigger/input/locator", replacement),
+  ).plan;
   const candidate = entity(f.app.context, "rev", {
-    ...f.candidate, id: entity(f.app.context, "rev", {}).id, ordinal: 3,
-    plan: healedPlan, contentHash: semanticHash(healedPlan, "plan"),
+    ...f.candidate,
+    id: entity(f.app.context, "rev", {}).id,
+    ordinal: 3,
+    plan: healedPlan,
+    contentHash: semanticHash(healedPlan, "plan"),
   });
   f.app.context.entities.insert("TestRevision", candidate);
-  const proposal = { ...f.proposal, candidateRevisionId: candidate.id,
+  const proposal = {
+    ...f.proposal,
+    candidateRevisionId: candidate.id,
     changes: [{ stepId: "download", path: "/input/trigger/input/locator", value: replacement }],
-    status: "proposed", approvalMode: null, verificationRunId: null };
+    status: "proposed",
+    approvalMode: null,
+    verificationRunId: null,
+  };
   f.app.context.entities.insert("HealingProposal", proposal);
   const review = await f.app.healing.review(proposal.id);
-  expect(review.changes).toEqual([{
-    stepId: "download", path: "/input/trigger/input/locator",
-    before: { by: "testId", value: "invoice-old" }, after: replacement,
-  }]);
+  expect(review.changes).toEqual([
+    {
+      stepId: "download",
+      path: "/input/trigger/input/locator",
+      before: { by: "testId", value: "invoice-old" },
+      after: replacement,
+    },
+  ]);
   expect(review.identity[0]!.equivalence).toBeNull();
-  expect(review.limitations).toContain("No comparable passing locator baseline recorded; equivalence unavailable");
+  expect(review.limitations).toContain(
+    "No comparable passing locator baseline recorded; equivalence unavailable",
+  );
 });
 
 it("healing review recalculates protected assertion hashes rather than trusting the proposal", async () => {
@@ -932,15 +975,25 @@ it("healing review recalculates protected assertion hashes rather than trusting 
   const candidate = f.app.revisions.get(f.candidate.id);
   const changed = structuredClone(candidate.plan!);
   const assertion = changed.steps.find((step) => step.id === "check-status");
-  if (!assertion || assertion.operation !== "assert" || assertion.expectation.predicate !== "statusIn") throw new Error("status assertion");
+  if (
+    !assertion ||
+    assertion.operation !== "assert" ||
+    assertion.expectation.predicate !== "statusIn"
+  )
+    throw new Error("status assertion");
   assertion.expectation.values = [201];
   const altered = entity(f.app.context, "rev", {
-    ...candidate, id: entity(f.app.context, "rev", {}).id, ordinal: 3,
-    plan: changed, contentHash: semanticHash(changed, "plan"),
+    ...candidate,
+    id: entity(f.app.context, "rev", {}).id,
+    ordinal: 3,
+    plan: changed,
+    contentHash: semanticHash(changed, "plan"),
   });
   f.app.context.entities.insert("TestRevision", altered);
   const proposal = entity(f.app.context, "hea", {
-    ...f.proposal, id: entity(f.app.context, "hea", {}).id, candidateRevisionId: altered.id,
+    ...f.proposal,
+    id: entity(f.app.context, "hea", {}).id,
+    candidateRevisionId: altered.id,
   });
   f.app.context.entities.insert("HealingProposal", proposal);
   const review = await f.app.healing.review(proposal.id);
@@ -952,7 +1005,9 @@ it("healing review approval version remains mandatory and rejects a divergent ve
   const f = await deferredFixture(true);
   const proposal = await f.service.propose(f.failed.id);
   const review = await f.service.review(proposal.id);
-  await expect(f.service.approve(proposal.id, review.approval.expectedVersion + 1)).rejects.toMatchObject({ code: "REVISION_CONFLICT" });
+  await expect(
+    f.service.approve(proposal.id, review.approval.expectedVersion + 1),
+  ).rejects.toMatchObject({ code: "REVISION_CONFLICT" });
   expect(f.service.get(proposal.id).status).toBe("proposed");
 });
 
@@ -960,13 +1015,27 @@ it("healing review denies another project before exposing immutable plan or evid
   const f = await fixture();
   const other = f.app.projects.create({ name: "Other project" });
   const reader = f.app.withIdentity({
-    principalId: f.app.context.principalId, scopes: ["R"], grants: [{
-      resourceType: "*", actions: ["read"], projectIds: [other.id], environmentIds: [],
-      expiresAt: null, grantedBy: f.app.context.principalId,
-    }, {
-      resourceType: "*", actions: ["read"], projectIds: [String(f.test.projectId)], environmentIds: [],
-      expiresAt: null, grantedBy: f.app.context.principalId, deny: true,
-    }],
+    principalId: f.app.context.principalId,
+    scopes: ["R"],
+    grants: [
+      {
+        resourceType: "*",
+        actions: ["read"],
+        projectIds: [other.id],
+        environmentIds: [],
+        expiresAt: null,
+        grantedBy: f.app.context.principalId,
+      },
+      {
+        resourceType: "*",
+        actions: ["read"],
+        projectIds: [String(f.test.projectId)],
+        environmentIds: [],
+        expiresAt: null,
+        grantedBy: f.app.context.principalId,
+        deny: true,
+      },
+    ],
   });
   await expect(reader.healing.review(f.proposal.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
@@ -978,7 +1047,11 @@ it("healing review shows policy-applied verification without rewriting historica
   const verified = await f.service.reconcile(f.verification.id);
   const review = await f.service.review(proposal.id);
   expect(review.automation.decision).toBe("applied_by_policy");
-  expect(review.verification).toEqual({ runId: f.verification.id, outcome: "passed", gate: "passed" });
+  expect(review.verification).toEqual({
+    runId: f.verification.id,
+    outcome: "passed",
+    gate: "passed",
+  });
   expect(review.approval.expectedVersion).toBe(verified.version);
   expect(f.app.runs.get(f.failed.id).outcome).toBe("failed");
 });
@@ -995,7 +1068,10 @@ it("healing review exposes only recorded label and form attributes and never inv
   record.evidenceHash = semanticHash(payload);
   const proposal = await f.service.propose(f.failed.id);
   const review = await f.service.review(proposal.id);
-  expect(review.identity[0]!.candidates[0]).toMatchObject({ label: "Recorded submit label", form: "checkout-form" });
+  expect(review.identity[0]!.candidates[0]).toMatchObject({
+    label: "Recorded submit label",
+    form: "checkout-form",
+  });
   expect(review.limitations).not.toContain("Candidate label unavailable for step first");
   expect(review.limitations).not.toContain("Candidate form unavailable for step first");
   expect(review.automation.reasons).toEqual(proposal.limitations);
@@ -1011,13 +1087,17 @@ it("healing review shows recorded truncated candidates without claiming locator 
   const review = await f.service.review(proposal.id);
   expect(review.identity[0]!.candidates.length).toBe(1);
   expect(review.identity[0]!.equivalence?.equivalent).toBe(false);
-  expect(review.limitations).toContain(`Locator candidate list truncated for Run ${f.failed.id}; equivalence is not established by this record`);
+  expect(review.limitations).toContain(
+    `Locator candidate list truncated for Run ${f.failed.id}; equivalence is not established by this record`,
+  );
   expect(review.automation.reasons).toEqual(proposal.limitations);
 });
 
 it("healing review propagates unexpected locator read failures instead of masking defects", async () => {
   const f = await deferredFixture(true);
   const proposal = await f.service.propose(f.failed.id);
-  vi.spyOn(f.service.artifacts, "get").mockRejectedValue(new Error("Unexpected locator reader defect"));
+  vi.spyOn(f.service.artifacts, "get").mockRejectedValue(
+    new Error("Unexpected locator reader defect"),
+  );
   await expect(f.service.review(proposal.id)).rejects.toThrow("Unexpected locator reader defect");
 });

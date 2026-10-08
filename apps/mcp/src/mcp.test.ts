@@ -176,7 +176,10 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     Object.assign(run, { phase: "completed", status: "failed", outcome: "failed", gate: "failed" });
     app.context.entities.insert("Run", run);
     const connect = async (scopes: ("R" | "W" | "X")[]) => {
-      const server = createMcpServer({ application: app.withIdentity({ principalId: init.principalId, scopes }), roots: [cwd] });
+      const server = createMcpServer({
+        application: app.withIdentity({ principalId: init.principalId, scopes }),
+        roots: [cwd],
+      });
       servers.push(server);
       const [left, right] = InMemoryTransport.createLinkedPair();
       await server.connect(right);
@@ -186,7 +189,10 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
       return client;
     };
     const executor = await connect(["R", "X"]);
-    const analyzed = await executor.callTool({ name: "testmaster_analyze_run", arguments: { runId: run.id } });
+    const analyzed = await executor.callTool({
+      name: "testmaster_analyze_run",
+      arguments: { runId: run.id },
+    });
     expect(analyzed.isError).not.toBe(true);
     const content = analyzed.content as { type: string; text: string }[];
     expect(content[0]?.text).toContain("Diagnosis\nFailure:");
@@ -196,30 +202,58 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     expect(analyzed.structuredContent).toEqual(app.analysis.get(run.id));
     const reader = await connect(["R"]);
     const before = app.database.all("SELECT * FROM analyses");
-    const read = await reader.callTool({ name: "testmaster_get_analysis", arguments: { runId: run.id } });
+    const read = await reader.callTool({
+      name: "testmaster_get_analysis",
+      arguments: { runId: run.id },
+    });
     expect(read.isError).not.toBe(true);
     expect(read.structuredContent).toEqual(analyzed.structuredContent);
     expect(app.database.all("SELECT * FROM analyses")).toEqual(before);
-    const denied = await reader.callTool({ name: "testmaster_analyze_run", arguments: { runId: run.id } });
+    const denied = await reader.callTool({
+      name: "testmaster_analyze_run",
+      arguments: { runId: run.id },
+    });
     expect(denied.isError).toBe(true);
-    expect(JSON.parse(String((denied.content as { text: string }[])[0]?.text)).error.code).toBe("FORBIDDEN");
+    expect(JSON.parse(String((denied.content as { text: string }[])[0]?.text)).error.code).toBe(
+      "FORBIDDEN",
+    );
     const empty = app.runs.resolve({ testId: test.id, environmentId: init.environmentId });
     app.context.entities.insert("Run", empty);
-    const missing = await reader.callTool({ name: "testmaster_get_analysis", arguments: { runId: empty.id } });
+    const missing = await reader.callTool({
+      name: "testmaster_get_analysis",
+      arguments: { runId: empty.id },
+    });
     expect(missing.isError).toBe(true);
-    expect(JSON.parse(String((missing.content as { text: string }[])[0]?.text)).error.code).toBe("NOT_FOUND");
+    expect(JSON.parse(String((missing.content as { text: string }[])[0]?.text)).error.code).toBe(
+      "NOT_FOUND",
+    );
 
     const revision = app.revisions.get(String(run.revisionId));
     if (!revision.plan) throw new Error("Missing fixture plan");
     const proposal = entity(app.context, "hea", {
-      failedRunId: run.id, testId: test.id, analysisId: null, baseRevisionId: revision.id,
-      candidateRevisionId: revision.id, diff: "Manual review only", changes: [], evidenceRefs: [],
+      failedRunId: run.id,
+      testId: test.id,
+      analysisId: null,
+      baseRevisionId: revision.id,
+      candidateRevisionId: revision.id,
+      diff: "Manual review only",
+      changes: [],
+      evidenceRefs: [],
       preservedAssertionsHash: assertionsHash(revision.plan),
-      risk: "read", status: "proposed", approvalMode: null, reviewerId: null, policyHash: null,
-      verificationRunId: null, modelCallId: null, limitations: ["Multiple locator candidates require manual review"],
+      risk: "read",
+      status: "proposed",
+      approvalMode: null,
+      reviewerId: null,
+      policyHash: null,
+      verificationRunId: null,
+      modelCallId: null,
+      limitations: ["Multiple locator candidates require manual review"],
     });
     app.context.entities.insert("HealingProposal", proposal);
-    const review = await reader.callTool({ name: "testmaster_review_healing", arguments: { proposalId: proposal.id } });
+    const review = await reader.callTool({
+      name: "testmaster_review_healing",
+      arguments: { proposalId: proposal.id },
+    });
     expect(review.isError).not.toBe(true);
     const reviewContent = review.content as { text: string }[];
     expect(reviewContent[0]?.text).toContain("Healing review");
@@ -227,9 +261,13 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     expect(reviewContent[0]?.text).toContain("--expected-version");
     expect(JSON.parse(reviewContent[1]?.text ?? "null")).toEqual(review.structuredContent);
     expect(review.structuredContent).toEqual(await app.healing.review(proposal.id));
-    expect(app.context.entities.get("HealingProposal", init.workspaceId, proposal.id)).toEqual(proposal);
+    expect(app.context.entities.get("HealingProposal", init.workspaceId, proposal.id)).toEqual(
+      proposal,
+    );
     const tools = (await reader.listTools()).tools;
-    expect(tools.find((tool) => tool.name === "testmaster_review_healing")?.annotations?.readOnlyHint).toBe(true);
+    expect(
+      tools.find((tool) => tool.name === "testmaster_review_healing")?.annotations?.readOnlyHint,
+    ).toBe(true);
   } finally {
     for (const client of clients) await client.close();
     for (const server of servers) await server.close();

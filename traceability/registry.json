@@ -18134,7 +18134,7 @@
           {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(() => validateHoldout(value)).toThrow(\"reviewer must differ from author\");"},
           {"path": "tools/src/evals/holdout.test.ts", "assertion": "await expect(checkHoldout(root, \"sealed.json\")).rejects.toThrow(\"sealed file changed: data.json\");"},
           {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(result).toMatchObject({ participants: 3, sessions: 3, counterbalanced: true });"},
-          {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(() => aggregateUserTasks(value)).toThrow(\"Participants and completed sessions are required\");"},
+          {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(() => aggregateUserTasks(value)).toThrow(\n    \"Participants and completed sessions are required\",\n  );"},
           {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(() => aggregateUserTasks(unbalanced)).toThrow(\"not counterbalanced\");"}
         ]
       }
@@ -18175,10 +18175,10 @@
         ],
         "criticalAssertions": [
           {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.observation?.absence).toBe(\"empty_collection\");"},
-          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(\"Inspect the creation response at step create and the read at step read, including entity identity and environment.\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(\n    \"Inspect the creation response at step create and the read at step read, including entity identity and environment.\",\n  );"},
           {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.conclusion.status).toBe(\"no_failure\");"},
           {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.observation?.absence).toBe(\"evidence_unavailable\");"},
-          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(() => persist.persist(legacy)).toThrow(\"New analysis requires layered diagnosis and hypothesis support\");"},
+          {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(() => persist.persist(legacy)).toThrow(\n    \"New analysis requires layered diagnosis and hypothesis support\",\n  );"},
           {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);"},
           {"path": "packages/application/src/ai/analysis.test.ts", "assertion": "expect(analysis.limitations.some((limitation) => limitation.includes(rejection))).toBe(true);"},
           {"path": "packages/reporting/src/reporting.test.ts", "assertion": "expect(output).toContain(\"Expected effect absent; internal cause undetermined\");"},
@@ -18217,13 +18217,13 @@
           "packages/application/src/ai/healing.test.ts::healing review recalculates protected assertion hashes rather than trusting the proposal"
         ],
         "criticalAssertions": [
-          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.changes[0]).toEqual({\n    stepId: \"first\", path: \"/input/locator\",\n    before: { by: \"css\", value: \"#form > button\" }, after: f.replacement,\n  });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.changes[0]).toEqual({\n    stepId: \"first\",\n    path: \"/input/locator\",\n    before: { by: \"css\", value: \"#form > button\" },\n    after: f.replacement,\n  });"},
           {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.automation.reasons).toEqual(proposal.limitations);"},
-          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.preservedAssertions).toMatchObject({ hash: proposal.preservedAssertionsHash, intact: true, stepIds: [\"business\"] });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.preservedAssertions).toMatchObject({\n    hash: proposal.preservedAssertionsHash,\n    intact: true,\n    stepIds: [\"business\"],\n  });"},
           {"path": "packages/application/src/ai/healing.test.ts", "assertion": "await expect(reader.healing.review(f.proposal.id)).rejects.toMatchObject({ code: \"FORBIDDEN\" });"},
-          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "await expect(f.service.approve(proposal.id, review.approval.expectedVersion + 1)).rejects.toMatchObject({ code: \"REVISION_CONFLICT\" });"},
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "await expect(\n    f.service.approve(proposal.id, review.approval.expectedVersion + 1),\n  ).rejects.toMatchObject({ code: \"REVISION_CONFLICT\" });"},
           {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.preservedAssertions.intact).toBe(false);"},
-          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.verification).toEqual({ runId: f.verification.id, outcome: \"passed\", gate: \"passed\" });"}
+          {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.verification).toEqual({\n    runId: f.verification.id,\n    outcome: \"passed\",\n    gate: \"passed\",\n  });"}
         ]
       }
     },

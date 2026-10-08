@@ -380,8 +380,16 @@ it("REST healing review returns immutable changes and refuses project-scoped rea
   const f = await fixture();
   const plan = scaffoldPlan("backend");
   const test = f.application.tests.create({ projectId: f.init.projectId, plan });
-  const failed = f.application.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
-  Object.assign(failed, { phase: "completed", outcome: "failed", status: "failed", gate: "failed" });
+  const failed = f.application.runs.resolve({
+    testId: test.id,
+    environmentId: f.init.environmentId,
+  });
+  Object.assign(failed, {
+    phase: "completed",
+    outcome: "failed",
+    status: "failed",
+    gate: "failed",
+  });
   f.application.context.entities.insert("Run", failed);
   const base = f.application.revisions.get(String(test.activeRevisionId));
   const changed = structuredClone(plan);
@@ -391,29 +399,68 @@ it("REST healing review returns immutable changes and refuses project-scoped rea
   const candidate = f.application.revisions.create(test.id, changed, base.id);
   const proposalId = `hea_${randomUUID()}`;
   f.application.context.entities.insert("HealingProposal", {
-    id: proposalId, workspaceId: f.application.context.workspaceId, createdAt: new Date().toISOString(), version: 1,
-    failedRunId: failed.id, testId: test.id, analysisId: null, baseRevisionId: base.id,
-    candidateRevisionId: candidate.id, diff: "Recorded route drift",
-    changes: [{ stepId: "get-health", path: "/input/pathSegments", value: [{ literal: "health-v2" }] }],
-    evidenceRefs: [], preservedAssertionsHash: "a".repeat(64), risk: "read", status: "proposed",
-    approvalMode: null, reviewerId: null, policyHash: null, verificationRunId: null, modelCallId: null,
-    limitations: ["Business input changes require manual review"], extensions: {},
+    id: proposalId,
+    workspaceId: f.application.context.workspaceId,
+    createdAt: new Date().toISOString(),
+    version: 1,
+    failedRunId: failed.id,
+    testId: test.id,
+    analysisId: null,
+    baseRevisionId: base.id,
+    candidateRevisionId: candidate.id,
+    diff: "Recorded route drift",
+    changes: [
+      { stepId: "get-health", path: "/input/pathSegments", value: [{ literal: "health-v2" }] },
+    ],
+    evidenceRefs: [],
+    preservedAssertionsHash: "a".repeat(64),
+    risk: "read",
+    status: "proposed",
+    approvalMode: null,
+    reviewerId: null,
+    policyHash: null,
+    verificationRunId: null,
+    modelCallId: null,
+    limitations: ["Business input changes require manual review"],
+    extensions: {},
   });
   const url = `/v1/healing-proposals/${proposalId}/review`;
   const result = await f.app.inject({ url, headers: f.headers });
   expect(result.statusCode).toBe(200);
-  expect(result.json().data.changes).toEqual([{
-    stepId: "get-health", path: "/input/pathSegments", before: [{ literal: "health" }], after: [{ literal: "health-v2" }],
-  }]);
-  expect(result.json().data.automation.reasons).toEqual(["Business input changes require manual review"]);
+  expect(result.json().data.changes).toEqual([
+    {
+      stepId: "get-health",
+      path: "/input/pathSegments",
+      before: [{ literal: "health" }],
+      after: [{ literal: "health-v2" }],
+    },
+  ]);
+  expect(result.json().data.automation.reasons).toEqual([
+    "Business input changes require manual review",
+  ]);
   expect(f.application.healing.get(proposalId).version).toBe(1);
   const other = f.application.projects.create({ name: "Reader scope" });
-  const membership = f.application.database.get("SELECT id FROM memberships WHERE workspace_id=? AND principal_id=?",
-    f.application.context.workspaceId, f.application.context.principalId)!;
-  const storedMembership = f.application.context.entities.get("Membership", f.application.context.workspaceId, String(membership.id))!;
-  f.application.context.entities.update("Membership", f.application.context.workspaceId, storedMembership.id, Number(storedMembership.version), {
-    ...storedMembership, projectRestrictions: [other.id], version: Number(storedMembership.version) + 1,
-  });
+  const membership = f.application.database.get(
+    "SELECT id FROM memberships WHERE workspace_id=? AND principal_id=?",
+    f.application.context.workspaceId,
+    f.application.context.principalId,
+  )!;
+  const storedMembership = f.application.context.entities.get(
+    "Membership",
+    f.application.context.workspaceId,
+    String(membership.id),
+  )!;
+  f.application.context.entities.update(
+    "Membership",
+    f.application.context.workspaceId,
+    storedMembership.id,
+    Number(storedMembership.version),
+    {
+      ...storedMembership,
+      projectRestrictions: [other.id],
+      version: Number(storedMembership.version) + 1,
+    },
+  );
   const denied = await f.app.inject({ url, headers: f.headers });
   expect(denied.statusCode).toBe(403);
   expect(denied.json().error.code).toBe("FORBIDDEN");

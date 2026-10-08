@@ -13,7 +13,7 @@ import type {
 } from "@testmaster/contracts";
 import { diagnosisSummary } from "./diagnosis.js";
 
-export { diagnosisSummary, formatDiagnosisSummary, type DiagnosisSummary } from "./diagnosis.js";
+export { type DiagnosisSummary, diagnosisSummary, formatDiagnosisSummary } from "./diagnosis.js";
 
 export { coverageMetrics, executionMetrics, ratioMetric } from "./metrics.js";
 

@@ -12,27 +12,60 @@ export function healingReviewText(review: HealingReview): string {
     `Automation: ${review.automation.decision}`,
     ...review.automation.reasons.map((reason) => `- ${reason}`),
     `Risk: ${review.risk}`,
-    "", "Step | Path | Before | After", "--- | --- | --- | ---",
-    ...review.changes.map((change) => `${change.stepId} | ${change.path} | ${cell(change.before)} | ${cell(change.after)}`),
+    "",
+    "Step | Path | Before | After",
+    "--- | --- | --- | ---",
+    ...review.changes.map(
+      (change) =>
+        `${change.stepId} | ${change.path} | ${cell(change.before)} | ${cell(change.after)}`,
+    ),
   ];
   for (const identity of review.identity) {
-    lines.push("", `Identity: ${identity.stepId}`, `Previous: ${cell(identity.previous)}`,
-      "Role | Name | Tag | Type | Label | Form | Matched | Visible", "--- | --- | --- | --- | --- | --- | --- | ---");
+    lines.push(
+      "",
+      `Identity: ${identity.stepId}`,
+      `Previous: ${cell(identity.previous)}`,
+      "Role | Name | Tag | Type | Label | Form | Matched | Visible",
+      "--- | --- | --- | --- | --- | --- | --- | ---",
+    );
     if (!identity.candidates.length) lines.push("No recorded candidates available.");
     for (const candidate of identity.candidates)
-      lines.push([candidate.role, candidate.name, candidate.tag, candidate.type, candidate.label,
-        candidate.form, candidate.matched, candidate.visible].map(cell).join(" | "));
-    lines.push(identity.equivalence ? `Equivalence: ${identity.equivalence.equivalent ? "supported" : "not established"}`
-      : "Equivalence: unavailable");
-    if (identity.equivalence) lines.push(...identity.equivalence.reasons.map((reason) => `- ${reason}`));
+      lines.push(
+        [
+          candidate.role,
+          candidate.name,
+          candidate.tag,
+          candidate.type,
+          candidate.label,
+          candidate.form,
+          candidate.matched,
+          candidate.visible,
+        ]
+          .map(cell)
+          .join(" | "),
+      );
+    lines.push(
+      identity.equivalence
+        ? `Equivalence: ${identity.equivalence.equivalent ? "supported" : "not established"}`
+        : "Equivalence: unavailable",
+    );
+    if (identity.equivalence)
+      lines.push(...identity.equivalence.reasons.map((reason) => `- ${reason}`));
   }
-  lines.push("", `Preserved assertions: ${review.preservedAssertions.intact ? "intact" : "NOT INTACT"}`,
-    `Assertion hash: ${review.preservedAssertions.hash}`, `Assertion steps: ${review.preservedAssertions.stepIds.join(", ") || "none"}`,
-    review.verification ? `Verification: ${review.verification.runId} — ${review.verification.outcome}/${review.verification.gate}`
+  lines.push(
+    "",
+    `Preserved assertions: ${review.preservedAssertions.intact ? "intact" : "NOT INTACT"}`,
+    `Assertion hash: ${review.preservedAssertions.hash}`,
+    `Assertion steps: ${review.preservedAssertions.stepIds.join(", ") || "none"}`,
+    review.verification
+      ? `Verification: ${review.verification.runId} — ${review.verification.outcome}/${review.verification.gate}`
       : "Verification: not recorded",
-    "", "Approval is bound to this proposal, candidate revision and expected version:",
-    `testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`);
-  if (review.limitations.length) lines.push("", "Limitations:", ...review.limitations.map((limitation) => `- ${limitation}`));
+    "",
+    "Approval is bound to this proposal, candidate revision and expected version:",
+    `testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
+  );
+  if (review.limitations.length)
+    lines.push("", "Limitations:", ...review.limitations.map((limitation) => `- ${limitation}`));
   return `${lines.join("\n")}\n`;
 }
 

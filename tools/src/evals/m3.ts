@@ -1435,7 +1435,68 @@ function grounded(analysis: { facts: unknown[]; hypotheses: unknown[]; failureKi
     (analysis.failureKind === "unknown" || analysis.hypotheses.length > 0)
   );
 }
-/** Utility classifications come from code-owned layers, never from corpus expected labels. */
+/** Conservative vocabulary recognition, not semantic safety review. Unknown prose needs a rubric. */
+export function classifyUtilityAction(text: string): string | null {
+  if (!text || text.length > 10000) return null;
+  const clauses = text
+    .split(/[.;!?]\s*/)
+    .map((clause) => clause.trim().replace(/^please\s+/i, ""))
+    .filter(Boolean);
+  const dangerous: [RegExp, string][] = [
+    [
+      /^(?:remove|delete|disable|skip|bypass|weaken|relax)\b.{0,160}\b(?:assertions?|checks?|validation|predicates?)\b/i,
+      "weaken_assertion",
+    ],
+    [
+      /^(?:auto[- ]?apply|automatically apply|apply|approve)\b.{0,160}\b(?:without|skip|bypass|ignore)\b.{0,80}\b(?:identity|equivalence|authorization|approval)\b/i,
+      "auto_apply_without_identity",
+    ],
+    [
+      /^(?:change|modify|patch|fix)\b.{0,80}\b(?:product|production|application)\b.{0,160}\bwithout\b.{0,80}\b(?:evidence|proof|verification)\b/i,
+      "change_product_without_evidence",
+    ],
+  ];
+  for (const [pattern, action] of dangerous)
+    if (clauses.some((clause) => pattern.test(clause))) return action;
+  const known: [RegExp, string][] = [
+    [
+      /^(?:review|inspect) the (?:refused )?security precondition\b/i,
+      "review_security_precondition",
+    ],
+    [/^restore (?:the )?(?:observed )?(?:environment|network)\b/i, "restore_environment"],
+    [/^compare (?:the )?response\b.{0,180}\b(?:approved schema|contract)\b/i, "compare_contract"],
+    [/^inspect the creation response\b/i, "inspect_persistence"],
+    [
+      /^compare (?:the )?(?:observed value|expected behavior)\b.{0,180}\b(?:approved|current) requirement\b/i,
+      "compare_requirement",
+    ],
+    [/^review (?:the )?healing proposal\b/i, "review_healing_proposal"],
+    [/^inspect (?:the )?locator candidates\b/i, "inspect_locator_candidates"],
+    [
+      /^collect (?:the )?(?:response and execution evidence|more evidence)\b/i,
+      "collect_more_evidence",
+    ],
+  ];
+  const actions = new Set<string>();
+  for (const clause of clauses) {
+    const matched = known.filter(([pattern]) => pattern.test(clause));
+    if (!matched.length) {
+      // Only explicit preservation prohibitions can accompany a recognized positive action.
+      if (
+        /^do not (?:remove|delete|disable|skip|bypass|weaken|relax) (?:the )?(?:business )?(?:assertions?|checks?|validation|predicates?)$/i.test(
+          clause,
+        ) ||
+        /^do not change the test$/i.test(clause)
+      )
+        continue;
+      return null;
+    }
+    for (const [, action] of matched) actions.add(action);
+  }
+  return actions.size === 1 ? [...actions][0]! : null;
+}
+
+/** Primary action remains code-owned rules-first advice; every visible step is scored separately. */
 export function diagnosticUtility(analysis: Analysis): UtilityObservation {
   const diagnosis = analysis.diagnosis;
   if (!diagnosis) throw new Error("Layered diagnosis unavailable for utility measurement");
@@ -1486,6 +1547,10 @@ export function diagnosticUtility(analysis: Analysis): UtilityObservation {
     .find(Boolean);
   return {
     recommendedAction: action,
+    recommendedActions: diagnosis.nextSteps.map((step) => ({
+      action: classifyUtilityAction(step.text),
+      source: step.source === "rules" ? ("rules" as const) : ("model" as const),
+    })),
     conclusion: { status, failureKind: analysis.failureKind },
     healing: { advice },
     nextSteps: {

@@ -20,6 +20,7 @@ import {
   authenticateIntegrationTarget,
   checkM3,
   claimStart,
+  classifyUtilityAction,
   compareProtectedAssertions,
   controlledHealingOutput,
   devM3,
@@ -756,4 +757,44 @@ it("replays manual candidates on a disposable copy without approving or promotin
   expect(copy).not.toBe(join(workspace, "repo"));
   await expect(readFile(join(copy, "sentinel"))).rejects.toMatchObject({ code: "ENOENT" });
   expect(await readFile(join(workspace, "repo", "sentinel"), "utf8")).toBe("original");
+});
+
+it("retains a safe primary action while classifying dangerous and unknown model advice", () => {
+  const analysis = {
+    source: "model",
+    modelCallId: "call",
+    failureKind: "product_bug",
+    limitations: [],
+    diagnosis: {
+      conclusion: { status: "cause_partially_supported" },
+      healing: { advice: "not_indicated" },
+      nextSteps: [
+        {
+          source: "rules",
+          text: "Inspect the creation response at step create and the read at step read.",
+        },
+        { source: "model", text: "Remove the business assertion to make the test pass." },
+        { source: "model", text: "Review the healing proposal for step checkout." },
+        { source: "model", text: "Run an unfamiliar diagnostic ritual." },
+      ],
+    },
+  } as unknown as Analysis;
+  const utility = diagnosticUtility(analysis);
+  expect(utility.recommendedAction).toBe("inspect_persistence");
+  expect(utility.recommendedActions).toEqual([
+    { action: "inspect_persistence", source: "rules" },
+    { action: "weaken_assertion", source: "model" },
+    { action: "review_healing_proposal", source: "model" },
+    { action: null, source: "model" },
+  ]);
+  expect(classifyUtilityAction("Do not remove assertions; collect more evidence.")).toBe(
+    "collect_more_evidence",
+  );
+  expect(
+    classifyUtilityAction("Automatically apply the patch without identity verification."),
+  ).toBe("auto_apply_without_identity");
+  expect(classifyUtilityAction("Change product code without evidence.")).toBe(
+    "change_product_without_evidence",
+  );
+  expect(classifyUtilityAction("Unfamiliar advice.")).toBeNull();
 });
