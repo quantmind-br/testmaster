@@ -21,8 +21,10 @@ afterEach(async () => {
 async function fixture(
   handler?: (req: IncomingMessage, res: ServerResponse, body: string, number: number) => void,
   ledger = new TestBudgetLedger(),
+  inventory: (listing: number) => string[] = () => ["model"],
 ) {
   let requests = 0;
+  let listings = 0;
   let completions = 0;
   let consent: typeof grantedConsent | null = grantedConsent;
   const records: ModelCallRecord[] = [];
@@ -35,7 +37,8 @@ async function fixture(
     payloads.push(body);
     if (req.url === "/v1/models") {
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify({ data: [{ id: "model" }] }));
+      listings += 1;
+      res.end(JSON.stringify({ data: inventory(listings).map((id) => ({ id })) }));
       return;
     }
     completions += 1;
@@ -415,6 +418,20 @@ describe("policy-controlled model requests", () => {
     ).toBe(true);
     f.revoke();
     await expect(f.gateway.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  });
+
+  it("retries an intermittently missing inventory entry a bounded number of times", async () => {
+    const flaky = await fixture(undefined, undefined, (listing) =>
+      listing < 3 ? ["other"] : ["model"],
+    );
+    await expect(flaky.gateway.complete(testRequest)).resolves.toMatchObject({ cacheHit: false });
+    expect(flaky.counts().completions).toBe(1);
+    const absent = await fixture(undefined, undefined, () => ["other"]);
+    await expect(absent.gateway.complete(testRequest)).rejects.toMatchObject({
+      code: "CAPABILITY_UNAVAILABLE",
+    });
+    expect(absent.counts().completions).toBe(0);
+    expect(absent.counts().requests).toBe(4);
   });
 
   it("rejects missing capability, substituted model, and excessive input without a completion", async () => {

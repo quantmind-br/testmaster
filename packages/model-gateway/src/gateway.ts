@@ -22,6 +22,19 @@ import type {
 } from "./types.js";
 
 const maxRepairIssues = 20;
+const INVENTORY_LISTINGS = 4;
+const INVENTORY_BACKOFF_MS = 250;
+function inventoryBackoff(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    signal.addEventListener("abort", done, { once: true });
+    function done() {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    }
+  });
+}
 const forbiddenDataClasses: Record<string, true> = {
   credentials: true,
   secrets: true,
@@ -208,7 +221,14 @@ export class ModelGateway {
       if (!inventoryChecked) {
         await this.authorize(input, provider, signal);
         try {
-          if (!(await transport.models(key, signal)).includes(input.model))
+          // Gateways in front of several upstream pools can list a model intermittently;
+          // absence is reported only after a bounded number of listings.
+          let listed = false;
+          for (let listing = 0; !listed && listing < INVENTORY_LISTINGS; listing += 1) {
+            if (listing > 0) await inventoryBackoff(INVENTORY_BACKOFF_MS * listing, signal);
+            listed = (await transport.models(key, signal)).includes(input.model);
+          }
+          if (!listed)
             throw new ContractError(
               "CAPABILITY_UNAVAILABLE",
               "Declared model is absent from provider inventory",
