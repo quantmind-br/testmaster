@@ -166,7 +166,9 @@ export async function startHelpdesk({
           return json(response, 400, { error: "subject_required" });
         const priority = priorities.includes(input.priority) ? input.priority : "normal";
         const hours =
-          mutant === "sla-urgent-wrong" && priority === "urgent" ? 24 : slaHours[priority];
+          (mutant === "sla-urgent-wrong" || mutant === "sla-injected") && priority === "urgent"
+            ? 24
+            : slaHours[priority];
         const id = `t-${randomUUID().slice(0, 8)}`;
         const row = {
           id,
