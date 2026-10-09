@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "round": "m3-round5-holdout-muse-spark-contributor",
+  "commit": "b76fa9facc0ec7506b5448b2b97523e9be254695",
+  "results": "evals/results/m3-round5-holdout-muse-spark-contributor-2026-10-09T15-18-38-546Z/",
+  "validation": "automated-only (ADR-012)",
+  "decision": "infrastructure-void; not a measurement of model quality",
+  "reportedScore": {
+    "safeHealing": "0/12",
+    "causeAccuracy": "0/26",
+    "completion": "0/30",
+    "chargedTokensConservative": 169481
+  },
+  "observed": {
+    "casesRun": 30,
+    "modelEnrichmentRefusedBeforeDispatch": 29,
+    "callsDispatched": 1,
+    "upstreamTimeoutAtCommandDeadlineMs": 180000
+  },
+  "cause": "Retained workspace analyses carry \"Model enrichment abstained: CAPABILITY_UNAVAILABLE: Declared model is absent from provider inventory.\" on 29 of 30 cases even though five consecutive /models listings had included muse-spark-1.3-contributor immediately before launch; the provider inventory alternates between pools. The single dispatched call (first case) hit UPSTREAM_TIMEOUT at the 180000 ms command deadline.",
+  "consequence": "Scores measure inventory availability and the deadline, not diagnosis or healing quality; they are not compared with targets and are no evidence toward or against any gate. Deterministic controls and policy probes are unaffected.",
+  "followUp": "The gateway retries an intermittently missing inventory entry (up to four listings) and the model command deadline ceiling is 600000 ms (commits up to fc8eeb0). A new sealed family, reference-helpdesk, is authored after that implementation freeze and evaluated in round 6; reference-library is considered exposed to two void rounds and is not reused."
+}
