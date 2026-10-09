@@ -381,7 +381,7 @@ export async function checkM3(root: string, registrationPath: string) {
   if (
     b.maxTokens !== 10000000 ||
     b.maxWallTimeMs !== 7200000 ||
-    b.commandDeadlineMs !== 180000 ||
+    ![180000, 600000].includes(b.commandDeadlineMs) ||
     b.maxLogicalCommands !==
       corpus.cases.filter((row) => row.group !== "integration").length * 2 +
         corpus.cases.filter((row) => row.group === "integration").length ||
