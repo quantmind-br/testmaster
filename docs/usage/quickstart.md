@@ -28,6 +28,35 @@ pnpm build
 node containers/build.mjs          # builds and pins testmaster-runner and testmaster-runner-python
 alias testmaster="node $PWD/apps/cli/dist/main.js"
 ```
+### Install from the checkout with Make
+
+```bash
+make install PREFIX="$HOME/.local"
+make verify PREFIX="$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"
+testmaster --version
+# Remove only this managed installation; project data is retained.
+make uninstall PREFIX="$HOME/.local"
+```
+
+Run these targets from the repository root. `make install` installs locked build
+dependencies and compiles with Node 24 before staging independent production files.
+It excludes checkout sources, evaluation results and private configuration; no
+hardlinks to writable checkout files are used. Docker and the locally locked images
+remain prerequisites; run `node containers/build.mjs` before executing tests if needed.
+The launcher pins the Node executable used to install. Prefixes containing spaces
+are supported. `SELF_CONTAINED=0` explicitly binds the launcher to this checkout
+instead of copying the runtime; moving/removing that checkout then breaks the launcher.
+
+Installation validates the staged CLI before replacing an owned runtime and rolls
+back ordinary installation errors. Existing unowned/modified launchers, symlinks,
+runtime directories or missing/mismatched ownership markers are refused without
+deleting them. An installation made by the previous Makefile has no ownership receipt
+and must be moved aside explicitly before installing this version. `uninstall` follows
+the saved receipt, not the current `SELF_CONTAINED` option, and never removes the source
+checkout or project `.testmaster` data. A process kill may leave a staging directory or
+`.testmaster-install.lock`; inspect the prefix before removing stale installation state.
+
 
 `testmaster doctor` refuses execution (exit 9) when Docker, the image lock or the seccomp profile is not
 usable. There is no silent fallback to unsandboxed execution; `--unsafe-local` additionally requires
