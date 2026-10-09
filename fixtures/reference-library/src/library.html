@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Lantern Library</title><style>body{font:1rem system-ui;max-width:60rem;margin:2rem auto;padding:1rem}nav{display:flex;gap:1rem}label{display:block;margin:1rem 0}[role=alert]{color:#a00}table{width:100%;border-collapse:collapse}td,th{padding:1rem;text-align:left}ul{padding:0}li{list-style:none;margin:1rem 0}</style></head>
+<body><h1>Lantern Library</h1><nav aria-label="Library"><a href="/login">Member login</a><a href="/books">Books</a><a href="/loans">My loans</a></nav><main id="view" aria-live="polite"></main><p role="status" data-testid="notice"></p>
+<script type="module">
+const view = document.querySelector('#view');
+let token = sessionStorage.getItem('library-token');
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+async function api(path, options = {}) {
+  const response = await fetch(`/api${path}`, {...options, headers:{...(token ? {authorization:`Bearer ${token}`} : {}), ...options.headers}});
+  if (response.status === 401 && path !== '/auth/token') throw new Error('Please log in');
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error);
+  return value;
+}
+const send = (path, value, headers = {}) => api(path,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
+function notice(value) { document.querySelector('[data-testid=notice]').textContent = value; }
+async function render() {
+  notice('');
+  const path = location.pathname;
+  if (path === '/login' || path === '/') {
+    view.innerHTML = '<h2>Member login</h2><form novalidate><label>Email<input name="email" type="email" value="member@example.test" autocomplete="username" data-testid="member-email"></label><label>Passcode<input name="passcode" type="password" autocomplete="current-password" data-testid="member-passcode"></label><p role="alert" data-testid="login-error"></p><button type="submit">Log in</button></form>';
+    view.querySelector('form').onsubmit = async event => {
+      event.preventDefault();
+      const email = view.querySelector('[name=email]').value;
+      const passcode = view.querySelector('[name=passcode]').value;
+      try {
+        const result = await send('/auth/token',{email,passcode});
+        token = result.token; sessionStorage.setItem('library-token',token); navigate('/books');
+      } catch { view.querySelector('[data-testid=login-error]').textContent = !passcode ? 'Passcode is required' : 'Invalid credentials'; }
+    };
+    return;
+  }
+  if (path === '/books') {
+    view.innerHTML = '<h2>Books</h2><p data-testid="books-loading">Loading books</p>';
+    await new Promise(resolve => setTimeout(resolve,40));
+    const {items} = await api('/books?limit=100');
+    view.innerHTML = `<h2>Books</h2><table data-testid="books-ready"><caption>Collection</caption><thead><tr><th>Title</th><th>Copies</th><th>Action</th></tr></thead><tbody>${items.map(item => `<tr data-testid="book-${escapeHtml(item.id)}"><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.copiesAvailable ?? item.available)}</td><td><button data-book="${escapeHtml(item.id)}" data-testid="borrow-${escapeHtml(item.id)}">Borrow ${escapeHtml(item.title)}</button></td></tr>`).join('')}</tbody></table>`;
+    for (const button of view.querySelectorAll('[data-book]')) button.onclick = async () => { try { await send('/loans',{bookId:button.dataset.book}); notice('Borrowed'); } catch (error) { notice(error.message); } };
+  } else if (path === '/loans') {
+    const {items} = await api('/loans');
+    const {renewHook} = await fetch('/config').then(response => response.json());
+    view.innerHTML = `<h2>My loans</h2><p data-testid="loan-count">${items.length}</p><ul data-testid="loan-list">${items.map(item => `<li data-testid="loan"><span>${escapeHtml(item.bookId)}</span> due <time>${escapeHtml(item.dueDate)}</time>, renewals <span data-testid="renewal-count">${item.renewals}</span>, status <span data-testid="loan-status">${escapeHtml(item.status)}</span> <button class="renew" data-testid="${renewHook}" data-loan="${escapeHtml(item.id)}" ${item.status !== 'active' ? 'disabled' : ''}>Renew</button> <button class="return" data-testid="return-button" data-loan="${escapeHtml(item.id)}" ${item.status !== 'active' ? 'disabled' : ''}>Return</button></li>`).join('')}</ul>`;
+    console.info('loans-ready');
+    for (const button of view.querySelectorAll('button.renew')) button.onclick = async () => { try { const result = await send(`/loans/${button.dataset.loan}/renew`,{}); notice(`Renewed until ${result.dueDate}`); } catch (error) { notice(error.message); } };
+    for (const button of view.querySelectorAll('button.return')) button.onclick = async () => { try { await send(`/loans/${button.dataset.loan}/return`,{}); notice('Returned'); } catch (error) { notice(error.message); } };
+  }
+}
+function navigate(path) { history.pushState({},'',path); render().catch(error => { view.textContent=error.message; }); }
+document.querySelector('nav').onclick = event => { const link = event.target.closest('a'); if (!link || link.target) return; event.preventDefault();navigate(link.pathname); };
+addEventListener('popstate',()=>render().catch(error=>{view.textContent=error.message;}));
+render().catch(error=>{view.textContent=error.message;});
+</script></body></html>
