@@ -1,6 +1,6 @@
 # Support matrix
 
-Version: 2026-10-05. This matrix distinguishes observed application acceptance from environment prerequisites. The approved implementation scope is M0–M2; registry statuses and explicit residual gaps govern release eligibility. No GA, performance/parity, human security sign-off or license/publication certification is implied.
+Version: 2026-10-05. This matrix distinguishes observed application acceptance from environment prerequisites. The approved implementation scope is M0–M2; registry statuses and explicit residual gaps govern release eligibility. No GA, performance/parity, automated security homologation or license/publication certification is implied.
 
 ## Platform profiles
 

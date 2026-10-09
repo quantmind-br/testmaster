@@ -5643,8 +5643,8 @@
         "packages/sandbox/src/egress/policy.ts",
         "packages/evidence/src/reader.ts"
       ],
-      "note": "Security design and controls exist; complete boundary review/sign-off and raw-trace-default acceptance are not recorded.",
-      "blockedReason": "Security design and controls exist; complete boundary review/sign-off and raw-trace-default acceptance are not recorded."
+      "note": "Security design and controls exist; automated boundary acceptance (versioned threat model plus adversarial suites, ADR-012) and raw-trace-default acceptance are not recorded.",
+      "blockedReason": "Security design and controls exist; automated boundary acceptance (versioned threat model plus adversarial suites, ADR-012) and raw-trace-default acceptance are not recorded."
     },
     {
       "id": "M0-04",
@@ -5671,8 +5671,8 @@
         "fixtures/reference-shop/oracle/index.js",
         "evals/corpus/manifest.json"
       ],
-      "note": "Current corpus metadata is Apache-2.0 for original TestMaster fixtures and labels (ADR-010); third-party materials keep their own terms and SOURCES.md stays provenance, not permission. Independent label review/reviewer fields remain pending.",
-      "blockedReason": "Independent label review/reviewer fields pending; no independently reviewed benchmark claim."
+      "note": "Current corpus metadata is Apache-2.0 for original TestMaster fixtures and labels (ADR-010); third-party materials keep their own terms and SOURCES.md stays provenance, not permission. Sealed labels with declared authorship (ADR-012) are not yet recorded.",
+      "blockedReason": "Sealed labels with declared authorship pending (ADR-012); no sealed benchmark claim."
     },
     {
       "id": "M0-05",
@@ -12485,8 +12485,8 @@
       ],
       "evidence": ["docs/security/threat-model.md", "docs/adr/003-rootful-docker.md"],
       "code": ["docs/security/threat-model.md"],
-      "note": "Versioned threat model present; independent review/sign-off for enabling all implemented transports/executors is not recorded. Document alone is not verified acceptance.",
-      "blockedReason": "Versioned threat model present; independent review/sign-off for enabling all implemented transports/executors is not recorded. Document alone is not verified acceptance."
+      "note": "Versioned threat model present; automated adversarial acceptance for enabling all implemented transports/executors is not recorded (ADR-012). Document alone is not verified acceptance.",
+      "blockedReason": "Versioned threat model present; automated adversarial acceptance for enabling all implemented transports/executors is not recorded (ADR-012). Document alone is not verified acceptance."
     },
     {
       "id": "SEC-002",
@@ -16245,8 +16245,8 @@
       ],
       "evidence": ["evals/corpus/manifest.json", "fixtures/reference-shop/src/shop.test.ts"],
       "code": ["evals/corpus/manifest.json", "fixtures/reference-shop/oracle/index.js"],
-      "note": "Corpus versioned with Apache-2.0 metadata for original fixtures/labels (ADR-010). Independent label review empty/pending; no independently reviewed licensed benchmark claim.",
-      "blockedReason": "Independent label review empty/pending; no independently reviewed benchmark claim."
+      "note": "Corpus versioned with Apache-2.0 metadata for original fixtures/labels (ADR-010). Sealed labels with declared authorship pending (ADR-012); no sealed licensed benchmark claim.",
+      "blockedReason": "Sealed labels with declared authorship pending (ADR-012); no sealed benchmark claim."
     },
     {
       "id": "VAL-015",
@@ -16480,7 +16480,7 @@
     },
     {
       "id": "VAL-018",
-      "title": "Ambiguidade de PRD tem processo de adjudicação, sem rotular discordância humana como erro de modelo automaticamente.",
+      "title": "Ambiguidade de PRD tem adjudicação determinística, sem rotular divergência de rótulo como erro de modelo automaticamente.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M0",
       "ownerRole": "Quality",
@@ -16498,8 +16498,8 @@
         "evals/preregistration.json"
       ],
       "code": ["packages/application/src/ai/requirements.ts", "evals/corpus/manifest.json"],
-      "note": "Single scripted reviewer adjudication exists; required two independent reviewers and separately reported no-consensus strata are pending.",
-      "blockedReason": "Single scripted reviewer adjudication exists; required two independent reviewers and separately reported no-consensus strata are pending."
+      "note": "Single scripted adjudication exists; the deterministic disputed rule (sealed label vs evidence-justifiable label vs oracle, ADR-012) and separately reported disputed strata are pending.",
+      "blockedReason": "Single scripted adjudication exists; the deterministic disputed rule (sealed label vs evidence-justifiable label vs oracle, ADR-012) and separately reported disputed strata are pending."
     },
     {
       "id": "VAL-019",
@@ -17470,7 +17470,7 @@
     },
     {
       "id": "VAL-037",
-      "title": "Evidência de aceitação registra método automático/humano, reviewer e limitations, sem inflar validação UI para versões não abertas.",
+      "title": "Evidência de aceitação registra método automatizado, ferramenta/versão e limitations, sem inflar validação UI para versões não abertas.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M1",
       "ownerRole": "Quality",
@@ -17633,7 +17633,7 @@
     },
     {
       "id": "VAL-041",
-      "title": "Visual/a11y usa baseline autorizada, clocks/fontes/animações estabilizados, masks mínimas e auditoria automática+humana.",
+      "title": "Visual/a11y usa baseline autorizada, clocks/fontes/animações estabilizados, masks mínimas e auditoria automatizada; critérios não automatizáveis reportados como não verificados.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
@@ -17981,8 +17981,8 @@
         "tools/src/traceability/release.ts",
         "tools/src/traceability/cli.ts"
       ],
-      "note": "Per-area gate validation implemented and passing. Final release targets/observation/interval/n and human sign-off are absent; no release-quality decision invented.",
-      "blockedReason": "Per-area gate validation implemented and passing. Final release targets/observation/interval/n and human sign-off are absent; no release-quality decision invented."
+      "note": "Per-area gate validation implemented and passing. Final release targets/observation/interval/n and the automated release evaluation record are absent; no release-quality decision invented.",
+      "blockedReason": "Per-area gate validation implemented and passing. Final release targets/observation/interval/n and the automated release evaluation record are absent; no release-quality decision invented."
     },
     {
       "id": "VAL-051",
@@ -18234,7 +18234,7 @@
       "milestone": "M6",
       "ownerRole": "Quality",
       "status": "implemented",
-      "blockedReason": "Scoped capability decision controls are implemented; complete immutable GA release evaluation, exceptions and independent sign-off remain M6 obligations and are not established by gate unit tests.",
+      "blockedReason": "Scoped capability decision controls are implemented; complete immutable GA release evaluation, exceptions and automated per-area decision record remain M6 obligations and are not established by gate unit tests.",
       "scenario": [
         "tools/src/traceability/release.test.ts::passes a measured capability independently of blocked milestone areas",
         "tools/src/traceability/release.test.ts::blocks a capability with the genuine missing evidence reason without unrelated milestone failures",
@@ -18724,13 +18724,13 @@
       },
       {
         "area": "public-release",
-        "proposedTarget": "Licensed artifacts, independent security/human benchmark review and supported runtime gate",
+        "proposedTarget": "Licensed artifacts, automated security evidence (threat model plus adversarial suites), sealed benchmark and supported runtime gate",
         "approvedTarget": null,
         "observation": null,
         "interval": null,
         "n": 0,
         "decision": "blocked",
-        "reason": "Apache-2.0 for original work is decided (ADR-010) and experimental public prereleases with SBOM, obligations and corresponding sources exist (latest runtime-4df8ba5), but independent security/human benchmark review, release signatures/advisory workflow and the normative rootless reference are unavailable, and the M3 model pilot failed twice; no GA, public-release quality or parity claim."
+        "reason": "Apache-2.0 for original work is decided (ADR-010) and experimental public prereleases with SBOM, obligations and corresponding sources exist (latest runtime-4df8ba5), but automated security evidence and a sealed benchmark (ADR-012), release signatures/advisory workflow and the normative rootless reference are unavailable, and the M3 model pilot failed twice; no GA, public-release quality or parity claim."
       },
       {
         "area": "model-pipeline-round3-qwen38",
@@ -18814,43 +18814,43 @@
       },
       {
         "area": "m3-assistive-holdout-utility",
-        "proposedTarget": "Independently reviewed external-family holdout: nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
+        "proposedTarget": "Sealed holdout (families never used in development, labels sealed before the first evaluated call, authorship declared; ADR-012): nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
         "approvedTarget": null,
         "observation": null,
         "interval": null,
         "n": 0,
         "decision": "blocked",
-        "reason": "External-family independently reviewed holdout and measured next-action/overclaim/incremental-gain evidence are absent. Development-corpus post-hoc labels, offline replays and limited smoke are not holdout or homologation. Fork-token proof is not required for assistive diagnosis."
+        "reason": "Sealed holdout and measured next-action/overclaim/incremental-gain evidence are absent. Development-corpus post-hoc labels, offline replays and limited smoke are not holdout or homologation. Fork-token proof is not required for assistive diagnosis."
       },
       {
         "area": "m3-automatic-holdout-safety",
-        "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on independently reviewed holdout with eligibility frozen before measurement; independent safety sign-off",
+        "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash (ADR-012)",
         "approvedTarget": null,
         "observation": null,
         "interval": null,
         "n": 0,
         "decision": "blocked",
-        "reason": "Independently reviewed external holdout with predeclared automatic eligibility and independent security review/sign-off are absent. Historical 0/11 unsafe applications and regression success do not establish generalized safety; automatic identity and policy guards remain unchanged."
+        "reason": "Sealed holdout with predeclared automatic eligibility and its automated safety evidence are absent. Historical 0/11 unsafe applications and regression success do not establish generalized safety; automatic identity and policy guards remain unchanged."
       },
       {
-        "area": "m3-assisted-task-study",
-        "proposedTarget": "Preregistered participant task study of review decisions and verification: paired decision time, correctness and manual workload with approved targets and uncertainty",
+        "area": "m3-assisted-review-surface",
+        "proposedTarget": "Automated review-surface acceptance (ADR-012): candidate validated in isolated replay with positive and semantic-negative controls, complete HealingReview projection, stale approval and cross-project lookup refused, reviewLoad measured; no human decision-time, workload or usability claim",
         "approvedTarget": null,
         "observation": null,
         "interval": null,
         "n": 0,
         "decision": "blocked",
-        "reason": "No participant review/verification sessions or independent human task-study measurements are available. Session format, validators and isolated candidate controls are implementation evidence, not a completed user study."
+        "reason": "No recorded automated review-surface acceptance run on the evaluated implementation. Isolated candidate controls (assisted-candidate-replay.json) and review projection tests are implementation evidence, not a recorded area measurement."
       },
       {
         "area": "m3-ci-fork-token-isolation",
-        "proposedTarget": "GitHub-hosted healthy/defect acceptance and cross-owner fork token/secret isolation controls bound to the distributed action commit",
+        "proposedTarget": "GitHub-hosted healthy/defect acceptance and automated cross-owner fork token/secret isolation controls (fork owner distinct from the base repository owner, e.g. organization-owned base) bound to the distributed action commit",
         "approvedTarget": null,
         "observation": null,
         "interval": null,
         "n": 0,
         "decision": "blocked",
-        "reason": "Public same-repository hosted healthy/defect and dispatch-control evidence exists in validation/results/m3-acceptance/hosted/public, but real cross-owner fork-token isolation requires a second GitHub identity unavailable to this execution. Local policy controls do not substitute for that hosted fork proof."
+        "reason": "Public same-repository hosted healthy/defect and dispatch-control evidence exists in validation/results/m3-acceptance/hosted/public, but the automated cross-owner fork-token isolation proof (fork owner distinct from the base owner) has not been executed. Local policy controls do not substitute for that hosted fork proof."
       }
     ],
     "capabilityGates": [
@@ -18868,7 +18868,7 @@
       },
       {
         "id": "m3-assisted-healing",
-        "requiredAreas": ["m3-assisted-task-study"],
+        "requiredAreas": ["m3-assisted-review-surface"],
         "requiredItems": ["HEAL-003", "VAL-053"],
         "nonNegotiable": ["INV-005", "VAL-046"]
       },

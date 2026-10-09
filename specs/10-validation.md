@@ -14,13 +14,13 @@ A validação deve provar que o TestMaster observa comportamento real, conserva 
 | Avaliação estocástica | Geração, diagnóstico e healing em corpus versionado com ground truth independente. | Garantia universal, determinismo de provedor externo ou causalidade sem controle experimental. |
 | Segurança/adversarial | Resistência às ameaças e fronteiras explicitamente testadas. | “Sem vulnerabilidades”; segurança de plugins/versões não cobertos. |
 | Qualidade avançada | Cross-browser, visual/responsive/a11y, contrato/property API, performance e security probes autorizados. | Aprovação irrestrita de produção ou equivalência entre todos os ambientes. |
-| Aceitação humana | Compreensão, acessibilidade, revisão e operações sem sucesso falso. | Prova completa sem os artefatos e contracts dos demais níveis. |
+| Aceitação de UX automatizada | Fluxos por teclado, estados não dependentes de cor, acessibilidade automatizada, revisão e operações sem sucesso falso, exercitados por automação real ([ADR-012](../docs/adr/012-automated-only-validation.md)). | Usabilidade humana, tempo de decisão, conformidade de critérios não automatizáveis ou prova completa sem os artefatos e contracts dos demais níveis. |
 
 | ID | Requisito | Aceitação / evidência |
 |---|---|---|
 | VAL-001 | Separar suites determinísticas do benchmark LLM e dos testes contra hosts externos. | Cada resultado informa classe, runner real/simulado, dependência externa e escopo; benchmark variável não torna unit suite intermitente. |
 | VAL-002 | Um gate funcional browser/API exige execução contra app/API real controlada e coleta do runner real. | Manifest contém Playwright/HTTP/Schemathesis efetivos e logs/requests; mock tem label e não satisfaz gate funcional. |
-| VAL-003 | Assertions e ground truth não podem ser aprovados apenas pelo mesmo LLM que os gerou. | Oracle independente faz avaliação final; judge LLM auxiliar tem incerteza e revisão humana em conflito. |
+| VAL-003 | Assertions e ground truth não podem ser aprovados apenas pelo mesmo LLM que os gerou. | Oracle independente faz avaliação final; judge LLM auxiliar tem incerteza; conflito vira caso `disputed`/`inconclusive`, nunca decisão do judge. |
 | VAL-004 | Cada requisito de release liga implementação, cenário positivo, negativo/adversarial, oracle, evidência e owner. | Requisito sem essa ligação aparece como uncovered/blocked; não há check verde baseado em documento assinado sem execução exigida. |
 | VAL-005 | Limiar proposto só muda por decisão versionada antes da rodada, com motivo e impacto. | Falha de benchmark não é corrigida removendo casos depois do resultado ou relaxando limiar silenciosamente. |
 
@@ -95,7 +95,7 @@ Para utilidade M3, publicar braços `none` (ação implícita `collect_more_evid
 | `assistedCandidateCorrect` | candidata manual passa oracle de drift e falha no negativo semântico / candidatas manuais revisadas em replay isolado | sem promoção nem aplicação implícita |
 | `reviewLoad` | propostas exigindo revisão e mudanças por proposta | não é estudo de tempo humano |
 
-Registrar latência por chamada, primeira tentativa inválida, tokens por ação correta e custo desconhecido explicitamente. Denominador zero não é sucesso. Rótulos de regressão pós-hoc usam `labelSource:post-hoc-scenario-design` e `pending-independent-review`; casos disputados (incluindo bug-03/env-03 históricos) são reportados separadamente. Replays do corpus de desenvolvimento não são holdout.
+Registrar latência por chamada, primeira tentativa inválida, tokens por ação correta e custo desconhecido explicitamente. Denominador zero não é sucesso. Rótulos de regressão pós-hoc usam `labelSource:post-hoc-scenario-design` e não contam como holdout selado; casos disputados (incluindo bug-03/env-03 históricos) são reportados separadamente. Replays do corpus de desenvolvimento não são holdout.
 
 ### 2.4 Tempo, recursos e custo
 
@@ -142,7 +142,7 @@ Em `n_valid = 0`, não há intervalo. Para claim de ausência de falhas, usar li
 
 Manter aplicações pequenas porém reais, com repos/containers/licenças e versões fixadas. Browser suite deve incluir autenticação, rotas protegidas, formulário, validação, navegação SPA, tabela virtualizada, async readiness, popup/iframe autorizado, upload/download, permissões, localization e workflows stateful. API suite inclui CRUD, auth/refresh, schema, headers/status, paginação, rate limits, idempotência, concorrência, dependências/teardown e dados persistidos. Não é obrigatório chamar internet ou SaaS para satisfazer real execution: servidores HTTP e apps containerizadas locais são suficientes, se a rede/browser/DB reais forem exercitados.
 
-Cada defect case tem: ID estável; baseline commit/digest; mutant/fixture defeituoso; requisito violado; categoria de falha; efeito observável; passos de ativação; oracle fora do LLM/gerador; assertions esperadas; limites; labeling/reviewer; license e risco de dados. Exemplos: preço arredondado errado; login inválido aceito; carrinho não persiste; toast de sucesso sem gravação; API devolve 200 mas estado não altera; isolamento de tenant quebrado; schema omite campo obrigatório; idempotência cria duplicata; wait excessivo esconde erro; selector aponta botão errado com mesmo texto. Defeitos cosméticos devem ser diferenciados dos de negócio.
+Cada defect case tem: ID estável; baseline commit/digest; mutant/fixture defeituoso; requisito violado; categoria de falha; efeito observável; passos de ativação; oracle fora do LLM/gerador; assertions esperadas; limites; labels selados e autoria declarada; license e risco de dados. Exemplos: preço arredondado errado; login inválido aceito; carrinho não persiste; toast de sucesso sem gravação; API devolve 200 mas estado não altera; isolamento de tenant quebrado; schema omite campo obrigatório; idempotência cria duplicata; wait excessivo esconde erro; selector aponta botão errado com mesmo texto. Defeitos cosméticos devem ser diferenciados dos de negócio.
 
 Incluir baselines saudáveis, drift não funcional (renomear hook com comportamento igual, readiness dentro do contrato), falhas de ambiente e casos inconclusivos. Dividir corpus por **família de aplicação/defeito**, não apenas por exemplo aleatório, em dev/calibration/holdout. Variações do mesmo template não podem aparecer em treino e holdout como prova de generalização. Ground truth do holdout não é enviado ao modelo avaliado. Exposição pública do corpus pode produzir contaminação: manter subconjunto novo/revisado, documentar limites e nunca alegar ausência de leakage sem base.
 
@@ -152,11 +152,11 @@ Usar assertions de estado e invariantes fora da implementação gerada: DB/test 
 
 | ID | Requisito | Aceitação |
 |---|---|---|
-| VAL-014 | Corpus é versionado/licenciado com baseline, defeito, oracle e labels revisados independentemente. | Revisor diferente consegue reproduzir healthy pass e defective failure com manifest fixo. |
+| VAL-014 | Corpus é versionado/licenciado com baseline, defeito, oracle e labels declarados e selados antes da avaliação. | Execução automatizada reproduz healthy pass e defective failure com manifest fixo; autoria e conhecimento da implementação são declarados. |
 | VAL-015 | Baseline saudável e negativo com defeito são executados com os mesmos testes/oracle. | Teste que falha em ambos ou passa em ambos não conta como detector útil. |
 | VAL-016 | Holdout é isolado por famílias e modelo recebe apenas contexto autorizado de entrada. | Labels/patch de defeito/expected answer não aparecem no prompt; leakage acidental invalida rodada. |
 | VAL-017 | Oracle checa efeito de negócio, não somente sinal produzido pelo próprio componente sob teste. | “Success toast sem persistência” falha por oracle de estado; HTTP 200 com payload inválido falha. |
-| VAL-018 | Ambiguidade de PRD tem processo de adjudicação, sem rotular discordância humana como erro de modelo automaticamente. | Dois reviewers registram decisão/motivo; casos sem consenso são estrato separado, não removidos em segredo. |
+| VAL-018 | Ambiguidade de PRD tem adjudicação determinística, sem rotular divergência de rótulo como erro de modelo automaticamente. | Regra publicada marca `disputed` quando rótulo selado do autor, rótulo justificável pela evidência e oracle divergem; casos disputados são estrato separado, não removidos em segredo. |
 
 ## 5. Mutation testing e anti-vacuity
 
@@ -270,23 +270,23 @@ Admin habilita visual, a11y, API property/security/load em destino controlado, c
 |---|---|---|
 | VAL-035 | Jornadas J01–J18 são versionadas com dados/atores/scripts/expectativas e manifest de cada execução. | Release evidence referencia jornada e implementação concreta; checklist manual sem artifacts não satisfaz parte automatizável. |
 | VAL-036 | Jornadas possuem cenários negativos tão exigíveis quanto positivos. | Remover negative control ou assertion crítica faz o gate apontar cobertura faltante, não “verde com menos testes”. |
-| VAL-037 | Evidência de aceitação registra método automático/humano, reviewer e limitations, sem inflar validação UI para versões não abertas. | Chromium verificado não vira “todos browsers”; mocked GitHub não vira prova de instalação real. |
+| VAL-037 | Evidência de aceitação registra método automatizado, ferramenta/versão e limitations, sem inflar validação UI para versões não abertas. | Chromium verificado não vira “todos browsers”; mocked GitHub não vira prova de instalação real. |
 
 ## 8. Avaliação estocástica LLM e desenho experimental
 
 ### 8.1 Pipeline e rubrica
 
-Avaliar separadamente discovery/mapeamento, normalização PRD, proposal generation, código/plano, diagnóstico e healing. Para cada fase, registrar entrada autorizada, resposta bruta sanitizada, schema validity, custo, tempo, retries, modelo/provider/version, prompts/templates, tools e resultado humano/oracle. Não usar “agent success” agregado sem decomposição. Execução dos testes aceitos é determinística: LLM sugere, não decide passed.
+Avaliar separadamente discovery/mapeamento, normalização PRD, proposal generation, código/plano, diagnóstico e healing. Para cada fase, registrar entrada autorizada, resposta bruta sanitizada, schema validity, custo, tempo, retries, modelo/provider/version, prompts/templates, tools e resultado do oracle. Não usar “agent success” agregado sem decomposição. Execução dos testes aceitos é determinística: LLM sugere, não decide passed.
 
 Rubrica de proposta: alinhamento à intenção, observabilidade da assertion, dados/prerequisitos, isolamento/teardown, determinismo, segurança e capacidade de matar defeito-alvo. Rubrica de diagnóstico: causa correta, evidência citada verificável, causalidade em vez de correlação, alternativa/abstention, ação segura. Rubrica de healing: assertion idêntica semanticamente e conforme policy, patch mínimo selector/wait, ausência de ampliação de escopo e prova nova com controle negativo. Scores ordinais podem ajudar review, mas aprovação crítica é binária por invariáveis publicadas; média alta não compensa unsafe patch.
 
 Rubrica de utilidade: separar observação/ausência, causa parcialmente sustentada, alternativas não estabelecidas e próxima ação que distingue hipóteses. Avaliar segurança da ação mesmo quando a causa estiver errada; cura de assertion divergente é perigosa, não remediação. Comparar nenhum diagnóstico, regras e modelo; evidência indisponível exige lacuna e conselho conservador. Enriquecimento nunca redefine conclusão, conselho de cura ou identidade automática.
 
-A métrica primária de próxima ação corresponde à primeira orientação exibida ao usuário (regras antes do enriquecimento). Orientações suplementares do modelo devem ser registradas e avaliadas à parte, inclusive quando não alteram essa ação primária. Qualquer conselho visível classificado perigoso torna a orientação insegura; conselho não classificado não recebe crédito de segurança e sua contagem fica explícita. Classificar texto livre por regras não resolve integralmente sua semântica: anotações manuais independentes podem ser necessárias. Ganho na decisão humana requer estudo de tarefas, não se deduz apenas da classificação automática de texto nem do número de próximos passos admitidos.
+A métrica primária de próxima ação corresponde à primeira orientação exibida ao usuário (regras antes do enriquecimento). Orientações suplementares do modelo devem ser registradas e avaliadas à parte, inclusive quando não alteram essa ação primária. Qualquer conselho visível classificado perigoso torna a orientação insegura; conselho não classificado não recebe crédito de segurança e sua contagem fica explícita. Classificar texto livre por regras não resolve integralmente sua semântica: texto não classificado fica `unclassified`, sem crédito. Não há claim de ganho na decisão humana; ele não se deduz da classificação automática de texto nem do número de próximos passos admitidos.
 
-Holdout externo usa famílias com autoria/data/proveniência declaradas, driver versionado, plano/variante, verdade conhecida pelo autor separada da causa justificável, conjuntos de ações, conselho e elegibilidade, revisão e selo de hashes. Revisor deve diferir do autor; homologação requer todos os casos `independently-reviewed` e famílias fora da equipe de implementação. A ferramenta valida declaração e consistência, não comprova independência humana. O formato pronto sem casos externos não constitui evidência de generalização.
+Holdout usa famílias nunca usadas no desenvolvimento, com autoria/data/proveniência e `implementationKnowledge` declarados com veracidade, driver versionado, plano/variante, verdade conhecida pelo autor separada da causa justificável, conjuntos de ações, conselho e elegibilidade, e selo de hashes. Famílias são autoradas e seladas após o congelamento da implementação avaliada e antes da primeira chamada de avaliação; autoria pela equipe de implementação ou por agente é permitida e declarada como limitação. Divergência entre rótulo selado, rótulo justificável e oracle marca o caso `disputed` por regra determinística. Nenhuma homologação exige revisão humana ([ADR-012](../docs/adr/012-automated-only-validation.md)); o formato pronto sem casos selados não constitui evidência de generalização.
 
-Estudo de tarefas registra participante, braço, ordem alternada, decisão, tempo até decisão e trabalho manual. Validador/agregação prontos sem sessões reais não satisfazem homologação de cura assistida. Revisão de segurança independente e estudo humano não podem ser substituídos por judge LLM ou casos sintéticos de teste.
+Cura assistida é aceita por automação da superfície de revisão: candidata validada em replay isolado com controles positivo e semântico-negativo, projeção `HealingReview` completa, aprovação stale recusada, consulta entre projetos negada e `reviewLoad` medido. Não há claim de usabilidade, tempo de decisão ou carga de trabalho humanos. Judge LLM e casos sintéticos não substituem oracle determinístico nem suíte adversarial.
 
 ### 8.2 Desenho proposto
 
@@ -297,7 +297,7 @@ Estudo de tarefas registra participante, braço, ordem alternada, decisão, temp
 - Fixar endpoint/model snapshot quando disponível, tools e política de retry. Registrar reasoning effort efetivo quando configurado ou sua omissão (default do provider); parâmetros de sampling e limites de saída permanecem omitidos, sem controlar temperature/top-p/max tokens/seed. Registrar recusa, timeout, invalid output e chamadas faturadas; retry não remove fracasso inicial do end-to-end score.
 - Pré-registrar primary metric, estratos, tamanho, budget, stopping rule, exclusões e threshold. Rodada cortada por custo é truncada com resultados parciais; não virar amostra “aleatória” retroativamente.
 - Para diferenças de recall/precision usar intervalo pareado/bootstrap por família ou método apropriado ao dado; taxas raras podem exigir teste exato. Sem tamanho/power suficiente, reportar “inconclusivo”, não equivalência.
-- Revisor humano cego ao modelo sempre que possível. Dois reviewers nos itens de segurança e em amostra calibrada dos demais; reportar agreement e adjudication. Judge LLM só ajuda triagem, nunca decide sozinho o gate de oracle/segurança.
+- Rótulos selados antes da execução e oracle determinístico decidem; adjudicação segue regra determinística publicada, com estrato disputado e concordância entre rótulo e oracle reportados. Judge LLM só ajuda triagem, nunca decide sozinho o gate de oracle/segurança. Nenhum gate exige revisor humano.
 
 | ID | Requisito | Aceitação |
 |---|---|---|
@@ -313,11 +313,11 @@ Ausência de chave/provedor não impede release dos recursos determinísticos; e
 | ID | Requisito | Aceitação |
 |---|---|---|
 | VAL-040 | UI/browser matrix cobre Chromium, Firefox e WebKit em versões pinadas suportadas, desktop e viewports responsivos. | Critical workflows executados em cada engine; viewport mobile não é declarado teste em dispositivo físico. |
-| VAL-041 | Visual/a11y usa baseline autorizada, clocks/fontes/animações estabilizados, masks mínimas e auditoria automática+humana. | Mutant visual relevante e violação a11y são detectados; atualizar snapshot sem review não cura regressão. |
+| VAL-041 | Visual/a11y usa baseline autorizada, clocks/fontes/animações estabilizados, masks mínimas e auditoria automatizada; critérios não automatizáveis reportados como não verificados. | Mutant visual relevante e violação a11y são detectados; atualizar snapshot sem review não cura regressão. |
 
 Matriz proposta para telas próprias: 320, 768 e 1440 CSS px; zoom 200%; themes dark/light; locale pt-BR/en; timezone definida; reduced motion; keyboard e screen reader ao menos na combinação referência, com lista real de ferramentas/versões na evidence. Baseline visual é específica a engine/platform/fonts/viewport; diferenças esperadas de rasterização não podem produzir aprovação automática de UI errada. O threshold de diff por pixel/SSIM deve ser calibrado por região com mutants, documentado e congelado antes do gate. Porcentagem universal arbitrária não é aceitável. Máscaras só para áreas inevitavelmente variáveis e não podem cobrir assertion de negócio.
 
-Acessibilidade alvo: WCAG 2.2 AA nas telas próprias; scan automatizado zero violações serious/critical e review humano dos critérios não automatizáveis, conforme escopo. Pass automático não equivale a conformidade. Verificar foco, modals, labels, semântica de tabelas, contraste, navegação por landmarks, tamanho de alvos, error association e live region. Viewer terceiro precisa de alternativa acessível e limitações explícitas.
+Acessibilidade alvo: WCAG 2.2 AA nas telas próprias; scan automatizado zero violações serious/critical; critérios não automatizáveis ficam reportados como não verificados, conforme escopo. Pass automático não equivale a conformidade. Verificar foco, modals, labels, semântica de tabelas, contraste, navegação por landmarks, tamanho de alvos, error association e live region. Viewer terceiro precisa de alternativa acessível e limitações explícitas.
 
 ### 9.2 API, property, segurança e carga
 
@@ -368,7 +368,7 @@ O schema canônico deve permitir recuperar os campos abaixo, por snapshot ou ref
 | Determinismo | Seed por gerador, clock control, fixture reset/isolation, retries/healing policy, timeouts, sharding/order e limites externos. |
 | LLM opcional | Provider/model requested/resolved/fingerprint quando disponível, prompt/template/tool/schema versions, sanitized input/output hashes, decoding/seed/limits, usage/cost, trial/retry IDs. |
 | Evidência | Artifacts/hashes/tamanhos/required flags, collector/redactor versions, timestamps/durations, status/phase/outcome, firstAttemptOutcome/passedOnRetry, cleanupOutcome/gate, contagens BatchRun, analyses e oracle version. |
-| Avaliação | Corpus/baseline/defect/oracle IDs e hashes, split/family, reviewer/decision, metrics definitions/version e exclusions. |
+| Avaliação | Corpus/baseline/defect/oracle IDs e hashes, split/family, autoria/selo dos rótulos e decisão, metrics definitions/version e exclusions. |
 
 ### 11.2 Níveis de replay
 
@@ -395,14 +395,14 @@ Todos os alvos desta seção são **propostos e não medidos**. M0 define protoc
 | E2E vertical/browser/API | 100% das jornadas critical in-scope em profile suportado; defect controls killed. | Não usar retries para apresentar suite strict saudável. |
 | Artifacts requeridos | 100% íntegros em Runs críticos fechados; fault injection produz partial explícito. | Hash inválido nunca accepted; retenção depois da janela é outro cenário. |
 | CI/check/namespace | 100% mapeamentos canônicos; nenhum cancelled/blocked/inconclusive, passed com gate failed, seleção vazia not_applicable ou SHA errado aprova. | Configuração de required check no provider e cleanup obrigatório incluídos na prova. |
-| Segurança | Zero critical/high abertas que afetem release scope, zero leaks/cross-tenant/policy bypass na suite. | Scanner zero findings não prova segurança; manual review/threat model requeridos. |
+| Segurança | Zero critical/high abertas que afetem release scope, zero leaks/cross-tenant/policy bypass na suite. | Scanner zero findings não prova segurança; threat model versionado e suíte adversarial com controles negativos requeridos; sem claim além das ameaças testadas. |
 | Flake critical plataforma | Zero flakes observadas na série planejada e limite unilateral <=1% quando claim <1% for feito. | Pelo menos 299–300 repetições independentes por célula/coorte para esse claim; n total entre células não prova cada célula. |
 | Geração LLM | Validity >=95%, useful intent coverage >=80%, rubric precision >=90% no holdout. | Publish interval/n e strata; objetivo inicial, não garantia universal. |
-| Diagnóstico assistivo | Próxima ação correta >=80%, segura >=95%, zero ações perigosas críticas; overclaim <=5%; ganho model − rules positivo com intervalo pareado que exclui zero no holdout revisado. | Metas propostas a aprovar antes da coleta; causa/recall/precisão são secundários; não exige isolamento de token em fork. |
-| Healing automático | Zero unsafe auto-applied patches; zero false repair de defeito crítico; `eligibleSuccess` >=80% no holdout pré-rotulado. | Assertions intactas, controle negativo, verificação e revisão de segurança independente obrigatórios; publicar cobertura sobre todos os drifts separadamente. |
-| Healing assistido | Candidata validada em replay isolado e estudo humano de decisão/verificação com tempo e trabalho manual. | Metas/participantes pré-registrados; formato pronto não é estudo executado. |
+| Diagnóstico assistivo | Próxima ação correta >=80%, segura >=95%, zero ações perigosas críticas; overclaim <=5%; ganho model − rules positivo com intervalo pareado que exclui zero no holdout selado. | Metas pré-registradas antes da coleta; causa/recall/precisão são secundários; não exige isolamento de token em fork. |
+| Healing automático | Zero unsafe auto-applied patches; zero false repair de defeito crítico; `eligibleSuccess` >=80% no holdout pré-rotulado. | Assertions intactas (hash), controle semântico-negativo por caso elegível, verificação, suíte adversarial crítica e inventário de mutation crítico sem sobreviventes obrigatórios; publicar cobertura sobre todos os drifts separadamente. |
+| Healing assistido | Candidata validada em replay isolado com controles positivo/semântico-negativo; `HealingReview` completa; aprovação stale e consulta entre projetos recusadas; `reviewLoad` medido. | Sem claim de tempo de decisão, carga de trabalho ou usabilidade humanos. |
 | Mutation útil | >=90% global não equivalente; 100% para invariantes críticas e defeitos explicitamente prometidos. | Sobrevivente fora de scope documentado não vira killed; ampliar caso antes de claim. |
-| Web/a11y | Critical journeys por teclado; zero serious/critical automáticas; review WCAG 2.2 AA de critérios in-scope. | Sem claim de conformidade integral a partir de scanner. |
+| Web/a11y | Critical journeys por teclado; zero serious/critical automáticas; critérios WCAG 2.2 AA não automatizáveis reportados como não verificados. | Sem claim de conformidade integral a partir de scanner. |
 | Visual/cross-browser | Mutants visuais críticos detectados; zero diferenças não revisadas em baselines pinadas. | Threshold por região calibrado antes de gate. |
 | Load/responsividade | p95 conforme profile proposto da seção 9 e ausência de violação de resource caps. | Baseline/hardware/dataset explícitos; metas calibradas versionadamente antes de SLA. |
 | Import/install/backup | 100% controles de preservation, provenance, malicious archive/symlink e restore. | Relatório importado nunca prova Run novo. |
@@ -419,10 +419,10 @@ Todos os alvos desta seção são **propostos e não medidos**. M0 define protoc
 
 | Gate | Prova requerida | Estado inicial e motivo genuíno |
 |---|---|---|
-| `m3-assistive-diagnosis` | holdout revisado, próxima ação/overclaim nas metas e ganho sobre regras | bloqueado: holdout externo revisado e ganho de utilidade ainda não medidos; fork não é prerequisite |
-| `m3-automatic-healing` | zero inseguro/false repair, eligibleSuccess no holdout e revisão independente de segurança | bloqueado: holdout de elegibilidade e sign-off independente ausentes |
-| `m3-assisted-healing` | estudo de tarefas de revisão e verificação | bloqueado: participantes e sessões reais de estudo ausentes |
-| `m3-ci-integration` | aceite hospedado e isolamento de token em fork | bloqueado: aceite same-repo público existe, prova cross-owner/fork requer segunda identidade GitHub |
+| `m3-assistive-diagnosis` | holdout selado, próxima ação/overclaim nas metas e ganho sobre regras | bloqueado: holdout selado e ganho de utilidade ainda não medidos; fork não é prerequisite |
+| `m3-automatic-healing` | zero inseguro/false repair, eligibleSuccess no holdout com elegibilidade pré-declarada e evidência automatizada de segurança | bloqueado: holdout selado com elegibilidade pré-declarada ainda não executado |
+| `m3-assisted-healing` | aceitação automatizada da superfície de revisão e verificação | bloqueado: aceitação automatizada da superfície de revisão ainda não registrada como área medida |
+| `m3-ci-integration` | aceite hospedado e isolamento de token em fork cross-owner automatizado | bloqueado: aceite same-repo público existe; prova cross-owner automatizada (owner distinto do repositório base, ex. organização) ainda não executada |
 
 Nenhuma linha afirma homologação. Resultados históricos falhos permanecem intactos e o milestone M3 continua vermelho.
 
@@ -444,24 +444,24 @@ Não se inicia uma fase insegura porque o marco anterior ficou “quase concluí
 
 Cada registro deve conter `requirementId`, `milestone`, `implementationRefs`, `scenarioIds`, `oracleRefs`, `evidenceRefs`, `profile`, `status`, `owner` e `limitations`. Esses nomes são estrutura lógica para planejamento; contrato de registry deve ser versionado antes de implementar. Status de rastreabilidade (`planned`, `implemented`, `verified`, `blocked`, `waived`) não é estado de Run. IDs UX-/INT-/VAL- são únicos e nunca reutilizados com outro significado. IDs de requisitos funcionais das specs 01–08 devem integrar o mesmo registro; ausência de nome nesta tabela não dispensa sua verificação.
 
-“Verified” exige proof artifact na versão avaliada; não basta PR merged. Cada artifact cita Run/Attempt/manifest e, em validação humana, reviewer e método. “Blocked” tem prerequisite específico, tentativa de obtenção, risco e milestone afetado. Feature do fornecedor não verificada independentemente continua scope explícito com label de alegação e avaliação futura, não é convertida em “não necessária”. Critério não mensurável deve ser reescrito como oracle observável, sem remover a intenção.
+“Verified” exige proof artifact na versão avaliada; não basta PR merged. Cada artifact cita Run/Attempt/manifest, método automatizado e ferramenta; nenhuma validação depende de revisor humano ([ADR-012](../docs/adr/012-automated-only-validation.md)). “Blocked” tem prerequisite específico, tentativa de obtenção, risco e milestone afetado. Feature do fornecedor não verificada independentemente continua scope explícito com label de alegação e avaliação futura, não é convertida em “não necessária”. Critério não mensurável deve ser reescrito como oracle observável, sem remover a intenção.
 
 | ID | Requisito | Aceitação |
 |---|---|---|
-| VAL-053 | Trace registry cobre todos IDs normativos e capabilities anunciadas com cenário/oracle/gate; gaps são bloqueios explícitos. Inclui proveniência de rótulos de utilidade/holdout e protocolo de tarefas sem equiparar formato a estudo. | Nenhuma capacidade advanced desaparece na release summary; campo verified sem evidence é inválido; independência declarada/revisão e casos disputados são explícitos. |
-| VAL-054 | Release evidence é imutável/versionada e reproduzível: commit/tag, manifests, reports, metrics, exceptions e sign-off. Gates por capacidade são aditivos e preservam bloqueios genuínos e invariantes não negociáveis. | Atualização posterior cria nova release evaluation; não sobrescreve resultados falhos; capability passa apenas com áreas/requisitos medidos próprios e não libera milestone cumulativo bloqueado. |
+| VAL-053 | Trace registry cobre todos IDs normativos e capabilities anunciadas com cenário/oracle/gate; gaps são bloqueios explícitos. Inclui proveniência e selo de rótulos de utilidade/holdout sem equiparar formato a execução. | Nenhuma capacidade advanced desaparece na release summary; campo verified sem evidence é inválido; autoria/conhecimento da implementação declarados e casos disputados são explícitos. |
+| VAL-054 | Release evidence é imutável/versionada e reproduzível: commit/tag, manifests, reports, metrics, exceptions e registro automatizado de decisão por área. Gates por capacidade são aditivos e preservam bloqueios genuínos e invariantes não negociáveis. | Atualização posterior cria nova release evaluation; não sobrescreve resultados falhos; capability passa apenas com áreas/requisitos medidos próprios e não libera milestone cumulativo bloqueado. |
 | VAL-055 | Publicação GA informa scope, supported profiles, licenças/SBOM, limitações, migração/rollback, security policy e modo sem LLM. | Não anuncia performance/paridade sem prova; install/import/restore/documentation completam a jornada OSS. |
 
 ## 14. Relatório de avaliação e política de publicação
 
 Uma rodada deve entregar:
 
-1. Pergunta avaliada, hipótese e scope; classificação determinística/estocástica/segurança/humana.
+1. Pergunta avaliada, hipótese e scope; classificação determinística/estocástica/segurança.
 2. Versões do TestMaster, source/test revisions, runner/env/model manifests, corpus split/seed e horários.
 3. Totais planejados/selecionados/elegíveis, terminal/nonterminal, exclusões e motivos; n efetivo/famílias/trials.
 4. Métricas com fórmulas/denominadores, intervals, strata e recursos/custo; nunca só porcentagem.
 5. Controles positivos/negativos, mutations killed/survived/invalid/equivalent e achados com severity.
-6. Bundles reais verificáveis, reviewers/oracles independentes e limites de redaction/retention.
+6. Bundles reais verificáveis, oracles independentes, autoria declarada dos rótulos e limites de redaction/retention.
 7. Targets propostos/aprovados versus observados, decisão por gate e waivers válidos.
 8. Incertezas, comportamento não testado, diferenças de provider/platform e próximo requisito de evidência para claim mais forte.
 

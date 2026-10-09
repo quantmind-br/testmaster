@@ -243,15 +243,16 @@ After committing the full candidate, the orchestrator runs
 It clones into a private temporary checkout, uses a populated local pnpm store with frozen offline
 installation, clears key/token/secret environment variables, builds, runs unit tests and exercises
 canonical CLI capabilities/scaffold/init. Failed commands are recorded; no-key/offline flags are not
-a substitute for the separate real replay network-boundary tests. License publication and independent
-release sign-off remain blocked until explicitly approved.
+a substitute for the separate real replay network-boundary tests. License publication remains
+blocked until explicitly approved; release decisions come from the automated release evaluation
+record ([ADR-012](../adr/012-automated-only-validation.md)), not a human sign-off.
 
 Release traceability requires explicit positive/negative scenario labels and protected assertion
 text/path controls. An uncovered item needs `blockedReason`, not a silent green `implemented` row.
 Capability mappings include every announced advanced feature with its milestone gate and residuals.
 Per-area targets/observations/intervals/n cannot compensate an open critical security/evidence finding;
 waivers have owner/expiry/noncritical severity/requirement/public capability effect, never cover core
-invariant violations. The orchestrator owns registry migration and release sign-off.
+invariant violations. The orchestrator owns registry migration and the release evaluation record.
 
 ## Vault keys and isolated restore review
 

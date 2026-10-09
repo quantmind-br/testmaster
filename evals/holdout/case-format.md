@@ -1,6 +1,6 @@
 # External M3 holdout and user-task formats
 
-This directory intentionally contains **no holdout cases**. Cases must be authored outside the team implementing the capability. Validator tests use synthetic controls, not evaluation cases. Regression replay, development smoke, and a structurally valid manifest do not establish generalization or homologate any capability.
+This directory intentionally contains **no holdout cases**. Cases must use families never used during development, be authored after the evaluated implementation is frozen and be sealed before the first evaluated call; authorship by the implementing team or an agent is allowed and declared truthfully through `implementationKnowledge` ([ADR-012](../../docs/adr/012-automated-only-validation.md)). Validator tests use synthetic controls, not evaluation cases. Regression replay, development smoke, and a structurally valid manifest do not establish generalization or homologate any capability.
 
 ## Holdout manifest
 
@@ -38,7 +38,7 @@ node tools/dist/evals/m3.js holdout-check sealed-manifest.json --homologation
 
 Sealing validates all required labels and writes a new file exclusively. `seal` records `sealedAt`, SHA-256 of canonical manifest content excluding the seal, and SHA-256 of every declared input. Checking rejects altered labels, missing inputs, changed input bytes, traversal, authorship after sealing, and self-review. To revise any label, review or input, author and seal a new manifest rather than mutating the old one. Historical registrations are immutable and unchanged.
 
-`--homologation` additionally requires every case independently reviewed and every family declared external to the implementing team. The result explicitly reports `provenanceVerified: false`: authorship, reviewer identities and implementation knowledge are declarations, not machine-verifiable facts. This check is only a prerequisite for capability evidence; it does not measure utility or approve release.
+`--homologation` currently still requires every case `independently-reviewed` and every family declared `external`. [ADR-012](../../docs/adr/012-automated-only-validation.md) supersedes that rule: homologation uses sealed labels, the deterministic `disputed` rule and declared authorship, without human review; until the tool is updated, this flag reflects the superseded rule and is not a gate prerequisite. The result explicitly reports `provenanceVerified: false`: authorship and implementation knowledge are declarations, not machine-verifiable facts. This check is only a prerequisite for capability evidence; it does not measure utility or approve release.
 
 ## Offline replay and limited model smoke
 
@@ -51,7 +51,9 @@ Each retained workspace (both `repo/` and `home/`) is copied to a fresh temporar
 
 The optional model arm is development smoke only and requires separate operator authorization. It allows at most four selected cases, Qwen `qwen3.8-flash` with `medium` reasoning only, at most eight generation requests (including repair and retry requests), and 200,000 conservative tokens. Inventory requests are reported separately from generation calls and consume no token reservation. An isolated copied profile uses a local admission forwarder. Before forwarding each completion it reserves the gateway's exact full canonical request UTF-8 byte count plus 8,192 output tokens. Reservations are cumulative and never refunded from provider-reported usage. It stops on the first inventory, transport or HTTP provider failure; no substitute model is attempted. Sanitized wire metadata proves model, effort, request bytes, reserved charge and response status without recording keys or prompt content. Global operator profiles and original retained workspaces are never modified. Existing model-call history is excluded from new smoke usage; reuse of a prior model receipt cannot count as a live smoke measurement.
 
-## User-task protocol
+## User-task protocol (superseded)
+
+Under [ADR-012](../../docs/adr/012-automated-only-validation.md) no gate requires a human task study; assisted healing is accepted through automated review-surface acceptance. The format below remains a validator for optional, non-gating studies.
 
 Create a JSON study with `schemaVersion: "1.0.0"`, `id`, nonempty `participants`, and completed `sessions`. This protocol is prepared only: no participants or measurements have been created.
 

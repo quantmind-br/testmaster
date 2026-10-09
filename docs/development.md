@@ -622,7 +622,7 @@ J02 failed ungrounded conflict evidence, J03 returned four requirements instead 
 and the fixture-authored agent/candidate journey passed. Local acceptance is failed, not M2
 completion. `validation/results/m2-round4-qwen38-medium/closure.json` records stages, usage,
 single-execution captures and residual blockers. VAL-038/039 verify measurement integrity only;
-human review, family holdout, graduation, security/license and public-release obligations remain.
+sealed labels, family holdout, graduation, security/license and public-release obligations remain.
 
 ### M3 diagnosis/healing evaluation
 
@@ -692,7 +692,7 @@ tokens; `muse-spark-1.3` xhigh got safe healing 9/12, cause accuracy 19/26, reca
 unknown for both. `validation/results/m3-round3-posthoc-audit.json` recomputes both scores. Healing
 is capped at 9/12 because `m3-drift-07/08/12` are manual-only by design (renamed control,
 duplicate roleless fingerprint). `m3-bug-03` and `m3-env-03` are labelled `unknown`
-(pending independent review) while rules and both models observe a failed business assertion, so
+(disputed stratum) while rules and both models observe a failed business assertion, so
 they score as misses; labels were not changed. Recall/precision (8/9) and healing (9/12) stay
 below their proposed 0.9/0.8 pilot point targets; the M3 milestone gate stays red.
 
@@ -716,20 +716,20 @@ Utility scoring separates `none`, `rules` and `model` arms with corpus-derived d
 next-action correctness/safety, dangerous actions, healing advice and overclaim are primary utility
 signals. Cause/recall/precision remain secondary. Report automatic coverage separately from
 predeclared automatic eligibility and isolated manual-candidate correctness. Regression action
-labels are post-hoc scenario-design labels pending independent review; disputed labels remain
+labels are post-hoc scenario-design labels and do not count as sealed holdout; disputed labels remain
 separate. Development replay or limited smoke is neither a registered round nor holdout evidence.
-External holdout and participant task-session formats validate declared provenance/review and
-data consistency; validators cannot prove human independence and no real study is claimed.
+The sealed holdout format validates declared provenance and data consistency. Under
+[ADR-012](adr/012-automated-only-validation.md) no gate requires human review or a human task study.
 
 The registry adds `release.capabilityGates` with `requiredAreas`, `requiredItems` and
 `nonNegotiable` requirement references. All four initial decisions are blocked:
 
 | Command suffix | Missing evidence |
 |---|---|
-| `--capability-gate m3-assistive-diagnosis` | Reviewed external-family holdout and utility/overclaim targets plus measured incremental gain over rules; no fork prerequisite. |
-| `--capability-gate m3-automatic-healing` | Predeclared-eligibility holdout and independent security sign-off. |
-| `--capability-gate m3-assisted-healing` | Participant review/verification task sessions and measured decision time/workload. |
-| `--capability-gate m3-ci-integration` | Real cross-owner fork-token isolation with a second GitHub identity; same-repo hosted acceptance already exists. |
+| `--capability-gate m3-assistive-diagnosis` | Sealed holdout and utility/overclaim targets plus measured incremental gain over rules; no fork prerequisite. |
+| `--capability-gate m3-automatic-healing` | Sealed predeclared-eligibility holdout with automated safety evidence (critical adversarial suite, critical mutation inventory, semantic-negative control per eligible case, protected-assertion hash). |
+| `--capability-gate m3-assisted-healing` | Recorded automated review-surface acceptance (isolated replay with positive/semantic-negative controls, complete review projection, stale-approval and cross-project refusal, `reviewLoad`). |
+| `--capability-gate m3-ci-integration` | Automated cross-owner fork-token isolation proof with a distinct GitHub owner (for example an organization-owned base repository); same-repo hosted acceptance already exists. |
 
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
@@ -741,7 +741,7 @@ Plan/ID reconciliation: VAL-053 and VAL-054 already existed in the normative cor
 completeness and immutable/versioned release evidence). They were extended additively for utility
 provenance and scoped capability decisions, not reassigned as new IDs or stripped of prior controls.
 AI-005 and HEAL-003 are the new layered-diagnosis and healing-review requirements. New test source
-links record implementation controls, not external holdout, human-study or security homologation.
+links record implementation controls, not sealed holdout or security homologation.
 
 #### Exercised development evidence (2026-10-08)
 
@@ -762,7 +762,7 @@ isolated copies with healing off: all three candidate positives passed, all thre
 failed, assertions stayed intact and no candidate was promoted (six Docker controls).
 `generic-driver-controls.json` records two synthetic external-driver controls with four Docker
 runs, physical independent oracles and zero model calls. These prove exercised local mechanics,
-not externally authored holdout, participant review utility or independent security sign-off.
+not sealed holdout, recorded review-surface acceptance or automated security homologation.
 
 The single limited paid Qwen medium smoke is **failed utility enrichment**, not success:
 `validation/results/m3-utility/qwen-medium-smoke-summary.json` records four generation calls plus
@@ -779,7 +779,7 @@ built-runtime controlled-output admission check (`nextstep-guard-runtime.json`, 
 the corrected code has **not** received another live provider call. Supplemental-advice safety
 controls passed the 54-test evaluation suite: primary first-displayed action stays rules-first,
 any dangerous visible advice is unsafe and unclassified advice cannot receive safety credit.
-Free-text classification still needs independent manual rubric where unresolved. Post-hoc advice
+Unresolved free-text advice stays `unclassified` without safety credit. Post-hoc advice
 classification is recorded separately in `posthoc-advice-classification.json` without changing the
 original smoke/replay evidence or making another provider call.
 
@@ -802,15 +802,15 @@ the four original workspaces were byte-identical. No test changes or healing wer
 
 Admission is not demonstrated utility or safety. The twelve supplemental next steps
 remain unclassified by the runtime classifier; `bug-03` is excluded from utility
-denominators pending independent label review. `healthy-01` suggests unnecessary
+denominators as a disputed label. `healthy-01` suggests unnecessary
 investigation despite passing. `bug-02` suggests diagnostic polling, not authorized
 test modification; some advice points to empty logs or uninspected artifact fields.
 `drift-03` still has unknown cause and manual-only advice, which differs from the
 existing scenario labels. Those labels and the earlier smoke evidence were not changed.
 
 Evidence: `validation/results/m3-utility-postfix-live/summary.json`, `session.json`
-and the referenced development replay reports. The next prerequisite is an external
-case author and independent reviewer using `evals/holdout/case-format.md`; a real
-user-task study additionally requires consenting participants and reviewed tasks.
+and the referenced development replay reports. The next prerequisite is a sealed holdout
+authored after implementation freeze using `evals/holdout/case-format.md`, with declared
+authorship and the deterministic `disputed` rule ([ADR-012](adr/012-automated-only-validation.md)).
 No capability was homologated by this smoke.
 
