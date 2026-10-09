@@ -1,0 +1,265 @@
+{
+  "id": "lib-bug-08",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1212b-afc6-72a5-8a53-8e18781630ac",
+    "revisionId": "rev_01a1212b-af8d-76f7-9fdc-f6bebfccf127",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "repeat",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "ea21b33fc7a19c8234167d4446a329d0b62d92f829eac5e6207d4e68ef00a3f1",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1212b-af77-7601-8e51-b527345c7af7",
+    "admissionHash": "d83ecdaab3c7ee8cc2bbf1f56ba2b2d73a8f3e8d32ac5037680c74be687314e2"
+  },
+  "transformed": {
+    "runId": "run_01a1212b-b357-7035-815f-98e854e849ef",
+    "revisionId": "rev_01a1212b-af8d-76f7-9fdc-f6bebfccf127",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "repeat",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "ea21b33fc7a19c8234167d4446a329d0b62d92f829eac5e6207d4e68ef00a3f1",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1212b-af77-7601-8e51-b527345c7af7",
+    "admissionHash": "d83ecdaab3c7ee8cc2bbf1f56ba2b2d73a8f3e8d32ac5037680c74be687314e2"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "borrowIdempotency",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "firstId": "a7434945-dd16-42ee-abee-868a3f280f4a",
+      "secondId": "a7434945-dd16-42ee-abee-868a3f280f4a",
+      "persistedRows": 1
+    }
+  },
+  "transformedOracle": {
+    "check": "borrowIdempotency",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "firstId": "1a6520e5-ab12-45ec-aac9-13239cef61d9",
+      "secondId": "46ec8aca-5528-4190-9a54-22dfa15a72e6",
+      "persistedRows": 2
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-08",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "member@example.test",
+                "passcode": "library-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-lib-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrow",
+        "kind": "action",
+        "operation": "request",
+        "description": "borrow",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "idempotency-key": {
+              "literal": "lib-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b1"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "loan_id",
+              "from": "jsonPointer",
+              "pointer": "/id",
+              "valueType": "string",
+              "sensitive": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "repeat",
+        "kind": "action",
+        "operation": "request",
+        "description": "repeat",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "idempotency-key": {
+              "literal": "lib-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "repeat"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

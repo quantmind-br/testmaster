@@ -1,0 +1,196 @@
+{
+  "id": "lib-bug-06",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1212b-a0a7-750f-be55-95a418a53356",
+    "revisionId": "rev_01a1212b-a06c-77fc-b5c9-097d15a586e0",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "books",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "7fecb3e6df5dc529ee36d5cd9b4406919d63611b86723b606047ba1ef9e3f098",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1212b-a056-73df-9493-325bb798edab",
+    "admissionHash": "ea117637c6545ec123156eb85bc66e15c6a67077aabf5ee33bcc17ef6245b50c"
+  },
+  "transformed": {
+    "runId": "run_01a1212b-a3d2-7099-99df-d4c6fd9cfcfe",
+    "revisionId": "rev_01a1212b-a06c-77fc-b5c9-097d15a586e0",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "books",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "7fecb3e6df5dc529ee36d5cd9b4406919d63611b86723b606047ba1ef9e3f098",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1212b-a056-73df-9493-325bb798edab",
+    "admissionHash": "ea117637c6545ec123156eb85bc66e15c6a67077aabf5ee33bcc17ef6245b50c"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "bookSchema",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "items": [
+        {
+          "id": "b1",
+          "title": "Quiet Algorithms",
+          "copiesAvailable": 3
+        },
+        {
+          "id": "b2",
+          "title": "Single Copy Atlas",
+          "copiesAvailable": 1
+        },
+        {
+          "id": "b3",
+          "title": "Garden of Graphs",
+          "copiesAvailable": 2
+        },
+        {
+          "id": "b4",
+          "title": "Ledger Poetry",
+          "copiesAvailable": 5
+        },
+        {
+          "id": "b5",
+          "title": "Orbital Cookery",
+          "copiesAvailable": 4
+        }
+      ],
+      "total": 5,
+      "nextOffset": 100
+    }
+  },
+  "transformedOracle": {
+    "check": "bookSchema",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "items": [
+        {
+          "id": "b1",
+          "title": "Quiet Algorithms",
+          "available": 3
+        },
+        {
+          "id": "b2",
+          "title": "Single Copy Atlas",
+          "available": 1
+        },
+        {
+          "id": "b3",
+          "title": "Garden of Graphs",
+          "available": 2
+        },
+        {
+          "id": "b4",
+          "title": "Ledger Poetry",
+          "available": 5
+        },
+        {
+          "id": "b5",
+          "title": "Orbital Cookery",
+          "available": 4
+        }
+      ],
+      "total": 5,
+      "nextOffset": 100
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "books",
+        "kind": "action",
+        "operation": "request",
+        "description": "books",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "books"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "books",
+          "jsonPointer": "/items/0/copiesAvailable"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 3
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

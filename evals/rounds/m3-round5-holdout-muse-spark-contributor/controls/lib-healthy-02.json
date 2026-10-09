@@ -1,0 +1,249 @@
+{
+  "id": "lib-healthy-02",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12137-af21-7564-9d71-592a4020fbc2",
+    "revisionId": "rev_01a12137-aee1-705d-994d-f8037160367a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "loans",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "c1c525d5aa563155fae91da95eca76445a1541e28491c62ba2f5b2315ba44052",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12137-aeca-750d-a7a1-8130446dc9c1",
+    "admissionHash": "28a53ed75538954d692af81261d68943a01cc0b371ad015db80d8065cd0f4338"
+  },
+  "transformed": {
+    "runId": "run_01a12137-b2cd-765e-9dd0-0f9e6845de9d",
+    "revisionId": "rev_01a12137-aee1-705d-994d-f8037160367a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "loans",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "c1c525d5aa563155fae91da95eca76445a1541e28491c62ba2f5b2315ba44052",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12137-aeca-750d-a7a1-8130446dc9c1",
+    "admissionHash": "28a53ed75538954d692af81261d68943a01cc0b371ad015db80d8065cd0f4338"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "loanPersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "persistedRows": 1,
+      "listedTotal": 1
+    }
+  },
+  "transformedOracle": {
+    "check": "loanPersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "persistedRows": 1,
+      "listedTotal": 1
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-healthy-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "member@example.test",
+                "passcode": "library-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-lib-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrow",
+        "kind": "action",
+        "operation": "request",
+        "description": "borrow",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b1"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "loan_id",
+              "from": "jsonPointer",
+              "pointer": "/id",
+              "valueType": "string",
+              "sensitive": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "loans",
+        "kind": "action",
+        "operation": "request",
+        "description": "loans",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "loans",
+          "jsonPointer": "/total"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 1
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

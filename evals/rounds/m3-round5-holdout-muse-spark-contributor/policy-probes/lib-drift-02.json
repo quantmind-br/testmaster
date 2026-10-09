@@ -1,0 +1,235 @@
+{
+  "id": "lib-drift-02",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a12138-553a-706e-b90a-f5ad8d768bc4",
+    "revisionId": "rev_01a12138-5501-76bc-8323-b95c790ebdd9",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid_open",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_passcode",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_login_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "passcode",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "books_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "e73c7bc373126627ed9ee33139cc9e975db51d6bdc78c76586648476ae59c920",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12138-54e5-7066-bd71-1a02d81c121c",
+    "admissionHash": "c648d1369971d7c18f00be4704f1b324248654e2df9d345cce93e155c117abcb"
+  },
+  "transformed": {
+    "runId": "run_01a12138-5b22-7088-a9ec-15d1d24219fb",
+    "revisionId": "rev_01a12138-5501-76bc-8323-b95c790ebdd9",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "invalid_open",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_email",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "invalid_passcode",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "invalid_submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "invalid_login_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "open_login",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "passcode",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "books_ready",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "e73c7bc373126627ed9ee33139cc9e975db51d6bdc78c76586648476ae59c920",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12138-54e5-7066-bd71-1a02d81c121c",
+    "admissionHash": "c648d1369971d7c18f00be4704f1b324248654e2df9d345cce93e155c117abcb"
+  },
+  "proposal": {
+    "analysisId": "ana_01a12138-d678-731b-aa33-2463157092e4",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a12138-5501-76bc-8323-b95c790ebdd9",
+    "candidateRevisionId": "rev_01a12138-d6fd-7376-a56a-c969fed67346",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "invalid_email",
+        "value": {
+          "by": "testId",
+          "value": "login-email"
+        }
+      },
+      {
+        "path": "/input/locator",
+        "stepId": "email",
+        "value": {
+          "by": "testId",
+          "value": "login-email"
+        }
+      }
+    ],
+    "createdAt": "2026-10-09T15:12:15.614Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "2407921a7dde7922f48a6071008ebd669033253a8486ae676b78a9f0c35c6de8",
+        "runId": "run_01a12138-5b22-7088-a9ec-15d1d24219fb"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a12138-54d8-7074-a582-7fa66756150f",
+      "testmaster:deferredLocatorProofs": [
+        {
+          "baselineEvidenceHash": "8b57e935ef5e96786d1a441f191524c77cfd74187f84943b2a2df41c0b137780",
+          "baselineRunId": "run_01a12138-553a-706e-b90a-f5ad8d768bc4",
+          "path": "/input/locator",
+          "stepId": "email"
+        }
+      ]
+    },
+    "failedRunId": "run_01a12138-5b22-7088-a9ec-15d1d24219fb",
+    "id": "hea_01a12138-d6fc-779c-9392-0137469c8fc6",
+    "limitations": [],
+    "modelCallId": "mdl_01a12138-d6b3-77f5-8042-42fdbc9a6cdb",
+    "policyHash": "848c8023d0ff898e241fd0bf1eec4eee9097714b941d01a44de14a1a4c141a10",
+    "preservedAssertionsHash": "4e6cdd61453edd1a2fe0f665995c3ab46706556eead887636293bd0663274cc8",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a12138-54fe-75c3-a8f9-6558adbf9612",
+    "verificationRunId": "run_01a12138-d73c-70cb-8588-579589de9aa9",
+    "version": 3,
+    "workspaceId": "ws_01a12138-54d7-7552-8f41-53981642e58b"
+  }
+}
