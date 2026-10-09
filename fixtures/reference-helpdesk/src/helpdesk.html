@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Northwind Helpdesk</title><style>body{font:1rem system-ui;max-width:64rem;margin:2rem auto;padding:1rem}nav{display:flex;gap:1.5rem}label{display:block;margin:1rem 0}[role=alert]{color:#a00}table{width:100%;border-collapse:collapse}td,th{padding:.75rem;text-align:left}ul{padding:0}li{list-style:none;margin:1rem 0}</style></head>
+<body><h1>Northwind Helpdesk</h1><nav aria-label="Desk"><a href="/login">Agent sign-in</a><a href="/tickets">Queue</a><a href="/mine">My tickets</a></nav><main id="view" aria-live="polite"></main><p role="status" data-testid="banner"></p>
+<script type="module">
+const view = document.querySelector('#view');
+let token = sessionStorage.getItem('desk-token');
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+async function api(path, options = {}) {
+  const response = await fetch(`/api${path}`, {...options, headers:{...(token ? {authorization:`Bearer ${token}`} : {}), ...options.headers}});
+  if (response.status === 401 && path !== '/session') throw new Error('Please sign in');
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error);
+  return value;
+}
+const send = (path, value, headers = {}) => api(path,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
+function banner(value) { document.querySelector('[data-testid=banner]').textContent = value; }
+async function render() {
+  banner('');
+  const path = location.pathname;
+  if (path === '/login' || path === '/') {
+    view.innerHTML = '<h2>Agent sign-in</h2><form novalidate><label>Work email<input name="email" type="email" value="agent@helpdesk.test" autocomplete="username" data-testid="agent-email"></label><label>Secret<input name="secret" type="password" autocomplete="current-password" data-testid="agent-secret"></label><p role="alert" data-testid="signin-error"></p><button type="submit">Sign in</button></form>';
+    view.querySelector('form').onsubmit = async event => {
+      event.preventDefault();
+      const email = view.querySelector('[name=email]').value;
+      const secret = view.querySelector('[name=secret]').value;
+      try {
+        const result = await send('/session',{email,secret});
+        token = result.sessionToken; sessionStorage.setItem('desk-token',token); navigate('/tickets');
+      } catch { view.querySelector('[data-testid=signin-error]').textContent = !secret ? 'Secret is required' : 'Invalid credentials'; }
+    };
+    return;
+  }
+  if (path === '/tickets') {
+    view.innerHTML = '<h2>Queue</h2><p data-testid="queue-loading">Loading queue</p>';
+    await new Promise(resolve => setTimeout(resolve,40));
+    const {items,total} = await api('/tickets?pageSize=100');
+    view.innerHTML = `<h2>Queue</h2><form id="new-ticket" novalidate><label>Subject<input name="subject" data-testid="ticket-subject"></label><button type="submit">Create ticket</button></form><p data-testid="queue-count">${total}</p><table data-testid="queue-ready"><caption>Open tickets</caption><thead><tr><th>Subject</th><th>Priority</th><th>Action</th></tr></thead><tbody>${items.map(item => `<tr data-testid="ticket-${escapeHtml(item.id)}"><td>${escapeHtml(item.subject)}</td><td>${escapeHtml(item.priority ?? item.severity)}</td><td><button data-ticket="${escapeHtml(item.id)}" data-testid="claim-${escapeHtml(item.id)}">Claim ${escapeHtml(item.subject)}</button></td></tr>`).join('')}</tbody></table>`;
+    view.querySelector('#new-ticket').onsubmit = async event => { event.preventDefault(); try { await send('/tickets',{subject:view.querySelector('[name=subject]').value}); banner('Ticket created'); } catch (error) { banner(error.message); } };
+    for (const button of view.querySelectorAll('[data-ticket]')) button.onclick = async () => { try { await send(`/tickets/${button.dataset.ticket}/claim`,{}); banner('Claimed'); } catch (error) { banner(error.message); } };
+  } else if (path === '/mine') {
+    const {items,total} = await api('/tickets?assignee=me&pageSize=100');
+    const {escalateHook} = await fetch('/config').then(response => response.json());
+    view.innerHTML = `<h2>My tickets</h2><p data-testid="mine-count">${total}</p><ul data-testid="mine-list">${items.map(item => `<li data-testid="ticket"><span>${escapeHtml(item.subject)}</span> priority <span data-testid="ticket-priority">${escapeHtml(item.priority ?? item.severity)}</span>, status <span data-testid="ticket-status">${escapeHtml(item.status)}</span> <button class="escalate" data-testid="${escalateHook}" data-ticket="${escapeHtml(item.id)}" ${item.status === 'closed' ? 'disabled' : ''}>Escalate</button> <button class="close" data-testid="close-button" data-ticket="${escapeHtml(item.id)}" ${item.status === 'closed' ? 'disabled' : ''}>Close</button></li>`).join('')}</ul>`;
+    console.info('mine-ready');
+    for (const button of view.querySelectorAll('button.escalate')) button.onclick = async () => { try { const result = await send(`/tickets/${button.dataset.ticket}/escalate`,{}); banner(`Escalated to ${result.priority}`); } catch (error) { banner(error.message); } };
+    for (const button of view.querySelectorAll('button.close')) button.onclick = async () => { try { await send(`/tickets/${button.dataset.ticket}/close`,{resolution:'Resolved from the desk'}); banner('Closed'); } catch (error) { banner(error.message); } };
+  }
+}
+function navigate(path) { history.pushState({},'',path); render().catch(error => { view.textContent=error.message; }); }
+document.querySelector('nav').onclick = event => { const link = event.target.closest('a'); if (!link || link.target) return; event.preventDefault();navigate(link.pathname); };
+addEventListener('popstate',()=>render().catch(error=>{view.textContent=error.message;}));
+render().catch(error=>{view.textContent=error.message;});
+</script></body></html>
