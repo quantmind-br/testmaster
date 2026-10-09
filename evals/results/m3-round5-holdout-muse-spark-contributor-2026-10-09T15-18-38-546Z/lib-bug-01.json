@@ -1,0 +1,256 @@
+{
+  "oracle": "passcodeValidation",
+  "mutant": "no-passcode-validation",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-bug-01",
+  "group": "bug",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid",
+        "kind": "action",
+        "operation": "request",
+        "description": "invalid",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "member@example.test",
+                "passcode": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "invalid"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "passcodeValidation",
+    "mutant": "no-passcode-validation",
+    "expectedFailingStepIds": [
+      "business_assertion"
+    ],
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "compare_requirement"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "no-passcode-validation"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "The failed required assertion expects status 401 for an empty passcode and the recorded response status is 200; the contradicted status alone establishes a product defect."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "product_bug",
+  "controls": {},
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "8192a4f3abcd1e78af175d73baab00b04511dd6b157f8405497ab614d5d24f08"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-4G9070",
+    "baseRevision": {
+      "id": "rev_01a12142-8d6c-70ee-80f3-abab6556b9f6",
+      "protectedHash": "a3934916e6390d18fb2d9affd91d248fd3631a60aa44b0dd35adacfd2330cb7c"
+    },
+    "healthy": {
+      "runId": "run_01a12142-8da3-7608-98c1-9fd5c5360776",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12142-90c9-7066-b55d-461bcc6761a5",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12142-941e-711a-9792-7bcaf07e42a9",
+      "hash": "7b461a71220eb70bf1f733dc6dbd82235733df6f613201746e2e4e4c8c150f09",
+      "failureKind": "product_bug"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12142-9443-74d1-ac61-f86a613fca70",
+      "hash": "c102362f96404d841995206603f1798afaf97cf808d72bb86240f00e30f97fc0"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "semantic_failure",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a12142-944b-764e-b223-9cbf9c65fcfd",
+      "job": {
+        "state": "completed",
+        "result": {
+          "reason": "semantic_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}

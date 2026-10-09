@@ -1,0 +1,327 @@
+{
+  "oracle": "borrowStock",
+  "mutant": "borrow-ignores-stock",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-bug-03",
+  "group": "bug",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "member@example.test",
+                "passcode": "library-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-lib-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrow_first",
+        "kind": "action",
+        "operation": "request",
+        "description": "borrow_first",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "borrow_second",
+        "kind": "action",
+        "operation": "request",
+        "description": "borrow_second",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "borrow_second"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            409
+          ]
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "borrowStock",
+    "mutant": "borrow-ignores-stock",
+    "expectedFailingStepIds": [
+      "business_assertion"
+    ],
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "compare_requirement"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "borrow-ignores-stock"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "The second borrow of the single-copy book is required to answer 409 and the recorded status is 201; the contradicted status establishes a product defect."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "product_bug",
+  "controls": {},
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "8192a4f3abcd1e78af175d73baab00b04511dd6b157f8405497ab614d5d24f08"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-ZsAUmY",
+    "baseRevision": {
+      "id": "rev_01a12142-9e39-708f-8e71-80996ee742f9",
+      "protectedHash": "e4d58e3a030497b47e592445d0fe53f7d8933958019bfd6d1f6a59a27994a01c"
+    },
+    "healthy": {
+      "runId": "run_01a12142-9e74-72e9-bf35-c5b6cd10d3de",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12142-a204-7543-910d-71786e6c0f2c",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12142-a4fb-7109-bec2-605947a8cc78",
+      "hash": "e45ec1580bd4c11654ed492fe6cdc65483be41baab088de1196950489580b97e",
+      "failureKind": "product_bug"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12142-a52a-72ac-94c1-cf55cdd29299",
+      "hash": "b1537edf32e6e1ccbc2f8ee8675e8732ad788b3fb47c716f7d8f3b0528b5354d"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "semantic_failure",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a12142-a531-75da-a3a9-29d5821265a1",
+      "job": {
+        "state": "completed",
+        "result": {
+          "reason": "semantic_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,472 @@
+{
+  "id": "m3-drift-01",
+  "group": "drift",
+  "expectedFailureKind": "test_fragility",
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "expectedHealingAdvice": "proposal_possible",
+    "healingEligibility": "automatic",
+    "labelSource": "post-hoc-scenario-design",
+    "reviewStatus": "pending-independent-review",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "Authored locator or wait-state transformation; semantic negative preserved."
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "Action labels derive from the authored transformation and required assertion, not from diagnosis output. Independent review is pending."
+    }
+  },
+  "controls": {
+    "semanticCandidate": true
+  },
+  "labelStatus": "pending-independent-review",
+  "authoredPlanLabel": "approved-preregistered-fixture-not-model-generated",
+  "mutant": "healthy",
+  "baselinePatches": [
+    {
+      "file": "index.js",
+      "before": "        return json(response, 200, { token, userId: user.id });",
+      "after": "        response.setHeader(\"x-m3-auth\", `Bearer ${token}`);\n        return json(response, 200, { token, userId: user.id });"
+    }
+  ],
+  "patches": [
+    {
+      "file": "shop.html",
+      "before": "${checkoutHook}",
+      "after": "place-order"
+    }
+  ],
+  "resultDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "a04a41fc379c81dedb7e1bdb822b00f2e1fefb377f570f08669e9078b8f42139"
+  },
+  "oracle": "orderPersistence",
+  "semanticNegative": "toast-without-persist",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "m3-drift-01",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "email"
+          },
+          "value": {
+            "literal": "demo@example.test"
+          }
+        }
+      },
+      {
+        "id": "password",
+        "kind": "action",
+        "operation": "fill",
+        "description": "password",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "password"
+          },
+          "value": {
+            "literal": "correct-password"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "catalog_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "catalog_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "catalog-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "add",
+        "kind": "action",
+        "operation": "click",
+        "description": "add",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "add-p1"
+          }
+        }
+      },
+      {
+        "id": "added",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "added",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "toast"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Added to cart"
+          }
+        }
+      },
+      {
+        "id": "cart",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "cart",
+        "required": true,
+        "input": {
+          "path": "/cart"
+        }
+      },
+      {
+        "id": "checkout",
+        "kind": "action",
+        "operation": "click",
+        "description": "checkout",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "checkout-button"
+          }
+        }
+      },
+      {
+        "id": "toast",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "toast",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "toast"
+          }
+        },
+        "expectation": {
+          "predicate": "textContains",
+          "value": {
+            "literal": "Order created:"
+          }
+        }
+      },
+      {
+        "id": "orders",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "orders",
+        "required": true,
+        "input": {
+          "path": "/orders"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "order-count"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "1"
+          }
+        }
+      }
+    ]
+  },
+  "baselineDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "21a4f6fb076755b44ee94d9d485ab79d10b26e8e1fdbd51d6b40988e2aed94c0"
+  },
+  "semanticDigests": {
+    "index.js": "0560d95ec7fa59145e88e32aef975ead6e938b01242a576bf891fffe086606e1",
+    "shop.html": "a04a41fc379c81dedb7e1bdb822b00f2e1fefb377f570f08669e9078b8f42139"
+  },
+  "transformationSourceDigest": "e35e270393c9495d5118a3aa11496ff982e6e95d7a6044dc72e0c95c69dda25e",
+  "expectedFailingStepIds": [
+    "checkout"
+  ],
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true,
+    "manualReviewRequired": false,
+    "changeCount": 1
+  },
+  "usage": {
+    "inputTokens": 19837,
+    "outputTokens": 8849,
+    "reasoningTokens": 8106,
+    "cacheTokens": 0,
+    "unknownCalls": 1,
+    "unknownCostCalls": 3,
+    "conservativeCharge": 199146,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-zdYeqI",
+    "baseRevision": {
+      "id": "rev_01a12156-d5ed-72a4-90fe-dfb5775838f5",
+      "protectedHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a"
+    },
+    "healthy": {
+      "runId": "run_01a12156-d627-7172-9fe6-e167b6a42354",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12156-dcdb-7728-a50d-3416591be9f2",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12157-5952-725c-a05b-45314b47c57e",
+      "hash": "0ebeb0b8053254cdd01872e1e3c556fe559d250b12c04d7cccae4f11511a7eea",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a1215b-f0d9-70b2-a32b-d92dc659a123",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "8b6350759856f02077cc74638262a43cc877c6da9da53e4dce238c73677d67d4",
+        "responseHash": null,
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "failed",
+        "usage": {
+          "inputTokens": null,
+          "outputTokens": null,
+          "reasoningTokens": null
+        },
+        "cost": "unknown",
+        "latencyMs": 300362,
+        "createdAt": "2026-10-09T15:50:35.993Z"
+      },
+      {
+        "id": "mdl_01a1215f-f3e9-747e-a633-cbf6ccf30324",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "8b6350759856f02077cc74638262a43cc877c6da9da53e4dce238c73677d67d4",
+        "responseHash": "fc09107102c222aeea467d486e7272a7de9ea915f2ff31d721bcab7488e5b32c",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 1,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 9585,
+          "inputTokens": 9970,
+          "outputTokens": 6206,
+          "reasoningTokens": 5657
+        },
+        "cost": "unknown",
+        "latencyMs": 262927,
+        "createdAt": "2026-10-09T15:54:58.922Z"
+      },
+      {
+        "id": "mdl_01a12164-67cb-763a-a252-eb41e2c13561",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "8ce411626d96c7f10e2d6a27727aa7d0e48a614ac522adc0d6c75f271aa225c6",
+        "responseHash": "98bfdd264ed8169a1d827db13890704a423d9a3dd01fe5e61bed35f232c4118a",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 9867,
+          "outputTokens": 2643,
+          "reasoningTokens": 2449
+        },
+        "cost": "unknown",
+        "latencyMs": 291338,
+        "createdAt": "2026-10-09T15:59:50.732Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a1215f-f3eb-717f-b9fc-fe70304cd79e",
+      "hash": "a0f9d6cfdaa942af56d4b1c33a11f3776ff2da2846141116be8621e84b6edf0f"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12156-d5ed-72a4-90fe-dfb5775838f5",
+      "candidateRevisionId": "rev_01a12164-6859-773b-89d5-4c14ea821412",
+      "baseHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a",
+      "candidateHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12164-6857-7672-bb55-1a24b5f47c4e",
+      "hash": "af6626703a1fc1c21918d839abf1cc60a53866c6a1708c01bb6b6032d1cea486",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a12156-d5ed-72a4-90fe-dfb5775838f5",
+      "candidateRevisionId": "rev_01a12164-6859-773b-89d5-4c14ea821412",
+      "baseHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a",
+      "candidateHash": "85413afc1b287db88f785ce704bbe12eed6cafc3493f3af596495d7af360971a",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a12164-6ee8-7604-b073-c2786504bb47",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 3,
+        "sources": [
+          "rules",
+          "model",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

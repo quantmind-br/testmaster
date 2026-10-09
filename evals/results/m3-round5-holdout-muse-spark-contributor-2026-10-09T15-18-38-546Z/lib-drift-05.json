@@ -1,0 +1,517 @@
+{
+  "oracle": "returnPersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "return"
+  ],
+  "patches": [
+    {
+      "file": "library.html",
+      "before": "data-testid=\"return-button\"",
+      "after": "data-testid=\"give-back-button\""
+    }
+  ],
+  "candidate": {
+    "testIdRenames": {
+      "return-button": "give-back-button"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "bb2093d364ba9c0e904938c5e3b4ab3f88bf2973af1c2a821b89efe24a727649"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-drift-05",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-drift-05",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-email"
+          },
+          "value": {
+            "literal": "member@example.test"
+          }
+        }
+      },
+      {
+        "id": "passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-passcode"
+          },
+          "value": {
+            "literal": "library-passcode"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Log in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "books_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "books_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "books-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "borrow",
+        "kind": "action",
+        "operation": "click",
+        "description": "borrow",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "borrow-b1"
+          }
+        }
+      },
+      {
+        "id": "borrowed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "borrowed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Borrowed"
+          }
+        }
+      },
+      {
+        "id": "loans",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "loans",
+        "required": true,
+        "input": {
+          "path": "/loans"
+        }
+      },
+      {
+        "id": "return",
+        "kind": "action",
+        "operation": "click",
+        "description": "return",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "return-button"
+          }
+        }
+      },
+      {
+        "id": "returned",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "returned",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Returned"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/loans"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "loan-status"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "returned"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "returnPersistence",
+    "semanticNegative": "return-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "return"
+    ],
+    "patches": [
+      {
+        "file": "library.html",
+        "before": "data-testid=\"return-button\"",
+        "after": "data-testid=\"give-back-button\""
+      }
+    ],
+    "candidate": {
+      "testIdRenames": {
+        "return-button": "give-back-button"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "bb2093d364ba9c0e904938c5e3b4ab3f88bf2973af1c2a821b89efe24a727649"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "healingEligibility": "automatic",
+    "expectedHealingAdvice": "proposal_possible",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "return-testid-renamed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the return control by its test id; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "return-without-persist",
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "8192a4f3abcd1e78af175d73baab00b04511dd6b157f8405497ab614d5d24f08"
+    },
+    {
+      "phase": "healing",
+      "code": "healing_model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "PRECONDITION_FAILED: Healing model request did not produce an admissible candidate"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-cNZ8wp",
+    "baseRevision": {
+      "id": "rev_01a12144-e828-7161-b067-05cc6165b677",
+      "protectedHash": "59b2f23db24cbdbb468d66b47633e7c636f184a0dfae15629bd23e21f8f53caf"
+    },
+    "healthy": {
+      "runId": "run_01a12144-e865-73f1-b909-b163754837b0",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12144-ef16-76dc-8b68-c748cf9dc5e6",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12145-6b79-733d-b327-189fbf54093d",
+      "hash": "fd31dcdda4e0476bce05e1778f28053d47d14fc72ce5fcb2039a32fdad65aef4",
+      "failureKind": "test_fragility"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12145-6db1-74cf-8248-e32c8cfdc940",
+      "hash": "38f3633339d9c854124f38b70c3b75e61519c431f3622768c29cd59445a2ec0b"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "transport",
+      "jobId": "job_01a12145-6dbb-72ef-969a-5fd2c2e3cc5a",
+      "job": {
+        "state": "completed",
+        "result": {
+          "detail": "transport",
+          "evidenceHashes": [
+            "81f33677c8489f7b3ae1b761833a5c78d9ba8ce7a55d3dab02a0f3d8c9d26a37",
+            "0d69f386155660eaa72f6fb7f20675bfb276f5540cab8751b2ce32457a884eea",
+            "7516c3456326a302cb162a91b57c86b1270d91667b64bede3d947eb5ca9c40f7",
+            "2beac6fd8b3d092ab716e13c69dd7a2d2674ffbab7030f7b78449d2b5eb85cad",
+            "a93e18123fa528e49cce95440363a65e2996b8ebd61af6a25a016f3699780abe",
+            "3bc6da3528e36bd4e69083e1846b5a49da86693b8da1f33da72934181bbe8fa1",
+            "bfbb2cd31f6f1423b8cb2c26b89b32bbbca5cfdc937ef7d17184ef2836ad401a",
+            "93026cb9beb067c795c33f91a37355505070a3ce1181830da7a4b6e266edf4af",
+            "33811b37ce6a556544bbdc3d4cd61fc5881e8e08627258e92506dd9ff98147fa",
+            "3e3496a2505da1bfc7b6acd461285622a4f1c333be946d713b4fe0141cc5e51a",
+            "4ca74b1635c0644ca5f1314ffcecc4bbf2520a2de20855503f95ee334eebb01f",
+            "7fb13244afe6064c2029d65ca716b51e1d08ce5899134bcdc49d36c038d503f4",
+            "70488a164a3f6bd85eed7efd27bd46c50d0894771275845af703e445144fed3e",
+            "df89d812c417f6e6ae6f094a0a00030c62d03de36d06c8cef45bc551ac10a42a",
+            "e9fc71b3aa2268eb1bb3008796c70dbe757636218001843a60cf5829f8b21206",
+            "253861f7742c0780f5ee85081c4c0da62d3656add734dc534adbd19f4cd75a1d",
+            "55b2f9a8e35eb474376a311aba6df923deca750e2b2438c60fbd6f44b3624c05",
+            "4394a90837e3f8592bf6a91cb9ae25120af14ab0e547d953d3391232f20acfb6",
+            "616625da1da055384b1f3c05ee8a9b0cec536f0e42910972583fc4552f207fd8",
+            "d5683e7aaad49bd0426c8f6663e83a34446cca3c4f58b681bfffeca8ccfd1796",
+            "913686c7b6c8f9415489e8d73de569e186ddc667d32793d0d96fe6139bc6d8fc",
+            "48bca656ef80dd5057c28aa7e6c2954e191794743a7da346f867e4cb9c236336",
+            "b8840b125725a92c7f8d0bfe3bcf2ec1caabe2638f1278157ec7f3e47dcfc6b8",
+            "6b9c3383be77d5abc4737c6b987f43740222bc562582d0361b3a72a62d69075b",
+            "d72db4d4f19980242c7882d5db1826d2eacd67fe3044a4b29ecf9fee6e6f0ccc",
+            "89af5d4b5375930da1b4a0e07e492fefcd03a9e6540f6948bb3484ae11ae5810",
+            "e4a312b0856bf5e430ba80eef2012e27de4c350d156e05f3c975fbd85abfdbdc",
+            "6135f834a76b4a66718c70d67db783fe90bf3271855e22e58a43cde17e36fd15",
+            "ed37728e02510d7e7132f03379bbb0966bc53552475c3f44f8e4301c790aacb6",
+            "6105c4f91ef4ca3789341bd59338412a0b508d2479935690b6f7dbb40f6fc8cb",
+            "8e3f28cd4cb477c4594341b483ee9d327dc1d8ba7bcba4b4f86c75839f04c6e5",
+            "76c851a6297c56f2ed0dedd1612fdfc8270b6e721ea222142c92935ffa837715",
+            "f5434f07c230ed1406f0b4766e8251fb8fb9b7d9a7ee15ae0be4768dea9af80d",
+            "c3d37022dba9b4a88a1c151a1cfae213ed1ea3452b99f762f317b54f8df819e6",
+            "a79ccab4adb98615341aafca00dc80cc6242d623118d162a11ae2f705e09061b",
+            "3e034dfcf071ddaef4c8ce15f9f3003590c931797823ad692c4acf77d02571ab",
+            "52942c3909abf841c8c442f3838c0fbd6713190f5766cc65f74a5e2fa588b59c",
+            "18142938a4db0b21cdeaf0254e5395e75184a6bc44ce76bdf951845cddb7a739",
+            "d3b3e3e472fe5f676f9b5d30e43ccf40cace2d3eeb0ca1e7f57a85e926be353f",
+            "1103ceccaad6c6b25c5eec6929df4200fdb7411ee9d2a49959fe834bd04c0589",
+            "a5b7a66bd0bd29475c84b4b295be8640c44b92d547d45413ebf67c293f264313",
+            "1c68746d2554c530722442aaf341609a7f7940b7eb7b999055eff7138f0574d2",
+            "da86a60ef72d132535974de9e0ac679421b13d70ee84a36bc233d616061f90b2",
+            "9417a6ff37dc2a49094d04ebdd28e6326c232e2459c706203e0899e21ce246cc",
+            "a33cd3548175c62db691186a05d79ff6c4ac91b1a4ada62f5ead0cb83f116f12",
+            "3fca7f238955234ee3740514b3cdf8f8d623149f4a44581da3e9a9ef7d6c5c9a",
+            "507ca2a58a1358f57b212659559c7afeffbd80b9ff75f7416075f3db0a0b6747",
+            "35a6a4478d711df16db4c90259a113d35cb5e658cf5679cd6c87a1645cc9026d",
+            "eee6da48ea8130f7e9d3d8987039258e49f05659ac53f7db2484d2205c14c416",
+            "4f0172240144fcef014be4af5cd20952a5057c10bb04ef699266aca8013b50d8",
+            "7fa06ede3877581c287bbceabcaeb05df38f87f0b8f48a463d6e523d8beb4ba5",
+            "7641c6952fd43b1529ba9ad201ee73bca1c3ee6c1cd3bec75bd3a685b5a0699a",
+            "a99ad6b32d43895b34c9c3a0d5f3e34d5698224ef13f54520b29cdb39b10f52c",
+            "b403e517b6d9ea5153cea0b1d67a5c218c006b845d00617ce68680b06bf428c8",
+            "179e30b25118d38ce37837bb7c68cab564c106ed223d33df941689e390ac2480",
+            "4622d19b92426584e0804b65e75ea1f14b5b013ad1b685b133bb8ef0ce13437c",
+            "145b69268bb92bb8bdc022a222b3123aae2f26c999f9d8f80aaeb791d553875e",
+            "90850f5b0bde176be5c14bf0f4af514dc15204276728e4b3382cd3567944e6e0",
+            "e8f1d6e936e6af4043c1420ec3369a7b14f0811ada96cd9805b2bb80904b6fd3",
+            "e27205bd3a8b1be7e3e994d27d50308710ddb7c9e5c1d9a2d11baa336f278647",
+            "b8d1e1656a8d8cf2fef408a29315677c8216e266aa18bf3501575b0962aeb70b",
+            "3d935c77afe177698ffd0958bf0c898f45de4cb73887dff588ca3cc64a3f370f",
+            "566f7e38da470683a29c5e6d993c11e4560769471bdeaafe0424c9e412263358",
+            "b0e89ca3e16460482db7c19008c6c2817f90005f7043742f664150a3ee067e56",
+            "95cf652f97e7b40e83c462abaf76e3f31017ee8c5475d754490c837e5c95e3e3",
+            "c6c1a516c487b6b9b2f58d8d9992a26b4cc92228c995439b1a342ded22b189e1",
+            "b00f0353958bb8a2a28240b249a63b8a6dfe682ca08c2cc85ffe2bf941b56e45",
+            "cd824d8f6fba75a9c78ca0f684d893e9d10ec858c13c4175e136b34b1e123ac6",
+            "583d9d31b301032d46ba42c0cf849a3205727ecea823a194bfce58dbb4b3e4fd",
+            "70181ea1669afc2a76ef4f65c3f146cd876be0d2f26aae7ad2641708aa8798b8",
+            "393e5588e7d8b54c3e8e2146c53ce7ce9dbf0f0a7277902eb0fafe636376f1e6",
+            "dc13be68450995cf6504843b07ad1ee5b422ac9abe7ea96c264b3463728721b9",
+            "6ae07d8245d812834c0282c07df9b6d4ebebbf45644911af6381fc845d0128f0",
+            "c192ef15c1ebb777348ec964766cc4102e53318b956a78b1bbd27d0cee9d373a",
+            "e2034df4476cdd2da973d2a79c04f45278de48d20e8c54fcca2c625113f7884e",
+            "8e2b40d6b6591c8996de9f3da21c67f2711f4bd37fa0b5778b87521fdb7fab8f",
+            "03c281e6f3ce48505ed3a2417d6a621a3aa37995fd34b42cc05392e63bf42e50",
+            "6bc07156fbf1169048ad2e4b9db3527a69d0cc5e2ed5a70d94beff2ad7647b1d",
+            "d17c6cea746955bdef5b89f72d8f55d4f0fecff197cefaa6699df8e64db1db4e",
+            "71e1a0429ae3fa72aefd4d9135604681991c99d254c90cd6eb7675d9bddb0cdf",
+            "6c877869e041372098a2a274bb414ab016eeb29ccfbfb9d18b62e4412697e0c4",
+            "44d62f02590a278cac9b82184b19dcd935128363c29041e3a90a29e5f6d1af3e",
+            "0faa8b21796377c964a2afcf9bd1e9375cbc466d2e5c5022e10d45273ab9d4cf",
+            "02d697a54a20abe3431931abf04784ccb560020491cad51cfc9d7234e60da160",
+            "6136576373d087a06d439f6219c675dc84d7bc4165aa26ae410e5a49b416c8e5",
+            "3d68aa1cd2bc5af8885950830adde889a7fe2bb91c08c4b54eaf8c8b794c2aeb",
+            "64fa636ebe3ab62532d135223626c53926809a9990890eca0ea2ea4d0d1e164a",
+            "79f4fc44a8e40389d6dc8ad2b83c9b7ed5a727d80a063a359fd89ad503671f4b",
+            "0b1aa9c7ccd9d49394587cabe4d0fed0d5e54170417121e31737cc5e68dfc124",
+            "14c63b4923d2184c4b1930d720bf1a1ea49e222a750c9e40902e3804e085e09d",
+            "c76224d6a47eeb8a6065aa951f9f9ea354d385a807a2021e10fa6ced7da8945a"
+          ],
+          "modelCallId": null,
+          "phase": "model",
+          "reason": "model_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}

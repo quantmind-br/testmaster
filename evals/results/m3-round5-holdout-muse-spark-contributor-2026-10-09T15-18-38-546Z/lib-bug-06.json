@@ -1,0 +1,269 @@
+{
+  "oracle": "bookSchema",
+  "mutant": "schema-field-renamed",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-bug-06",
+  "group": "bug",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "books",
+        "kind": "action",
+        "operation": "request",
+        "description": "books",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "books"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "books",
+          "jsonPointer": "/items/0/copiesAvailable"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 3
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "bookSchema",
+    "mutant": "schema-field-renamed",
+    "expectedFailingStepIds": [
+      "business_assertion"
+    ],
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "compare_contract"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "contract_violation",
+      "mechanism": "schema-field-renamed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "contract_violation",
+      "rationale": "The required field /items/0/copiesAvailable does not resolve in a successful response whose items carry a differently named field; an unresolved required field in a 200 response establishes a contract violation."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "contract_violation",
+  "controls": {},
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "5cd9a66f4d1d175af6d86da737856f684495d0d49de68665d511f5e6eb324f6d"
+    },
+    {
+      "phase": "healing",
+      "code": "healing_model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "PRECONDITION_FAILED: Healing model request did not produce an admissible candidate"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-pYPKrF",
+    "baseRevision": {
+      "id": "rev_01a12142-b6ea-766a-ae99-a82918d12997",
+      "protectedHash": "3599363aea1b683232846792573f54b9b0bc49a26f7bf05137575dd4e06b5e54"
+    },
+    "healthy": {
+      "runId": "run_01a12142-b722-7285-9769-79ad8919acf1",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12142-ba4d-7169-bc3e-9fa9cd005de0",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12142-bd40-7451-950e-8153809802d1",
+      "hash": "5bc883d5bd7055433541a4891bfb791575bd854802b3833db07460f20092f289",
+      "failureKind": "unknown"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12142-bd65-77b0-8187-a20038e8392b",
+      "hash": "7295fce728edbee5c76f8a20f7438094581ab3888f7b16ec9b54c3db4dfd52bb"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "transport",
+      "jobId": "job_01a12142-bd6d-7107-a072-447a7991880b",
+      "job": {
+        "state": "completed",
+        "result": {
+          "detail": "transport",
+          "evidenceHashes": [
+            "5c61b39bff0c6f70314508d1b7b84ba9a78887759102a5af2a1fe62055639f3e",
+            "d42cdea93d05d6b15178adab99aace5f65e0ad90849745167660e839634d83e4",
+            "6a0e67680cd74d84d25c2535ac3469f67e34d691f3cefea165d563349e73d20e",
+            "30c3bd9efc97fda5aacee650bc71db0f2a57a775fb9ba015c18f8b4199c41909",
+            "8c096190b259529e65bf3e6e6278a2d8833a0d4f058667655b1ce8548cbee0d3",
+            "9170fff8bcad19222d67ac245527f4e11e5e7071109f8d54c20ecc3ce71d581d",
+            "ed448ece370107e844220bc1ea59e513246e5cb96551dd344d228af56b85dbd6",
+            "acb38edcfe0b4a09af80af7bea8db44c7e07de42f452f46d181ea7c2a3e0086a",
+            "22b963860b68547e1d9c4046d0e9ef37d1974f7149871daaa3059c83140608a1",
+            "2f9e456f5e3dc93858305e95567fce1e855185d52d261ec1cd01d675a5474526",
+            "c2f69714246372611ee5a2fc7e518c355dbe2fafc4afb815493fd140cdffeabe",
+            "19e89ba0171d1187ff025da5057544240e5ac75729cd817e37c9d5656eb31d7c",
+            "4aa9fb238a4c34a0edf8fc14879c646e6daa870b882b7ae4a947884675c87033"
+          ],
+          "modelCallId": null,
+          "phase": "model",
+          "reason": "model_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "collect_more_evidence",
+      "recommendedActions": [
+        {
+          "action": "collect_more_evidence",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "collect_more_evidence",
+      "recommendedActions": [
+        {
+          "action": "collect_more_evidence",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}

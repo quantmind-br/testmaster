@@ -1,0 +1,445 @@
+{
+  "oracle": "passcodeValidation",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "invalid_submit"
+  ],
+  "patches": [
+    {
+      "file": "library.html",
+      "before": "<button type=\"submit\">Log in</button>",
+      "after": "<section><button type=\"submit\">Log in</button></section>"
+    }
+  ],
+  "candidate": {
+    "cssDescendant": true
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "51fa1be03f29a9b091b388059565c0543206ee8b5bfcb94f86d24fc4f133483a"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-drift-09",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-drift-09",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "invalid_open",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "invalid_open",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "invalid_email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-email"
+          },
+          "value": {
+            "literal": "member@example.test"
+          }
+        }
+      },
+      {
+        "id": "invalid_passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "invalid_passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-passcode"
+          },
+          "value": {
+            "literal": ""
+          }
+        }
+      },
+      {
+        "id": "invalid_submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "invalid_submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#view > form > button"
+          }
+        }
+      },
+      {
+        "id": "invalid_login_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "invalid_login_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "login-error"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Passcode is required"
+          }
+        }
+      },
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-email"
+          },
+          "value": {
+            "literal": "member@example.test"
+          }
+        }
+      },
+      {
+        "id": "passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-passcode"
+          },
+          "value": {
+            "literal": "library-passcode"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#view > form > button"
+          }
+        }
+      },
+      {
+        "id": "books_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "books_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "books-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "passcodeValidation",
+    "semanticNegative": "no-passcode-validation",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "invalid_submit"
+    ],
+    "patches": [
+      {
+        "file": "library.html",
+        "before": "<button type=\"submit\">Log in</button>",
+        "after": "<section><button type=\"submit\">Log in</button></section>"
+      }
+    ],
+    "candidate": {
+      "cssDescendant": true
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "51fa1be03f29a9b091b388059565c0543206ee8b5bfcb94f86d24fc4f133483a"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "healingEligibility": "automatic",
+    "expectedHealingAdvice": "proposal_possible",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "login-button-wrapped"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the login control through a child-combinator CSS path; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "no-passcode-validation",
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "8192a4f3abcd1e78af175d73baab00b04511dd6b157f8405497ab614d5d24f08"
+    },
+    {
+      "phase": "healing",
+      "code": "healing_model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "PRECONDITION_FAILED: Healing model request did not produce an admissible candidate"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-nTr19i",
+    "baseRevision": {
+      "id": "rev_01a12147-05db-71a7-9ccd-c3d6454e7d3b",
+      "protectedHash": "4e6cdd61453edd1a2fe0f665995c3ab46706556eead887636293bd0663274cc8"
+    },
+    "healthy": {
+      "runId": "run_01a12147-0617-7799-9b96-945adc35bcc7",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12147-0c03-719e-ad4f-d576e8c17dcc",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12147-8734-767e-a840-928942d01423",
+      "hash": "d7e5817fca205e4e1a1ea84ac0de2776e9a4afad80fe6439993585ac09384cce",
+      "failureKind": "test_fragility"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12147-886a-712c-afce-ff1307db2de7",
+      "hash": "5e2b690302812abf4d869c92a1f16878508442ddf514898c1db7dac7e6492a0c"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "transport",
+      "jobId": "job_01a12147-8874-7742-9952-02c5c5e5adac",
+      "job": {
+        "state": "completed",
+        "result": {
+          "detail": "transport",
+          "evidenceHashes": [
+            "ebad9668c3182ee311bbce2040d443b191aff15fc4429fd447016c330cf7b311",
+            "e5f4aceb1a043fd8786bbd9c8d50f17324a1ab3351090e710f421ac53bf06ab4",
+            "17bfc6a0e7bb181d1cc985478d70f367ca8b4418e7876ee3325a1a8e815d9440",
+            "7af1c7930e4396ec3dcd5136959a806cb09cb72b93f29024395c2e8776dfb310",
+            "00368b1a79bb342115775158c49ce6068ca86ebb43b7176707e6f5e3fe9eadf0",
+            "fcde3a1d05848d13818a8ef6c413fe35b5b6585c33629870c6c2c45b15470838",
+            "a1af67b789dc1b061ec06a2764fd511bbfc68e937f13aeb01af0e9e710a6ff09",
+            "3bdd26927b66b20aba9df251442f60599990bb43ac226879df451d043d62ce6c",
+            "f262b9024a480b0b2dd269336bc28ac3c56ba9172b1abc1988de2c9f3087c0b9",
+            "a805598548cfea3c9d2da75a0426973fba0f768abbed9e2715c8e7ffdbf5436c",
+            "00395c9877de47035ef5d15426063c86838bf480d0a7d1a1815159234e5a43f3",
+            "04f93ed0bd583f92cc94d824ffc41781b61ccdd0c62518f2cba7cf55d3ee0b4a",
+            "324ad0ae3ecc482685914d6362b402537f489fa63628c704711cf3673185762d",
+            "723d3837fc76ae13f1ce8f0cd1c36e9f7a0505f23bdcc6256ca4457bdc58b7c3",
+            "98b499f2c04bf3ec1fae17629b49e8660dbc07f9d905607c003c4336510546a3",
+            "dd7a9d3fc26a5e37bab881cc13f75f719a768be8e7b69b92cbcd540b0c67597c",
+            "a7db598ba68be9f35648fbfc158f127f9c67be16c905fe0076609d59be8aa0f7",
+            "14b1f92f8f9f85d85006640cb60fb5bdd8402828fd0f5c6f52bda09fac6eeff4",
+            "eaebd17f38d017470615f658be57247041541aae5dc2b942a3810e86f8eec196",
+            "5e83354b69ba7a4522d2d7a75e668da5db4fbc00eb9350aca3d073cddc13486b",
+            "3ec89fffec32edf6365501912036087d18006da44f9d2b9cad22f0031f5ccf75",
+            "52d51c9f6f46d7177b57e5ecf109f37e5bffc2a7d37ee0e8761564263bcd3101",
+            "b095cb467387e1a79e95e199500ca212e79ed9b4d263098f18a523de40c66d16",
+            "f56d9fb0f8ba5ca7d7d78387b1891ac600a2b54db4f8ddea77230f641b7eb628",
+            "8ba6a48cef51c1001f6cdc706a251db32b44d8401a99e2deda3b72e95083e9d0",
+            "09406079d5a2b6b249015cbb19730ddc7639b06410d67242621829bff4111107",
+            "f5a3cbf4c9c11fdfb8263c5b9e03d91ca7a5f9a4c8eb3008007d5819de15320c",
+            "f156b8ba26c388d9c478de32a88eb375554f0f54c5caca70798119a81bddacac",
+            "d16b47ec56bebf1cbaba6b5e32189739f8b3de5adbd06b291e11d503f7926c94",
+            "3602844cb59dfceb5a9aeacc361a9f629752865312756b526144bd242b271cd2",
+            "71958f3d2387175bcd0a8fbed051e2ba60ffc969f26bd72bce2b5d9a83286c4e",
+            "00fd1eecad99a8bf793c5fe3eeb8655c86c6867cab26d4d898d90572a83bb2f3",
+            "90b3b0634d0fc3ed1540c4e4b648ca5e85e2444729851ce2af4ea2a06d9eb2df",
+            "1e7186ee050d9fb2c1d0c8384d38c0f16639e00fcd6a19b2634c5927e8af0e9c",
+            "9c4ca21deaf618cf49e2eb9f83e1e702cda29d57f587769e1af0ffce86e4a089",
+            "3014bf20a78138e251b339ee22802c9dd1347fb81dfeb6e473e28c361828f613",
+            "65ee8940b0f8f567bc759cf90d818cb7cba06817fb0260baf66cf5296ffd43ee",
+            "225ac5626be4ae3a001b1c6615c470c36c04ea24e15471cd6f1c89c2d735db46",
+            "2333a290249ff8aeff2dbedb0b5413ea427e16ba35376cd7e0fea732f6182bda",
+            "c7c45fa5da8a4c37853dd1f92dd1da6bcf5d0915efe584d217390da419b8c6d4",
+            "061fd7fad5c94897e3e0b94554aa4be520ef2b8da865aae6bd2e36053d2b22ac",
+            "2ebdf19dda824a88927fbe50f4b9330f95e8029a550c0a0bedf51af97f75acdb",
+            "fc81c3b1280559a91a6d731ff4ccb09f10fa3d3baf9d5ed3b75024cdc2be20f2",
+            "c699f49e96b93375974a19ff1385ef9eb6c95bbcfa16a5764a0dff1405f49e57",
+            "f732cabf0235622206046a9f68b1ea825d5b2a9d328f772265dcd65ffef768dd",
+            "f5150df82d33212e40cb18e37f1edb68fe35e263f120c49f8b8aa25a31392f7a",
+            "5c9204153a77ca7a9a7f3ed19f8d4b09af9b339bec2d2125ec50d2b467a21706",
+            "42fa30c7eb019a1b09489d71c4f89123ba8bff1e3a69b5d37855accb3e2f04a7",
+            "b536f6ff6e5227160a8d919518a2537b4bc33479aae2e235695c33af9acac821",
+            "0dbe56dff7b2bbcb7f44e99005c6707a2c2a020195de87d06a47b3e984d1721c",
+            "b34967ebc97a14f1dbd222a8e7e138f023bc73181a37307a50418a4f27144268",
+            "95b71a4a9cdec83bdb080882f5ac6bb14a0826cf04ac87d4e2520ebfc93c6f83",
+            "cd908d6feb56ea5a086a6670d13197ff9cf45fa6255a4fdc82c245b1ae3fa1dc",
+            "7151fa906f7c56e38cfed9d0bd0421b48161a24204552228747fa60c3ab3d75b"
+          ],
+          "modelCallId": null,
+          "phase": "model",
+          "reason": "model_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,255 @@
+{
+  "oracle": "paginationContinuity",
+  "mutant": "pagination-overlap",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-bug-07",
+  "group": "bug",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-07",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "page",
+        "kind": "action",
+        "operation": "request",
+        "description": "page",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "books"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "offset"
+              },
+              "value": {
+                "literal": "2"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "page",
+          "jsonPointer": "/items/0/id"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "b3"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "paginationContinuity",
+    "mutant": "pagination-overlap",
+    "expectedFailingStepIds": [
+      "business_assertion"
+    ],
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "compare_requirement"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "pagination-overlap"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "The page at offset 2 is required to start with b3 and the resolved first item id is b2; a resolved wrong value establishes a product defect."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "product_bug",
+  "controls": {},
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "8192a4f3abcd1e78af175d73baab00b04511dd6b157f8405497ab614d5d24f08"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-zodzRe",
+    "baseRevision": {
+      "id": "rev_01a12142-bed0-759c-8f2a-7de3b36e53fe",
+      "protectedHash": "b494a186ad1c36e5ae055048a67b60f5ee0a8d041cc486468e38fa108140057c"
+    },
+    "healthy": {
+      "runId": "run_01a12142-bf09-7409-bb77-140df138a30f",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12142-c558-7305-8658-28f7f75ed087",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12142-c84c-75fd-9ca9-618cfe569e01",
+      "hash": "218a9881d5486864b68aabb75c2cedf6f7a365923fb5fd1764773d2f474ec877",
+      "failureKind": "product_bug"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12142-c86d-76db-bc30-fc716708a93b",
+      "hash": "749f66521ffe68330d97f1f24d4d7052936ca94cf6e6a2bb063b3b29055d5b6a"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "semantic_failure",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a12142-c875-7692-afe4-ef60686a05d5",
+      "job": {
+        "state": "completed",
+        "result": {
+          "reason": "semantic_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}
