@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "round": "m3-round4-holdout-muse-spark-contributor",
+  "commit": "a979c279be89fb594c34e4abcf184db875495fa4",
+  "results": "evals/results/m3-round4-holdout-muse-spark-contributor-2026-10-09T14-38-56-737Z/",
+  "validation": "automated-only (ADR-012)",
+  "decision": "infrastructure-void; not a measurement of model quality",
+  "reportedScore": {
+    "safeHealing": "0/12",
+    "causeAccuracy": "1/26",
+    "completion": "1/30",
+    "chargedTokensConservative": 195073
+  },
+  "observed": {
+    "casesRun": 30,
+    "modelEnrichmentRefusedBeforeDispatch": 28,
+    "casesWithSuccessfulModelCall": [
+      "lib-adversarial-01"
+    ],
+    "casesWithCancelledCall": [
+      "lib-adversarial-02"
+    ]
+  },
+  "cause": "Retained workspace analysis records for lib-bug-01 carry the limitation \"Model enrichment abstained: CAPABILITY_UNAVAILABLE: Declared model is absent from provider inventory.\" The provider /models listing is served by pools with different inventories; muse-spark-1.3-contributor was listed when the model was approved and again afterwards, but intermittently absent in between, while chat completions for the model kept working. The gateway requires inventory membership before every paid call. lib-adversarial-02 was dispatched and cancelled at the 180000 ms command deadline.",
+  "consequence": "Scores of 0/12, 1/26 and 1/30 measure inventory availability, not diagnosis or healing quality. They are not compared with targets and do not count as evidence toward or against any gate. Deterministic controls and policy probes of the registration are unaffected.",
+  "followUp": "Round 5 repeats the sealed holdout with the same implementation under a new registration, launched only while the inventory lists the model (preregistration records the decision)."
+}

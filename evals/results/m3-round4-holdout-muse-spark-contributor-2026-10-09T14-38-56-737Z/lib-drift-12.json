@@ -1,0 +1,477 @@
+{
+  "oracle": "returnPersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "passcode"
+  ],
+  "patches": [
+    {
+      "file": "library.html",
+      "before": "data-testid=\"member-passcode\"",
+      "after": "data-testid=\"login-passcode\""
+    }
+  ],
+  "candidate": {
+    "testIdRenames": {
+      "member-passcode": "login-passcode"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "d91c4f3140ca044f88c949cd7e8b117132b0c0d610d343ad3ec1fcb6153070a1"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-drift-12",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-drift-12",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-email"
+          },
+          "value": {
+            "literal": "member@example.test"
+          }
+        }
+      },
+      {
+        "id": "passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "member-passcode"
+          },
+          "value": {
+            "literal": "library-passcode"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Log in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "books_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "books_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "books-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "borrow",
+        "kind": "action",
+        "operation": "click",
+        "description": "borrow",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "borrow-b1"
+          }
+        }
+      },
+      {
+        "id": "borrowed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "borrowed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Borrowed"
+          }
+        }
+      },
+      {
+        "id": "loans",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "loans",
+        "required": true,
+        "input": {
+          "path": "/loans"
+        }
+      },
+      {
+        "id": "return",
+        "kind": "action",
+        "operation": "click",
+        "description": "return",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "return-button"
+          }
+        }
+      },
+      {
+        "id": "returned",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "returned",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Returned"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/loans"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "loan-status"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "returned"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "returnPersistence",
+    "semanticNegative": "return-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "passcode"
+    ],
+    "patches": [
+      {
+        "file": "library.html",
+        "before": "data-testid=\"member-passcode\"",
+        "after": "data-testid=\"login-passcode\""
+      }
+    ],
+    "candidate": {
+      "testIdRenames": {
+        "member-passcode": "login-passcode"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "d91c4f3140ca044f88c949cd7e8b117132b0c0d610d343ad3ec1fcb6153070a1"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "healingEligibility": "automatic",
+    "expectedHealingAdvice": "proposal_possible",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "passcode-testid-renamed-in-return-flow"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that fills the passcode field by its test id; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "return-without-persist",
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "5cd9a66f4d1d175af6d86da737856f684495d0d49de68665d511f5e6eb324f6d"
+    },
+    {
+      "phase": "healing",
+      "code": "healing_model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "PRECONDITION_FAILED: Healing model request did not produce an admissible candidate"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-G9608r",
+    "baseRevision": {
+      "id": "rev_01a12124-f56f-7459-8bad-b9c021c33116",
+      "protectedHash": "59b2f23db24cbdbb468d66b47633e7c636f184a0dfae15629bd23e21f8f53caf"
+    },
+    "healthy": {
+      "runId": "run_01a12124-f5bb-732e-899f-5fa22378c25f",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12124-fc2f-7395-8c61-55ee08e1a45d",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12125-76f6-75e4-9b1d-d3087dcbac26",
+      "hash": "aad7f520c5e0bae504b5a6f88548e427c2f896edd771ed7399d98f3a394404c2",
+      "failureKind": "unknown"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12125-7819-728a-b207-8f2c278f1f99",
+      "hash": "2e07419c118ae7e7931eda526333a849ab5a5ee7ac7fc7208d444979bc2b96da"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "model_failure",
+      "messageHash": "6e43e861e870bfdda3b992e1efbd9a2abeae0ad5ac0cbaf8db9e269e22421537",
+      "detail": "transport",
+      "jobId": "job_01a12125-7826-70d1-8936-88745c54b075",
+      "job": {
+        "state": "completed",
+        "result": {
+          "detail": "transport",
+          "evidenceHashes": [
+            "3f4c199d02c9a95b43d8bb7b661e6ed64f982824b6743a55b6f94c3a2dfa703d",
+            "5dcaa7d314995e7b5f072b42e4fba64543c683a35ad1bc0dea1f290f88d64c57",
+            "5cbaa42a0987bff584dc39b87d4fc57bf1a6e4c4512d0a848e7927c60de371fd",
+            "fd68472eb73e8c9eb0aa5c648a536885ed9786555c466da99ca510efc4aef5e4",
+            "60f179fe9568f7588c3c6210f96ecf60f5188178bda7ed03090f0c5c508e1760",
+            "8351310b43a5f0f65401ee007de010203758301c260d39ffa2ca3a04d6b55eae",
+            "58183dbeb091b40d59ae040f0e087f72d26ae8c5ed5b10ea62a029623996b3d9",
+            "520658bd643c61256f438c4844392a56020a040cac93991f00d69d7fef4be364",
+            "b3f75ad0f9a1ebed819174abb064de5c216547f22a1e743e8fc277fd6b028efe",
+            "6fb68b5fc20faab421594a163926139a88a5c55b9b03f5c0a3fa363fd828f6d5",
+            "5577f4589a6e8cd5ebdb7c7ef3bc37f801a24e96680f912c01d5fee47c3708b3",
+            "eac55d6e175184cb28eb223b76b8657cc5ddf7a47b6c02b8fdfd5b41f39f6a5f",
+            "d10a9efd08d7c121cac494888afa0343baa7df2c66983d0e9ef68590285851d9",
+            "8f7ef8ec37c18596a3d4e2ff0bbcc362da1c00fa8156ca2c2b8b019850fd5360",
+            "a14c88d862b10f4a263ab0fa9ed00d1d68024198d68914a9147e90617dd4f3a8",
+            "6353685b2468bad95cb6ba1eb811c3411f43e74c911af859cef12d32adda4fea",
+            "dfe8c6f2e6914752e1da45771cdbbd1022056fc3242d5e97c759d0c92648508b",
+            "26a8af9c443ac45339283fefd263639993b0cfd51db25d4270a53e91b0fc5f82",
+            "ecfbd3e25c38fee286889dbcecf1d7b76e02a42e92c26b5e8651aea22986010f",
+            "a66ff9418521cff677a6df2f2a0665b3e7955044f9e21235a1f1d81bdcf0f8bd",
+            "525f13723b64f950350932dae15faf3d3b174c2971f37f5ef42e4d30dbad7c42",
+            "276a9e660a772b1185e0f9465387e71cbc8aa94027c1921c1d6aa79fe58ee27b",
+            "c4fb2b518bd1a9b42a894e0a71faadf21ba685784a67b163fc745a344c566a50",
+            "3fb6007f1abd62df73e5da7363dc3bca92bb94f1311954b501173fc1caa7d3b1",
+            "078b5169242e52e52aff17cc456c8a8fe16d207974e804c568ac26ba0e9b9e13",
+            "f804028f949fbb1287543fcd0ca7afecfdcc5205cb38b27eec647bf38764f43c",
+            "3469b91eee529c8d6a87daa022e7f9a9fcf16a766b84ae218977806e91d39a6e",
+            "91770ddc3e31d3f0b24a1c2fbbbfef1d615ab685bbfdf6db05446fda626cca4a",
+            "8bc9c8ca300209bfc1f1f9262082ed424a638257e4222467193667d9b504c23b",
+            "536664108b387560f73813bc189cb0c29c830c619497ce84fc5742ceff0daeef",
+            "9e17e3c0c19bf83cf66edd9ffaba223642d630ecd19b8405babbda13b5fc165b",
+            "211ae197184115164b4ec2115a85ad0f98dce0a330a133f1e771289dbc95dbd6",
+            "683a2afb49a5791339fbc7c85f09051333950e0b38275a030bf2e51c3799e6eb",
+            "c8e11aaebdab848b3b9be02f37730f78c9e2ca009cf1112e84a97f30eb6a0e3d",
+            "3a51188f6fb00c152850f179a545abb11724f8c380c6c5148da07fda8cee6521",
+            "afd9c30365a956d16dd8c88961a1b331f594bd5eb07629757a404857d17e8c8b",
+            "75fff03a8ea3070994d33b26a91cec159126c6a49f57ea6f88edf875e5e806c2",
+            "7ce6f11bde37e26d8131d9c573429696f455bbf51be64d704b27ce33f19a7cd7",
+            "89cbcfab6eff84527c80029fe3b0cade167c64046694e682bb31b19357f1e237",
+            "1de22b988cfe558f7e285a2f445033123152006f7e76dbf6f97c2568b98dd0f8",
+            "ae5af2b55ede9751f8179b10d31c53919b5983893260f65ec12b7894a1ca02ad",
+            "e399c602a0eeaf6dfcd17c1adecda2b5c8df1a1c47683887cbbfb56c16f32c5a",
+            "710dc7ad956ac5ba97ff8fe4fa61704f56896c210f682758679c60d1755883cc",
+            "dff9f58601b690ef4d6ab7e6287c86de4f61c41db30ebd7034613d68acedb43c",
+            "f310eebad8110d0dc75d0307e19f13a495068005bc5d09a9020363dbdd6d7c4e",
+            "1d6c4933944043c960718adf9799e233ecb78dc6694163d9b6fb0e57bc08f410",
+            "79b7cc6fc3bdada409bec23208d3dc37b8f6cb64cf3074ac0df085904f387808",
+            "a4114cb6a0a0e889dc2dcecb37895a05674747726f64b0fd59dd921fde5036ca",
+            "67c3b102e2ea440368cd81f6dc38f482dd4ff3641f83720cf392306edd443301",
+            "7302d3ac6030caace1ef9753cfaba468f6206c5f803e24c90ca2ff0240ad06fc",
+            "9c9810157fd015be35e8995f372a2f72d45ad5a1e2cbb56bf67572376890ab1d"
+          ],
+          "modelCallId": null,
+          "phase": "model",
+          "reason": "model_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}

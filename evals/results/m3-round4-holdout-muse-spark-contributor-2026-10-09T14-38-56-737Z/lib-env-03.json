@@ -1,0 +1,256 @@
+{
+  "oracle": "serviceHealth",
+  "controls": {
+    "unavailableTarget": true
+  },
+  "expectedFailingStepIds": [],
+  "digests": {
+    "healthy": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    },
+    "transformed": {
+      "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+      "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+    }
+  },
+  "familyId": "reference-library",
+  "id": "lib-env-03",
+  "group": "env",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-env-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "member@example.test",
+                "passcode": "library-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-lib-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "authenticate"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "serviceHealth",
+    "controls": {
+      "unavailableTarget": true
+    },
+    "expectedFailingStepIds": [],
+    "digests": {
+      "healthy": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      },
+      "transformed": {
+        "index.js": "37c3ba60b38c6f4897ddf537347f661769da5967e1ce7b6284d84ec01a061073",
+        "library.html": "983b949f2a37a3478d6840bdb92a4c317e64454c7025c231eab5ec70f8e3c71b"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "restore_environment"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "environment",
+      "mechanism": "target-unavailable-at-authentication"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "environment",
+      "rationale": "The authentication request failed with a connection-refused transport error and no response was received, which justifies an environment cause."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "environment",
+  "status": "error",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": false,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "environment",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "reasoningTokens": 0,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 0,
+    "conservativeCharge": 0,
+    "costs": []
+  },
+  "errors": [
+    {
+      "phase": "model-diagnosis",
+      "code": "model_enrichment_abstained",
+      "messageHash": "8192a4f3abcd1e78af175d73baab00b04511dd6b157f8405497ab614d5d24f08"
+    }
+  ],
+  "records": {
+    "workspace": "/tmp/tm-m3-UgkZDD",
+    "baseRevision": {
+      "id": "rev_01a12125-8ac0-7023-ae3c-03793eaccde5",
+      "protectedHash": "3504428d14e5a683802882013e1fd66622a685ba6777111aa6fa88f7773482a6"
+    },
+    "healthy": {
+      "runId": "run_01a12125-8b10-7541-9a9f-1cfdcbe04b6e",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12125-8e5b-7771-a04e-dbfe798e8375",
+      "outcome": "inconclusive",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12125-9155-77ea-b505-fed39986dbdc",
+      "hash": "5f1718ebe844a2b8e493bc3c05a25ad020bc67b96f97e7625e9c9f210159caa5",
+      "failureKind": "environment"
+    },
+    "calls": [],
+    "modelDiagnosis": {
+      "id": "ana_01a12125-9177-71f2-b1cb-c3badfd14951",
+      "hash": "4778fce165b29050d2bae30d6780da89fbb104ecaa2c6278a41f414cd89103b0"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "not_failed",
+      "messageHash": "cceecb584eea682acbbf8b32d89d28148223b9e6b26803514204aac60758eed0",
+      "detail": "PRECONDITION_FAILED: Healing requires a terminal failed Run"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "restore_environment",
+      "recommendedActions": [
+        {
+          "action": "restore_environment",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_supported",
+        "failureKind": "environment"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "restore_environment",
+      "recommendedActions": [
+        {
+          "action": "restore_environment",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_supported",
+        "failureKind": "environment"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      }
+    }
+  }
+}
