@@ -109,7 +109,7 @@ export class ModelService {
       });
     if (
       input.deadlineMs !== undefined &&
-      (!Number.isSafeInteger(input.deadlineMs) || input.deadlineMs < 1 || input.deadlineMs > 180000)
+      (!Number.isSafeInteger(input.deadlineMs) || input.deadlineMs < 1 || input.deadlineMs > 600000)
     )
       throw new ContractError(
         "INVALID_ARGUMENT",

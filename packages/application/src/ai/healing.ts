@@ -366,7 +366,7 @@ export class HealingService {
       queue: "healing",
       jobId: job.jobId,
       owner: `healing:${randomUUID()}`,
-      leaseMs: 240000,
+      leaseMs: Math.max(240000, (input.budget?.deadlineMs ?? 180000) + 60000),
     });
     if (!fence)
       throw new ContractError("PRECONDITION_FAILED", "Healing request is already running", {

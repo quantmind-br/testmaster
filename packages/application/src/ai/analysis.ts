@@ -1597,7 +1597,7 @@ export class AnalysisService {
       owner: `analysis-${randomUUID()}`,
       queue: "analysis",
       jobId: job.jobId,
-      leaseMs: 240000,
+      leaseMs: Math.max(240000, (input.budget?.deadlineMs ?? 180000) + 60000),
     });
     if (!fence) {
       const deadline = Date.now() + (input.budget?.deadlineMs ?? 180000);

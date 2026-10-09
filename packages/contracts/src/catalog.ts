@@ -236,7 +236,7 @@ const supplemental = {
     /** Authorized code discovery whose snapshot grounds optional source fix targets. */
     discoveryId: Type.Optional(P.id("dsc")),
     budget: Type.Optional(
-      P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
+      P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
     ),
   }),
   AIAnalysisOutput: P.Obj({
@@ -267,7 +267,7 @@ const supplemental = {
   }),
   HealingInput: P.Obj({
     budget: Type.Optional(
-      P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
+      P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
     ),
   }),
   HealingRejectInput: P.Obj({ reason: Type.String({ minLength: 1, maxLength: 8000 }) }),

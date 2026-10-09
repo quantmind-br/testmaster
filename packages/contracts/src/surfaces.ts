@@ -347,7 +347,7 @@ export const mcpTools = {
       jobId: Type.Optional(id("bat")),
       idempotencyKey: Type.Optional(Type.String({ minLength: 16, maxLength: 128 })),
       wait: Type.Optional(Type.Boolean()),
-      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 1800000 })),
+      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000000 })),
     }),
     output: "BatchReceipt",
   },
@@ -356,7 +356,7 @@ export const mcpTools = {
     input: Obj({
       runId: id("run"),
       wait: Type.Optional(Type.Boolean()),
-      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 1800000 })),
+      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000000 })),
     }),
     output: "RunResult",
   },
@@ -372,7 +372,7 @@ export const mcpTools = {
       model: Type.Optional(Type.Boolean()),
       discoveryId: Type.Optional(id("dsc")),
       budget: Type.Optional(
-        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
+        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
       ),
     }),
     output: "Analysis",
@@ -408,7 +408,7 @@ export const mcpTools = {
     input: Obj({
       failedRunId: id("run"),
       budget: Type.Optional(
-        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 180000 })) }),
+        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
       ),
     }),
     output: "HealingProposal",
