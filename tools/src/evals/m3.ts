@@ -356,7 +356,7 @@ function validateMeasurementInputs(registration: M3Registration, corpus: Corpus)
   }
 }
 // Models the operator has approved for registered rounds.
-const approvedModels = ["qwen3.8-flash", "muse-spark-1.3"];
+const approvedModels = ["qwen3.8-flash", "muse-spark-1.3", "muse-spark-1.3-contributor"];
 export async function checkM3(root: string, registrationPath: string) {
   const registration = JSON.parse(
     await readFile(confined(root, registrationPath), "utf8"),
