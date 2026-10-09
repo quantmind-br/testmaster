@@ -1,0 +1,177 @@
+{
+  "id": "lib-bug-07",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12107-722a-766a-b171-19176f3d49c2",
+    "revisionId": "rev_01a12107-71f7-7797-9dad-79c9330d4e1a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "page",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "936de302a679374e44f0665ff60712bf99d57b684999b548f4e868e3f7ff79b5",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12107-71e2-74b0-9097-ec4302fad72b",
+    "admissionHash": "f16bc6dea2eb584d6fdab0c66048ab7f40cb7bc4d427d1e68490378dd858afa6"
+  },
+  "transformed": {
+    "runId": "run_01a12107-754f-71c1-a475-f0da74dff5a5",
+    "revisionId": "rev_01a12107-71f7-7797-9dad-79c9330d4e1a",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "page",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "936de302a679374e44f0665ff60712bf99d57b684999b548f4e868e3f7ff79b5",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12107-71e2-74b0-9097-ec4302fad72b",
+    "admissionHash": "f16bc6dea2eb584d6fdab0c66048ab7f40cb7bc4d427d1e68490378dd858afa6"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "paginationContinuity",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "expected": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5"
+      ],
+      "observed": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5"
+      ]
+    }
+  },
+  "transformedOracle": {
+    "check": "paginationContinuity",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "expected": [
+        "b1",
+        "b2",
+        "b3",
+        "b4",
+        "b5"
+      ],
+      "observed": [
+        "b1",
+        "b2",
+        "b2",
+        "b3",
+        "b4",
+        "b5"
+      ]
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-07",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "page",
+        "kind": "action",
+        "operation": "request",
+        "description": "page",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "books"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "offset"
+              },
+              "value": {
+                "literal": "2"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "page",
+          "jsonPointer": "/items/0/id"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "b3"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

@@ -1,0 +1,250 @@
+{
+  "id": "lib-bug-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12107-4ef8-73c5-b700-8140595f3e89",
+    "revisionId": "rev_01a12107-4ebf-745e-8e8d-13de8ed39b17",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow_first",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow_second",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "915a68ae4b850f7369878faf81ea0f6de5b72ae093059967f396ad3c00540b7e",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12107-4eaa-7446-a8b4-86021965cb96",
+    "admissionHash": "ec2233bb9651556feb2b5341f96ff177da3470fa1d08e1d228fcc4fd7beb5087"
+  },
+  "transformed": {
+    "runId": "run_01a12107-5280-76c7-81bc-457ed29888fb",
+    "revisionId": "rev_01a12107-4ebf-745e-8e8d-13de8ed39b17",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow_first",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "borrow_second",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "915a68ae4b850f7369878faf81ea0f6de5b72ae093059967f396ad3c00540b7e",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12107-4eaa-7446-a8b4-86021965cb96",
+    "admissionHash": "ec2233bb9651556feb2b5341f96ff177da3470fa1d08e1d228fcc4fd7beb5087"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "borrowStock",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "firstStatus": 201,
+      "secondStatus": 409,
+      "copies": 0
+    }
+  },
+  "transformedOracle": {
+    "check": "borrowStock",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "firstStatus": 201,
+      "secondStatus": 201,
+      "copies": -1
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "lib-bug-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "auth"
+            },
+            {
+              "literal": "token"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "member@example.test",
+                "passcode": "library-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "header",
+              "header": "x-lib-auth",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrow_first",
+        "kind": "action",
+        "operation": "request",
+        "description": "borrow_first",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "borrow_second",
+        "kind": "action",
+        "operation": "request",
+        "description": "borrow_second",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "loans"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "bookId": "b2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "borrow_second"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            409
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}
