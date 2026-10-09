@@ -16,21 +16,26 @@ function manifest(): HoldoutManifest {
     id: "validator-control",
     driver: "driver.mjs",
     inputs: ["driver.mjs", "data.json"],
+    implementation: {
+      commit: "0123456789abcdef0123456789abcdef01234567",
+      frozenAt: "2025-12-31T00:00:00Z",
+    },
     families: [
       {
-        id: "external",
+        id: "sealed",
         description: "Synthetic validator family",
         provenance: {
           authoredBy: "author",
           authoredAt: "2026-01-01T00:00:00Z",
-          implementationKnowledge: "external",
+          implementationKnowledge: "implementing-team",
+          developmentUse: "none",
         },
       },
     ],
     cases: [
       {
         id: "control",
-        familyId: "external",
+        familyId: "sealed",
         group: "healthy",
         plan: {
           schemaVersion: "1.0.0",
@@ -68,12 +73,11 @@ function manifest(): HoldoutManifest {
           expectedHealingAdvice: "not_indicated",
           healingEligibility: "none",
         },
-        review: { status: "independently-reviewed", reviewers: ["reviewer"] },
       },
     ],
   };
 }
-async function fixture() {
+async function fixture(value: HoldoutManifest = manifest()) {
   const root = await mkdtemp(join(tmpdir(), "tm-holdout-validator-"));
   temporary.push(root);
   await writeFile(
@@ -81,37 +85,66 @@ async function fixture() {
     "export function startCase(){};export function materialize(){};export function independentOracle(){};export function executedProductOracle(){};",
   );
   await writeFile(join(root, "data.json"), "{}\n");
-  await writeFile(join(root, "manifest.json"), JSON.stringify(manifest()));
+  await writeFile(join(root, "manifest.json"), JSON.stringify(value));
   await sealHoldout(root, "manifest.json", "sealed.json");
   return root;
 }
-it("accepts a sealed externally reviewed manifest without proving provenance or utility", async () => {
+it("accepts a sealed same-team manifest without proving provenance or utility", async () => {
   const root = await fixture();
   const result = await loadHoldout(root, "sealed.json", { homologation: true });
   expect(result.homologationEligible).toBe(true);
   expect(result.provenanceVerified).toBe(false);
+  expect(result.validation).toBe("automated-only");
+  expect(result.disputedCases).toEqual([]);
+  expect(result.limitations).toContain(
+    "Same-team or agent authorship declared for families: sealed.",
+  );
+  expect(result.plannedCases[0]?.labels?.labelStatus).toBe("sealed");
   expect(result.plannedCases[0]?.expectedFailureKind).toBe("unknown");
   expect(result.cases[0]?.oracle).toBe("control");
   expect(typeof result.driver.startCase).toBe("function");
 });
-it("rejects author self-review and missing presealed healing eligibility", () => {
+it("rejects review records, declared label status and missing presealed healing eligibility", () => {
   const value = manifest();
-  value.cases[0]!.review.reviewers = ["author"];
-  expect(() => validateHoldout(value)).toThrow("reviewer must differ from author");
-  value.cases[0]!.review.reviewers = ["reviewer"];
+  Object.assign(value.cases[0]!, { review: { status: "independently-reviewed", reviewers: [] } });
+  expect(() => validateHoldout(value)).toThrow("review is superseded by ADR-012");
+  delete (value.cases[0] as { review?: unknown }).review;
+  value.cases[0]!.labels.labelStatus = "sealed";
+  expect(() => validateHoldout(value)).toThrow('"sealed" is derived');
+  delete value.cases[0]!.labels.labelStatus;
+  value.cases[0]!.labels.reviewStatus = "independently-reviewed";
+  expect(() => validateHoldout(value)).toThrow("review status is superseded by ADR-012");
+  delete value.cases[0]!.labels.reviewStatus;
   delete (value.cases[0]!.labels as Partial<HoldoutManifest["cases"][number]["labels"]>)
     .healingEligibility;
   expect(() => validateHoldout(value)).toThrow(
     "healing eligibility must be declared before sealing",
   );
 });
-it("rejects unreviewed or implementation-team cases for homologation", () => {
+it("keeps only presealed disputes as a separate stratum, not author/evidence divergence", async () => {
   const value = manifest();
-  value.cases[0]!.review.status = "pending-independent-review";
-  expect(() => validateHoldout(value, true)).toThrow("independent review of every case");
-  value.cases[0]!.review.status = "independently-reviewed";
-  value.families[0]!.provenance.implementationKnowledge = "implementing-team";
-  expect(() => validateHoldout(value, true)).toThrow("outside the implementing team");
+  value.cases[0]!.labels.truthKnownToAuthor.failureKind = "product_bug";
+  const divergent = await loadHoldout(await fixture(value), "sealed.json");
+  expect(divergent.disputedCases).toEqual([]);
+  expect(divergent.plannedCases[0]?.labels?.labelStatus).toBe("sealed");
+  value.cases[0]!.labels.labelStatus = "disputed";
+  const disputed = await loadHoldout(await fixture(value), "sealed.json");
+  expect(disputed.disputedCases).toEqual(["control"]);
+  expect(disputed.plannedCases[0]?.labels?.labelStatus).toBe("disputed");
+});
+it("rejects development-used, pre-freeze or unfrozen families for homologation", () => {
+  const value = manifest();
+  value.families[0]!.provenance.developmentUse = "used";
+  expect(() => validateHoldout(value, true)).toThrow("never used in development");
+  expect(validateHoldout(value).id).toBe("validator-control");
+  value.families[0]!.provenance.developmentUse = "none";
+  value.families[0]!.provenance.authoredAt = "2025-12-30T00:00:00Z";
+  expect(() => validateHoldout(value, true)).toThrow("authored after the implementation freeze");
+  delete value.implementation;
+  expect(() => validateHoldout(value, true)).toThrow("evaluated implementation freeze");
+  value.implementation = { commit: "short", frozenAt: "2025-12-31T00:00:00Z" };
+  expect(() => validateHoldout(value)).toThrow("full commit and frozenAt");
+  delete value.implementation;
   value.families = [];
   expect(() => validateHoldout(value)).toThrow("at least one family");
 });

@@ -138,7 +138,7 @@ const utilityCase: PlannedCase = {
     expectedHealingAdvice: "not_indicated",
     healingEligibility: "none",
     labelSource: "external-author",
-    reviewStatus: "independently-reviewed",
+    labelStatus: "sealed",
   },
 };
 
@@ -198,7 +198,7 @@ describe("M3 user utility", () => {
     const disputed: PlannedCase = {
       ...utilityCase,
       id: "disputed-context",
-      labels: { ...utilityCase.labels!, reviewStatus: "disputed" },
+      labels: { ...utilityCase.labels!, labelStatus: "disputed" },
     };
     const rows = [utilityCase, disputed].map(emptyLedger);
     rows[0]!.utility = { rules: observation("collect_more_evidence") };
@@ -211,6 +211,7 @@ describe("M3 user utility", () => {
     expect(utility.arms.rules!.nextActionCorrect.successes).toBe(0);
     expect(utility.incrementalGain).toMatchObject({ n: 0, missingPairs: 1, estimate: null });
     expect(utility.disputed.caseIds).toEqual(["disputed-context"]);
+    expect(utility.unsealedLabels).toEqual([]);
     expect(utility.disputed.arms.model!.nextActionCorrect).toMatchObject({ successes: 1, n: 1 });
   });
 
@@ -375,7 +376,7 @@ describe("M3 user utility", () => {
       ...utilityCase,
       group: "drift",
       expectedFailureKind: "test_fragility",
-      labels: { ...utilityCase.labels!, healingEligibility: "automatic", reviewStatus: "disputed" },
+      labels: { ...utilityCase.labels!, healingEligibility: "automatic", labelStatus: "disputed" },
     };
     const row = emptyLedger(item);
     row.healing.proposed = true;

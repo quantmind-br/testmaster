@@ -156,7 +156,7 @@ Usar assertions de estado e invariantes fora da implementação gerada: DB/test 
 | VAL-015 | Baseline saudável e negativo com defeito são executados com os mesmos testes/oracle. | Teste que falha em ambos ou passa em ambos não conta como detector útil. |
 | VAL-016 | Holdout é isolado por famílias e modelo recebe apenas contexto autorizado de entrada. | Labels/patch de defeito/expected answer não aparecem no prompt; leakage acidental invalida rodada. |
 | VAL-017 | Oracle checa efeito de negócio, não somente sinal produzido pelo próprio componente sob teste. | “Success toast sem persistência” falha por oracle de estado; HTTP 200 com payload inválido falha. |
-| VAL-018 | Ambiguidade de PRD tem adjudicação determinística, sem rotular divergência de rótulo como erro de modelo automaticamente. | Regra publicada marca `disputed` quando rótulo selado do autor, rótulo justificável pela evidência e oracle divergem; casos disputados são estrato separado, não removidos em segredo. |
+| VAL-018 | Ambiguidade de PRD tem adjudicação determinística, sem rotular divergência de rótulo como erro de modelo automaticamente. | Regra publicada: o autor declara `disputed` antes do selo quando a evidência não determina rótulo justificável único; diferença entre verdade do autor e rótulo justificável pela evidência não é disputa; oracle que não reproduz o comportamento selado falha a pré-condição de reprodução. Casos disputados são estrato separado, não removidos em segredo. |
 
 ## 5. Mutation testing e anti-vacuity
 

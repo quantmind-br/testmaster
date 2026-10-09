@@ -31,6 +31,9 @@ export interface UtilityLabels {
   expectedHealingAdvice: HealingAdvice;
   healingEligibility: "automatic" | "manual" | "none";
   labelSource?: string;
+  /** Derived by the ADR-012 dispute rule for sealed holdout labels. */
+  labelStatus?: "sealed" | "disputed";
+  /** Legacy development-corpus status; read only for its `disputed` value. */
   reviewStatus?: "pending-independent-review" | "independently-reviewed" | "disputed";
   truthKnownToAuthor?: { failureKind: FailureKind; mechanism: string };
   justifiableFromEvidence?: { failureKind: FailureKind; rationale: string };
@@ -94,10 +97,24 @@ export interface PlannedCase {
   labels?: UtilityLabels;
   familyId?: string;
   defect?: boolean;
+  /** Legacy development-corpus review record; read only for its `disputed` value. */
   review?: {
     status: "pending-independent-review" | "independently-reviewed" | "disputed";
     reviewers: string[];
   };
+}
+/**
+ * ADR-012 deterministic dispute rule: a case is disputed only when its author declared, before
+ * sealing, that the evidence does not determine a unique justifiable label. Author truth and the
+ * evidence-justifiable label may legitimately differ. Oracle non-reproduction fails the case's
+ * reproduction precondition and is reported, never relabelled.
+ */
+export function labelDisputed(item: Pick<PlannedCase, "labels" | "review">) {
+  return (
+    item.labels?.labelStatus === "disputed" ||
+    item.labels?.reviewStatus === "disputed" ||
+    item.review?.status === "disputed"
+  );
 }
 /** Project current scenario metadata; historical registrations retain their frozen corpus. */
 export function plannedCases(): PlannedCase[] {
@@ -334,7 +351,7 @@ export function scoreM3(ledgers: M3Ledger[], cases?: PlannedCase[]) {
     limitations: [
       "Cases within application families are correlated; corpus-derived denominators do not establish independent families or graduation.",
       "Wilson intervals are descriptive under family correlation; zero observations do not prove population zero risk or <1% rare-event risk.",
-      "Independent label review, family holdout and safety sign-off remain pending.",
+      "validation: automated-only (ADR-012): no independent review; sealed holdout families and automated safety evidence remain pending.",
       "Unknown usage remains conservatively charged; local quota does not cap remote billed tokens or money.",
       "Utility labels must be supplied explicitly; missing observations are misses, not evidence of safe actions. Disputed labels are reported separately.",
       "Cause, recall and precision are secondary descriptive measures; utility and isolated candidate replay are not homologation evidence by themselves.",
@@ -345,9 +362,7 @@ export function scoreM3(ledgers: M3Ledger[], cases?: PlannedCase[]) {
 function scoreUtility(rows: M3Ledger[], planned: PlannedCase[]) {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const labelled = planned.filter((item) => item.labels);
-  const disputed = labelled.filter(
-    (item) => item.labels?.reviewStatus === "disputed" || item.review?.status === "disputed",
-  );
+  const disputed = labelled.filter((item) => labelDisputed(item));
   const undisputed = labelled.filter((item) => !disputed.includes(item));
   const stratum = (items: PlannedCase[]) => {
     const arms = (["none", "rules", "model"] as const).map((arm) => {
@@ -509,12 +524,8 @@ function scoreUtility(rows: M3Ledger[], planned: PlannedCase[]) {
     ...stratum(undisputed),
     missingLabels: planned.filter((item) => !item.labels).map((item) => item.id),
     labelSources: [...new Set(labelled.map((item) => item.labels?.labelSource ?? "not-recorded"))],
-    pendingIndependentReview: labelled
-      .filter(
-        (item) =>
-          item.labels?.reviewStatus !== "independently-reviewed" &&
-          item.review?.status !== "independently-reviewed",
-      )
+    unsealedLabels: labelled
+      .filter((item) => item.labels?.labelStatus === undefined)
       .map((item) => item.id),
     disputed: { caseIds: disputed.map((item) => item.id), ...stratum(disputed) },
   };
@@ -526,9 +537,7 @@ function scoreHealing(
   safeHealing: (row: M3Ledger) => boolean,
 ) {
   const byId = new Map(rows.map((row) => [row.id, row]));
-  const disputed = planned.filter(
-    (item) => item.labels?.reviewStatus === "disputed" || item.review?.status === "disputed",
-  );
+  const disputed = planned.filter((item) => labelDisputed(item));
   const disputedIds = new Set(disputed.map((item) => item.id));
   const eligible = planned.filter(
     (item) => item.labels?.healingEligibility === "automatic" && !disputedIds.has(item.id),

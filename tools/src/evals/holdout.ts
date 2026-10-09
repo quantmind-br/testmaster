@@ -7,7 +7,9 @@ import { validate } from "@testmaster/contracts";
 import { canonicalJson } from "@testmaster/domain";
 import type { FixtureDriver } from "../../../evals/m3/fixture.mjs";
 import type { FailureKind, PlannedCase, UtilityLabels } from "./m3-scoring.js";
+import { labelDisputed } from "./m3-scoring.js";
 
+/** ADR-012: provenance is declared truthfully; same-team or agent authorship is allowed. */
 export interface HoldoutFamily {
   id: string;
   description: string;
@@ -15,6 +17,7 @@ export interface HoldoutFamily {
     authoredBy: string;
     authoredAt: string;
     implementationKnowledge: "external" | "implementing-team";
+    developmentUse: "none" | "used";
   };
 }
 export interface HoldoutCase {
@@ -27,14 +30,12 @@ export interface HoldoutCase {
     truthKnownToAuthor: { failureKind: FailureKind; mechanism: string };
     justifiableFromEvidence: { failureKind: FailureKind; rationale: string };
   };
-  review: {
-    status: "pending-independent-review" | "independently-reviewed" | "disputed";
-    reviewers: string[];
-  };
 }
 export interface HoldoutManifest {
   schemaVersion: "1.0.0";
   id: string;
+  /** Evaluated implementation frozen before the families were authored. */
+  implementation?: { commit: string; frozenAt: string };
   families: HoldoutFamily[];
   driver: string;
   inputs: string[];
@@ -62,7 +63,11 @@ function strings(value: unknown): value is string[] {
 function fail(message: string): never {
   throw new Error(`Invalid holdout: ${message}`);
 }
-/** Provenance and reviewer identities are declarations, never identity proofs. */
+/**
+ * Validates a holdout manifest under ADR-012 (automated-only validation): labels are sealed,
+ * not reviewed. Provenance, development use and the implementation freeze are declarations,
+ * never identity proofs.
+ */
 export function validateHoldout(value: unknown, homologation = false): HoldoutManifest {
   if (!value || typeof value !== "object") fail("manifest must be an object");
   const manifest = value as HoldoutManifest;
@@ -70,6 +75,16 @@ export function validateHoldout(value: unknown, homologation = false): HoldoutMa
     fail("manifest identity or driver missing");
   if (!strings(manifest.inputs) || !manifest.inputs.includes(manifest.driver))
     fail("inputs must include the driver and all authored dependencies");
+  const implementation = manifest.implementation;
+  if (
+    implementation !== undefined &&
+    (!implementation ||
+      !/^[a-f0-9]{40}([a-f0-9]{24})?$/.test(implementation.commit) ||
+      !date(implementation.frozenAt))
+  )
+    fail("implementation freeze must declare a full commit and frozenAt");
+  if (homologation && !implementation)
+    fail("homologation requires the evaluated implementation freeze");
   if (!Array.isArray(manifest.families) || !manifest.families.length)
     fail("at least one family is required");
   const families = new Map<string, HoldoutFamily>();
@@ -81,11 +96,18 @@ export function validateHoldout(value: unknown, homologation = false): HoldoutMa
       !p ||
       !text(p.authoredBy) ||
       !date(p.authoredAt) ||
-      !["external", "implementing-team"].includes(p.implementationKnowledge)
+      !["external", "implementing-team"].includes(p.implementationKnowledge) ||
+      !["none", "used"].includes(p.developmentUse)
     )
       fail("family provenance missing");
-    if (homologation && p.implementationKnowledge !== "external")
-      fail("homologation requires families outside the implementing team");
+    if (homologation && p.developmentUse !== "none")
+      fail("homologation requires families never used in development");
+    if (
+      homologation &&
+      implementation &&
+      Date.parse(p.authoredAt) < Date.parse(implementation.frozenAt)
+    )
+      fail("homologation requires families authored after the implementation freeze");
     families.set(family.id, family);
   }
   if (!Array.isArray(manifest.cases) || !manifest.cases.length) fail("cases are required");
@@ -132,20 +154,11 @@ export function validateHoldout(value: unknown, homologation = false): HoldoutMa
       !text(labels.justifiableFromEvidence.rationale)
     )
       fail("truth and evidence labels missing");
-    if (
-      !item.review ||
-      !["pending-independent-review", "independently-reviewed", "disputed"].includes(
-        item.review.status,
-      ) ||
-      !strings(item.review.reviewers)
-    )
-      fail("review status missing");
-    const author = families.get(item.familyId)!.provenance.authoredBy;
-    if (item.review.reviewers.includes(author)) fail("reviewer must differ from author");
-    if (item.review.status === "independently-reviewed" && !item.review.reviewers.length)
-      fail("independent review requires a reviewer");
-    if (homologation && item.review.status !== "independently-reviewed")
-      fail("homologation requires independent review of every case");
+    if ("review" in item) fail("review is superseded by ADR-012; labels are sealed, not reviewed");
+    if ("reviewStatus" in labels)
+      fail("review status is superseded by ADR-012; labels are sealed, not reviewed");
+    if (labels.labelStatus !== undefined && labels.labelStatus !== "disputed")
+      fail('only "disputed" may be declared before sealing; "sealed" is derived');
   }
   return manifest;
 }
@@ -213,14 +226,27 @@ export async function checkHoldout(root: string, manifestPath: string, homologat
     )
       fail(`sealed file changed: ${path}`);
   }
+  const implementation = manifest.implementation;
+  const sameTeam = manifest.families
+    .filter((family) => family.provenance.implementationKnowledge === "implementing-team")
+    .map((family) => family.id);
   return {
     manifest,
+    validation: "automated-only" as const,
     homologationEligible:
-      manifest.cases.every((item) => item.review.status === "independently-reviewed") &&
-      manifest.families.every((family) => family.provenance.implementationKnowledge === "external"),
+      implementation !== undefined &&
+      manifest.families.every(
+        (family) =>
+          family.provenance.developmentUse === "none" &&
+          Date.parse(family.provenance.authoredAt) >= Date.parse(implementation.frozenAt),
+      ),
+    disputedCases: manifest.cases.filter((item) => labelDisputed(item)).map((item) => item.id),
     provenanceVerified: false,
     limitations: [
-      "Authorship, implementation knowledge and reviewer identities are declared, not proven. A valid manifest does not demonstrate utility or homologate a capability.",
+      "validation: automated-only (ADR-012). Labels are sealed, not independently reviewed; authorship, implementation knowledge, development use and the implementation freeze are declared, not proven. A valid manifest does not demonstrate utility or homologate a capability.",
+      ...(sameTeam.length
+        ? [`Same-team or agent authorship declared for families: ${sameTeam.join(", ")}.`]
+        : []),
     ],
   };
 }
@@ -242,7 +268,10 @@ export async function loadHoldout(
     oracle: item.variant.oracle,
     semanticNegative: item.variant.semanticNegative,
     expectedFailureKind: item.labels.justifiableFromEvidence.failureKind,
-    labels: { ...item.labels, reviewStatus: item.review.status },
+    labels: {
+      ...item.labels,
+      labelStatus: labelDisputed(item) ? ("disputed" as const) : ("sealed" as const),
+    },
   }));
   return { ...checked, driver, cases, plannedCases: cases as PlannedCase[] };
 }

@@ -16498,8 +16498,8 @@
         "evals/preregistration.json"
       ],
       "code": ["packages/application/src/ai/requirements.ts", "evals/corpus/manifest.json"],
-      "note": "Single scripted adjudication exists; the deterministic disputed rule (sealed label vs evidence-justifiable label vs oracle, ADR-012) and separately reported disputed strata are pending.",
-      "blockedReason": "Single scripted adjudication exists; the deterministic disputed rule (sealed label vs evidence-justifiable label vs oracle, ADR-012) and separately reported disputed strata are pending."
+      "note": "Single scripted adjudication exists; the presealed disputed-declaration rule (ADR-012) is implemented in the holdout tooling and scored as a separate stratum; evidence on a sealed holdout is pending.",
+      "blockedReason": "Single scripted adjudication exists; the presealed disputed-declaration rule (ADR-012) is implemented in the holdout tooling and scored as a separate stratum; evidence on a sealed holdout is pending."
     },
     {
       "id": "VAL-019",
@@ -18081,8 +18081,8 @@
         "tools/src/evals/m3-scoring.test.ts::scores correct safe dangerous actions and layered advice for every arm",
         "tools/src/evals/m3-scoring.test.ts::requires isolated paired candidate runs and does not mistake a proposal for automatic healing",
         "tools/src/evals/m3-scoring.test.ts::derives denominators from external cases without inventing legacy labels",
-        "tools/src/evals/holdout.test.ts::accepts a sealed externally reviewed manifest without proving provenance or utility",
-        "tools/src/evals/holdout.test.ts::rejects author self-review and missing presealed healing eligibility",
+        "tools/src/evals/holdout.test.ts::accepts a sealed same-team manifest without proving provenance or utility",
+        "tools/src/evals/holdout.test.ts::rejects review records, declared label status and missing presealed healing eligibility",
         "tools/src/evals/holdout.test.ts::rejects changed sealed labels and transitive driver inputs",
         "tools/src/evals/user-tasks.test.ts::aggregates counterbalanced participant decisions and manual review work",
         "tools/src/evals/user-tasks.test.ts::rejects studies without participants or independent arm ordering"
@@ -18099,19 +18099,19 @@
         "tools/src/evals/holdout.ts",
         "tools/src/evals/user-tasks.ts"
       ],
-      "note": "Normative IDs and advertised capabilities remain inventoried; real releaseSummary controls preserve unavailable capabilities and reject missing mappings. Utility controls use planned-case labels, reject missing evidence and isolated-candidate false credit. This is implementation evidence, not holdout, participant-study, independent-security or public-release homologation.",
+      "note": "Normative IDs and advertised capabilities remain inventoried; real releaseSummary controls preserve unavailable capabilities and reject missing mappings. Utility controls use planned-case labels, reject missing evidence and isolated-candidate false credit; holdout validation follows ADR-012 (sealed labels, declared authorship, presealed disputes, no review records). The participant task-session validator is retained but is not a gate input. This is implementation evidence, not sealed-holdout, automated-safety or public-release homologation.",
       "coverage": {
         "positive": [
           "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate",
           "tools/src/evals/m3-scoring.test.ts::scores correct safe dangerous actions and layered advice for every arm",
-          "tools/src/evals/holdout.test.ts::accepts a sealed externally reviewed manifest without proving provenance or utility",
+          "tools/src/evals/holdout.test.ts::accepts a sealed same-team manifest without proving provenance or utility",
           "tools/src/evals/user-tasks.test.ts::aggregates counterbalanced participant decisions and manual review work"
         ],
         "negative": [
           "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate",
           "tools/src/evals/m3-scoring.test.ts::requires isolated paired candidate runs and does not mistake a proposal for automatic healing",
           "tools/src/evals/m3-scoring.test.ts::derives denominators from external cases without inventing legacy labels",
-          "tools/src/evals/holdout.test.ts::rejects author self-review and missing presealed healing eligibility",
+          "tools/src/evals/holdout.test.ts::rejects review records, declared label status and missing presealed healing eligibility",
           "tools/src/evals/holdout.test.ts::rejects changed sealed labels and transitive driver inputs",
           "tools/src/evals/user-tasks.test.ts::rejects studies without participants or independent arm ordering"
         ],
@@ -18131,7 +18131,8 @@
           {"path": "tools/src/evals/m3-scoring.test.ts", "assertion": "expect(score.utility.arms.model!.nextActionSafe.successes).toBe(0);"},
           {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(result.homologationEligible).toBe(true);"},
           {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(result.provenanceVerified).toBe(false);"},
-          {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(() => validateHoldout(value)).toThrow(\"reviewer must differ from author\");"},
+          {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(() => validateHoldout(value)).toThrow(\"review is superseded by ADR-012\");"},
+          {"path": "tools/src/evals/holdout.test.ts", "assertion": "expect(() => validateHoldout(value, true)).toThrow(\"never used in development\");"},
           {"path": "tools/src/evals/holdout.test.ts", "assertion": "await expect(checkHoldout(root, \"sealed.json\")).rejects.toThrow(\"sealed file changed: data.json\");"},
           {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(result).toMatchObject({ participants: 3, sessions: 3, counterbalanced: true });"},
           {"path": "tools/src/evals/user-tasks.test.ts", "assertion": "expect(() => aggregateUserTasks(value)).toThrow(\n    \"Participants and completed sessions are required\",\n  );"},
