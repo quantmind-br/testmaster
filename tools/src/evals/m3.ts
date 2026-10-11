@@ -2392,7 +2392,9 @@ async function executeRound(
           );
           ledger.records.verificationAssertions = protectedVerification;
           ledger.healing.assertionsPreserved = protectedVerification.preserved;
-          if (item.group === "drift") {
+          // A case with a semantic-candidate control (for example an automatically eligible
+          // adversarial case) needs the same drift and semantic-negative evidence as a drift case.
+          if (item.group === "drift" || item.controls?.semanticCandidate === true) {
             const driftOracle = await fixture.startCase(
               root,
               corpus,

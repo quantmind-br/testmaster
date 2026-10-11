@@ -741,6 +741,20 @@ and logs, delete the canary and revoke the second account's token. The validator
 evidence if the secret is readable, any write API is not refused, a gate check/status exists on the
 fork head, or the pinned Action did not refuse before installing the runtime.
 
+Changes after the spent round 6 (2026-10-11, implementation freeze for the next round; prompts
+`analyze-6-typed-next-steps` and `heal-4-ranked-candidates`): model next steps are typed
+selections from the shared action vocabulary (`AIAnalysisOutput.nextSteps[].action`) and the
+application renders their text, so no model prose is shown as advice; an action that does not fit the
+recorded cause, or a healing review without a code-owned proposal, is dropped with a disclosed
+limitation. A model cause without a hypothesis supported by execution observation is no longer a
+whole-response rejection: the cause is not recorded, the rules cause stays, and the typed steps and
+evidence gaps remain. The healing model input ranks locator candidates (matched, then interactive or
+identified elements) before the 30-candidate cap instead of using DOM order, since round 6 abstained
+on two cases whose renamed control sat beyond the first 30 elements. A healing abstention keeps a
+bounded, scrubbed copy of the model's stated reason in the job result for audit. The evaluator
+measures the drift oracle and semantic negative for any case carrying a semantic-candidate control,
+not only the `drift` group. Round 6 is not rescored; the next measurement needs a new sealed family.
+
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
 targets/controls, waived invariants or critical/high findings. It does not require unrelated release
