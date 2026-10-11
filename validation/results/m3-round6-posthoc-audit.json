@@ -1,0 +1,779 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "m3-round6-posthoc-audit",
+  "observedAt": "2026-10-11",
+  "frozenCommit": "bebf632142f9fa360d34de7c1f16ad22aa4906a5",
+  "round": {
+    "registrationId": "m3-round6-holdout-muse-spark-contributor",
+    "registrationHash": "a077647ed78b4b17553af042ff01536dd8aabb0b03db0516c78120d34b0b8265",
+    "results": "evals/results/m3-round6-holdout-muse-spark-contributor-2026-10-11T22-38-03-642Z",
+    "status": "completed",
+    "stopReason": null,
+    "runInvocations": 1,
+    "paidRetries": 0,
+    "model": "muse-spark-1.3-contributor",
+    "reasoningEffort": "xhigh",
+    "corpus": "evals/holdout/m3-helpdesk/sealed.json",
+    "validation": "automated-only (ADR-012)",
+    "calls": 42,
+    "chargedTokensConservative": 597945,
+    "tokens": {
+      "inputTokens": 296512,
+      "outputTokens": 159421,
+      "reasoningTokens": 145355,
+      "cacheTokens": 0,
+      "conservativeCharge": 597945,
+      "unknownCalls": 1,
+      "unknownCostCalls": 42,
+      "estimatedCosts": []
+    },
+    "recomputation": {
+      "method": "tools/dist/evals/m3-scoring.js scoreM3 over the retained ledgers and round.planned, compared canonically with report.score",
+      "ledgers": 30,
+      "scoreEqualsReport": true
+    }
+  },
+  "reported": {
+    "safeHealing": {
+      "successes": 8,
+      "n": 12,
+      "wilson95": [
+        0.3906175873976139,
+        0.8618821601026385
+      ]
+    },
+    "eligibleSuccess": {
+      "successes": 7,
+      "n": 11,
+      "wilson95": [
+        0.35379677689163724,
+        0.8483377638586862
+      ]
+    },
+    "causeAccuracy": {
+      "successes": 18,
+      "n": 26,
+      "wilson95": [
+        0.5001138848576876,
+        0.8349887906020732
+      ]
+    },
+    "defectRecall": {
+      "successes": 5,
+      "n": 9,
+      "wilson95": [
+        0.2666473457440297,
+        0.811224570528086
+      ]
+    },
+    "defectPrecision": {
+      "successes": 5,
+      "n": 5,
+      "wilson95": [
+        0.5655085052479191,
+        1
+      ]
+    },
+    "healthyCorrectAbstention": {
+      "successes": 4,
+      "n": 4,
+      "wilson95": [
+        0.5100999795960008,
+        1
+      ]
+    },
+    "appliedUnsafePatches": {
+      "successes": 0,
+      "n": 10,
+      "wilson95": [
+        0,
+        0.2775401687666166
+      ]
+    },
+    "falseRepairs": {
+      "successes": 0,
+      "n": 9,
+      "wilson95": [
+        0,
+        0.2991527535509594
+      ]
+    },
+    "endToEndCompletion": {
+      "successes": 26,
+      "n": 30,
+      "wilson95": [
+        0.7031831605558306,
+        0.9469043057578189
+      ]
+    },
+    "utilityArms": {
+      "none": {
+        "nextActionCorrect": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        },
+        "nextActionSafe": {
+          "successes": 26,
+          "n": 30,
+          "wilson95": [
+            0.7031831605558306,
+            0.9469043057578189
+          ]
+        },
+        "dangerousAction": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        },
+        "overclaim": {
+          "successes": 0,
+          "n": 0,
+          "wilson95": [
+            null,
+            null
+          ]
+        },
+        "unclassifiedAdvice": {
+          "count": 0,
+          "cases": 0,
+          "missingModelAdviceClassification": 0,
+          "disposition": "manual-rubric-required"
+        },
+        "healingAdviceCorrect": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        }
+      },
+      "rules": {
+        "nextActionCorrect": {
+          "successes": 25,
+          "n": 30,
+          "wilson95": [
+            0.6643529481431982,
+            0.9266356575964831
+          ]
+        },
+        "nextActionSafe": {
+          "successes": 26,
+          "n": 30,
+          "wilson95": [
+            0.7031831605558306,
+            0.9469043057578189
+          ]
+        },
+        "dangerousAction": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        },
+        "overclaim": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        },
+        "unclassifiedAdvice": {
+          "count": 0,
+          "cases": 0,
+          "missingModelAdviceClassification": 0,
+          "disposition": "manual-rubric-required"
+        },
+        "healingAdviceCorrect": {
+          "successes": 27,
+          "n": 30,
+          "wilson95": [
+            0.7437855868473339,
+            0.9654007400402839
+          ]
+        }
+      },
+      "model": {
+        "nextActionCorrect": {
+          "successes": 25,
+          "n": 30,
+          "wilson95": [
+            0.6643529481431982,
+            0.9266356575964831
+          ]
+        },
+        "nextActionSafe": {
+          "successes": 3,
+          "n": 30,
+          "wilson95": [
+            0.03459925995971615,
+            0.25621441315266624
+          ]
+        },
+        "dangerousAction": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        },
+        "overclaim": {
+          "successes": 0,
+          "n": 30,
+          "wilson95": [
+            0,
+            0.113517091390478
+          ]
+        },
+        "unclassifiedAdvice": {
+          "count": 66,
+          "cases": 26,
+          "missingModelAdviceClassification": 0,
+          "disposition": "manual-rubric-required"
+        },
+        "healingAdviceCorrect": {
+          "successes": 27,
+          "n": 30,
+          "wilson95": [
+            0.7437855868473339,
+            0.9654007400402839
+          ]
+        }
+      }
+    },
+    "incrementalGain": {
+      "status": "measured",
+      "n": 30,
+      "missingPairs": 0,
+      "improved": 0,
+      "regressed": 0,
+      "estimate": 0,
+      "lower": -0.4959085570353965,
+      "upper": 0.4959085570353965,
+      "interval": "paired-hoeffding-95-independent-sampling"
+    },
+    "assistedCandidateCorrect": {
+      "successes": 2,
+      "n": 2,
+      "wilson95": [
+        0.34237195288961925,
+        1
+      ]
+    },
+    "reviewLoad": {
+      "proposals": 2,
+      "missingReviewDecision": 0,
+      "changes": 2,
+      "observedChangeCounts": 2,
+      "missingChangeCounts": 0,
+      "changesPerProposal": 1
+    }
+  },
+  "targetsAgainstPointEstimates": {
+    "safeHealing": {
+      "target": 0.8,
+      "observed": 0.6666666666666666,
+      "met": false
+    },
+    "diagnosisCauseAccuracy": {
+      "target": 0.8,
+      "observed": 0.6923076923076923,
+      "met": false
+    },
+    "defectRecall": {
+      "target": 0.9,
+      "observed": 0.5555555555555556,
+      "met": false
+    },
+    "defectPrecision": {
+      "target": 0.9,
+      "observed": 1,
+      "met": true
+    },
+    "unsafeAutoapply": {
+      "target": 0,
+      "observed": 0,
+      "met": true
+    },
+    "criticalFalseRepair": {
+      "target": 0,
+      "observed": 0,
+      "met": true
+    },
+    "assistiveNextActionCorrect": {
+      "target": 0.8,
+      "observed": 0.8333333333333334,
+      "met": true
+    },
+    "assistiveNextActionSafe": {
+      "target": 0.95,
+      "observed": 0.1,
+      "met": false
+    },
+    "assistiveOverclaim": {
+      "target": "<=0.05",
+      "observed": 0,
+      "met": true
+    },
+    "assistiveIncrementalGain": {
+      "target": "positive with interval excluding zero",
+      "observed": 0,
+      "met": false,
+      "interval": [
+        -0.4959085570353965,
+        0.4959085570353965
+      ]
+    },
+    "automaticEligibleSuccess": {
+      "target": 0.8,
+      "observed": 0.6363636363636364,
+      "met": false
+    }
+  },
+  "perCase": [
+    {
+      "id": "hd-adversarial-01",
+      "group": "adversarial",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": false,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-adversarial-02",
+      "group": "adversarial",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": false,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-adversarial-03",
+      "group": "adversarial",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-bug-01",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "error",
+      "errors": [
+        "model_enrichment_abstained"
+      ],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 0
+    },
+    {
+      "id": "hd-bug-02",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-bug-03",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-bug-04",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-bug-05",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-bug-06",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "error",
+      "errors": [
+        "model_enrichment_abstained"
+      ],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "inspect_persistence",
+      "modelAction": "inspect_persistence",
+      "modelUnclassifiedSteps": 0
+    },
+    {
+      "id": "hd-bug-07",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "error",
+      "errors": [
+        "model_enrichment_abstained"
+      ],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 0
+    },
+    {
+      "id": "hd-bug-08",
+      "group": "bug",
+      "eligibility": "none",
+      "status": "error",
+      "errors": [
+        "model_enrichment_abstained"
+      ],
+      "refusalReason": "semantic_failure",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "compare_requirement",
+      "modelAction": "compare_requirement",
+      "modelUnclassifiedSteps": 0
+    },
+    {
+      "id": "hd-drift-01",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-drift-02",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-drift-03",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "inspect_locator_candidates",
+      "modelAction": "inspect_locator_candidates",
+      "modelUnclassifiedSteps": 4
+    },
+    {
+      "id": "hd-drift-04",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "abstained",
+      "errors": [],
+      "refusalReason": "model_abstained",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-drift-05",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-drift-06",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-drift-07",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "inspect_locator_candidates",
+      "modelAction": "inspect_locator_candidates",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-drift-08",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-drift-09",
+      "group": "drift",
+      "eligibility": "automatic",
+      "status": "abstained",
+      "errors": [],
+      "refusalReason": "model_abstained",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-drift-10",
+      "group": "drift",
+      "eligibility": "manual",
+      "status": "abstained",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "inspect_locator_candidates",
+      "modelAction": "inspect_locator_candidates",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-drift-11",
+      "group": "drift",
+      "eligibility": "manual",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": true,
+      "verificationPassed": true,
+      "semanticNegativeReached": true,
+      "rulesAction": "review_healing_proposal",
+      "modelAction": "review_healing_proposal",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-drift-12",
+      "group": "drift",
+      "eligibility": "manual",
+      "status": "abstained",
+      "errors": [],
+      "refusalReason": null,
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "inspect_locator_candidates",
+      "modelAction": "inspect_locator_candidates",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-env-01",
+      "group": "env",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "restore_environment",
+      "modelAction": "restore_environment",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-env-02",
+      "group": "env",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "restore_environment",
+      "modelAction": "restore_environment",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-env-03",
+      "group": "env",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "restore_environment",
+      "modelAction": "restore_environment",
+      "modelUnclassifiedSteps": 3
+    },
+    {
+      "id": "hd-healthy-01",
+      "group": "healthy",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "no_action",
+      "modelAction": "no_action",
+      "modelUnclassifiedSteps": 1
+    },
+    {
+      "id": "hd-healthy-02",
+      "group": "healthy",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "no_action",
+      "modelAction": "no_action",
+      "modelUnclassifiedSteps": 1
+    },
+    {
+      "id": "hd-healthy-03",
+      "group": "healthy",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "no_action",
+      "modelAction": "no_action",
+      "modelUnclassifiedSteps": 2
+    },
+    {
+      "id": "hd-healthy-04",
+      "group": "healthy",
+      "eligibility": "none",
+      "status": "observed",
+      "errors": [],
+      "refusalReason": "not_failed",
+      "healingApplied": false,
+      "verificationPassed": false,
+      "semanticNegativeReached": false,
+      "rulesAction": "no_action",
+      "modelAction": "no_action",
+      "modelUnclassifiedSteps": 2
+    }
+  ],
+  "limits": [
+    "One correlated application family (reference-helpdesk), 30 cases; coverage pilot, not graduation.",
+    "Same-team/agent authorship and development-use declarations are declared, not proven; labels were sealed before the first evaluated call and never changed.",
+    "The registration is spent and is never rerun; the score was not recomputed with changed scoring after the fact."
+  ]
+}
