@@ -62,6 +62,38 @@ function originalLocator(plan: ExecutablePlan, stepId: string, path: string): Lo
   }
   return null;
 }
+const interactiveTags = new Set([
+  "a",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "summary",
+  "option",
+]);
+const modelCandidateLimit = 30;
+/**
+ * The model input admits a bounded number of candidates. Plain DOM order would spend that budget
+ * on document scaffolding, so matched and interactive or identified elements go first (stable
+ * within each bucket); the full recorded list stays available to the local equivalence policy.
+ */
+export function modelCandidates(
+  candidates: LocatorEvidence["candidates"],
+): LocatorEvidence["candidates"] {
+  const rank = (candidate: LocatorEvidence["candidates"][number]) =>
+    candidate.matched
+      ? 0
+      : candidate.role ||
+          interactiveTags.has(candidate.tag) ||
+          Object.keys(candidate.attributes).length
+        ? 1
+        : 2;
+  return candidates
+    .map((candidate, index) => ({ candidate, index, rank: rank(candidate) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .slice(0, modelCandidateLimit)
+    .map((item) => item.candidate);
+}
 function uniqueLocatorBaseline(record: LocatorEvidence, locator: Locator): boolean {
   if (
     !validLocatorEvidence(record) ||
@@ -454,9 +486,9 @@ export class HealingService {
             allowedReplacements,
             locatorEvidence: locatorEvidence.map((record) => ({
               ...record,
-              candidates: record.candidates.slice(0, 30),
+              candidates: modelCandidates(record.candidates),
               candidateCount: record.candidates.length,
-              truncated: record.truncated || record.candidates.length > 30,
+              truncated: record.truncated || record.candidates.length > modelCandidateLimit,
             })),
             // Evidence references (content hashes) stay local; the model cites handles only.
             facts: facts.facts.map((fact) => ({
@@ -505,6 +537,9 @@ export class HealingService {
           refused: true,
           reason: "model_abstained",
           modelCallId,
+          // Audit only: a bounded, scrubbed copy of the model's stated reason. It never changes
+          // the refusal and is not shown as advice.
+          abstention: scrubEvidenceText(output.reason, secretValues).text.slice(0, 1000),
           evidenceHashes: evidenceRefs.map((ref) => semanticHash(ref)),
         });
         throw new ContractError("PRECONDITION_FAILED", "Healing abstained", {

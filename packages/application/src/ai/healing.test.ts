@@ -17,7 +17,7 @@ import { promoteRevisionCas, scaffoldPlan } from "../authoring.js";
 import { entity } from "../context.js";
 import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
-import { HealingService } from "./healing.js";
+import { HealingService, modelCandidates } from "./healing.js";
 import { applyHealingPatch, healingReplacements } from "./healing-patch.js";
 import type { ModelInput, ModelService } from "./model.js";
 
@@ -436,7 +436,11 @@ it("evidence-backed model abstention completes once without a candidate, proposa
   expect(f.app.context.database.get("SELECT COUNT(*) AS n FROM healing_proposals")?.n).toBe(0);
   expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id)[0]).toMatchObject({
     state: "completed",
-    result: { refused: true, reason: "model_abstained" },
+    result: {
+      refused: true,
+      reason: "model_abstained",
+      abstention: "Insufficient equivalence evidence",
+    },
   });
   await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
     details: { reason: "no_regeneration" },
@@ -1100,4 +1104,29 @@ it("healing review propagates unexpected locator read failures instead of maskin
     new Error("Unexpected locator reader defect"),
   );
   await expect(f.service.review(proposal.id)).rejects.toThrow("Unexpected locator reader defect");
+});
+
+it("model locator candidates keep the matched and interactive elements ahead of document scaffolding", () => {
+  const element = (tag: string, extra: Partial<LocatorEvidence["candidates"][number]> = {}) => ({
+    role: "",
+    name: "",
+    tag,
+    type: "",
+    attributes: {},
+    fingerprint: "",
+    matched: false,
+    visible: true,
+    ...extra,
+  });
+  const scaffolding = Array.from({ length: 40 }, () => element("div"));
+  const renamed = element("button", { attributes: { "data-testid": "take-t1" } });
+  const candidates = [...scaffolding, renamed, element("span")];
+  const selected = modelCandidates(candidates);
+  expect(selected).toHaveLength(30);
+  expect(selected[0]).toBe(renamed);
+  expect(
+    selected.slice(1).every((candidate) => candidate.tag === "div" || candidate.tag === "span"),
+  ).toBe(true);
+  const matched = element("div", { matched: true });
+  expect(modelCandidates([renamed, matched])[0]).toBe(matched);
 });
