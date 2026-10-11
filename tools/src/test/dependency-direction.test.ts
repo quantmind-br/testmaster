@@ -24,6 +24,7 @@ const layers: Record<string, number> = {
   runner: 1,
   "reference-shop": 0,
   "reference-helpdesk": 0,
+  "reference-dockyard": 0,
   "reference-library": 0,
   tools: 8,
   validation: 8,

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Harborline Dockyard</title><style>body{font:1rem system-ui;max-width:72rem;margin:2rem auto;padding:1rem}header{display:flex;justify-content:space-between}nav{display:flex;gap:1.5rem}.layout{display:grid;grid-template-columns:12rem 1fr;gap:2rem}aside ul{padding:0;margin:0}aside li{list-style:none}label{display:block;margin:1rem 0}[role=alert]{color:#a00}table{width:100%;border-collapse:collapse}td,th{padding:.75rem;text-align:left}article{border:1px solid #ccc;padding:1rem;margin:1rem 0}.actions{display:flex;gap:.5rem}</style></head>
+<body><header><h1>Harborline Dockyard</h1><nav aria-label="Yard"><a href="/signin">Clerk sign-in</a><a href="/shipments">Inbound queue</a><a href="/assigned">My shipments</a></nav></header>
+<div class="layout"><aside aria-label="Bays"><h2>Bays</h2><ul><li><a href="/bays/1">Bay 1</a></li><li><a href="/bays/2">Bay 2</a></li><li><a href="/bays/3">Bay 3</a></li><li><a href="/bays/4">Bay 4</a></li><li><a href="/bays/5">Bay 5</a></li><li><a href="/bays/6">Bay 6</a></li><li><a href="/bays/7">Bay 7</a></li><li><a href="/bays/8">Bay 8</a></li><li><a href="/bays/9">Bay 9</a></li><li><a href="/bays/10">Bay 10</a></li><li><a href="/bays/11">Bay 11</a></li><li><a href="/bays/12">Bay 12</a></li></ul></aside>
+<div><main id="view" aria-live="polite"></main><p role="status" data-testid="banner"></p></div></div>
+<script type="module">
+const view = document.querySelector('#view');
+let token = sessionStorage.getItem('yard-token');
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+async function api(path, options = {}) {
+  const response = await fetch(`/api${path}`, {...options, headers:{...(token ? {authorization:`Bearer ${token}`} : {}), ...options.headers}});
+  if (response.status === 401 && path !== '/session') throw new Error('Please sign in');
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error);
+  return value;
+}
+const send = (path, value, headers = {}) => api(path,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
+function banner(value) { document.querySelector('[data-testid=banner]').textContent = value; }
+async function render() {
+  banner('');
+  const path = location.pathname;
+  if (path === '/signin' || path === '/') {
+    view.innerHTML = '<h2>Clerk sign-in</h2><form novalidate><label>Work email<input name="email" type="email" value="clerk@dockyard.test" autocomplete="username" data-testid="clerk-email"></label><label>Passphrase<input name="secret" type="password" autocomplete="current-password" data-testid="clerk-secret"></label><p role="alert" data-testid="signin-error"></p><button type="submit">Sign in</button></form>';
+    view.querySelector('form').onsubmit = async event => {
+      event.preventDefault();
+      const email = view.querySelector('[name=email]').value;
+      const secret = view.querySelector('[name=secret]').value;
+      try {
+        const result = await send('/session',{email,secret});
+        token = result.sessionToken; sessionStorage.setItem('yard-token',token); navigate('/shipments');
+      } catch { view.querySelector('[data-testid=signin-error]').textContent = !secret ? 'Passphrase is required' : 'Invalid credentials'; }
+    };
+    return;
+  }
+  if (path === '/shipments') {
+    view.innerHTML = '<h2>Inbound queue</h2><p data-testid="queue-loading">Loading queue</p>';
+    await new Promise(resolve => setTimeout(resolve,40));
+    const {items,total} = await api('/shipments?pageSize=100');
+    view.innerHTML = `<h2>Inbound queue</h2><form id="new-shipment" novalidate><label>Reference<input name="reference" data-testid="shipment-reference"></label><button type="submit">Log shipment</button></form><p data-testid="queue-count">${total}</p><section data-testid="queue-ready" aria-label="Open shipments">${items.map(item => `<article data-testid="shipment-${escapeHtml(item.id)}"><h3>${escapeHtml(item.reference)}</h3><p>Tier ${escapeHtml(item.tier ?? item.class)}</p><div class="actions"><button data-shipment="${escapeHtml(item.id)}" data-testid="accept-${escapeHtml(item.id)}">Accept ${escapeHtml(item.reference)}</button></div></article>`).join('')}</section>`;
+    view.querySelector('#new-shipment').onsubmit = async event => { event.preventDefault(); try { await send('/shipments',{reference:view.querySelector('[name=reference]').value}); banner('Shipment logged'); } catch (error) { banner(error.message); } };
+    for (const button of view.querySelectorAll('[data-shipment]')) button.onclick = async () => { try { await send(`/shipments/${button.dataset.shipment}/accept`,{}); banner('Accepted'); } catch (error) { banner(error.message); } };
+  } else if (path === '/assigned') {
+    const {items,total} = await api('/shipments?assignee=me&pageSize=100');
+    const {expediteHook} = await fetch('/config').then(response => response.json());
+    view.innerHTML = `<h2>My shipments</h2><p data-testid="assigned-count">${total}</p><div data-testid="assigned-list">${items.map(item => `<article data-testid="shipment"><h3>${escapeHtml(item.reference)}</h3><p>Tier <span data-testid="shipment-tier">${escapeHtml(item.tier ?? item.class)}</span>, status <span data-testid="shipment-status">${escapeHtml(item.status)}</span></p><div class="actions"><button class="expedite" data-testid="${expediteHook}" data-shipment="${escapeHtml(item.id)}" ${item.status === 'sealed' ? 'disabled' : ''}>Expedite</button><button class="seal" data-testid="seal-button" data-shipment="${escapeHtml(item.id)}" ${item.status === 'sealed' ? 'disabled' : ''}>Seal</button></div></article>`).join('')}</div>`;
+    console.info('assigned-ready');
+    for (const button of view.querySelectorAll('button.expedite')) button.onclick = async () => { try { const result = await send(`/shipments/${button.dataset.shipment}/expedite`,{}); banner(`Expedited to ${result.tier}`); } catch (error) { banner(error.message); } };
+    for (const button of view.querySelectorAll('button.seal')) button.onclick = async () => { try { await send(`/shipments/${button.dataset.shipment}/seal`,{note:'Sealed at the dock'}); banner('Sealed'); } catch (error) { banner(error.message); } };
+  }
+}
+function navigate(path) { history.pushState({},'',path); render().catch(error => { view.textContent=error.message; }); }
+document.querySelector('nav').onclick = event => { const link = event.target.closest('a'); if (!link || link.target) return; event.preventDefault();navigate(link.pathname); };
+addEventListener('popstate',()=>render().catch(error=>{view.textContent=error.message;}));
+render().catch(error=>{view.textContent=error.message;});
+</script></body></html>
