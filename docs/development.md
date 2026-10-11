@@ -722,15 +722,24 @@ The sealed holdout format validates declared provenance and data consistency. Un
 [ADR-012](adr/012-automated-only-validation.md) no gate requires human review or a human task study.
 
 The registry adds `release.capabilityGates` with `requiredAreas`, `requiredItems` and
-`nonNegotiable` requirement references. Three decisions remain blocked; assisted review passed
-automated-only acceptance on 2026-10-10:
+`nonNegotiable` requirement references. Two decisions remain blocked; assisted review (2026-10-10)
+and CI integration (2026-10-11) passed automated-only acceptance:
 
 | Command suffix | Evidence / remaining prerequisite |
 |---|---|
 | `--capability-gate m3-assistive-diagnosis` | Sealed holdout and utility/overclaim targets plus measured incremental gain over rules; no fork prerequisite. |
 | `--capability-gate m3-automatic-healing` | Sealed predeclared-eligibility holdout with automated safety evidence (critical adversarial suite, critical mutation inventory, semantic-negative control per eligible case, protected-assertion hash). |
 | `--capability-gate m3-assisted-healing` | **Passed (automated-only).** `validation/results/m3-assisted-review-20261010/acceptance.json`: built CLI JSON/text, REST loopback and MCP stdio; complete review, version-conflict and cross-project denial; candidate positive/semantic-negative Docker controls; manual approval and verification with intact assertions and historical evidence. `reviewLoad`: 1 proposal, 1 change, 1 change/proposal. |
-| `--capability-gate m3-ci-integration` | Automated cross-owner fork-token isolation proof with a distinct GitHub owner (for example an organization-owned base repository); same-repo hosted acceptance already exists. |
+| `--capability-gate m3-ci-integration` | **Passed (automated-only).** `validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json` with raw API records and logs in `22-fork-benign/` and `23-fork-hostile/`: a fork owned by a second GitHub account gets no secret, writable token, gate check or execution; commit binding verified on merge-ref runs. Revalidated by `tools/src/github-action/hosted-evidence.test.ts`. |
+
+To repeat the fork controls, use a disposable public base repository with the generated workflow, a
+random canary repository secret and "require approval for all external contributors", and a second
+account's fork with a benign branch and a hostile branch (both same-repository job guards removed,
+plus a probe workflow requesting write permissions that records HTTP codes, the canary length and the
+OIDC endpoint). Approve each run with the base owner, retain the raw run/job/check/status/pull JSON
+and logs, delete the canary and revoke the second account's token. The validator rejects the
+evidence if the secret is readable, any write API is not refused, a gate check/status exists on the
+fork head, or the pinned Action did not refuse before installing the runtime.
 
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
@@ -799,7 +808,8 @@ Final preserved `pnpm check` passed 112 files / 839 tests, regenerated contract 
 448 normative registry IDs. The full Docker suite passed 50 files / 133 tests. Both wrapper
 manifests reported `verifyFailures=0`; the Docker wrapper restored 84 rewritten result files.
 The four capability commands all returned blocked (exit 1), with their genuine external holdout,
-safety-review, participant-study or fork-isolation reasons and no missing protected assertion.
+safety-review or participant-study reasons and no missing protected assertion (the fork-isolation
+reason has since passed; see the gate table above).
 The cumulative M3 milestone remains red (exit 1). See `validation/results/m3-utility/verification.json`
 and `gates/summary.json`. The 62 original retained workspaces / 6,841 files remain byte-identical.
 

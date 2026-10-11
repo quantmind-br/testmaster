@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "hosted-fork-token-isolation-acceptance",
+  "date": "2026-10-11",
+  "baseRepository": "quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a",
+  "baseOwner": "quantmind-br",
+  "baseRepositoryId": 1408086281,
+  "forkRepository": "quantforge-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a",
+  "forkOwner": "quantforge-br",
+  "forkRepositoryId": 1414806003,
+  "distinctOwners": true,
+  "baseMainSha": "0de31a6825743e8ccd09125d1c7b9895b0345932",
+  "approvalPolicy": "all_external_contributors",
+  "pinned": {
+    "action": "quantmind-br/testmaster@fc5e7eb9af9d008af8ba2b3e04ed97fafcba7990",
+    "runtime": "runtime-4df8ba5"
+  },
+  "canary": "A random repository secret TM_FORK_CANARY existed in the base repository during both runs and was deleted afterwards; its value is not recorded and does not appear in any retained log.",
+  "controls": {
+    "benign": {
+      "pullRequest": 7,
+      "headSha": "a9b3601f4eb925e1ea908c022bdf6470fe5031bd",
+      "runId": 38178696902,
+      "url": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/38178696902",
+      "beforeApproval": "action_required with zero jobs",
+      "afterApproval": {
+        "execute": "skipped",
+        "publish": "skipped"
+      },
+      "gateChecksOnHead": 0
+    },
+    "hostile": {
+      "pullRequest": 8,
+      "headSha": "28dd9ed5b66d7b56dcd07885810dfd73f71b4b83",
+      "description": "Fork branch removed both same-repository job guards from the generated workflow and added a probe workflow requesting write permissions",
+      "executeRunId": 38178761812,
+      "executeUrl": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/38178761812",
+      "executeResult": "failure: pinned Action refused with POLICY_DENIED: Fork execution is denied before runtime installation; publish skipped",
+      "probeRunId": 38178761699,
+      "probeUrl": "https://github.com/quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a/actions/runs/38178761699",
+      "probeHttp": {
+        "read-repo": 200,
+        "write-check-run": 403,
+        "write-commit-status": 403,
+        "write-pr-comment": 403,
+        "write-contents": 403,
+        "write-ref": 403,
+        "list-secrets": 403,
+        "oidc-env-absent-check": 200
+      },
+      "canaryLengthSeenByForkCode": 0,
+      "oidcRequestUrl": "absent",
+      "gateChecksOnHead": 0,
+      "mergeableState": "blocked"
+    }
+  },
+  "validator": "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
+  "limits": "One disposable public repository and one fork owner. Proves GitHub-hosted fork pull_request isolation for the retained workflow and pinned Action; it is not a pull_request_target, private-repository, GitHub App or preview-provider claim."
+}

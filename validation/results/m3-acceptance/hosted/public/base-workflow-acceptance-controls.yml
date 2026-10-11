@@ -1,0 +1,237 @@
+name: TestMaster acceptance controls
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Acceptance control
+        type: choice
+        options: [selected, empty, authorized-empty, cancel, injection, sha-mismatch, publisher-readonly]
+        default: selected
+permissions: {}
+env:
+  # Public trusted Action distribution commit and pinned public runtime manifest.
+  ACTION_REPO: quantmind-br/testmaster
+  ACTION_SHA: fc5e7eb9af9d008af8ba2b3e04ed97fafcba7990
+  RUNTIME_TAG: runtime-4df8ba5
+  MANIFEST_SHA256: 3d79df4e6676d51816401bc5cc6edb86b5b1977473dc60f94f423e3a74c91f2d
+  FIXTURE_PORT: "18080"
+jobs:
+  execute:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Execution never receives a Checks-capable token or provider credentials.
+    permissions:
+      contents: read
+    outputs:
+      job-id: ${{ job.check_run_id }}
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.upload.outputs.artifact-digest }}
+      report-hash: ${{ steps.testmaster.outputs.report-hash }}
+      assessed-sha: ${{ steps.testmaster.outputs.assessed-sha }}
+      checkout-sha: ${{ steps.testmaster.outputs.checkout-sha }}
+      gate: ${{ steps.testmaster.outputs.gate }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.ACTION_REPO }}
+          ref: ${{ env.ACTION_SHA }}
+          path: .trusted
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Free runner disk for locked runner images
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - name: Use the containerd image store required by the image lock
+        # images.lock.json pins image IDs as reported by Docker's containerd image store; the
+        # classic store assigns different IDs to the same archive, so verification would fail.
+        run: |
+          docker version --format 'client={{.Client.Version}} server={{.Server.Version}}'
+          config=/etc/docker/daemon.json
+          current=$(sudo cat "$config" 2>/dev/null || echo '{}')
+          echo "$current" | jq '.features = ((.features // {}) + {"containerd-snapshotter": true})' | sudo tee "$config" > /dev/null
+          sudo systemctl restart docker
+          driver=$(docker info --format '{{json .DriverStatus}}')
+          echo "driver-status=$driver"
+          case "$driver" in *io.containerd.snapshotter.v1*) ;; *) echo "::error::containerd image store not active"; exit 1;; esac
+      - name: Download anonymous pinned public runtime
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/dist" "$RUNNER_TEMP/dist/images"
+          base="https://github.com/$ACTION_REPO/releases/download/$RUNTIME_TAG"
+          for asset in manifest.json runtime.tar.gz; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$base/$asset" --output "$RUNNER_TEMP/dist/$asset"
+          done
+          for asset in testmaster-runner.tar.gz.part-0000 testmaster-runner-python.tar.gz.part-0000; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$base/$asset" --output "$RUNNER_TEMP/dist/images/$asset"
+          done
+          printf '%s  %s\n' "$MANIFEST_SHA256" "$RUNNER_TEMP/dist/manifest.json" | sha256sum --check --status
+      - name: Install verified runtime for fixture preparation
+        run: node .trusted/tools/dist/distribution/install.js --manifest "$RUNNER_TEMP/dist/manifest.json" --manifest-sha256 "$MANIFEST_SHA256" --dest "$RUNNER_TEMP/setup-runtime"
+      - name: Start minimal fixture
+        run: nohup node fixture/server.mjs > "$RUNNER_TEMP/fixture.log" 2>&1 &
+      - name: Prepare disposable workspace
+        id: setup
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TESTMASTER_CLI: ${{ runner.temp }}/setup-runtime/apps/cli/dist/main.js
+          TESTMASTER_DATA_DIR: ${{ runner.temp }}/testmaster-data
+        run: node setup.mjs
+      - name: TestMaster strict CI
+        id: testmaster
+        uses: quantmind-br/testmaster@fc5e7eb9af9d008af8ba2b3e04ed97fafcba7990
+        env:
+          TESTMASTER_DATA_DIR: ${{ runner.temp }}/testmaster-data
+          TESTMASTER_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+        with:
+          runtime-manifest: ${{ runner.temp }}/dist/manifest.json#${{ env.MANIFEST_SHA256 }}
+          test-ids: ${{ steps.setup.outputs.test-ids }}
+          environment: ${{ steps.setup.outputs.environment-id }}
+          target-url: ${{ steps.setup.outputs.target-url }}
+          commit-sha: ${{ steps.setup.outputs.commit-sha }}
+          checkout-sha: ${{ steps.setup.outputs.checkout-sha }}
+          allow-empty: ${{ steps.setup.outputs.allow-empty }}
+          empty-reason: ${{ steps.setup.outputs.empty-reason }}
+      - name: Locate envelope
+        id: envelope
+        if: always() && steps.testmaster.outputs.report-path != ''
+        env:
+          REPORT_PATH: ${{ steps.testmaster.outputs.report-path }}
+        run: echo "dir=$(dirname "$REPORT_PATH")" >> "$GITHUB_OUTPUT"
+      - name: Upload redacted envelope
+        id: upload
+        if: always() && steps.envelope.outputs.dir != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: testmaster-ci-${{ job.check_run_id }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ steps.envelope.outputs.dir }}/report.json
+            ${{ steps.envelope.outputs.dir }}/junit.xml
+            ${{ steps.envelope.outputs.dir }}/summary.md
+            ${{ steps.envelope.outputs.dir }}/bundle-index.json
+            ${{ steps.envelope.outputs.dir }}/completion.json
+  publish:
+    needs: execute
+    if: always() && needs.execute.outputs.artifact-id != '' && inputs.scenario != 'publisher-readonly'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Trusted publisher: never checks out or executes the evaluated revision.
+    permissions:
+      checks: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.ACTION_REPO }}
+          ref: ${{ env.ACTION_SHA }}
+          path: .trusted
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Free runner disk for locked runner images
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - name: Use the containerd image store required by the image lock
+        run: |
+          docker version --format 'client={{.Client.Version}} server={{.Server.Version}}'
+          config=/etc/docker/daemon.json
+          current=$(sudo cat "$config" 2>/dev/null || echo '{}')
+          echo "$current" | jq '.features = ((.features // {}) + {"containerd-snapshotter": true})' | sudo tee "$config" > /dev/null
+          sudo systemctl restart docker
+          driver=$(docker info --format '{{json .DriverStatus}}')
+          echo "driver-status=$driver"
+          case "$driver" in *io.containerd.snapshotter.v1*) ;; *) echo "::error::containerd image store not active"; exit 1;; esac
+      - name: Download anonymous pinned public runtime
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/dist" "$RUNNER_TEMP/dist/images"
+          base="https://github.com/$ACTION_REPO/releases/download/$RUNTIME_TAG"
+          for asset in manifest.json runtime.tar.gz; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$base/$asset" --output "$RUNNER_TEMP/dist/$asset"
+          done
+          for asset in testmaster-runner.tar.gz.part-0000 testmaster-runner-python.tar.gz.part-0000; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$base/$asset" --output "$RUNNER_TEMP/dist/images/$asset"
+          done
+          printf '%s  %s\n' "$MANIFEST_SHA256" "$RUNNER_TEMP/dist/manifest.json" | sha256sum --check --status
+      - name: Publish frozen result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TESTMASTER_RUNTIME_MANIFEST: ${{ runner.temp }}/dist/manifest.json#${{ env.MANIFEST_SHA256 }}
+          TESTMASTER_ARTIFACT_ID: ${{ needs.execute.outputs.artifact-id }}
+          TESTMASTER_ARTIFACT_DIGEST: ${{ needs.execute.outputs.artifact-digest }}
+          TESTMASTER_REPORT_HASH: ${{ needs.execute.outputs.report-hash }}
+          TESTMASTER_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          TESTMASTER_EXECUTION_JOB_ID: ${{ needs.execute.outputs.job-id }}
+          TESTMASTER_ASSESSED_SHA: ${{ needs.execute.outputs.assessed-sha }}
+          TESTMASTER_CHECKOUT_SHA: ${{ needs.execute.outputs.checkout-sha }}
+        run: |
+          export TESTMASTER_ARTIFACT_SHA256="${TESTMASTER_ARTIFACT_DIGEST#sha256:}"
+          unset TESTMASTER_ARTIFACT_DIGEST
+          node .trusted/tools/dist/github-action/publish.js
+  publish-readonly:
+    needs: execute
+    if: always() && needs.execute.outputs.artifact-id != '' && inputs.scenario == 'publisher-readonly'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Unprivileged publication control: the same trusted publisher with a read-only Checks token.
+    permissions:
+      checks: read
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.ACTION_REPO }}
+          ref: ${{ env.ACTION_SHA }}
+          path: .trusted
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Free runner disk for locked runner images
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - name: Use the containerd image store required by the image lock
+        run: |
+          docker version --format 'client={{.Client.Version}} server={{.Server.Version}}'
+          config=/etc/docker/daemon.json
+          current=$(sudo cat "$config" 2>/dev/null || echo '{}')
+          echo "$current" | jq '.features = ((.features // {}) + {"containerd-snapshotter": true})' | sudo tee "$config" > /dev/null
+          sudo systemctl restart docker
+          driver=$(docker info --format '{{json .DriverStatus}}')
+          echo "driver-status=$driver"
+          case "$driver" in *io.containerd.snapshotter.v1*) ;; *) echo "::error::containerd image store not active"; exit 1;; esac
+      - name: Download anonymous pinned public runtime
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/dist" "$RUNNER_TEMP/dist/images"
+          base="https://github.com/$ACTION_REPO/releases/download/$RUNTIME_TAG"
+          for asset in manifest.json runtime.tar.gz; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$base/$asset" --output "$RUNNER_TEMP/dist/$asset"
+          done
+          for asset in testmaster-runner.tar.gz.part-0000 testmaster-runner-python.tar.gz.part-0000; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' "$base/$asset" --output "$RUNNER_TEMP/dist/images/$asset"
+          done
+          printf '%s  %s\n' "$MANIFEST_SHA256" "$RUNNER_TEMP/dist/manifest.json" | sha256sum --check --status
+      - name: Publish frozen result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TESTMASTER_RUNTIME_MANIFEST: ${{ runner.temp }}/dist/manifest.json#${{ env.MANIFEST_SHA256 }}
+          TESTMASTER_ARTIFACT_ID: ${{ needs.execute.outputs.artifact-id }}
+          TESTMASTER_ARTIFACT_DIGEST: ${{ needs.execute.outputs.artifact-digest }}
+          TESTMASTER_REPORT_HASH: ${{ needs.execute.outputs.report-hash }}
+          TESTMASTER_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          TESTMASTER_EXECUTION_JOB_ID: ${{ needs.execute.outputs.job-id }}
+          TESTMASTER_ASSESSED_SHA: ${{ needs.execute.outputs.assessed-sha }}
+          TESTMASTER_CHECKOUT_SHA: ${{ needs.execute.outputs.checkout-sha }}
+        run: |
+          export TESTMASTER_ARTIFACT_SHA256="${TESTMASTER_ARTIFACT_DIGEST#sha256:}"
+          unset TESTMASTER_ARTIFACT_DIGEST
+          node .trusted/tools/dist/github-action/publish.js

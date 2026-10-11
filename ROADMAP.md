@@ -110,10 +110,14 @@ The registry's `m3-assisted-healing` capability passed automated-only review-sur
 2026-10-10 (`validation/results/m3-assisted-review-20261010/acceptance.json`): built CLI JSON/text,
 REST and MCP, complete immutable review, version-conflict/cross-project refusals, candidate positive
 and semantic-negative Docker controls, manual approval and verification; reviewLoad 1 proposal/1 change.
-Three additive gates remain blocked: `m3-assistive-diagnosis` lacks a sealed holdout and measured
-utility/overclaim/incremental gain; `m3-automatic-healing` lacks a sealed predeclared-eligibility
-holdout with automated safety evidence; `m3-ci-integration` lacks automated cross-owner fork-token
-isolation proof with a distinct GitHub owner. They are checked individually
+`m3-ci-integration` passed automated-only cross-owner fork isolation on 2026-10-11
+(`validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json`): a fork owned by
+a second GitHub account got no repository secret, writable token, gate check or execution for a benign
+and a guard-removed hostile pull request, and the pinned Action refused before installing the runtime.
+Scope: one disposable public repository; not private-repository, `pull_request_target`, GitHub App or
+preview-provider evidence. Two additive gates remain blocked: `m3-assistive-diagnosis` lacks a sealed
+holdout and measured utility/overclaim/incremental gain; `m3-automatic-healing` lacks a sealed
+predeclared-eligibility holdout with automated safety evidence. They are checked individually
 with `check --capability-gate ID`, do not compensate critical failures and do not replace the red
 `--milestone-gate M3`. Automatic identity/policy guards and original failed evidence are unchanged.
 

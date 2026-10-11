@@ -2234,22 +2234,70 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M1",
       "ownerRole": "Integrations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m1-recovery.docker.test.ts::J17 persistent receipt survives a killed waiting client; killed worker reconciles its attempt without a false pass",
-        "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
+        "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document",
+        "tools/src/github-action/download.test.ts::refuses fork or foreign-head pull request runs before job lookup",
+        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
       ],
       "oracle": [
-        "Run IDs survive detached client; wait/cancel/export canonical envelopes and exits."
+        "Run IDs survive detached client; wait/cancel/export canonical envelopes and exits.",
+        "On GitHub-hosted runners a pull request from a fork owned by a different account gets no repository secret, no writable token, no check/status and no execution, even with the workflow guard removed."
       ],
       "evidence": [
         "validation/results/j17-worker-recovery.json",
         "validation/results/cli-001-interruption.json",
-        "validation/results/quickstart-m1.md"
+        "validation/results/quickstart-m1.md",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json"
       ],
-      "code": ["apps/cli/src/runtime.ts", "apps/cli/src/runs.ts", "apps/cli/src/reports.ts"],
-      "note": "Local CLI and M3 generic strict CI exercise canonical JSON/JUnit/exits, cancellation and empty/nonpass controls. The pinned Action propagated them on GitHub-hosted runners in a public disposable repository, including with the public Apache-2.0 runtime-4df8ba5 and its generated workflow. Private-repository acceptance is superseded by the public-only operator decision.",
-      "blockedReason": "External: hosted propagation observed on a public disposable GitHub repository (validation/results/m3-acceptance/hosted/public/acceptance.json and 21-controls-4df8ba5/acceptance.json: exits 0/1/5/143, input injection and SHA mismatch refused, frozen gates published unchanged); fork pull_request token isolation needs a second authorized GitHub identity and remains unexercised."
+      "code": [
+        "apps/cli/src/runtime.ts",
+        "apps/cli/src/runs.ts",
+        "apps/cli/src/reports.ts",
+        "tools/src/github-action/main.ts",
+        "tools/src/github-action/download.ts"
+      ],
+      "note": "Local CLI and M3 generic strict CI exercise canonical JSON/JUnit/exits, cancellation and empty/nonpass controls. The pinned Action propagated them on GitHub-hosted runners in a public disposable repository (exits 0/1/5/143, input injection and SHA mismatch refused, frozen gates published unchanged), including with the public Apache-2.0 runtime-4df8ba5 and its generated workflow. On 2026-10-11 a second GitHub account (quantforge-br) forked the disposable repository: the benign fork PR waited for approval and its jobs stayed skipped; a hostile fork PR that removed the workflow's same-repository guards and probed with write permissions saw an empty repository secret, HTTP 403 on every write API and no OIDC endpoint, the pinned Action refused with POLICY_DENIED before runtime installation, and no gate check or status reached the fork head. Private-repository acceptance is superseded by the public-only operator decision; pull_request_target, GitHub App and preview providers are M4 and not claimed.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m1-recovery.docker.test.ts::J17 persistent receipt survives a killed waiting client; killed worker reconciles its attempt without a false pass",
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
+        ],
+        "negative": [
+          "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document",
+          "tools/src/github-action/download.test.ts::refuses fork or foreign-head pull request runs before job lookup",
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m1-recovery.docker.test.ts",
+            "assertion": "expect(resumed.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/m1-recovery.docker.test.ts",
+            "assertion": "expect(recovered.outcome).not.toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/m1-recovery.docker.test.ts",
+            "assertion": "expect(interrupted.exitCode).toBe(130);"
+          },
+          {
+            "path": "tools/src/github-action/download.test.ts",
+            "assertion": "await expect(downloadEnvelope(input)).rejects.toMatchObject({\n      code: \"POLICY_DENIED\",\n    });"
+          },
+          {
+            "path": "tools/src/github-action/hosted-evidence.test.ts",
+            "assertion": "expect(findForkIsolationViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-action/hosted-evidence.test.ts",
+            "assertion": "expect(findForkIsolationViolations(copy), name).toContain(expected);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-006",
@@ -2344,7 +2392,7 @@
           }
         ]
       },
-      "blockedReason": "Public runtime-4df8ba5 with Action fc5e7eb ran on GitHub-hosted runners with the minimum-permission workflow: input injection and SHA mismatch were refused before execution, and a publisher job without checks: write failed closed with no check run carrying its report hash (validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json). Actual cross-owner fork token isolation requires a second authorized GitHub identity and is not simulated by same-repository branches."
+      "blockedReason": "Public runtime-4df8ba5 with Action fc5e7eb ran on GitHub-hosted runners with the minimum-permission workflow: input injection and SHA mismatch were refused before execution, and a publisher job without checks: write failed closed with no check run carrying its report hash (validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json). Cross-owner fork isolation was exercised on 2026-10-11 with a second GitHub account (validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json): the fork PR saw an empty secret, HTTP 403 on every write API and no execution."
     },
     {
       "id": "INT-008",
@@ -2703,11 +2751,55 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/provenance.test.ts::keeps absent repositories unbound and verifies checkout, dirty and ancestor claims against actual Git state",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head"
+      ],
+      "oracle": [
+        "A merge-ref Run persists the assessed head and the distinct checkout merge SHA in its provenance; every published check is bound to the assessed head and publication to any other SHA is refused."
+      ],
+      "evidence": [
+        "packages/application/src/provenance.test.ts",
+        "packages/application/src/delivery.test.ts",
+        "validation/results/m3-acceptance/hosted/public/17-same-repo-pr-healthy-fixed-action/summary.json",
+        "validation/results/m3-acceptance/hosted/public/18-same-repo-pr-defect-fixed-action/summary.json"
+      ],
+      "code": [
+        "packages/application/src/provenance.ts",
+        "packages/application/src/delivery.ts",
+        "tools/src/github-action/hosted-evidence.ts"
+      ],
+      "note": "Verified for the generic CLI/Action commit binding: repository provenance stores commitSha (assessed head) and checkoutSha separately and flags a synthetic merge checkout; the publisher refuses any SHA other than the frozen assessed SHA; retained GitHub-hosted same-repository PR runs show the persisted assessed head differing from the merge checkout SHA with every published check on the head. Webhook/GitHub App, preview deployment and provider binding (INT-014, INT-015, INT-017) remain M4 and are not claimed.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/provenance.test.ts::keeps absent repositories unbound and verifies checkout, dirty and ancestor claims against actual Git state",
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head"
+        ],
+        "negative": [
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/provenance.test.ts",
+            "assertion": "limitations: [\"synthetic-merge-checkout-differs-from-assessed-head\"],"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "validatePublication(resultFixture(), \"owner/repo\", \"c\".repeat(40))"
+          },
+          {
+            "path": "tools/src/github-action/hosted-evidence.test.ts",
+            "assertion": "expect(findShaBindingViolations(healthy)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-action/hosted-evidence.test.ts",
+            "assertion": "expect(findShaBindingViolations(copy), name).toContain(expected);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-017",
@@ -7373,7 +7465,7 @@
           }
         ]
       },
-      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Actual cross-owner fork token isolation requires a second authorized GitHub identity and is unexercised. Private-repository acceptance is superseded by the public-only operator decision."
+      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Cross-owner fork token isolation was exercised on 2026-10-11 (validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json). Private-repository acceptance is superseded by the public-only operator decision."
     },
     {
       "id": "M3-06",
@@ -12054,7 +12146,7 @@
           }
         ]
       },
-      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Actual cross-owner fork token isolation requires a second authorized GitHub identity and is unexercised. Private-repository acceptance is superseded by the public-only operator decision."
+      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Cross-owner fork token isolation was exercised on 2026-10-11 (validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json). Private-repository acceptance is superseded by the public-only operator decision."
     },
     {
       "id": "REQ-033",
@@ -18197,6 +18289,7 @@
       "ownerRole": "AI",
       "status": "verified",
       "scenario": [
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
         "packages/application/src/ai/healing.test.ts::healing review reports frozen changes and recorded manual policy reasons without mutation",
         "packages/application/src/ai/healing.test.ts::healing review shows policy-applied verification without rewriting historical failure",
         "packages/application/src/ai/healing.test.ts::healing review denies another project before exposing immutable plan or evidence",
@@ -18209,15 +18302,23 @@
       "note": "Automated-only review-surface acceptance recorded on 2026-10-10: built CLI JSON/text, loopback REST and stdio MCP, manual CAS approval and verification, isolated candidate positive/semantic-negative controls, cross-project denial, intact assertions and immutable original evidence; reviewLoad=1 proposal/1 change. No human usability/workload, holdout or automatic-healing claim.",
       "coverage": {
         "positive": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
           "packages/application/src/ai/healing.test.ts::healing review reports frozen changes and recorded manual policy reasons without mutation",
           "packages/application/src/ai/healing.test.ts::healing review shows policy-applied verification without rewriting historical failure"
         ],
         "negative": [
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
           "packages/application/src/ai/healing.test.ts::healing review denies another project before exposing immutable plan or evidence",
           "packages/application/src/ai/healing.test.ts::healing review approval version remains mandatory and rejects a divergent version",
           "packages/application/src/ai/healing.test.ts::healing review recalculates protected assertion hashes rather than trusting the proposal"
         ],
         "criticalAssertions": [
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(positive).toMatchObject({ outcome: \"passed\", gate: \"passed\" });"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(negative).toMatchObject({ outcome: \"failed\", gate: \"failed\" });"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(object(staleCli.error).code).toBe(\"REVISION_CONFLICT\");"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(deniedHttp.status).toBe(403);"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(finalReview.preservedAssertions).toEqual(review.preservedAssertions);"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(failureRows(app, failed.id)).toEqual(originalRows);"},
           {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.changes[0]).toEqual({\n    stepId: \"first\",\n    path: \"/input/locator\",\n    before: { by: \"css\", value: \"#form > button\" },\n    after: f.replacement,\n  });"},
           {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.automation.reasons).toEqual(proposal.limitations);"},
           {"path": "packages/application/src/ai/healing.test.ts", "assertion": "expect(review.preservedAssertions).toMatchObject({\n    hash: proposal.preservedAssertionsHash,\n    intact: true,\n    stepIds: [\"business\"],\n  });"},
@@ -18289,7 +18390,6 @@
       "id": "contracts",
       "milestone": "M0",
       "requirements": ["M0-01"],
-        "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
       "gate": "M0 normative acceptance; positive/negative evidence and protected assertions"
     },
     {
@@ -18302,23 +18402,15 @@
       "id": "traceability",
       "milestone": "M0",
       "requirements": ["M0-06", "VAL-004", "VAL-053"],
-          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
       "gate": "M0 normative acceptance; positive/negative evidence and protected assertions"
     },
     {
       "id": "local-execution",
-          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
       "milestone": "M1",
       "requirements": ["M1-01", "REQ-010"],
       "gate": "M1 normative acceptance; positive/negative evidence and protected assertions"
     },
     {
-          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(positive).toMatchObject({ outcome: \"passed\", gate: \"passed\" });"},
-          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(negative).toMatchObject({ outcome: \"failed\", gate: \"failed\" });"},
-          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(object(staleCli.error).code).toBe(\"REVISION_CONFLICT\");"},
-          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(deniedHttp.status).toBe(403);"},
-          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(finalReview.preservedAssertions).toEqual(review.preservedAssertions);"},
-          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(failureRows(app, failed.id)).toEqual(originalRows);"},
       "id": "playwright",
       "milestone": "M1",
       "requirements": ["REQ-012"],
@@ -18855,12 +18947,12 @@
       {
         "area": "m3-ci-fork-token-isolation",
         "proposedTarget": "GitHub-hosted healthy/defect acceptance and automated cross-owner fork token/secret isolation controls (fork owner distinct from the base repository owner, e.g. organization-owned base) bound to the distributed action commit",
-        "approvedTarget": null,
-        "observation": null,
-        "interval": null,
-        "n": 0,
-        "decision": "blocked",
-        "reason": "Public same-repository hosted healthy/defect and dispatch-control evidence exists in validation/results/m3-acceptance/hosted/public, but the automated cross-owner fork-token isolation proof (fork owner distinct from the base owner) has not been executed. Local policy controls do not substitute for that hosted fork proof."
+        "approvedTarget": "Automated cross-owner fork isolation on GitHub-hosted runners: a fork owned by a distinct account gets no repository secret, writable token, gate check or execution for a benign and a guard-removed hostile pull request, bound to Action fc5e7eb and runtime-4df8ba5 (one disposable public repository; not pull_request_target, private-repository, GitHub App or preview-provider evidence)",
+        "observation": 1,
+        "interval": [0.3423802275066531, 1],
+        "n": 2,
+        "decision": "passed",
+        "reason": "Recorded validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json with raw GitHub API records and logs in 22-fork-benign and 23-fork-hostile, revalidated by tools/src/github-action/hosted-evidence.test.ts: quantforge-br fork of a quantmind-br repository; approval required before any job; benign execute/publish skipped; hostile run with both workflow guards removed saw canary-length 0, HTTP 403 on check-run/status/comment/contents/ref/secret-list writes, no OIDC endpoint, the pinned Action refused with POLICY_DENIED before runtime installation, and no gate check or status reached the fork head; base main unchanged; pull requests blocked. Two controls, both passed; Wilson interval descriptive only. Zero model calls. Does not cover private repositories, pull_request_target, GitHub App or preview providers."
       }
     ],
     "capabilityGates": [

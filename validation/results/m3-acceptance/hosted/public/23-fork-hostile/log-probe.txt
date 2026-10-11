@@ -1,0 +1,74 @@
+probe	Set up job	﻿2026-10-11T22:02:09.9946045Z Current runner version: '2.337.0'
+probe	Set up job	2026-10-11T22:02:09.9968055Z ##[group]Runner Image Provisioner
+probe	Set up job	2026-10-11T22:02:09.9968814Z Hosted Compute Agent
+probe	Set up job	2026-10-11T22:02:09.9969364Z Version: 20261002.596
+probe	Set up job	2026-10-11T22:02:09.9969887Z Commit: c3d12f3313a95f25162a1503be624f3b0617f8c0
+probe	Set up job	2026-10-11T22:02:09.9970784Z Build Date: 2026-10-02T22:28:27Z
+probe	Set up job	2026-10-11T22:02:09.9971441Z Worker ID: {2e941338-d57c-4319-ba4c-4225d736f5d7}
+probe	Set up job	2026-10-11T22:02:09.9972033Z Region: westus
+probe	Set up job	2026-10-11T22:02:09.9972525Z Cloud: Azure
+probe	Set up job	2026-10-11T22:02:09.9972990Z ##[endgroup]
+probe	Set up job	2026-10-11T22:02:09.9974173Z ##[group]Operating System
+probe	Set up job	2026-10-11T22:02:09.9974790Z Ubuntu
+probe	Set up job	2026-10-11T22:02:09.9975229Z 24.04.5
+probe	Set up job	2026-10-11T22:02:09.9975688Z LTS
+probe	Set up job	2026-10-11T22:02:09.9976133Z ##[endgroup]
+probe	Set up job	2026-10-11T22:02:09.9976627Z ##[group]Runner Image
+probe	Set up job	2026-10-11T22:02:09.9977164Z Image: ubuntu-24.04
+probe	Set up job	2026-10-11T22:02:09.9977643Z Version: 20261004.327.1
+probe	Set up job	2026-10-11T22:02:09.9978498Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md
+probe	Set up job	2026-10-11T22:02:09.9980028Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327
+probe	Set up job	2026-10-11T22:02:09.9981115Z ##[endgroup]
+probe	Set up job	2026-10-11T22:02:09.9982285Z ##[group]GITHUB_TOKEN Permissions
+probe	Set up job	2026-10-11T22:02:09.9984108Z Checks: read
+probe	Set up job	2026-10-11T22:02:09.9984642Z Contents: read
+probe	Set up job	2026-10-11T22:02:09.9985098Z Issues: read
+probe	Set up job	2026-10-11T22:02:09.9985667Z Metadata: read
+probe	Set up job	2026-10-11T22:02:09.9986140Z PullRequests: read
+probe	Set up job	2026-10-11T22:02:09.9986656Z Statuses: read
+probe	Set up job	2026-10-11T22:02:09.9987140Z ##[endgroup]
+probe	Set up job	2026-10-11T22:02:09.9989094Z Secret source: None
+probe	Set up job	2026-10-11T22:02:09.9989957Z Cache mode: write
+probe	Set up job	2026-10-11T22:02:09.9990875Z Prepare workflow directory
+probe	Set up job	2026-10-11T22:02:10.0249483Z Prepare all required actions
+probe	Set up job	2026-10-11T22:02:10.0333227Z Complete job name: probe
+probe	Probe token and secret isolation	﻿2026-10-11T22:02:10.1009134Z ##[group]Run set +e
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1009718Z ^[[36;1mset +e^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1010668Z ^[[36;1mecho "head-repo=quantforge-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1011657Z ^[[36;1mecho "base-repo=$GITHUB_REPOSITORY"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1012246Z ^[[36;1mecho "canary-length=${#CANARY}"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1012833Z ^[[36;1mprobe() {^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1013303Z ^[[36;1m  name=$1; shift^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1013943Z ^[[36;1m  code=$(gh api -i "$@" 2>/dev/null | sed -n '1s/^HTTP[^ ]* \([0-9]*\).*/\1/p')^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1014764Z ^[[36;1m  echo "probe $name http=${code:-none}"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1015324Z ^[[36;1m}^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1015849Z ^[[36;1mprobe read-repo "repos/$GITHUB_REPOSITORY"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1017085Z ^[[36;1mprobe write-check-run -X POST "repos/$GITHUB_REPOSITORY/check-runs" -f name="TestMaster / required-gate" -f head_sha="$HEAD_SHA" -f status=completed -f conclusion=success^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1018654Z ^[[36;1mprobe write-commit-status -X POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" -f state=success -f context="TestMaster / required-gate"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1020116Z ^[[36;1mprobe write-pr-comment -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -f body=probe^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1021407Z ^[[36;1mprobe write-contents -X PUT "repos/$GITHUB_REPOSITORY/contents/probe.txt" -f message=probe -f content=cHJvYmU= -f branch=main^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1022708Z ^[[36;1mprobe write-ref -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref=refs/heads/fork-probe -f sha="$HEAD_SHA"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1023669Z ^[[36;1mprobe list-secrets "repos/$GITHUB_REPOSITORY/actions/secrets"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1024669Z ^[[36;1mprobe oidc-env-absent-check "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.1025792Z ^[[36;1mif [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then echo "oidc-request-url=present"; else echo "oidc-request-url=absent"; fi^[[0m
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2148999Z shell: /usr/bin/bash -e {0}
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2150038Z env:
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2155229Z   GH_TOKEN: ***
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2155819Z   CANARY: 
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2156432Z   HEAD_SHA: 28dd9ed5b66d7b56dcd07885810dfd73f71b4b83
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2157507Z   PR_NUMBER: 8
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2158027Z ##[endgroup]
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2436131Z head-repo=quantforge-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2438968Z base-repo=quantmind-br/testmaster-m3-acceptance-20261007t011247z-4eafc26a
+probe	Probe token and secret isolation	2026-10-11T22:02:10.2440535Z canary-length=0
+probe	Probe token and secret isolation	2026-10-11T22:02:10.8760265Z probe read-repo http=200
+probe	Probe token and secret isolation	2026-10-11T22:02:11.1516438Z probe write-check-run http=403
+probe	Probe token and secret isolation	2026-10-11T22:02:11.4586167Z probe write-commit-status http=403
+probe	Probe token and secret isolation	2026-10-11T22:02:11.7902388Z probe write-pr-comment http=403
+probe	Probe token and secret isolation	2026-10-11T22:02:12.1028289Z probe write-contents http=403
+probe	Probe token and secret isolation	2026-10-11T22:02:12.3939875Z probe write-ref http=403
+probe	Probe token and secret isolation	2026-10-11T22:02:12.6599246Z probe list-secrets http=403
+probe	Probe token and secret isolation	2026-10-11T22:02:12.9424819Z probe oidc-env-absent-check http=200
+probe	Probe token and secret isolation	2026-10-11T22:02:12.9425681Z oidc-request-url=absent
+probe	Complete job	﻿2026-10-11T22:02:12.9573172Z Cleaning up orphan processes
+probe	Complete job	2026-10-11T22:02:12.9865095Z Terminate orphan process: pid (2042) (gh)
