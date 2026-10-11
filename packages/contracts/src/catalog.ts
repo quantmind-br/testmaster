@@ -12,6 +12,21 @@ const names = Type.Array(P.Name);
 /** Model-facing citation of supplied evidence (`E1`, `E2`, …); resolved by the application. */
 const EvidenceHandle = Type.String({ pattern: "^E[1-9][0-9]{0,5}$" });
 const evidenceIds = (minItems: number) => Type.Array(EvidenceHandle, { minItems, maxItems: 100 });
+/**
+ * Inspection actions a model may select for a next step. The application renders the visible text
+ * from the action, so model prose never becomes advice shown to the user.
+ */
+export const nextStepActions = [
+  "collect_more_evidence",
+  "restore_environment",
+  "review_security_precondition",
+  "compare_contract",
+  "inspect_persistence",
+  "compare_requirement",
+  "review_healing_proposal",
+  "inspect_locator_candidates",
+] as const;
+export type NextStepAction = (typeof nextStepActions)[number];
 const HealingPatch = P.Obj({
   changes: Type.Array(
     P.Obj({
@@ -260,7 +275,7 @@ const supplemental = {
     fixTargetHandle: Type.Union([EvidenceHandle, Type.Null()]),
     /** Persisted verbatim into `Analysis.limitations`, so each item uses that bound (Name). */
     limitations: Type.Array(P.Name, { maxItems: 100 }),
-    nextSteps: Type.Array(P.Obj({ text: P.Description, evidence: evidenceIds(1) }), {
+    nextSteps: Type.Array(P.Obj({ action: P.Enum(nextStepActions), evidence: evidenceIds(1) }), {
       maxItems: 5,
     }),
     evidenceGaps: Type.Array(P.Name, { maxItems: 20 }),

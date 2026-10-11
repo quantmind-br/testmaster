@@ -819,11 +819,11 @@ it("oversized evidence abstains before dispatch instead of silently dropping its
   expect(result.limitations.some((value) => value.includes("oversized structures"))).toBe(true);
 });
 it.each([
-  { cite: "locator", accepted: true },
-  { cite: "run", accepted: false },
+  { cite: "locator", recorded: true },
+  { cite: "run", recorded: false },
 ])(
-  "a hypothesis supported only by a $cite handle is accepted: $accepted",
-  async ({ cite, accepted }) => {
+  "a hypothesis supported only by a $cite handle is recorded: $recorded",
+  async ({ cite, recorded }) => {
     const f = await fixture();
     await attachLocatorEvidence(f, 1);
     f.complete.mockImplementationOnce(async (input: unknown) => {
@@ -843,8 +843,8 @@ it.each([
       };
     });
     const result = await f.service.analyze(f.run.id, { model: true });
-    expect(result.modelCallId !== null).toBe(accepted);
-    if (!accepted)
+    expect(result.hypotheses.some((item) => item.text === "Observed")).toBe(recorded);
+    if (!recorded)
       expect(
         result.limitations.some((value) => value.includes("execution observation support")),
       ).toBe(true);
@@ -1118,7 +1118,7 @@ it("model next steps enrich evidence without overriding code-owned conclusion an
       recommendedAction: "fix_test",
       fixTargetHandle: null,
       limitations: [],
-      nextSteps: [{ text: "Review whether a healing proposal is appropriate", evidence: ["E2"] }],
+      nextSteps: [{ action: "inspect_persistence", evidence: ["E2"] }],
       evidenceGaps: ["Source cause is unavailable"],
     },
   }));
@@ -1158,7 +1158,7 @@ it.each([{ handle: "E999", rejection: "unknown execution evidence" }])(
         recommendedAction: "fix_product",
         fixTargetHandle: null,
         limitations: [],
-        nextSteps: [{ text: "Inspect the response", evidence: [handle] }],
+        nextSteps: [{ action: "collect_more_evidence", evidence: [handle] }],
         evidenceGaps: [],
       },
     }));
@@ -1182,19 +1182,81 @@ it("model next steps may cite a verified Run handle without establishing a hypot
       recommendedAction: "fix_product",
       fixTargetHandle: null,
       limitations: [],
-      nextSteps: [{ text: "Collect context for this Run", evidence: ["E1"] }],
+      nextSteps: [{ action: "collect_more_evidence", evidence: ["E1"] }],
       evidenceGaps: [],
     },
   }));
   const analysis = await f.service.analyze(f.run.id, { model: true });
   expect(analysis.modelCallId).toBe(f.modelCallId);
   expect(analysis.diagnosis?.nextSteps.at(-1)).toEqual({
-    text: "Collect context for this Run",
+    text: "Collect the response and execution evidence for step price to distinguish product, contract, and environment explanations.",
     source: "model",
     evidenceRefs: factual.facts[0]!.evidenceRefs,
   });
   expect(analysis.diagnosis?.conclusion).toEqual(factual.diagnosis?.conclusion);
   expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);
+});
+
+it("model next steps are rendered by the application and dropped when they do not fit the recorded cause", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.5 },
+      ],
+      recommendedAction: "fix_product",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [
+        { action: "restore_environment", evidence: ["E1"] },
+        { action: "review_healing_proposal", evidence: ["E2"] },
+        { action: "compare_requirement", evidence: ["E2"] },
+      ],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.modelCallId).toBe(f.modelCallId);
+  // The rules already advise comparing the requirement, so only the two misfits are counted.
+  expect(analysis.diagnosis?.nextSteps).toEqual(factual.diagnosis?.nextSteps);
+  expect(analysis.limitations).toContain(
+    "2 model next steps outside the recorded cause were not recorded.",
+  );
+});
+
+it("a model cause without an execution-supported hypothesis keeps the rules cause and the typed steps", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [],
+      recommendedAction: "fix_product",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [{ action: "inspect_persistence", evidence: ["E2"] }],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.modelCallId).toBe(f.modelCallId);
+  expect(analysis.failureKind).toBe(factual.failureKind);
+  expect(analysis.recommendedAction).toBe(factual.recommendedAction);
+  expect(analysis.hypotheses).toEqual(factual.hypotheses);
+  expect(analysis.limitations).toContain(
+    "A model cause without a hypothesis supported by execution observation was not recorded.",
+  );
+  expect(analysis.limitations).not.toEqual(
+    expect.arrayContaining([expect.stringContaining("Model enrichment abstained")]),
+  );
+  expect(analysis.diagnosis?.nextSteps.at(-1)).toMatchObject({
+    source: "model",
+    text: "Inspect the creation response and the subsequent read for step price, including entity identity and environment.",
+  });
 });
 
 it("relational chain caps at 64 while retaining the failed step and its early response", async () => {

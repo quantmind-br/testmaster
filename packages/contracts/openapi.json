@@ -10593,13 +10593,45 @@
               "additionalProperties": false,
               "type": "object",
               "required": [
-                "text",
+                "action",
                 "evidence"
               ],
               "properties": {
-                "text": {
-                  "maxLength": 8000,
-                  "type": "string"
+                "action": {
+                  "anyOf": [
+                    {
+                      "const": "collect_more_evidence",
+                      "type": "string"
+                    },
+                    {
+                      "const": "restore_environment",
+                      "type": "string"
+                    },
+                    {
+                      "const": "review_security_precondition",
+                      "type": "string"
+                    },
+                    {
+                      "const": "compare_contract",
+                      "type": "string"
+                    },
+                    {
+                      "const": "inspect_persistence",
+                      "type": "string"
+                    },
+                    {
+                      "const": "compare_requirement",
+                      "type": "string"
+                    },
+                    {
+                      "const": "review_healing_proposal",
+                      "type": "string"
+                    },
+                    {
+                      "const": "inspect_locator_candidates",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "evidence": {
                   "minItems": 1,
