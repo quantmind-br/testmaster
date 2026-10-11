@@ -1,0 +1,253 @@
+{
+  "id": "hd-bug-08",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1218a-7dad-74f4-ad13-2dc5ac95538a",
+    "revisionId": "rev_01a1218a-7d74-7582-be03-a9a17d57c45c",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "first",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "repeat",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "9a2416231bb67a2896816a177090be79672a3ce6079a09ecdb5043b8f5184e3d",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-7d5d-76d9-9493-e444fb3e6f84",
+    "admissionHash": "e85cafa0e4f4e79e132cd8e7d78ca78c06263ade968e1ee67ebb2fb8dc16fd8b"
+  },
+  "transformed": {
+    "runId": "run_01a1218a-8144-7656-a2b8-5a2999d782e8",
+    "revisionId": "rev_01a1218a-7d74-7582-be03-a9a17d57c45c",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "first",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "repeat",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "9a2416231bb67a2896816a177090be79672a3ce6079a09ecdb5043b8f5184e3d",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-7d5d-76d9-9493-e444fb3e6f84",
+    "admissionHash": "e85cafa0e4f4e79e132cd8e7d78ca78c06263ade968e1ee67ebb2fb8dc16fd8b"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "createIdempotency",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "firstId": "t-8851481f",
+      "secondId": "t-8851481f",
+      "persistedRows": 1
+    }
+  },
+  "transformedOracle": {
+    "check": "createIdempotency",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "firstId": "t-70fa07c4",
+      "secondId": "t-194054c0",
+      "persistedRows": 2
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-bug-08",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "first",
+        "kind": "action",
+        "operation": "request",
+        "description": "first",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "x-request-id": {
+              "literal": "hd-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "subject": "Replay once"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "repeat",
+        "kind": "action",
+        "operation": "request",
+        "description": "repeat",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            },
+            "x-request-id": {
+              "literal": "hd-fixed-key"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "subject": "Replay once"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "repeat"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

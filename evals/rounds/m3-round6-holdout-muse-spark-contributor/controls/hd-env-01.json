@@ -1,0 +1,227 @@
+{
+  "id": "hd-env-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12196-621b-7485-acf2-102d89790ec4",
+    "revisionId": "rev_01a12196-61c0-72c0-9a7d-5f1fff8d916f",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "tickets",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "4134073b5c3428606688b3f45714317c639725266ee7ced03bdeed13d4007845",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12196-61ab-713d-b06f-9a4be9f40701",
+    "admissionHash": "2d5b9f0d288ec12bd641868742d32941b52d86da8c7c7fe167b1fbc0758cb95c"
+  },
+  "transformed": {
+    "runId": "run_01a12196-65f6-7182-8659-e1fd333ab164",
+    "revisionId": "rev_01a12196-61c0-72c0-9a7d-5f1fff8d916f",
+    "outcome": "inconclusive",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "inconclusive",
+        "reasonCode": "insufficient_evidence",
+        "errorCode": "ECONNREFUSED"
+      },
+      {
+        "id": "tickets",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "insufficient_evidence",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "insufficient_evidence",
+      "insufficient_evidence"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "4134073b5c3428606688b3f45714317c639725266ee7ced03bdeed13d4007845",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12196-61ab-713d-b06f-9a4be9f40701",
+    "admissionHash": "2d5b9f0d288ec12bd641868742d32941b52d86da8c7c7fe167b1fbc0758cb95c"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Fri, 09 Oct 2026 16:54:26 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Fri, 09 Oct 2026 16:54:26 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-env-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "tickets",
+        "kind": "action",
+        "operation": "request",
+        "description": "tickets",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "pageSize"
+              },
+              "value": {
+                "literal": "100"
+              }
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "tickets",
+          "jsonPointer": "/total"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 5
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

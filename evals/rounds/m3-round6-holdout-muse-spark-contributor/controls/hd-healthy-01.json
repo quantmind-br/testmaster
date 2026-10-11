@@ -1,0 +1,203 @@
+{
+  "id": "hd-healthy-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12196-7fd9-7444-8cd6-8fd16d4d1431",
+    "revisionId": "rev_01a12196-7f78-77f7-b9e7-6135d67aa45a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "blank",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "86120ecdd1419b309a431f10096b0e823bd67f62794ccdef00cdf0113a0f1994",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12196-7f5c-70a0-9b31-2e506dd699c6",
+    "admissionHash": "e6bca5b940bc1094fb1b3b09b5c891942fb6d65f2e4678395508d48339e68256"
+  },
+  "transformed": {
+    "runId": "run_01a12196-83bc-75cc-92cd-7978d07ba79e",
+    "revisionId": "rev_01a12196-7f78-77f7-b9e7-6135d67aa45a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "blank",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "86120ecdd1419b309a431f10096b0e823bd67f62794ccdef00cdf0113a0f1994",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12196-7f5c-70a0-9b31-2e506dd699c6",
+    "admissionHash": "e6bca5b940bc1094fb1b3b09b5c891942fb6d65f2e4678395508d48339e68256"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "subjectValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 400,
+      "rowsBefore": 5,
+      "rowsAfter": 5
+    }
+  },
+  "transformedOracle": {
+    "check": "subjectValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 400,
+      "rowsBefore": 5,
+      "rowsAfter": 5
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-healthy-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "blank",
+        "kind": "action",
+        "operation": "request",
+        "description": "blank",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "subject": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "blank"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            400
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

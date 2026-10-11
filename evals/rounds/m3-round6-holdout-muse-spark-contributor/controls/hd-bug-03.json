@@ -1,0 +1,255 @@
+{
+  "id": "hd-bug-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1218a-558c-7199-9f57-65f633192b83",
+    "revisionId": "rev_01a1218a-5551-73c2-8d0d-a6afb9bc862e",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "claim",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "close",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "6ef3d105a16dc2b16bb57198f97a3648012ff2ae0782d5392cb0fcd609c7bafc",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-553b-749e-a3bc-b079625f8312",
+    "admissionHash": "f96337260ab81b9bd669263a55d33785a07e7d475f4a824475ef00204cd69e1b"
+  },
+  "transformed": {
+    "runId": "run_01a1218a-58c1-7172-8f3a-86f3ed0102d6",
+    "revisionId": "rev_01a1218a-5551-73c2-8d0d-a6afb9bc862e",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "claim",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "close",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "6ef3d105a16dc2b16bb57198f97a3648012ff2ae0782d5392cb0fcd609c7bafc",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-553b-749e-a3bc-b079625f8312",
+    "admissionHash": "f96337260ab81b9bd669263a55d33785a07e7d475f4a824475ef00204cd69e1b"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "closeResolution",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 422,
+      "persistedStatus": "open"
+    }
+  },
+  "transformedOracle": {
+    "check": "closeResolution",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "status": 200,
+      "persistedStatus": "closed"
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-bug-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "claim",
+        "kind": "action",
+        "operation": "request",
+        "description": "claim",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            },
+            {
+              "literal": "t1"
+            },
+            {
+              "literal": "claim"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "close",
+        "kind": "action",
+        "operation": "request",
+        "description": "close",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            },
+            {
+              "literal": "t1"
+            },
+            {
+              "literal": "close"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "resolution": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "close"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            422
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

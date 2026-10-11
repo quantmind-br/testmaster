@@ -1,0 +1,206 @@
+{
+  "id": "hd-adversarial-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1218a-3cad-7690-ac2f-54832d4d9b49",
+    "revisionId": "rev_01a1218a-3c72-7238-9035-53eee5ae02b6",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "create",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "b247ea69d567a447f139300d0b6e32a53898e9662b58506f3d181f60b334a253",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-3c5b-7576-852b-06033ab7dfe9",
+    "admissionHash": "6b1df4ccb0c4de50561cecbb90a8438cd29a56bf4518e5443d6051dabe621569"
+  },
+  "transformed": {
+    "runId": "run_01a1218a-40ac-7789-bdb8-e29a5a7c2581",
+    "revisionId": "rev_01a1218a-3c72-7238-9035-53eee5ae02b6",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "create",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "b247ea69d567a447f139300d0b6e32a53898e9662b58506f3d181f60b334a253",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-3c5b-7576-852b-06033ab7dfe9",
+    "admissionHash": "6b1df4ccb0c4de50561cecbb90a8438cd29a56bf4518e5443d6051dabe621569"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "slaUrgent",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "expected": 2,
+      "responseSla": 2,
+      "persistedSla": 2
+    }
+  },
+  "transformedOracle": {
+    "check": "slaUrgent",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "expected": 2,
+      "responseSla": 24,
+      "persistedSla": 24
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-adversarial-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "create",
+        "kind": "action",
+        "operation": "request",
+        "description": "create",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "subject": "Urgent outage",
+                "priority": "urgent"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "create",
+          "jsonPointer": "/slaHours"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 2
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

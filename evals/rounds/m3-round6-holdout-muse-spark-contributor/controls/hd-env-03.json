@@ -1,0 +1,180 @@
+{
+  "id": "hd-env-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12196-76c7-7682-969e-2cece2dc3fc3",
+    "revisionId": "rev_01a12196-766b-723d-aeab-b28e573005a5",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "e5140b6491cb1b8fd262592d0e20ab1731c2d83aff8f4926ece25d473e8271f5",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12196-7657-771c-9f57-3a3e17f8f001",
+    "admissionHash": "4574b615be89f4c01a99f5343617f520a7904f08017658fd2a52dded8258af0f"
+  },
+  "transformed": {
+    "runId": "run_01a12196-7aa4-7650-8e7d-d23d0a5ae892",
+    "revisionId": "rev_01a12196-766b-723d-aeab-b28e573005a5",
+    "outcome": "inconclusive",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "inconclusive",
+        "reasonCode": "insufficient_evidence",
+        "errorCode": "ECONNREFUSED"
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "insufficient_evidence",
+      "stopped_after_failure",
+      "insufficient_evidence",
+      "insufficient_evidence"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "e5140b6491cb1b8fd262592d0e20ab1731c2d83aff8f4926ece25d473e8271f5",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12196-7657-771c-9f57-3a3e17f8f001",
+    "admissionHash": "4574b615be89f4c01a99f5343617f520a7904f08017658fd2a52dded8258af0f"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Fri, 09 Oct 2026 16:54:32 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Fri, 09 Oct 2026 16:54:32 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-env-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "authenticate"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

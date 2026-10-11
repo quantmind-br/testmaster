@@ -1,0 +1,279 @@
+{
+  "id": "hd-bug-06",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1218a-6d40-7660-80ba-1b119ec36bd4",
+    "revisionId": "rev_01a1218a-6d05-77fc-bfc3-d6dc6ab0865a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "tickets",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "6b2fd873c1ae72c122e1e1150e628e245cd979dad720a33a8f10ed7f7f1533c6",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-6cf0-76eb-8932-db1acd37d695",
+    "admissionHash": "6fdbb3061e131e1ad84f4da02b7fa224188cf9e9fa4a5f0520815d9b276b500b"
+  },
+  "transformed": {
+    "runId": "run_01a1218a-70d8-71dc-b84c-0bdb33aeba23",
+    "revisionId": "rev_01a1218a-6d05-77fc-bfc3-d6dc6ab0865a",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "tickets",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "6b2fd873c1ae72c122e1e1150e628e245cd979dad720a33a8f10ed7f7f1533c6",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1218a-6cf0-76eb-8932-db1acd37d695",
+    "admissionHash": "6fdbb3061e131e1ad84f4da02b7fa224188cf9e9fa4a5f0520815d9b276b500b"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "ticketSchema",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "items": [
+        {
+          "id": "t1",
+          "subject": "Printer offline",
+          "priority": "normal",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 24
+        },
+        {
+          "id": "t2",
+          "subject": "VPN drops hourly",
+          "priority": "high",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 8
+        },
+        {
+          "id": "t3",
+          "subject": "Password reset loop",
+          "priority": "normal",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 24
+        },
+        {
+          "id": "t4",
+          "subject": "Invoice mismatch",
+          "priority": "low",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 72
+        },
+        {
+          "id": "t5",
+          "subject": "Site down",
+          "priority": "urgent",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 2
+        }
+      ],
+      "total": 5,
+      "nextPage": 2
+    }
+  },
+  "transformedOracle": {
+    "check": "ticketSchema",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "items": [
+        {
+          "id": "t1",
+          "subject": "Printer offline",
+          "severity": "normal",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 24
+        },
+        {
+          "id": "t2",
+          "subject": "VPN drops hourly",
+          "severity": "high",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 8
+        },
+        {
+          "id": "t3",
+          "subject": "Password reset loop",
+          "severity": "normal",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 24
+        },
+        {
+          "id": "t4",
+          "subject": "Invoice mismatch",
+          "severity": "low",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 72
+        },
+        {
+          "id": "t5",
+          "subject": "Site down",
+          "severity": "urgent",
+          "status": "open",
+          "assignee": null,
+          "slaHours": 2
+        }
+      ],
+      "total": 5,
+      "nextPage": 2
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "agent@helpdesk.test",
+                "secret": "desk-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "tickets",
+        "kind": "action",
+        "operation": "request",
+        "description": "tickets",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "tickets"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "tickets",
+          "jsonPointer": "/items/0/priority"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "normal"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}
