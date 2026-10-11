@@ -1,14 +1,30 @@
-import { execFileSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { execFile, execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer, type RequestListener, type Server } from "node:http";
 import { join } from "node:path";
-import { Application } from "@testmaster/application";
-import type { ExecutablePlan, Run } from "@testmaster/contracts";
+import { promisify } from "node:util";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Application, issueLocalToken } from "@testmaster/application";
+import type { ExecutablePlan, HealingReview, Run } from "@testmaster/contracts";
+import { validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { assertionsHash, type LocatorEvidence } from "@testmaster/planner";
 import { expect, it } from "vitest";
+import { createServer as createApi } from "../../apps/server/dist/server.js";
 import { completion, testProvider } from "../../packages/model-gateway/src/test-support.js";
-import { action, assertion, executable, type Journey, journey, text } from "./harness.js";
+import {
+  action,
+  assertion,
+  cli,
+  executable,
+  type Journey,
+  journey,
+  object,
+  root,
+  text,
+} from "./harness.js";
 
 type Patch = { changes: Array<{ stepId: string; path: string; value: unknown }> };
 
@@ -54,6 +70,7 @@ async function fixture(
     prompts: () => Record<string, unknown>[];
     run: (testId: string, revisionId?: string) => Promise<Run>;
   }) => Promise<void>,
+  flagMode = true,
 ): Promise<void> {
   let patch: Patch = { changes: [] };
   let completions = 0;
@@ -117,11 +134,17 @@ async function fixture(
       JSON.stringify({ allowedModelProviders: ["fake"] }),
     );
     const init = await session.init(url);
+    if (!flagMode) {
+      const configPath = join(session.cwd, "testmaster.config.json");
+      const config = JSON.parse(await readFile(configPath, "utf8"));
+      config.healing = { mode: "apply" };
+      await writeFile(configPath, JSON.stringify(config));
+    }
     app = await Application.open({
       cwd: session.cwd,
       home: session.home,
       env: session.env,
-      flags: { healing: { mode: "apply" } },
+      ...(flagMode ? { flags: { healing: { mode: "apply" as const } } } : {}),
     });
     const projectId = text(init.projectId);
     const environmentId = text(init.environmentId);
@@ -863,3 +886,413 @@ it("HEAL-001 repeated selector repair defers an unexecuted step until verificati
     );
   });
 }, 180000);
+
+it("HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects", async () => {
+  await journey("m3-assisted-review-surface-20261010", async (session) => {
+    let drift = false;
+    let defect = false;
+    let priceRequests = 0;
+    await fixture(
+      session,
+      (request, response) => {
+        if (request.url === "/price") {
+          priceRequests++;
+          response.setHeader("content-type", "application/json");
+          response.end(JSON.stringify({ price: defect ? "1.25" : "12.50" }));
+          return;
+        }
+        response.setHeader("content-type", "text/html");
+        response.end(
+          `<form id="quote-form"><button type="button" aria-label="Check price" data-testid="${drift ? "quote-new" : "quote"}">Check price</button><output data-testid="price">Pending</output></form><script>document.querySelector('button').onclick=async()=>{const r=await fetch('/price');document.querySelector('output').textContent=(await r.json()).price}</script>`,
+        );
+      },
+      async ({ app, projectId, run, setPatch, completions }) => {
+        // This project permits assistance but does not authorize policy autoapplication.
+        const project = app.projects.get(projectId);
+        app.context.entities.update(
+          "Project",
+          app.context.workspaceId,
+          project.id,
+          Number(project.version),
+          {
+            ...project,
+            version: Number(project.version) + 1,
+            extensions: { ...project.extensions, "testmaster:healingPolicy": "propose" },
+          },
+        );
+        const test = app.tests.create({
+          projectId,
+          plan: executable("Assisted exact price", "playwright", [
+            action("open", "navigate", { path: "/" }),
+            {
+              ...action("quote", "click", { locator: { by: "testId", value: "quote" } }),
+              timeoutMs: 1000,
+            },
+            assertion(
+              "exact-price",
+              { locator: { by: "testId", value: "price" } },
+              "textEquals",
+              "12.50",
+            ),
+          ]),
+        });
+        const baseline = await run(test.id);
+        expect(baseline).toMatchObject({ outcome: "passed", gate: "passed" });
+        drift = true;
+        const failed = await run(test.id);
+        expect(failed).toMatchObject({ outcome: "failed", gate: "failed" });
+        const originalRows = failureRows(app, failed.id);
+        const originalManifest = (await app.artifacts.get(failed.id)).manifest;
+        setPatch({
+          changes: [
+            {
+              stepId: "quote",
+              path: "/input/locator",
+              value: { by: "testId", value: "quote-new" },
+            },
+          ],
+        });
+        const proposal = await app.healing.propose(failed.id);
+        expect(proposal).toMatchObject({
+          status: "proposed",
+          approvalMode: null,
+          verificationRunId: null,
+        });
+        expect(app.tests.get(test.id).activeRevisionId).toBe(proposal.baseRevisionId);
+
+        const issued = await issueLocalToken(app, {
+          grants: [
+            {
+              resourceType: "HealingProposal",
+              actions: ["approve"],
+              projectIds: [projectId],
+              environmentIds: [],
+              expiresAt: null,
+              grantedBy: app.context.principalId,
+            },
+          ],
+        });
+        const api = createApi({ application: app, mcp: false });
+        const address = await api.listen({ host: "127.0.0.1", port: 0 });
+        const reviewUrl = `${address}/v1/healing-proposals/${proposal.id}/review`;
+        const headers = { authorization: `Bearer ${issued.token}` };
+        const client = new Client({ name: "assisted-review-acceptance", version: "1" });
+        try {
+          await client.connect(
+            new StdioClientTransport({
+              command: process.execPath,
+              args: [
+                cli,
+                "--cwd",
+                session.cwd,
+                "mcp",
+                "serve",
+                "--transport",
+                "stdio",
+                "--token-file",
+                issued.tokenPath,
+              ],
+              env: Object.fromEntries(
+                Object.entries(session.env).filter(
+                  (pair): pair is [string, string] => typeof pair[1] === "string",
+                ),
+              ),
+              stderr: "pipe",
+            }),
+          );
+          const beforeRead = semanticHash({
+            proposal: app.healing.get(proposal.id),
+            rows: failureRows(app, failed.id),
+            test: app.tests.get(test.id),
+          });
+          const review = validate<HealingReview>(
+            "HealingReview",
+            await session.command(["heal", "review", proposal.id]),
+          );
+          expect(review.changes).toEqual([
+            {
+              stepId: "quote",
+              path: "/input/locator",
+              before: { by: "testId", value: "quote" },
+              after: { by: "testId", value: "quote-new" },
+            },
+          ]);
+          expect(review.automation).toEqual({
+            decision: "manual_review_required",
+            reasons: ["Project policy has not explicitly authorized automatic healing"],
+          });
+          expect(review.identity[0]).toMatchObject({
+            stepId: "quote",
+            previous: { by: "testId", value: "quote" },
+            equivalence: { equivalent: true },
+          });
+          expect(review.identity[0]!.candidates).toContainEqual(
+            expect.objectContaining({
+              role: "button",
+              name: "Check price",
+              tag: "button",
+              type: "button",
+              label: "Check price",
+              visible: true,
+            }),
+          );
+          expect(review.preservedAssertions).toEqual({
+            hash: assertionsHash(app.revisions.get(proposal.baseRevisionId).plan!),
+            intact: true,
+            stepIds: ["exact-price"],
+          });
+          expect(review.approval).toEqual({
+            proposalId: proposal.id,
+            candidateRevisionId: proposal.candidateRevisionId,
+            expectedVersion: proposal.version,
+          });
+          expect(review.risk).toBe(proposal.risk);
+          expect(review.evidenceRefs).toEqual(proposal.evidenceRefs);
+          expect(review.verification).toBeNull();
+          const rendered = await promisify(execFile)(
+            process.execPath,
+            [cli, "heal", "review", proposal.id, "--output", "text", "--no-color"],
+            { cwd: session.cwd, env: session.env },
+          );
+          // User-visible values, not renderer wording: both locators, the business oracle and CAS binding.
+          for (const value of [
+            "quote-new",
+            "exact-price",
+            proposal.candidateRevisionId,
+            `--expected-version ${proposal.version}`,
+          ])
+            expect(rendered.stdout).toContain(value);
+          const http = await fetch(reviewUrl, { headers });
+          expect(http.status).toBe(200);
+          expect(object(await http.json()).data).toEqual(review);
+          const mcp = await client.callTool({
+            name: "testmaster_review_healing",
+            arguments: { proposalId: proposal.id },
+          });
+          expect(mcp.isError).not.toBe(true);
+          expect(mcp.structuredContent).toEqual(review);
+          expect(
+            semanticHash({
+              proposal: app.healing.get(proposal.id),
+              rows: failureRows(app, failed.id),
+              test: app.tests.get(test.id),
+            }),
+          ).toBe(beforeRead);
+
+          const stale = Number(proposal.version) + 1;
+          const staleCli = await session.command(
+            ["heal", "approve", proposal.id, "--expected-version", String(stale)],
+            6,
+          );
+          expect(object(staleCli.error).code).toBe("REVISION_CONFLICT");
+          const staleHttp = await fetch(`${address}/v1/healing-proposals/${proposal.id}/approve`, {
+            method: "POST",
+            headers: {
+              ...headers,
+              "content-type": "application/json",
+              "idempotency-key": "assisted-stale-approval",
+            },
+            body: JSON.stringify({ expectedVersion: stale }),
+          });
+          expect(object(object(await staleHttp.json()).error).code).toBe("REVISION_CONFLICT");
+          const staleMcp = await client.callTool({
+            name: "testmaster_approve_healing",
+            arguments: { proposalId: proposal.id, expectedVersion: stale },
+          });
+          expect(staleMcp.isError).toBe(true);
+          expect(
+            object(object(JSON.parse((staleMcp.content as { text: string }[])[0]!.text)).error)
+              .code,
+          ).toBe("REVISION_CONFLICT");
+          expect(app.healing.get(proposal.id)).toEqual(proposal);
+          expect(
+            app.runs
+              .list()
+              .map((value) => value.id)
+              .sort(),
+          ).toEqual([baseline.id, failed.id].sort());
+
+          const other = app.projects.create({ name: "Unrelated review scope" });
+          const membershipRow = app.database.get(
+            "SELECT id FROM memberships WHERE workspace_id=? AND principal_id=?",
+            app.context.workspaceId,
+            app.context.principalId,
+          )!;
+          const membership = app.context.entities.get(
+            "Membership",
+            app.context.workspaceId,
+            String(membershipRow.id),
+          )!;
+          app.context.entities.update(
+            "Membership",
+            app.context.workspaceId,
+            membership.id,
+            Number(membership.version),
+            {
+              ...membership,
+              version: Number(membership.version) + 1,
+              projectRestrictions: [other.id],
+            },
+          );
+          try {
+            const deniedCli = await session.command(["heal", "review", proposal.id], 3);
+            expect(object(deniedCli.error).code).toBe("FORBIDDEN");
+            expect(deniedCli).not.toHaveProperty("data");
+            const deniedHttp = await fetch(reviewUrl, { headers });
+            expect(deniedHttp.status).toBe(403);
+            const deniedBody = object(await deniedHttp.json());
+            expect(object(deniedBody.error).code).toBe("FORBIDDEN");
+            expect(deniedBody).not.toHaveProperty("data");
+            const deniedMcp = await client.callTool({
+              name: "testmaster_review_healing",
+              arguments: { proposalId: proposal.id },
+            });
+            expect(deniedMcp.isError).toBe(true);
+            expect(deniedMcp.structuredContent).toBeUndefined();
+            expect(
+              object(object(JSON.parse((deniedMcp.content as { text: string }[])[0]!.text)).error)
+                .code,
+            ).toBe("FORBIDDEN");
+          } finally {
+            app.context.entities.update(
+              "Membership",
+              app.context.workspaceId,
+              membership.id,
+              Number(membership.version) + 1,
+              { ...membership, version: Number(membership.version) + 2 },
+            );
+          }
+
+          // Candidate-only replays never promote or weaken the original assertion.
+          const positive = await run(test.id, proposal.candidateRevisionId);
+          expect(positive).toMatchObject({ outcome: "passed", gate: "passed" });
+          defect = true;
+          const beforeRequests = priceRequests;
+          const negative = await run(test.id, proposal.candidateRevisionId);
+          expect(negative).toMatchObject({ outcome: "failed", gate: "failed" });
+          expect(
+            app.runs.steps(negative.id).find((step) => step.planStepId === "exact-price"),
+          ).toMatchObject({ status: "failed", reasonCode: "assertion_mismatch" });
+          expect(priceRequests).toBeGreaterThan(beforeRequests);
+          expect(app.tests.get(test.id).activeRevisionId).toBe(proposal.baseRevisionId);
+          const negativeRows = failureRows(app, negative.id);
+          const negativeManifest = (await app.artifacts.get(negative.id)).manifest;
+          await expect(app.healing.propose(negative.id)).rejects.toMatchObject({
+            code: "PRECONDITION_FAILED",
+            details: { reason: "semantic_failure" },
+          });
+          expect(completions()).toBe(1);
+          defect = false;
+          const approved = await session.command([
+            "heal",
+            "approve",
+            proposal.id,
+            "--expected-version",
+            String(review.approval.expectedVersion),
+            "--wait",
+          ]);
+          expect(object(approved.proposal)).toMatchObject({
+            status: "verified",
+            approvalMode: "manual",
+            candidateRevisionId: proposal.candidateRevisionId,
+          });
+          const verificationId = text(object(approved.proposal).verificationRunId);
+          const verification = app.runs.get(verificationId);
+          expect(verification).toMatchObject({
+            revisionId: proposal.candidateRevisionId,
+            origin: "verification",
+            outcome: "passed",
+            gate: "passed",
+          });
+          expect(verification.matrixCell).toMatchObject({
+            healingPolicy: "off",
+            limits: { maxAttempts: 1 },
+          });
+          expect(app.tests.get(test.id).activeRevisionId).toBe(proposal.candidateRevisionId);
+          const finalReview = validate<HealingReview>(
+            "HealingReview",
+            await session.command(["heal", "review", proposal.id]),
+          );
+          expect(finalReview.verification).toEqual({
+            runId: verificationId,
+            outcome: "passed",
+            gate: "passed",
+          });
+          expect(finalReview.preservedAssertions).toEqual(review.preservedAssertions);
+          expect(failureRows(app, failed.id)).toEqual(originalRows);
+          expect((await app.artifacts.get(failed.id)).manifest).toEqual(originalManifest);
+          expect(failureRows(app, negative.id)).toEqual(negativeRows);
+          expect((await app.artifacts.get(negative.id)).manifest).toEqual(negativeManifest);
+          const runtimeHashes = Object.fromEntries(
+            await Promise.all(
+              [
+                "apps/cli/dist/main.js",
+                "apps/cli/dist/heal.js",
+                "apps/server/dist/server.js",
+                "apps/mcp/dist/server.js",
+                "packages/application/dist/ai/healing.js",
+                "containers/images.lock.json",
+                "validation/journeys/m3-healing-acceptance.docker.test.ts",
+              ].map(async (file) => [
+                file,
+                createHash("sha256")
+                  .update(await readFile(join(root, file)))
+                  .digest("hex"),
+              ]),
+            ),
+          );
+          session.oracles.push({
+            check: "automatedAssistedReviewAcceptance",
+            proposalId: proposal.id,
+            baselineRunId: baseline.id,
+            failedRunId: failed.id,
+            positiveRunId: positive.id,
+            semanticNegativeRunId: negative.id,
+            verificationRunId: verificationId,
+            beforeReview: review,
+            afterReview: finalReview,
+            reviewLoad: {
+              proposals: 1,
+              changes: proposal.changes.length,
+              changesPerProposal: proposal.changes.length,
+            },
+            surfaces: [
+              "built-cli-json",
+              "built-cli-text",
+              "built-rest-loopback",
+              "built-mcp-stdio",
+            ],
+            staleApprovalRefused: true,
+            crossProjectDenied: true,
+            originalEvidenceUnchanged: true,
+            evaluatedCommit: execFileSync("git", ["rev-parse", "HEAD"], {
+              encoding: "utf8",
+            }).trim(),
+            runtimeHashes,
+            runs: [baseline, failed, positive, negative, verification].map((value) => ({
+              id: value.id,
+              revisionId: value.revisionId,
+              outcome: value.outcome,
+              gate: value.gate,
+              records: failureRows(app, value.id),
+            })),
+            manifests: await Promise.all(
+              [baseline, failed, positive, negative, verification].map(
+                async (value) => (await app.artifacts.get(value.id)).manifest,
+              ),
+            ),
+            controlledProviderCalls: completions(),
+            paidModelCalls: 0,
+            limitations: [
+              "One deterministic selector-drift family; no model-quality, holdout, human workload or usability claim.",
+            ],
+          });
+        } finally {
+          await client.close();
+          await api.close();
+        }
+      },
+      false,
+    );
+  });
+}, 360000);

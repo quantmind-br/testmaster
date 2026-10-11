@@ -18204,9 +18204,9 @@
         "packages/application/src/ai/healing.test.ts::healing review recalculates protected assertion hashes rather than trusting the proposal"
       ],
       "oracle": ["Review values derive from frozen plans and recorded evidence; project denial and CAS remain enforced; assertion integrity is recalculated"],
-      "evidence": ["packages/application/src/ai/healing.test.ts"],
+      "evidence": ["packages/application/src/ai/healing.test.ts", "validation/results/m3-assisted-review-20261010/acceptance.json"],
       "code": ["packages/application/src/ai/healing.ts", "apps/cli/src/heal.ts", "apps/server/src/server.ts", "apps/mcp/src/server.ts"],
-      "note": "Deterministic implementation controls only; independent safety/holdout/task-study homologation remains blocked.",
+      "note": "Automated-only review-surface acceptance recorded on 2026-10-10: built CLI JSON/text, loopback REST and stdio MCP, manual CAS approval and verification, isolated candidate positive/semantic-negative controls, cross-project denial, intact assertions and immutable original evidence; reviewLoad=1 proposal/1 change. No human usability/workload, holdout or automatic-healing claim.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/healing.test.ts::healing review reports frozen changes and recorded manual policy reasons without mutation",
@@ -18289,6 +18289,7 @@
       "id": "contracts",
       "milestone": "M0",
       "requirements": ["M0-01"],
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
       "gate": "M0 normative acceptance; positive/negative evidence and protected assertions"
     },
     {
@@ -18301,15 +18302,23 @@
       "id": "traceability",
       "milestone": "M0",
       "requirements": ["M0-06", "VAL-004", "VAL-053"],
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
       "gate": "M0 normative acceptance; positive/negative evidence and protected assertions"
     },
     {
       "id": "local-execution",
+          "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-003 automated assisted review preserves semantic failures and refuses stale approval and foreign projects",
       "milestone": "M1",
       "requirements": ["M1-01", "REQ-010"],
       "gate": "M1 normative acceptance; positive/negative evidence and protected assertions"
     },
     {
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(positive).toMatchObject({ outcome: \"passed\", gate: \"passed\" });"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(negative).toMatchObject({ outcome: \"failed\", gate: \"failed\" });"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(object(staleCli.error).code).toBe(\"REVISION_CONFLICT\");"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(deniedHttp.status).toBe(403);"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(finalReview.preservedAssertions).toEqual(review.preservedAssertions);"},
+          {"path": "validation/journeys/m3-healing-acceptance.docker.test.ts", "assertion": "expect(failureRows(app, failed.id)).toEqual(originalRows);"},
       "id": "playwright",
       "milestone": "M1",
       "requirements": ["REQ-012"],
@@ -18836,12 +18845,12 @@
       {
         "area": "m3-assisted-review-surface",
         "proposedTarget": "Automated review-surface acceptance (ADR-012): candidate validated in isolated replay with positive and semantic-negative controls, complete HealingReview projection, stale approval and cross-project lookup refused, reviewLoad measured; no human decision-time, workload or usability claim",
-        "approvedTarget": null,
-        "observation": null,
-        "interval": null,
-        "n": 0,
-        "decision": "blocked",
-        "reason": "No recorded automated review-surface acceptance run on the evaluated implementation. Isolated candidate controls (assisted-candidate-replay.json) and review projection tests are implementation evidence, not a recorded area measurement."
+        "approvedTarget": "Automated-only review-surface acceptance: all mandatory controls pass in one deterministic selector-drift journey (not population-risk or human usability evidence)",
+        "observation": 1,
+        "interval": [0.20654931437723745, 1],
+        "n": 1,
+        "decision": "passed",
+        "reason": "Recorded validation/results/m3-assisted-review-20261010/acceptance.json against binary/source/image-lock hashes: complete HealingReview on built CLI JSON/text, loopback REST and stdio MCP; version-conflict and cross-project controls on all three transports; candidate isolated positive passed and exact-price semantic-negative failed; manual approval verified with healing off then promoted; assertions and original failed evidence intact; reviewLoad 1 proposal, 1 change, 1 change/proposal. One successful deterministic journey; Wilson interval descriptive only. Zero paid model calls. No human workload/usability, holdout, automatic-healing or M3 graduation claim."
       },
       {
         "area": "m3-ci-fork-token-isolation",

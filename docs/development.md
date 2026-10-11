@@ -722,20 +722,32 @@ The sealed holdout format validates declared provenance and data consistency. Un
 [ADR-012](adr/012-automated-only-validation.md) no gate requires human review or a human task study.
 
 The registry adds `release.capabilityGates` with `requiredAreas`, `requiredItems` and
-`nonNegotiable` requirement references. All four initial decisions are blocked:
+`nonNegotiable` requirement references. Three decisions remain blocked; assisted review passed
+automated-only acceptance on 2026-10-10:
 
-| Command suffix | Missing evidence |
+| Command suffix | Evidence / remaining prerequisite |
 |---|---|
 | `--capability-gate m3-assistive-diagnosis` | Sealed holdout and utility/overclaim targets plus measured incremental gain over rules; no fork prerequisite. |
 | `--capability-gate m3-automatic-healing` | Sealed predeclared-eligibility holdout with automated safety evidence (critical adversarial suite, critical mutation inventory, semantic-negative control per eligible case, protected-assertion hash). |
-| `--capability-gate m3-assisted-healing` | Recorded automated review-surface acceptance (isolated replay with positive/semantic-negative controls, complete review projection, stale-approval and cross-project refusal, `reviewLoad`). |
+| `--capability-gate m3-assisted-healing` | **Passed (automated-only).** `validation/results/m3-assisted-review-20261010/acceptance.json`: built CLI JSON/text, REST loopback and MCP stdio; complete review, version-conflict and cross-project denial; candidate positive/semantic-negative Docker controls; manual approval and verification with intact assertions and historical evidence. `reviewLoad`: 1 proposal, 1 change, 1 change/proposal. |
 | `--capability-gate m3-ci-integration` | Automated cross-owner fork-token isolation proof with a distinct GitHub owner (for example an organization-owned base repository); same-repo hosted acceptance already exists. |
 
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
 targets/controls, waived invariants or critical/high findings. It does not require unrelated release
 areas, but the full normative inventory still applies. `check --milestone-gate M3` remains the
-cumulative red gate; a future scoped pass cannot silently graduate M3 or GA.
+cumulative red gate; this scoped pass does not graduate M3 or GA.
+
+Reproduce the assisted-review journey after `pnpm build` with
+`TMPDIR=/tmp pnpm exec vitest run --project docker validation/journeys/m3-healing-acceptance.docker.test.ts -t 'HEAL-003 automated assisted review'`
+through the result-preservation wrapper. It uses one local controlled provider response and no
+paid model calls. The evidence records Run/Attempt rows, manifests, frozen review projections and
+binary/source/image-lock SHA-256 hashes. One deterministic selector-drift family demonstrates the
+review surface, not model quality, population safety, human usability or workload improvement.
+REST/MCP approval tokens require an explicit project-scoped `HealingProposal:approve` grant.
+All processes use the same project-frozen execution configuration, including configuration origins;
+the scenario does not weaken execution-identity, authorization or automatic-healing guards.
+
 
 Plan/ID reconciliation: VAL-053 and VAL-054 already existed in the normative corpus (registry
 completeness and immutable/versioned release evidence). They were extended additively for utility

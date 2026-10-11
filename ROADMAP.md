@@ -106,12 +106,14 @@ automatic coverage from predeclared eligibility, and isolated manual candidates.
 labels stay post-hoc and do not count as sealed holdout; disputed labels are separate. The sealed
 holdout format is prepared; no sealed holdout has been run.
 
-The registry's additive capability gates are explicitly blocked: `m3-assistive-diagnosis` lacks
-a sealed holdout and measured utility/overclaim/incremental gain;
-`m3-automatic-healing` lacks a sealed predeclared-eligibility holdout with automated safety
-evidence; `m3-assisted-healing` lacks recorded automated review-surface acceptance;
-`m3-ci-integration` lacks an automated cross-owner fork-token isolation proof with a distinct
-GitHub owner (for example an organization-owned base repository). They are checked individually
+The registry's `m3-assisted-healing` capability passed automated-only review-surface acceptance on
+2026-10-10 (`validation/results/m3-assisted-review-20261010/acceptance.json`): built CLI JSON/text,
+REST and MCP, complete immutable review, version-conflict/cross-project refusals, candidate positive
+and semantic-negative Docker controls, manual approval and verification; reviewLoad 1 proposal/1 change.
+Three additive gates remain blocked: `m3-assistive-diagnosis` lacks a sealed holdout and measured
+utility/overclaim/incremental gain; `m3-automatic-healing` lacks a sealed predeclared-eligibility
+holdout with automated safety evidence; `m3-ci-integration` lacks automated cross-owner fork-token
+isolation proof with a distinct GitHub owner. They are checked individually
 with `check --capability-gate ID`, do not compensate critical failures and do not replace the red
 `--milestone-gate M3`. Automatic identity/policy guards and original failed evidence are unchanged.
 
