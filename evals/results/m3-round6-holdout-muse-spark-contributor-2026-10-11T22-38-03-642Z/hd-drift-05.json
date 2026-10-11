@@ -1,0 +1,483 @@
+{
+  "oracle": "closePersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "close"
+  ],
+  "patches": [
+    {
+      "file": "helpdesk.html",
+      "before": "data-testid=\"close-button\"",
+      "after": "data-testid=\"resolve-button\""
+    }
+  ],
+  "candidate": {
+    "testIdRenames": {
+      "close-button": "resolve-button"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+      "helpdesk.html": "4d16ba2a6d3841021d9aa8b349c444d5bd37f4ea332b44059970b56d6538b53f"
+    },
+    "transformed": {
+      "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+      "helpdesk.html": "d4694122245e2dd748ce8e2e0e90695837f727b4e3486192740e16a2bcb475f1"
+    }
+  },
+  "familyId": "reference-helpdesk",
+  "id": "hd-drift-05",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-drift-05",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "agent-email"
+          },
+          "value": {
+            "literal": "agent@helpdesk.test"
+          }
+        }
+      },
+      {
+        "id": "secret",
+        "kind": "action",
+        "operation": "fill",
+        "description": "secret",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "agent-secret"
+          },
+          "value": {
+            "literal": "desk-secret"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "queue_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "queue_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "queue-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "claim",
+        "kind": "action",
+        "operation": "click",
+        "description": "claim",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "claim-t1"
+          }
+        }
+      },
+      {
+        "id": "claimed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "claimed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "banner"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Claimed"
+          }
+        }
+      },
+      {
+        "id": "mine",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "mine",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "close",
+        "kind": "action",
+        "operation": "click",
+        "description": "close",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "close-button"
+          }
+        }
+      },
+      {
+        "id": "closed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "closed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "banner"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Closed"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "ticket-status"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "closed"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "closePersistence",
+    "semanticNegative": "close-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "close"
+    ],
+    "patches": [
+      {
+        "file": "helpdesk.html",
+        "before": "data-testid=\"close-button\"",
+        "after": "data-testid=\"resolve-button\""
+      }
+    ],
+    "candidate": {
+      "testIdRenames": {
+        "close-button": "resolve-button"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+        "helpdesk.html": "4d16ba2a6d3841021d9aa8b349c444d5bd37f4ea332b44059970b56d6538b53f"
+      },
+      "transformed": {
+        "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+        "helpdesk.html": "d4694122245e2dd748ce8e2e0e90695837f727b4e3486192740e16a2bcb475f1"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "healingEligibility": "automatic",
+    "expectedHealingAdvice": "proposal_possible",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "close-testid-renamed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the close control by its test id; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "close-without-persist",
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true,
+    "manualReviewRequired": false,
+    "changeCount": 1
+  },
+  "usage": {
+    "inputTokens": 20049,
+    "outputTokens": 8051,
+    "reasoningTokens": 7311,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 28100,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-8Nbqnu",
+    "baseRevision": {
+      "id": "rev_01a12d2b-933a-7187-80f7-c968c49eda5f",
+      "protectedHash": "68772177a81ad6e46b3d0fd2c23bf5bf2b8274d114abc8744efada82e635357c"
+    },
+    "healthy": {
+      "runId": "run_01a12d2b-9380-747d-b380-6451e7124f2a",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12d2b-9cbf-722b-9dd0-0410589bb571",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12d2c-8171-703b-93f0-b7a36ea0e7b9",
+      "hash": "e855a13d9c5823b95f0b8af2b3a8145e271aaa3609b5f1ed240aed3082d05a23",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12d2c-f463-74d8-abb6-2b991b34a1ce",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "58c0370f26488a54000d81239102008cac13a6d8672e6ff28477c58ac1ffcc16",
+        "responseHash": "793842fd69a2f5ca36b8ace6a793788cfd643f4314c2099cc2c1aaa58e4de136",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 9941,
+          "outputTokens": 4429,
+          "reasoningTokens": 3932
+        },
+        "cost": "unknown",
+        "latencyMs": 28757,
+        "createdAt": "2026-10-11T22:54:43.299Z"
+      },
+      {
+        "id": "mdl_01a12d2d-4a10-7788-8cc5-00e332f3d2ec",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "d325d8420344dec95502cec9429d83afb12efc710fe64d5311710ec2c0dd2f58",
+        "responseHash": "fcd52a2f2d8f20ece0383fbd82e0786595510b2402c456ba915b5b4a7afc015b",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10108,
+          "outputTokens": 3622,
+          "reasoningTokens": 3379
+        },
+        "cost": "unknown",
+        "latencyMs": 21451,
+        "createdAt": "2026-10-11T22:55:05.233Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12d2c-f463-74d8-abb6-2c58258887a2",
+      "hash": "4ca9e87f0603433074f69b7e5aeeca9b0f6eea76bda3e53034cad3b58a510685"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12d2b-933a-7187-80f7-c968c49eda5f",
+      "candidateRevisionId": "rev_01a12d2d-4a93-70d8-ba0a-bf2d532d8a41",
+      "baseHash": "68772177a81ad6e46b3d0fd2c23bf5bf2b8274d114abc8744efada82e635357c",
+      "candidateHash": "68772177a81ad6e46b3d0fd2c23bf5bf2b8274d114abc8744efada82e635357c",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12d2d-4a92-7088-a8bf-bf4fb3162c4d",
+      "hash": "be609358170e7790209316f54e1e6cad53831367dac292481a65f1531c1e8b0d",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a12d2b-933a-7187-80f7-c968c49eda5f",
+      "candidateRevisionId": "rev_01a12d2d-4a93-70d8-ba0a-bf2d532d8a41",
+      "baseHash": "68772177a81ad6e46b3d0fd2c23bf5bf2b8274d114abc8744efada82e635357c",
+      "candidateHash": "68772177a81ad6e46b3d0fd2c23bf5bf2b8274d114abc8744efada82e635357c",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a12d2d-56c0-729c-8cc4-e8d8edeea2b2",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 4,
+        "sources": [
+          "rules",
+          "model",
+          "model",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

@@ -1,0 +1,651 @@
+{
+  "oracle": "ticketPersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "submit"
+  ],
+  "patches": [
+    {
+      "file": "helpdesk.html",
+      "before": ">Create ticket</button>",
+      "after": ">Open ticket</button>"
+    }
+  ],
+  "candidate": {
+    "roleRenames": {
+      "Create ticket": "Open ticket"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+      "helpdesk.html": "4d16ba2a6d3841021d9aa8b349c444d5bd37f4ea332b44059970b56d6538b53f"
+    },
+    "transformed": {
+      "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+      "helpdesk.html": "6d15131031b1d81e68c491d437bafeaf3458c21b5bfa92245353eb133d5aba37"
+    }
+  },
+  "familyId": "reference-helpdesk",
+  "id": "hd-drift-10",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "hd-drift-10",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "agent-email"
+          },
+          "value": {
+            "literal": "agent@helpdesk.test"
+          }
+        }
+      },
+      {
+        "id": "secret",
+        "kind": "action",
+        "operation": "fill",
+        "description": "secret",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "agent-secret"
+          },
+          "value": {
+            "literal": "desk-secret"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "queue_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "queue_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "queue-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "subject",
+        "kind": "action",
+        "operation": "fill",
+        "description": "subject",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "ticket-subject"
+          },
+          "value": {
+            "literal": "Escalation drill"
+          }
+        }
+      },
+      {
+        "id": "submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Create ticket",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "created",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "created",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "banner"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Ticket created"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/tickets"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "queue-count"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "6"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "ticketPersistence",
+    "semanticNegative": "ticket-not-persisted",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "submit"
+    ],
+    "patches": [
+      {
+        "file": "helpdesk.html",
+        "before": ">Create ticket</button>",
+        "after": ">Open ticket</button>"
+      }
+    ],
+    "candidate": {
+      "roleRenames": {
+        "Create ticket": "Open ticket"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+        "helpdesk.html": "4d16ba2a6d3841021d9aa8b349c444d5bd37f4ea332b44059970b56d6538b53f"
+      },
+      "transformed": {
+        "index.js": "0cef9731a898bc70e83afd4e7c9410b8764693f1f55aa4438f22702ff4aaa264",
+        "helpdesk.html": "6d15131031b1d81e68c491d437bafeaf3458c21b5bfa92245353eb133d5aba37"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "inspect_locator_candidates"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence",
+      "review_healing_proposal"
+    ],
+    "healingEligibility": "manual",
+    "expectedHealingAdvice": "manual_review_only",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "create-label-changed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the create control by its accessible name; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "ticket-not-persisted",
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "assistedCandidate": true
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false,
+    "manualReviewRequired": true,
+    "changeCount": 1,
+    "assistedCandidate": {
+      "positiveDrift": true,
+      "negativeSemantic": true,
+      "isolated": true,
+      "assertionsPreserved": true,
+      "promoted": false,
+      "candidateRevisionId": "rev_01a12d35-9bcd-71fa-84de-a8557531ac7b",
+      "positiveRunId": "run_01a12d35-9c27-74d8-8a7b-a210124cceb9",
+      "negativeRunId": "run_01a12d35-a557-76dc-8ab3-c4182c7f7540"
+    }
+  },
+  "usage": {
+    "inputTokens": 19575,
+    "outputTokens": 7849,
+    "reasoningTokens": 7263,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 27424,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-B6n1cf",
+    "baseRevision": {
+      "id": "rev_01a12d34-593a-759f-bb9e-e42c58b36300",
+      "protectedHash": "5b9d68f68b5b2b6dfdbe7bd2de297bc249d2683f02ac70a64546e1a81d8e93d4"
+    },
+    "healthy": {
+      "runId": "run_01a12d34-598c-7282-bd2b-2b98cb43a455",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12d34-60d4-7711-974f-25e73b3e1342",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12d34-de3c-71cf-9630-cc8041c733a0",
+      "hash": "9871acf3fed28944be16b29356605c6f7110c42b3b203ce25ad5c0693349692c",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12d35-1e33-7314-ad59-39de7c46e653",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "182f9e606735dd30ec34c526e7c92d233392c92477090e629720bb7425dd128a",
+        "responseHash": "58d77f97c91f757713e79cab1c8757a09dee27c81d0e5ebc71d8e5210db063b5",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 9087,
+          "outputTokens": 2636,
+          "reasoningTokens": 2337
+        },
+        "cost": "unknown",
+        "latencyMs": 15881,
+        "createdAt": "2026-10-11T23:03:38.291Z"
+      },
+      {
+        "id": "mdl_01a12d35-9b65-7673-bd38-bff147781ca0",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "c55ee133d4798992347c59c09f8efe2fc2643b251227506c2de3da5d13934491",
+        "responseHash": "e8f4809105d92eeed8e7f85a089e0e017e7934ca05bab6ba8edca6324c5b7857",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10488,
+          "outputTokens": 5213,
+          "reasoningTokens": 4926
+        },
+        "cost": "unknown",
+        "latencyMs": 31629,
+        "createdAt": "2026-10-11T23:04:10.341Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12d35-1e33-7314-ad59-3f8241a5de34",
+      "hash": "f48067d97fd4b36e1fcd690f64f466d74d59b93721a65d119832c60f92bd000b"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12d34-593a-759f-bb9e-e42c58b36300",
+      "candidateRevisionId": "rev_01a12d35-9bcd-71fa-84de-a8557531ac7b",
+      "baseHash": "5b9d68f68b5b2b6dfdbe7bd2de297bc249d2683f02ac70a64546e1a81d8e93d4",
+      "candidateHash": "5b9d68f68b5b2b6dfdbe7bd2de297bc249d2683f02ac70a64546e1a81d8e93d4",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12d35-9bcd-71fa-84de-a7895252905d",
+      "hash": "50b1dedcc80f7fdcecc0be4e4fcdc277fb2dfd400627cbb0f72d87cfb286ca15",
+      "status": "proposed",
+      "approvalMode": null
+    },
+    "assistedCandidate": {
+      "proof": {
+        "positiveDrift": true,
+        "negativeSemantic": true,
+        "isolated": true,
+        "assertionsPreserved": true,
+        "promoted": false,
+        "candidateRevisionId": "rev_01a12d35-9bcd-71fa-84de-a8557531ac7b",
+        "positiveRunId": "run_01a12d35-9c27-74d8-8a7b-a210124cceb9",
+        "negativeRunId": "run_01a12d35-a557-76dc-8ab3-c4182c7f7540"
+      },
+      "runs": {
+        "transformed": {
+          "runId": "run_01a12d35-9c27-74d8-8a7b-a210124cceb9",
+          "revisionId": "rev_01a12d35-9bcd-71fa-84de-a8557531ac7b",
+          "outcome": "passed",
+          "gate": "passed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "secret",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "signin",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "queue_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "subject",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "submit",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "created",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            }
+          ],
+          "reasonCodes": [
+            "assertions_satisfied",
+            "assertions_satisfied"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "494c1921becdb4c092e5a74a6862703f5465cddd53c6ea12dc0a118945e824e8",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12d34-5923-76bb-935d-ce98591da2b3",
+          "admissionHash": "d8fbe562d5ed9bbb55947954e38308133c99828c5ff420882f24ea699c90069f"
+        },
+        "semantic": {
+          "runId": "run_01a12d35-a557-76dc-8ab3-c4182c7f7540",
+          "revisionId": "rev_01a12d35-9bcd-71fa-84de-a8557531ac7b",
+          "outcome": "failed",
+          "gate": "failed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "secret",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "signin",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "queue_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "subject",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "submit",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "created",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "failed",
+              "reasonCode": "assertion_mismatch",
+              "errorCode": "Error"
+            }
+          ],
+          "reasonCodes": [
+            "assertion_mismatch",
+            "assertion_mismatch",
+            "assertion_mismatch"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "494c1921becdb4c092e5a74a6862703f5465cddd53c6ea12dc0a118945e824e8",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12d34-5923-76bb-935d-ce98591da2b3",
+          "admissionHash": "d8fbe562d5ed9bbb55947954e38308133c99828c5ff420882f24ea699c90069f"
+        }
+      },
+      "oracles": {
+        "transformed": {
+          "check": "ticketPersistence",
+          "healthy": true,
+          "defective": false,
+          "observed": {
+            "createdStatus": 201,
+            "persistedRows": 1,
+            "listedTotal": 6
+          }
+        },
+        "semantic": {
+          "check": "ticketPersistence",
+          "healthy": false,
+          "defective": true,
+          "observed": {
+            "createdStatus": 201,
+            "persistedRows": 0,
+            "listedTotal": 5
+          }
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        },
+        {
+          "action": null,
+          "source": "model"
+        },
+        {
+          "action": null,
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 3,
+        "sources": [
+          "rules",
+          "model",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}
