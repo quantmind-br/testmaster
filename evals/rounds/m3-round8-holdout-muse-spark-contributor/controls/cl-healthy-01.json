@@ -1,0 +1,203 @@
+{
+  "id": "cl-healthy-01",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12dbe-00d2-77b4-8a81-9ce40c948ca3",
+    "revisionId": "rev_01a12dbe-0074-7150-bfd2-0cc7a24c3ef1",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "blank",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "4daa8418095afd8358382149ce7cc0d3cc32577d200a243c70e9c002126b36f9",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12dbe-005e-77d4-afa0-46eb507452ac",
+    "admissionHash": "ec5cc233819f40e7ef42cf7b594ffe04132f72e6609cd8bae8ba62d71dd14046"
+  },
+  "transformed": {
+    "runId": "run_01a12dbe-0524-7409-9454-443b5d85033f",
+    "revisionId": "rev_01a12dbe-0074-7150-bfd2-0cc7a24c3ef1",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "blank",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "4daa8418095afd8358382149ce7cc0d3cc32577d200a243c70e9c002126b36f9",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12dbe-005e-77d4-afa0-46eb507452ac",
+    "admissionHash": "ec5cc233819f40e7ef42cf7b594ffe04132f72e6609cd8bae8ba62d71dd14046"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "labelValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 400,
+      "rowsBefore": 5,
+      "rowsAfter": 5
+    }
+  },
+  "transformedOracle": {
+    "check": "labelValidation",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 400,
+      "rowsBefore": 5,
+      "rowsAfter": 5
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-healthy-01",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "desk@larkspur.test",
+                "passcode": "lark-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/accessToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "blank",
+        "kind": "action",
+        "operation": "request",
+        "description": "blank",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "bookings"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "label": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "blank"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            400
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

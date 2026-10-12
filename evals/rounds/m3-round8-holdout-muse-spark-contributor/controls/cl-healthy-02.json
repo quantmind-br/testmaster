@@ -1,0 +1,249 @@
+{
+  "id": "cl-healthy-02",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12dbe-0b3d-7109-946f-5d29d3557b4a",
+    "revisionId": "rev_01a12dbe-0ad6-7596-a682-161f0978353c",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "create",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "bookings",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "557bac157daf2043757bc79268f1e186d5ced76fc5bb28fd0dd5e092933bfad4",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12dbe-0abd-74bd-bd63-24c4da4292a8",
+    "admissionHash": "3097980fb54112c913244a1a8f80f4b6b40fc995d9aca5161147f180be5acb5c"
+  },
+  "transformed": {
+    "runId": "run_01a12dbe-0f38-71a8-b740-ffc6a7895fe2",
+    "revisionId": "rev_01a12dbe-0ad6-7596-a682-161f0978353c",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "create",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "bookings",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "557bac157daf2043757bc79268f1e186d5ced76fc5bb28fd0dd5e092933bfad4",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12dbe-0abd-74bd-bd63-24c4da4292a8",
+    "admissionHash": "3097980fb54112c913244a1a8f80f4b6b40fc995d9aca5161147f180be5acb5c"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "bookingPersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "createdStatus": 201,
+      "persistedRows": 1,
+      "listedCount": 6
+    }
+  },
+  "transformedOracle": {
+    "check": "bookingPersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "createdStatus": 201,
+      "persistedRows": 1,
+      "listedCount": 6
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-healthy-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "desk@larkspur.test",
+                "passcode": "lark-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/accessToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "create",
+        "kind": "action",
+        "operation": "request",
+        "description": "create",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "bookings"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "label": "Persistence check"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "bookings",
+        "kind": "action",
+        "operation": "request",
+        "description": "bookings",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "bookings"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "size"
+              },
+              "value": {
+                "literal": "100"
+              }
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "bookings",
+          "jsonPointer": "/count"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 6
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

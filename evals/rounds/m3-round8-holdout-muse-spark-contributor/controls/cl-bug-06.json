@@ -1,0 +1,279 @@
+{
+  "id": "cl-bug-06",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12db1-a9ae-73aa-93b3-d5f32ca00d1b",
+    "revisionId": "rev_01a12db1-a970-70c1-96b0-ebe6a4031816",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "bookings",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0331187de68173b572944b9e2d95841fca1f3acad65e451f7323aa9963a1f6e6",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12db1-a95b-7549-af0a-d9ce67b76951",
+    "admissionHash": "a4f9041db2e03bc4a26770ab97b28407e872b17e8c9fd4d3e089048bc53406af"
+  },
+  "transformed": {
+    "runId": "run_01a12db1-adc8-757f-93d9-c4a209363a7d",
+    "revisionId": "rev_01a12db1-a970-70c1-96b0-ebe6a4031816",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "bookings",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0331187de68173b572944b9e2d95841fca1f3acad65e451f7323aa9963a1f6e6",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12db1-a95b-7549-af0a-d9ce67b76951",
+    "admissionHash": "a4f9041db2e03bc4a26770ab97b28407e872b17e8c9fd4d3e089048bc53406af"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "bookingSchema",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "results": [
+        {
+          "id": "b1",
+          "label": "Annual physical",
+          "slot": "standard",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 240
+        },
+        {
+          "id": "b2",
+          "label": "Vaccination follow-up",
+          "slot": "urgent",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 60
+        },
+        {
+          "id": "b3",
+          "label": "Dental cleaning",
+          "slot": "standard",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 240
+        },
+        {
+          "id": "b4",
+          "label": "Allergy retest",
+          "slot": "routine",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 480
+        },
+        {
+          "id": "b5",
+          "label": "Chest pain consult",
+          "slot": "emergency",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 15
+        }
+      ],
+      "count": 5,
+      "nextPageNo": 2
+    }
+  },
+  "transformedOracle": {
+    "check": "bookingSchema",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "results": [
+        {
+          "id": "b1",
+          "label": "Annual physical",
+          "kind": "standard",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 240
+        },
+        {
+          "id": "b2",
+          "label": "Vaccination follow-up",
+          "kind": "urgent",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 60
+        },
+        {
+          "id": "b3",
+          "label": "Dental cleaning",
+          "kind": "standard",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 240
+        },
+        {
+          "id": "b4",
+          "label": "Allergy retest",
+          "kind": "routine",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 480
+        },
+        {
+          "id": "b5",
+          "label": "Chest pain consult",
+          "kind": "emergency",
+          "status": "open",
+          "assignee": null,
+          "responseMinutes": 15
+        }
+      ],
+      "count": 5,
+      "nextPageNo": 2
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "desk@larkspur.test",
+                "passcode": "lark-passcode"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/accessToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "bookings",
+        "kind": "action",
+        "operation": "request",
+        "description": "bookings",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "bookings"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "bookings",
+          "jsonPointer": "/results/0/slot"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "standard"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

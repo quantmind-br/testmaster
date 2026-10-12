@@ -1,0 +1,218 @@
+{
+  "id": "cl-drift-07",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a12dc1-fd02-7632-b614-7461a87589be",
+    "revisionId": "rev_01a12dc1-fcb3-71dd-be1a-ffab2fb6952c",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "passcode",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "start_shift",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "board_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "label",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "b30d4db0865af175c149439e6eddfd42af65984e308763b790d46884f2c77fe1",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12dc1-fc98-75ad-84aa-9ed4f5fd5b0a",
+    "admissionHash": "3b739a0c8d2fd19dc7ad1afd91a2435be9ebc27b5a60b460f73e21618b553ac1"
+  },
+  "transformed": {
+    "runId": "run_01a12dc2-0388-765d-9bfe-1657cb6d9759",
+    "revisionId": "rev_01a12dc1-fcb3-71dd-be1a-ffab2fb6952c",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "passcode",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "start_shift",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "board_ready",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "label",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "b30d4db0865af175c149439e6eddfd42af65984e308763b790d46884f2c77fe1",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12dc1-fc98-75ad-84aa-9ed4f5fd5b0a",
+    "admissionHash": "3b739a0c8d2fd19dc7ad1afd91a2435be9ebc27b5a60b460f73e21618b553ac1"
+  },
+  "proposal": {
+    "analysisId": "ana_01a12dc2-820f-720b-8505-3cdad4ce75b1",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a12dc1-fcb3-71dd-be1a-ffab2fb6952c",
+    "candidateRevisionId": "rev_01a12dc2-82c6-7079-b9ee-3ce788bc4444",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "passcode",
+        "value": {
+          "by": "testId",
+          "value": "login-passcode"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T01:38:04.615Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "7debdb36d803a4672ff18605bf91dd78b5a1cea0502e18a965cc1b907ae319e7",
+        "runId": "run_01a12dc2-0388-765d-9bfe-1657cb6d9759"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a12dc1-fc8a-74a2-91e9-c7d9fee11f69"
+    },
+    "failedRunId": "run_01a12dc2-0388-765d-9bfe-1657cb6d9759",
+    "id": "hea_01a12dc2-82c5-7447-8218-a413ab5c7b8b",
+    "limitations": [],
+    "modelCallId": "mdl_01a12dc2-826e-728f-a078-e3c692b49720",
+    "policyHash": "f793626975c4ffedee8c56871fab574508bf0c2be7cf1fd7123d9136e501b04e",
+    "preservedAssertionsHash": "77fe34aa79d8441ec6d0f4db5605e347f45c5c14a4aa7dd9acba4350d70a43ff",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a12dc1-fcb2-7362-beaf-2f33c922d342",
+    "verificationRunId": "run_01a12dc2-831c-703e-92aa-b3ef77e7032d",
+    "version": 3,
+    "workspaceId": "ws_01a12dc1-fc89-76c1-9651-54608ca22b02"
+  }
+}

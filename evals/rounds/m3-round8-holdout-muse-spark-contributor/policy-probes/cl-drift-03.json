@@ -1,0 +1,215 @@
+{
+  "id": "cl-drift-03",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a12dbf-dca7-77a8-9e4d-660d31c8690f",
+    "revisionId": "rev_01a12dbf-dc69-76ba-8d88-d0792759a83a",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "passcode",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "start_shift",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "board_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "label",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "5666d3a0340da6004f0f380c9d4e7802b954d4eaf4568a7fcae8952f7c33f311",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12dbf-dc4d-7257-88a5-e530211e13f2",
+    "admissionHash": "d535dea2b76d02884c29ff0e98f01cf33dbdcc6b980b646877cbc2283877a199"
+  },
+  "transformed": {
+    "runId": "run_01a12dbf-e367-71a7-80ea-e386371907cf",
+    "revisionId": "rev_01a12dbf-dc69-76ba-8d88-d0792759a83a",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "passcode",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "start_shift",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "board_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "label",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "5666d3a0340da6004f0f380c9d4e7802b954d4eaf4568a7fcae8952f7c33f311",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12dbf-dc4d-7257-88a5-e530211e13f2",
+    "admissionHash": "d535dea2b76d02884c29ff0e98f01cf33dbdcc6b980b646877cbc2283877a199"
+  },
+  "proposal": {
+    "analysisId": "ana_01a12dc0-62bd-751d-af9e-a9c8e0adc732",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a12dbf-dc69-76ba-8d88-d0792759a83a",
+    "candidateRevisionId": "rev_01a12dc0-643d-756d-acef-b3f5357ce3d9",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "label",
+        "value": {
+          "by": "testId",
+          "value": "visit-ref"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T01:35:45.726Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "6492ffee8fa3b36d415ac12c06982fe440d65c3b016b10c7405373f30824a081",
+        "runId": "run_01a12dbf-e367-71a7-80ea-e386371907cf"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a12dbf-dc40-76dc-85dd-ac4e36947171"
+    },
+    "failedRunId": "run_01a12dbf-e367-71a7-80ea-e386371907cf",
+    "id": "hea_01a12dc0-643b-7494-925f-d777c87cbc7c",
+    "limitations": [],
+    "modelCallId": "mdl_01a12dc0-63be-7665-b675-fafb62d827eb",
+    "policyHash": "b38daec577a83e45540b32ce6be2731a19203e957e0ed68c45b3e46befa24e38",
+    "preservedAssertionsHash": "77fe34aa79d8441ec6d0f4db5605e347f45c5c14a4aa7dd9acba4350d70a43ff",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a12dbf-dc66-75a4-b125-cfd73b73bdaa",
+    "verificationRunId": "run_01a12dc0-64a2-714a-90bb-4ca992e528c2",
+    "version": 3,
+    "workspaceId": "ws_01a12dbf-dc3f-7138-b850-7260111f65b1"
+  }
+}

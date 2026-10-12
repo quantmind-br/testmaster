@@ -1,0 +1,141 @@
+{
+  "id": "cl-bug-05",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12db1-994a-77eb-9bc0-eb4ea27d4b69",
+    "revisionId": "rev_01a12db1-990a-74a5-9d3e-877a406d5d03",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "unauthorized",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "6dcfbaa46fdfb8fd92f6256a3e97245de4a711286d68397fecd3a95932985974",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12db1-98f3-7478-b103-1e4dea519b7a",
+    "admissionHash": "e9bf64240a132a869dc343e39859639e035d732b82be24c082d680207cc585f5"
+  },
+  "transformed": {
+    "runId": "run_01a12db1-a1bf-7091-9be6-54a2cb1bdd84",
+    "revisionId": "rev_01a12db1-990a-74a5-9d3e-877a406d5d03",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "unauthorized",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "6dcfbaa46fdfb8fd92f6256a3e97245de4a711286d68397fecd3a95932985974",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12db1-98f3-7478-b103-1e4dea519b7a",
+    "admissionHash": "e9bf64240a132a869dc343e39859639e035d732b82be24c082d680207cc585f5"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "bookingsAuthorization",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 401,
+      "leakedBooking": false
+    }
+  },
+  "transformedOracle": {
+    "check": "bookingsAuthorization",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "status": 200,
+      "leakedBooking": true
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-bug-05",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "unauthorized",
+        "kind": "action",
+        "operation": "request",
+        "description": "unauthorized",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "bookings"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "unauthorized"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}
