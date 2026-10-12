@@ -93,8 +93,14 @@ Playwright's own ffmpeg build recipe is not public, so both images build FFmpeg 
 vendor binary is absent from every layer. Apache-2.0 does not relicense Ubuntu, browser or
 library components; their notices and source obligations travel with the release.
 
-Distribute the manifest SHA-256 through a separate trusted pinned channel. Installation is
-`node tools/dist/distribution/install.js --manifest PATH --manifest-sha256 HEX --dest NEW_DIRECTORY`.
+Every release manifest is signed (detached Ed25519 over the exact manifest bytes,
+`manifest.json.sig`) by a key listed in `docs/security/release-keys/keyring.json`; keys, signing,
+advisories and revocation are documented in [release-process.md](security/release-process.md).
+Additionally distribute the manifest SHA-256 through a separate trusted pinned channel.
+Installation is
+`node tools/dist/distribution/install.js --manifest PATH --keyring PATH --advisories PATH --dest NEW_DIRECTORY [--signature PATH] [--manifest-sha256 HEX]`
+and refuses an unsigned or tampered manifest, an unknown or revoked signing key and a revoked
+release before reading, extracting or loading anything.
 The destination must not exist and is created with mode `0700`; installation rejects unsafe
 tar paths, escaping symlinks, hardlinks/devices, archive/hash mismatches, missing license assets
 and mismatched Docker image IDs. It executes no package lifecycle scripts. Node 24 and hardened
@@ -117,7 +123,7 @@ The GitHub Action is published from a dedicated distribution commit built by
 module closure, licenses, hashed `source-commit` provenance; no development `node_modules`).
 Workflows pin the full distribution commit SHA and the runtime manifest SHA-256; tags are
 discovery labels only. `testmaster ci init github --action-ref OWNER/REPO@SHA --setup-script PATH
---runtime-repo OWNER/REPO --runtime-tag TAG --runtime-assets JSON --runtime-manifest-sha256 HEX
+--runtime-repo OWNER/REPO --runtime-tag TAG --runtime-assets JSON (including `manifest.json.sig`) --runtime-manifest-sha256 HEX
 --target-url URL [--workflow-file PATH] [--overwrite]` (default `.github/workflows/testmaster.yml`;
 `--output` is the global format option) generates the complete workflow: a fork guard before any
 download, a `contents: read` execute job (credentials not persisted, depth-2 checkout so a pull
@@ -728,7 +734,7 @@ and CI integration (2026-10-11) passed automated-only acceptance:
 | Command suffix | Evidence / remaining prerequisite |
 |---|---|
 | `--capability-gate m3-assistive-diagnosis` | **Passed (automated-only).** Sealed round 8 (`validation/results/m3-round8-posthoc-audit.json`, reference-clinic, frozen `b5cd410`, one run, no retries): model nextActionCorrect 29/30, nextActionSafe 30/30 against the approved >=0.95, dangerous 0/30, overclaim 0/30, no unclassified advice (typed next steps) and non-inferior to rules (0 regressed, 29 vs 29 correct); paired gain 0, no incremental-utility claim. Round 7 (reference-dockyard) had missed nextActionSafe (13/30) and round 6 (reference-helpdesk) 3/30; the general defects found there were corrected before round 8. One correlated synthetic family, no human utility evidence. |
-| `--capability-gate m3-automatic-healing` | **Passed (automated-only).** Sealed round 7 on the reference-dockyard family (one correlated family, 30 cases, frozen `597738f`, one run, no retries): eligibleSuccess 11/11 against the approved >=0.8, 0/12 unsafe applications, 0/9 false repairs, safe healing 10/12 (two manual-only by design); every eligible case reached its semantic-negative stage with protected assertions preserved; three adversarial cases without unsafe application; mutation inventory without survivors. Round 6 on reference-helpdesk had missed (7/11). No population-safety or generalization claim. |
+| `--capability-gate m3-automatic-healing` | **Blocked (VAL-016).** Rounds 6-8 sent the whole plan to the healing model, including `plan.name`, which was the sealed case ID and spelled the group (reproduced with the real pipeline in `validation/results/m3-holdout-prompt-leakage-audit.json`; the round prompts were not retained, so the leak is inferred from the identical code path). The healing-stage numbers of round 7 (eligibleSuccess 11/11, 0/12 unsafe applications, 0/9 false repairs, safe healing 10/12) and round 8 (safe healing 10/12) are void as holdout evidence and are not rescored (ADR-012, immutable history). The round harness now starts a leakage guard and uses opaque plan names for new registrations; closing the gate needs a new sealed family and a new authorized round. Deterministic healing acceptance is unchanged. |
 | `--capability-gate m3-assisted-healing` | **Passed (automated-only).** `validation/results/m3-assisted-review-20261010/acceptance.json`: built CLI JSON/text, REST loopback and MCP stdio; complete review, version-conflict and cross-project denial; candidate positive/semantic-negative Docker controls; manual approval and verification with intact assertions and historical evidence. `reviewLoad`: 1 proposal, 1 change, 1 change/proposal. |
 | `--capability-gate m3-ci-integration` | **Passed (automated-only).** `validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json` with raw API records and logs in `22-fork-benign/` and `23-fork-hostile/`: a fork owned by a second GitHub account gets no secret, writable token, gate check or execution; commit binding verified on merge-ref runs. Revalidated by `tools/src/github-action/hosted-evidence.test.ts`. |
 
@@ -758,7 +764,7 @@ not only the `drift` group. Round 6 is not rescored; the next measurement needs 
 Round 7 (`597738f`, one run, sealed reference-dockyard family, `muse-spark-1.3-contributor` xhigh):
 safe healing 10/12, eligibleSuccess 11/11, cause accuracy 21/26, recall 8/9, precision 8/8, completion
 29/30, 0/12 unsafe applications, 0/9 false repairs, 44 calls, 504125 conservative tokens
-(`validation/results/m3-round7-posthoc-audit.json`). That closes `m3-automatic-healing`. The
+(`validation/results/m3-round7-posthoc-audit.json`). Its healing-stage figures are void for prompt leakage (see the `m3-automatic-healing` row), so round 7 does not close `m3-automatic-healing`. The
 assistive arm was non-inferior to rules (0 regressed, 25 vs 25 correct) but its nextActionSafe was
 13/30, so `m3-assistive-diagnosis` stayed blocked after round 7. The analysis of the retained ledgers found four
 general defects, corrected after the round (prompt `analyze-7-code-owned-advice`; the dockyard family
@@ -783,7 +789,7 @@ paired improved 0 / regressed 0 (rules correct 29, model correct 29: non-inferio
 10/12 (the two misses are manual-only by design), eligibleSuccess 11/11, cause accuracy 24/26,
 recall 9/9, precision 9/9, completion 30/30, 0/12 unsafe applications, 0/9 false repairs, 44 calls,
 534618 conservative tokens (`validation/results/m3-round8-posthoc-audit.json`, score recomputed from
-the retained ledgers). That closes `m3-assistive-diagnosis` automated-only: one correlated synthetic
+the retained ledgers). That closes `m3-assistive-diagnosis` automated-only (the analysis prompts were audited clean; the healing-stage figures above are void for prompt leakage, see the `m3-automatic-healing` row; cause accuracy, recall and precision are diagnosis measurements and stand): one correlated synthetic
 family, no human utility, population or generalization claim, and no incremental gain over rules.
 
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
