@@ -802,8 +802,8 @@ Round 9 (`b476bb8`, one run, sealed reference-hostel family authored after the f
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
 targets/controls, waived invariants or critical/high findings. It does not require unrelated release
-areas, but the full normative inventory still applies. `check --milestone-gate M3` remains the
-cumulative red gate; this scoped pass does not graduate M3 or GA.
+areas, but the full normative inventory still applies. `check --milestone-gate M3` is the
+cumulative gate (passing since 2026-10-12 under ADR-013, below); a scoped pass alone does not graduate M3 or GA.
 
 Release areas carry `gate` (`M0`..`M6` or `claim`) and `series`. A cumulative milestone gate is
 blocked by a non-passed area only when its `gate` is not `claim`, is not later than the gate being
@@ -813,6 +813,35 @@ line. Supersession is additive metadata: a failed area keeps its decision and nu
 registry item may declare `deferred` residual scope owned by a later milestone with a literal
 specification quote; it blocks every gate at or after that milestone. See
 [ADR-013](adr/013-release-area-supersession.md).
+
+#### Cumulative M3 gate (2026-10-12)
+
+`node tools/dist/traceability/cli.js check --milestone-gate M3` passes at `1838f47`
+(`validation/results/release-evaluations/M3/1838f47f87ff2944b3bbc00bab79efe3c09b08db.json`, written once by
+`evaluate --milestone-gate M3` from a clean worktree; the four capability gates have records beside it, and the
+earlier failed record `a3ac6e35...` stays as history). Procedure for a new record: commit, run `evaluate` in a clean
+worktree of that commit, commit the record; re-evaluating the same commit refuses (`already recorded`).
+
+How the gate passes ([ADR-013](adr/013-release-area-supersession.md); nothing historical was rewritten and no target was relaxed):
+
+- Seven failed or blocked qwen3.8 and early Muse loop areas are superseded by the passed round 9 area of the same series; their
+  decisions stay `failed`/`blocked`. Claims cover the round 9 model and configuration (`muse-spark-1.3-contributor`, xhigh);
+  qwen3.8 diagnosis and healing are not claimed.
+- The six M2 generation areas are claim-scoped: they block only the homologated model-generation claim, which stays unmade.
+- `public-release` is an M6 area and does not block the M3 gate.
+- Local engineering for the remaining M3 items was verified with real tests and evidence (OPS-001/005/011/012/021-025/027/035/038, SEC-013/022/036/037/039/045/046/047,
+  NFR-003/011, INT-007, M0-05, M2-08, VAL-003/007/050 and others); SEC-045 evidence is `validation/results/sec-045-scan/`.
+- Residual scope owned by later milestones is deferred with a literal quote and blocks every gate at or after its milestone
+  (`check --milestone-gate M4` lists it):
+
+- **M4**: ARCH-004, INV-014, J05, J12, NFR-003, OPS-001, OPS-005, OPS-011, OPS-021, OPS-022, OPS-024, OPS-025, OPS-027, OPS-035, OPS-037, OPS-038, SEC-013, SEC-022, SEC-036, SEC-037, SEC-039, SEC-047, VAL-007, VAL-033, VAL-035, VAL-045.
+- **M5**: J08, J12, OPS-001, OPS-035, REQ-028, VAL-035.
+- **M6**: M0-05, OPS-035, VAL-035, VAL-045.
+
+The per-item scope and quote tables live in ADR-013.
+
+Claim limits: rootful hardened Docker only (rootless unvalidated, [ADR-014](adr/014-rootless-deferral.md)); generation quality is
+claim-only; no GA; webhook, GitHub App, preview, advanced browser matrix and server-profile scope remain M4/M5.
 
 Reproduce the assisted-review journey after `pnpm build` with
 `TMPDIR=/tmp pnpm exec vitest run --project docker validation/journeys/m3-healing-acceptance.docker.test.ts -t 'HEAL-003 automated assisted review'`
