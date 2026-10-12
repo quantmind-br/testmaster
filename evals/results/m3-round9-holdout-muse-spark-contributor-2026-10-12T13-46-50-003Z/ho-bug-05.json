@@ -1,0 +1,265 @@
+{
+  "oracle": "rosterAuthorization",
+  "mutant": "roster-auth-bypass",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "digests": {
+    "healthy": {
+      "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+      "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+    },
+    "transformed": {
+      "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+      "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+    }
+  },
+  "familyId": "reference-hostel",
+  "id": "ho-bug-05",
+  "group": "bug",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "ho-bug-05",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "unauthorized",
+        "kind": "action",
+        "operation": "request",
+        "description": "unauthorized",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "unauthorized"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            401
+          ]
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "rosterAuthorization",
+    "mutant": "roster-auth-bypass",
+    "expectedFailingStepIds": [
+      "business_assertion"
+    ],
+    "digests": {
+      "healthy": {
+        "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+        "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+      },
+      "transformed": {
+        "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+        "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "compare_requirement"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "product_bug",
+      "mechanism": "roster-auth-bypass"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "product_bug",
+      "rationale": "An unauthenticated stay listing is required to answer 401 and the recorded status is 200; the contradicted status establishes a product defect."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "product_bug",
+  "controls": {},
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "product_bug",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 2224,
+    "outputTokens": 4216,
+    "reasoningTokens": 3969,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 6440,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-EoGkEi",
+    "baseRevision": {
+      "id": "rev_01a1306d-d5d9-708f-8aec-91522afdae03",
+      "protectedHash": "aada3accfcc7dc3250c915c934ee4668e03d9d02afc4d07c8f65b5298e877df4"
+    },
+    "healthy": {
+      "runId": "run_01a1306d-d613-72b1-8923-396d71234b2e",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a1306d-d9b5-775b-93a5-4345e3449bf7",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a1306d-dcb3-74f5-8e53-5032639e4821",
+      "hash": "45d317e05da5838b56ef923601c6f9cbf19e74df662eb5ecca74bafcbf3aa8bb",
+      "failureKind": "product_bug"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a1306e-1cfb-7098-b93e-1d4ef425c5b7",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "63cb173f807d26388d09670a4ba7a7c1ef096d39ff3370f085e689643e5dd0c0",
+        "responseHash": "adc082e0c077a8c245dd3740f316f5dc54ff45f4ffb9beb34a1e06a93dad847e",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 2224,
+          "outputTokens": 4216,
+          "reasoningTokens": 3969
+        },
+        "cost": "unknown",
+        "latencyMs": 16414,
+        "createdAt": "2026-10-12T14:04:45.179Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a1306e-1cfb-7098-b93e-218a68945955",
+      "hash": "b47a5e967aa0d1c71c4a1a7b28659fadb7b24b5af143ef37497e53f90e4c1cff"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "semantic_failure",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a1306e-1d06-7731-ab37-c930230d3858",
+      "job": {
+        "state": "completed",
+        "result": {
+          "reason": "semantic_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "compare_requirement",
+      "recommendedActions": [
+        {
+          "action": "compare_requirement",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "product_bug"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

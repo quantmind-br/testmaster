@@ -1,0 +1,470 @@
+{
+  "oracle": "bumpPersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "bump"
+  ],
+  "patches": [
+    {
+      "file": "hostel.html",
+      "before": "<button class=\"step\" data-testid=\"${bumpHook}\" data-stay=\"${esc(item.id)}\" ${item.state === 'departed' ? 'disabled' : ''}>Move up a tier</button>",
+      "after": "<span class=\"grp\"><button class=\"step\" data-testid=\"${bumpHook}\" data-stay=\"${esc(item.id)}\" ${item.state === 'departed' ? 'disabled' : ''}>Move up a tier</button></span>"
+    }
+  ],
+  "candidate": {
+    "cssDescendant": true
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+      "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+    },
+    "transformed": {
+      "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+      "hostel.html": "39bdfa4390051e7b17ea8558bbfe51f24643dfa6183e0adfd64a36b41dca3239"
+    }
+  },
+  "familyId": "reference-hostel",
+  "id": "ho-drift-11",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "ho-drift-11",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_signin",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_signin",
+        "required": true,
+        "input": {
+          "path": "/signin"
+        }
+      },
+      {
+        "id": "handle",
+        "kind": "action",
+        "operation": "fill",
+        "description": "handle",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "desk-login"
+          },
+          "value": {
+            "literal": "front@marlow.test"
+          }
+        }
+      },
+      {
+        "id": "pin",
+        "kind": "action",
+        "operation": "fill",
+        "description": "pin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "desk-pin"
+          },
+          "value": {
+            "literal": "marlow-pin-77"
+          }
+        }
+      },
+      {
+        "id": "open_desk",
+        "kind": "action",
+        "operation": "click",
+        "description": "open_desk",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Open desk",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "arrivals_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "arrivals_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "arrivals-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "assign",
+        "kind": "action",
+        "operation": "click",
+        "description": "assign",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "assign-s1"
+          }
+        }
+      },
+      {
+        "id": "assigned",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "assigned",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "flash"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Bed assigned"
+          }
+        }
+      },
+      {
+        "id": "open_in_house",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_in_house",
+        "required": true,
+        "input": {
+          "path": "/in-house"
+        }
+      },
+      {
+        "id": "bump",
+        "kind": "action",
+        "operation": "click",
+        "description": "bump",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#stage > section.cards > article.card > div.acts > button.step"
+          }
+        }
+      },
+      {
+        "id": "bumped",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "bumped",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "flash"
+          }
+        },
+        "expectation": {
+          "predicate": "textContains",
+          "value": {
+            "literal": "Moved up to"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/in-house"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "cell-tier"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "private"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "bumpPersistence",
+    "semanticNegative": "bump-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "bump"
+    ],
+    "patches": [
+      {
+        "file": "hostel.html",
+        "before": "<button class=\"step\" data-testid=\"${bumpHook}\" data-stay=\"${esc(item.id)}\" ${item.state === 'departed' ? 'disabled' : ''}>Move up a tier</button>",
+        "after": "<span class=\"grp\"><button class=\"step\" data-testid=\"${bumpHook}\" data-stay=\"${esc(item.id)}\" ${item.state === 'departed' ? 'disabled' : ''}>Move up a tier</button></span>"
+      }
+    ],
+    "candidate": {
+      "cssDescendant": true
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+        "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+      },
+      "transformed": {
+        "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+        "hostel.html": "39bdfa4390051e7b17ea8558bbfe51f24643dfa6183e0adfd64a36b41dca3239"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "inspect_locator_candidates"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence",
+      "review_healing_proposal"
+    ],
+    "healingEligibility": "manual",
+    "expectedHealingAdvice": "manual_review_only",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "bump-button-wrapped"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the tier-move control through a child-combinator CSS path; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "bump-without-persist",
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true,
+    "manualReviewRequired": false,
+    "changeCount": 1
+  },
+  "usage": {
+    "inputTokens": 21610,
+    "outputTokens": 8404,
+    "reasoningTokens": 7803,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 30014,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-asvckE",
+    "baseRevision": {
+      "id": "rev_01a13085-38be-7137-9527-06779be67f4a",
+      "protectedHash": "6494caa90463226577fc4f95ce36ca24d6469f0a81f5532d32171058568fc77e"
+    },
+    "healthy": {
+      "runId": "run_01a13085-39d5-7390-ada4-975633a61054",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a13085-54dd-7535-970d-ff189f053da8",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a13085-d7eb-71c2-b876-b1e4b77beb89",
+      "hash": "768718288c67560e01327a9ff0eaa5e7129835a220f1e8f8163eb646db96041b",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a13086-476b-717f-b988-4eadf7bad7ff",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "ad82e4d277bd75d469b33ef7c986d4d2a9fd5b7a195b60a63817a902a15e17c4",
+        "responseHash": "aaabf7cb7d81396275b4592f1f1c5b658c482dee4ed95d7e54e0cbdbb06ed16e",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10605,
+          "outputTokens": 5151,
+          "reasoningTokens": 4797
+        },
+        "cost": "unknown",
+        "latencyMs": 27562,
+        "createdAt": "2026-10-12T14:31:08.907Z"
+      },
+      {
+        "id": "mdl_01a13086-ab58-716a-b647-c54f82bddc8a",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "a5eca4b79aa7ee1abaed44dcb0636b7bbce09ebaf052c758b8b126ff0570a594",
+        "responseHash": "43e89fc77580b5d43cc60ad0a545f0eec8d257c3f261fdbdf6280db84b89426c",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 11005,
+          "outputTokens": 3253,
+          "reasoningTokens": 3006
+        },
+        "cost": "unknown",
+        "latencyMs": 25084,
+        "createdAt": "2026-10-12T14:31:34.489Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a13086-476c-71bc-80d0-39e569d8205f",
+      "hash": "eb4938766e1770eb9f1051a014ec9847b8e7be44f4b21e61b9ae7efe30fcb3a3"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a13085-38be-7137-9527-06779be67f4a",
+      "candidateRevisionId": "rev_01a13086-ac01-768d-9491-bef491de7c68",
+      "baseHash": "6494caa90463226577fc4f95ce36ca24d6469f0a81f5532d32171058568fc77e",
+      "candidateHash": "6494caa90463226577fc4f95ce36ca24d6469f0a81f5532d32171058568fc77e",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a13086-ac00-713a-9849-6b9a4a39ea00",
+      "hash": "0ab1a748e08cdb2d4b0fadf02b45b24087056f805f998478ed080e3bca7d6577",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a13085-38be-7137-9527-06779be67f4a",
+      "candidateRevisionId": "rev_01a13086-ac01-768d-9491-bef491de7c68",
+      "baseHash": "6494caa90463226577fc4f95ce36ca24d6469f0a81f5532d32171058568fc77e",
+      "candidateHash": "6494caa90463226577fc4f95ce36ca24d6469f0a81f5532d32171058568fc77e",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a13086-b81b-72c1-9eff-0a53a52e85da",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

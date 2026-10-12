@@ -1,0 +1,449 @@
+{
+  "oracle": "stayPersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "guest"
+  ],
+  "patches": [
+    {
+      "file": "hostel.html",
+      "before": "data-testid=\"guest-name\"",
+      "after": "data-testid=\"guest-ref\""
+    }
+  ],
+  "candidate": {
+    "testIdRenames": {
+      "guest-name": "guest-ref"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+      "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+    },
+    "transformed": {
+      "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+      "hostel.html": "6796a48b55764fceff535c4aa4f1a06ab838e40f5c7bc02b515ab5553e4219d3"
+    }
+  },
+  "familyId": "reference-hostel",
+  "id": "ho-drift-03",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "ho-drift-03",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_signin",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_signin",
+        "required": true,
+        "input": {
+          "path": "/signin"
+        }
+      },
+      {
+        "id": "handle",
+        "kind": "action",
+        "operation": "fill",
+        "description": "handle",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "desk-login"
+          },
+          "value": {
+            "literal": "front@marlow.test"
+          }
+        }
+      },
+      {
+        "id": "pin",
+        "kind": "action",
+        "operation": "fill",
+        "description": "pin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "desk-pin"
+          },
+          "value": {
+            "literal": "marlow-pin-77"
+          }
+        }
+      },
+      {
+        "id": "open_desk",
+        "kind": "action",
+        "operation": "click",
+        "description": "open_desk",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Open desk",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "arrivals_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "arrivals_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "arrivals-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "guest",
+        "kind": "action",
+        "operation": "fill",
+        "description": "guest",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "guest-name"
+          },
+          "value": {
+            "literal": "Rafael Okonkwo"
+          }
+        }
+      },
+      {
+        "id": "submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Reserve bunk",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "created",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "created",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "flash"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Bunk reserved"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/arrivals"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "arrivals-total"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "6"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "stayPersistence",
+    "semanticNegative": "stay-not-stored",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "guest"
+    ],
+    "patches": [
+      {
+        "file": "hostel.html",
+        "before": "data-testid=\"guest-name\"",
+        "after": "data-testid=\"guest-ref\""
+      }
+    ],
+    "candidate": {
+      "testIdRenames": {
+        "guest-name": "guest-ref"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+        "hostel.html": "a9baab1389dbbc8e25f199852967a90abfc9cc3d89ecd76a7306884dac9eb0f4"
+      },
+      "transformed": {
+        "index.js": "4f7afb8def1821b0aa91a35f53975d172de09d2c9bed7a391f77d79aca69ef27",
+        "hostel.html": "6796a48b55764fceff535c4aa4f1a06ab838e40f5c7bc02b515ab5553e4219d3"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "healingEligibility": "automatic",
+    "expectedHealingAdvice": "proposal_possible",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "guest-field-testid-renamed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that fills the guest name field by its test id; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "stay-not-stored",
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true,
+    "manualReviewRequired": false,
+    "changeCount": 1
+  },
+  "usage": {
+    "inputTokens": 19733,
+    "outputTokens": 9447,
+    "reasoningTokens": 8751,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 29180,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-u9cLhf",
+    "baseRevision": {
+      "id": "rev_01a13075-9e86-70a5-8baa-5b5c1d4c9826",
+      "protectedHash": "6ff60b26fe49cd500584d7bae2bc57f6a435b63207629305fb05c53c7a9c5f6d"
+    },
+    "healthy": {
+      "runId": "run_01a13075-9eed-73d6-96be-7f56a7ff9a6d",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a13075-a62a-7450-86f6-060908086f55",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a13076-225c-77b0-967f-c6c902e690e5",
+      "hash": "5c110cfc112774a3818d41e0f4d6d3ea24a27cb98f174edfad84c0787d099f7e",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a13076-a981-7795-8189-8dffe091f59a",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "cbba7868353a49cd83aa16b5c4b22f6d4d7fa776a28bcdbf1e79b6d7c62d15ed",
+        "responseHash": "916ab9fef99c59d08d35f54f4d82384d8fd3cc59b0620b61364563412254e076",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 9191,
+          "outputTokens": 4783,
+          "reasoningTokens": 4341
+        },
+        "cost": "unknown",
+        "latencyMs": 34152,
+        "createdAt": "2026-10-12T14:14:05.441Z"
+      },
+      {
+        "id": "mdl_01a13077-3eec-71bd-b801-520977d4f2ba",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "f2b681ba364236b12453fd9d8d69cf4a5aa66f3061423c50d6053f208ede1101",
+        "responseHash": "619fb065dce1b8d68905a99c79da2b310e4c21a8788a41eac1197e1337c82707",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10542,
+          "outputTokens": 4664,
+          "reasoningTokens": 4410
+        },
+        "cost": "unknown",
+        "latencyMs": 37930,
+        "createdAt": "2026-10-12T14:14:43.693Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a13076-a982-7574-8d7d-d737f214cb11",
+      "hash": "0223a72bf4b4baca35002ae9a297e85efec68a20c725f399403124498e80ea2e"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a13075-9e86-70a5-8baa-5b5c1d4c9826",
+      "candidateRevisionId": "rev_01a13077-3f6d-7760-b875-6368435bf144",
+      "baseHash": "6ff60b26fe49cd500584d7bae2bc57f6a435b63207629305fb05c53c7a9c5f6d",
+      "candidateHash": "6ff60b26fe49cd500584d7bae2bc57f6a435b63207629305fb05c53c7a9c5f6d",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a13077-3f6c-76b0-8b57-472315f8fc31",
+      "hash": "63107392ebf9fa9fb33ec4610f8debbde53a846444d11e8dcb4db4a99d18e85a",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a13075-9e86-70a5-8baa-5b5c1d4c9826",
+      "candidateRevisionId": "rev_01a13077-3f6d-7760-b875-6368435bf144",
+      "baseHash": "6ff60b26fe49cd500584d7bae2bc57f6a435b63207629305fb05c53c7a9c5f6d",
+      "candidateHash": "6ff60b26fe49cd500584d7bae2bc57f6a435b63207629305fb05c53c7a9c5f6d",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a13077-45cd-73a5-a6b6-1b4234382802",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}
