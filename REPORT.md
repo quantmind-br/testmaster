@@ -32,6 +32,7 @@ Este relatório usa o commit pinado para interpretar a superfície atual do CLI 
 | **Observação prática offline** | Comando do CLI foi executado sem conta e seu resultado foi registrado | Que houve browser, teste de aplicação, consumo real ou execução remota |
 | **Marketing / alegação do fornecedor** | Promessa comercial, métrica autorrelatada ou resultado qualitativo sem reprodução independente | Que existe garantia de cobertura, ausência de falsos verdes, conformidade auditada ou SLA universal |
 | **Relato independente** | Terceiro descreve uma experiência positiva ou negativa | Que sua amostra representa todas as versões, regiões, projetos ou engines |
+| **Inferência** | Conclusão derivada das fontes listadas; nenhuma delas a afirma | Que o comportamento foi observado ou confirmado pelo fornecedor |
 | **Recomendação TestMaster** | Decisão de implementação independente, detalhada nas specs | Que o TestSprite funciona internamente dessa forma |
 
 “Documentado” prova o que a página promete e quais entradas/saídas ela expõe. Mesmo uma página oficial não prova a eficácia de um classificador ou a segurança de uma sandbox. Separar essas camadas evita atribuir ao produto proprietário o que, na verdade, foi observado somente em Playwright ou proposto para TestMaster.

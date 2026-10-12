@@ -25,6 +25,8 @@ export interface DistributionManifest {
   sourcesIndexHash?: string;
   sourcesArchive?: ArchiveDigest & { parts: (ArchiveDigest & { path: string })[] };
   sourcesTree?: FileDigest;
+  /** SEC-045: digest of `vulnerabilities.json`, whose bindings pin this manifest's inputs. */
+  vulnerabilityReport?: ArchiveDigest;
   images: { name: string; imageId: string; archive: ArchiveDigest & { parts: ArchiveDigest[] } }[];
 }
 export const LICENSE_ASSETS = ["LICENSE", "NOTICE", "containers/NOTICE"] as const;

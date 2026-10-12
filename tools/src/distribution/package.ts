@@ -34,6 +34,7 @@ import {
 } from "./archive.js";
 import { auditLicenses } from "./licenses.js";
 import { type SourcesIndex, verifySourcesIndex } from "./sources.js";
+import { startVulnerabilityScan } from "./vulnerabilities.js";
 
 interface PackageDocument {
   name: string;
@@ -300,7 +301,7 @@ export async function splitArchive(
     await handle?.close();
   }
 }
-async function dockerSave(imageId: string, output: string): Promise<void> {
+async function dockerSave(imageId: string, tarPath: string, archivePath: string): Promise<void> {
   const child = spawn("docker", ["save", imageId], {
     shell: false,
     stdio: ["ignore", "pipe", "pipe"],
@@ -317,17 +318,18 @@ async function dockerSave(imageId: string, output: string): Promise<void> {
   });
   try {
     await Promise.all([
-      pipeline(
-        child.stdout,
-        createGzip({ level: 9 }),
-        createWriteStream(output, { flags: "wx", mode: 0o600 }),
-      ),
+      pipeline(child.stdout, createWriteStream(tarPath, { flags: "wx", mode: 0o600 })),
       completion,
     ]);
   } catch (error) {
     child.kill("SIGTERM");
     throw error;
   }
+  await pipeline(
+    createReadStream(tarPath),
+    createGzip({ level: 9 }),
+    createWriteStream(archivePath, { flags: "wx", mode: 0o600 }),
+  );
 }
 async function sourceCommit(root: string): Promise<string> {
   const status = spawn("git", ["status", "--porcelain", "--untracked-files=normal"], {
@@ -429,16 +431,38 @@ export async function packageRuntime(
     const lock = JSON.parse(lockBytes.toString("utf8")) as Record<string, { imageId: string }>;
     await mkdir(join(out, "images"), { mode: 0o700 });
     const images: DistributionManifest["images"] = [];
-    for (const [name, image] of Object.entries(lock).sort(([a], [b]) =>
-      a < b ? -1 : a > b ? 1 : 0,
-    )) {
-      if (!/^[a-z0-9-]+$/u.test(name) || !/^sha256:[a-f0-9]{64}$/u.test(image.imageId))
-        throw new Error("Invalid image lock");
-      const archivePath = join(stage, `${name}.tar.gz`);
-      await dockerSave(image.imageId, archivePath);
-      const archive = await digestFile(archivePath);
-      const parts = await splitArchive(archivePath, join(out, "images", `${name}.tar.gz.part-`));
-      images.push({ name, imageId: image.imageId, archive: { ...archive, parts } });
+    // The register and scanner pin are validated here, before any image is exported.
+    const scan = await startVulnerabilityScan({ root, out, dependencies: staged.dependencies });
+    let vulnerabilityReport: ArchiveDigest;
+    try {
+      for (const [name, image] of Object.entries(lock).sort(([a], [b]) =>
+        a < b ? -1 : a > b ? 1 : 0,
+      )) {
+        if (!/^[a-z0-9-]+$/u.test(name) || !/^sha256:[a-f0-9]{64}$/u.test(image.imageId))
+          throw new Error("Invalid image lock");
+        const tarPath = join(stage, `${name}.tar`);
+        const archivePath = join(stage, `${name}.tar.gz`);
+        await dockerSave(image.imageId, tarPath, archivePath);
+        // One raw tar exists at a time: Trivy needs it uncompressed and images are multi-GB.
+        await scan.scanImage(name, tarPath);
+        await rm(tarPath);
+        const archive = await digestFile(archivePath);
+        const parts = await splitArchive(archivePath, join(out, "images", `${name}.tar.gz.part-`));
+        images.push({ name, imageId: image.imageId, archive: { ...archive, parts } });
+      }
+      vulnerabilityReport = await scan.finish({
+        sourceCommit: commit,
+        runtimeArchive,
+        imageLockHash: sha256(lockBytes),
+        images: images.map((image) => ({
+          name: image.name,
+          imageId: image.imageId,
+          archive: { sha256: image.archive.sha256, size: image.archive.size },
+        })),
+      });
+    } catch (error) {
+      await scan.abort();
+      throw error;
     }
     const manifest: DistributionManifest = {
       schemaVersion: "1.0.0",
@@ -449,6 +473,7 @@ export async function packageRuntime(
       sourcesIndexHash: sha256(sourcesBytes),
       sourcesArchive: sourcesIndex.archive,
       sourcesTree: sourcesIndex.sourceTree,
+      vulnerabilityReport,
       images,
     };
     const manifestBytes = JSON.stringify(manifest, null, 2) + "\n";

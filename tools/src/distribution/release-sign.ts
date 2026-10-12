@@ -19,6 +19,7 @@ import {
   signManifestBytes,
   verifyReleaseSignature,
 } from "./signing.js";
+import { verifyVulnerabilityReport } from "./vulnerabilities.js";
 
 /** Maintainer-only signing workflow. The private key is read from a file and never logged. */
 export const SIGNING_KEY_ENV = "TESTMASTER_RELEASE_SIGNING_KEY_FILE";
@@ -45,19 +46,25 @@ export async function createSigningKey(options: {
 }
 /**
  * Signs `<releaseDir>/manifest.json` and writes `manifest.json.sig`. The manifest must be a
- * structurally valid distribution manifest, and the signature is verified against the committed
- * keyring and advisories before it is written, so a key that is unregistered or revoked cannot
- * produce a release asset.
+ * structurally valid distribution manifest that pins a passing, correctly bound vulnerability
+ * report (SEC-045), and the signature is verified against the committed keyring and advisories
+ * before it is written, so a key that is unregistered or revoked cannot produce a release asset.
  */
 export async function signRelease(options: {
   releaseDir: string;
   privateKeyPath: string;
   keyringPath: string;
   advisoryPaths: string[];
+  /** Repository checkout holding the scanner pin and exception register; defaults to this one. */
+  repositoryRoot?: string;
 }): Promise<{ keyId: string; manifestSha256: string; signaturePath: string }> {
   const manifestPath = join(options.releaseDir, "manifest.json");
   const manifest = await readFile(manifestPath);
-  verifyManifest(manifest, sha256(manifest));
+  await verifyVulnerabilityReport(
+    options.releaseDir,
+    verifyManifest(manifest, sha256(manifest)),
+    options.repositoryRoot === undefined ? {} : { root: options.repositoryRoot },
+  );
   await assertPrivateKeyFileSafe(options.privateKeyPath);
   const privateKey = createPrivateKey(await readFile(options.privateKeyPath));
   const signature = signManifestBytes(manifest, privateKey);

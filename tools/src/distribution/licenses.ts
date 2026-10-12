@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { digestFile, sha256 } from "./archive.js";
 import { stageRuntime } from "./package.js";
+import { npmPurl } from "./vulnerabilities.js";
 
 const exec = promisify(execFile);
 export function licenseObligations(license: string): string[] {
@@ -30,6 +31,7 @@ interface Component {
   name: string;
   version: string;
   "bom-ref": string;
+  purl?: string;
   licenses: { license: { name: string } }[];
   properties: { name: string; value: string }[];
 }
@@ -80,6 +82,7 @@ export async function auditLicenses(root: string, runtime: string, output: strin
     notices: string[],
     properties: Record<string, string> = {},
     blockedReason?: string,
+    purl?: string,
   ) {
     const id = `${kind}:${name}@${version}:${components.length}`;
     components.push({
@@ -87,6 +90,7 @@ export async function auditLicenses(root: string, runtime: string, output: strin
       name,
       version,
       "bom-ref": id,
+      ...(purl ? { purl } : {}),
       licenses: [{ license: { name: license } }],
       properties: Object.entries({
         ...properties,
@@ -143,6 +147,7 @@ export async function auditLicenses(root: string, runtime: string, output: strin
           !effectiveNotices.length
             ? "No upstream license/NOTICE file found in shipped package root; review license grant before binary publication"
             : undefined,
+          npmPurl(doc.name, doc.version),
         );
       }
     }

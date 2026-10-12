@@ -4,6 +4,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/pr
 import { stripTypeScriptTypes } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { digestFile, sha256, writeDeterministicArchive } from "./archive.js";
@@ -68,8 +69,58 @@ interface Release {
   manifestBytes: Buffer;
   sourceCommit: string;
 }
-/** A complete, internally consistent release directory (manifest, runtime, image parts). */
-async function buildRelease(root: string, sourceCommit = "a".repeat(40)): Promise<Release> {
+const REPOSITORY_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
+/** Writes `vulnerabilities.json` the way the scan does, bound to the repository pin and register. */
+async function writeVulnerabilityReport(
+  dir: string,
+  verdict: "pass" | "fail",
+  bindings: Record<string, unknown>,
+) {
+  const lock = JSON.parse(
+    await readFile(join(REPOSITORY_ROOT, "containers/scanner.lock.json"), "utf8"),
+  ) as { scanner: Record<string, string> };
+  const register = await readFile(
+    join(REPOSITORY_ROOT, "docs/security/vulnerability-exceptions.json"),
+  );
+  const report = {
+    schemaVersion: "1.0.0",
+    scanner: {
+      ...lock.scanner,
+      db: {
+        version: 2,
+        updatedAt: "2026-10-12T06:00:00Z",
+        downloadedAt: "2026-10-12T07:00:00Z",
+        nextUpdate: "2026-10-13T06:00:00Z",
+      },
+    },
+    policy: {
+      blocking: ["CRITICAL", "HIGH"],
+      expired: "fail",
+      stale: "fail",
+      unscanned: "fail",
+      maxExceptionDays: 90,
+      maxDatabaseAgeDays: 7,
+    },
+    bindings: { ...bindings, exceptionRegisterSha256: sha256(register) },
+    targets: [],
+    findings: [],
+    verdict,
+    failures:
+      verdict === "pass"
+        ? []
+        : [
+            "Unexcepted blocking vulnerability: CVE-2025-3887 gstreamer1.0-plugins-bad@1.24.2-1ubuntu4 (HIGH) in image:testmaster-runner",
+          ],
+  };
+  const path = join(dir, "vulnerabilities.json");
+  await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
+  return digestFile(path);
+}
+async function buildRelease(
+  root: string,
+  sourceCommit = "a".repeat(40),
+  vulnerability: "pass" | "fail" | "none" = "pass",
+): Promise<Release> {
   const dir = join(root, "release");
   const stage = join(root, "stage");
   await mkdir(join(dir, "images"), { recursive: true });
@@ -109,6 +160,20 @@ async function buildRelease(root: string, sourceCommit = "a".repeat(40)): Promis
     files,
     dependencies: [],
     imageLockHash: sha256(contents["containers/images.lock.json"]!),
+    ...(vulnerability === "none"
+      ? {}
+      : {
+          vulnerabilityReport: await writeVulnerabilityReport(dir, vulnerability, {
+            sourceCommit,
+            runtimeArchive,
+            imageLockHash: sha256(contents["containers/images.lock.json"]!),
+            images: images.map((image) => ({
+              name: image.name,
+              imageId: image.imageId,
+              archive: { sha256: image.archive.sha256, size: image.archive.size },
+            })),
+          }),
+        }),
     images,
   };
   const manifestPath = join(dir, "manifest.json");
@@ -442,6 +507,77 @@ describe("keyring, advisory and signing mechanics", () => {
       }),
     ).rejects.toThrow("is revoked: rotated");
     expect(await exists(`${second.manifestPath}.sig`)).toBe(false);
+  });
+
+  describe("vulnerability report gate", () => {
+    async function signingOptions(root: string, release: Release) {
+      const privateKeyPath = join(root, "secret/release.pem");
+      const keyringPath = join(root, "keyring.json");
+      await createSigningKey({ privateKeyPath, keyringPath, description: "test maintainer" });
+      const advisoriesPath = join(root, "advisories.json");
+      await writeFile(advisoriesPath, JSON.stringify(emptyAdvisories));
+      return {
+        releaseDir: release.dir,
+        privateKeyPath,
+        keyringPath,
+        advisoryPaths: [advisoriesPath],
+      };
+    }
+
+    it("refuses to sign a release without a passing vulnerability report", async () => {
+      const root = await temporary();
+      const release = await buildRelease(root, "a".repeat(40), "none");
+      const unscanned = await signingOptions(root, release);
+      await expect(signRelease(unscanned)).rejects.toThrow(
+        "Release manifest has no vulnerability report",
+      );
+      expect(await exists(`${release.manifestPath}.sig`)).toBe(false);
+    });
+
+    it("refuses to sign when the vulnerability report bytes differ from the manifest digest", async () => {
+      const root = await temporary();
+      const release = await buildRelease(root);
+      const options = await signingOptions(root, release);
+      const reportPath = join(release.dir, "vulnerabilities.json");
+      const original = JSON.parse(await readFile(reportPath, "utf8")) as Record<string, unknown>;
+      await writeFile(
+        reportPath,
+        `${JSON.stringify({ ...original, targets: [{ id: "runtime" }] })}\n`,
+      );
+      await expect(signRelease(options)).rejects.toThrow("Vulnerability report hash mismatch");
+      expect(await exists(`${release.manifestPath}.sig`)).toBe(false);
+    });
+
+    it("refuses to sign a failing report even when its hash is pinned", async () => {
+      const root = await temporary();
+      const release = await buildRelease(root, "a".repeat(40), "fail");
+      const options = await signingOptions(root, release);
+      await expect(signRelease(options)).rejects.toThrow(
+        "Vulnerability report verdict is not pass",
+      );
+      expect(await exists(`${release.manifestPath}.sig`)).toBe(false);
+    });
+
+    it("refuses to sign a report that names a scanner other than the pinned one", async () => {
+      const root = await temporary();
+      const release = await buildRelease(root);
+      const options = await signingOptions(root, release);
+      const reportPath = join(release.dir, "vulnerabilities.json");
+      const original = JSON.parse(await readFile(reportPath, "utf8")) as {
+        scanner: Record<string, string>;
+      };
+      original.scanner.image = "aquasec/trivy:0.75.0@sha256:" + "0".repeat(64);
+      const bytes = Buffer.from(`${JSON.stringify(original)}\n`);
+      await writeFile(reportPath, bytes);
+      const manifest = JSON.parse(await readFile(release.manifestPath, "utf8")) as {
+        vulnerabilityReport: { sha256: string; size: number };
+      };
+      manifest.vulnerabilityReport = { sha256: sha256(bytes), size: bytes.length };
+      await writeFile(release.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+      await expect(signRelease(options)).rejects.toThrow(
+        "Vulnerability report scanner is not the pinned scanner",
+      );
+    });
   });
 });
 

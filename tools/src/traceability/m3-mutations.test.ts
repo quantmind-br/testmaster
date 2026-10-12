@@ -397,6 +397,7 @@ it("kills M3 critical mutations in source-isolated copies and retains equivalent
       "tools/src/distribution/install.ts",
       "tools/src/distribution/package.ts",
       "tools/src/distribution/licenses.ts",
+      "tools/src/distribution/vulnerabilities.ts",
       "tools/src/distribution/sources.ts",
       "tools/src/distribution/browser-sources.ts",
       "tools/src/distribution/python-sources.ts",

@@ -1,8 +1,9 @@
 # Release signing, advisories and revocation
 
-Implements the signature, advisory and revocation part of
+Implements the signature, advisory, revocation and vulnerability-scan parts of
 [SEC-045](../../specs/07-security.md). Claims are limited to what the automated tests in
-`tools/src/distribution/release-signing.test.ts` exercise ([ADR-012](../adr/012-automated-only-validation.md)):
+`tools/src/distribution/release-signing.test.ts` and `tools/src/distribution/vulnerabilities.test.ts`
+exercise ([ADR-012](../adr/012-automated-only-validation.md)):
 this is not a transparency log, a certified supply-chain attestation or a GA statement.
 
 ## What is signed and what is verified
@@ -86,12 +87,55 @@ node tools/dist/distribution/release-sign.js assemble \
   --advisories docs/security/advisories.json          # writes install-runtime.sh, install.js, archive.js, signing.js, package.json
 ```
 
-`sign` validates the manifest structure and verifies its own output against the committed keyring
-and advisories before writing, so an unregistered or revoked key cannot produce a release
-signature. Publish `manifest.json`, `manifest.json.sig`, `runtime.tar.gz`, the image and source
-parts, the installer assets and the SBOM/acceptance evidence as one GitHub release. Release assets
-become immutable on publication: a missing signature cannot be added afterwards, so verify the
-asset list before publishing. Publish the SHA-256 of `install-runtime.sh` in the release notes.
+`sign` validates the manifest structure, **refuses unless the manifest pins a passing, correctly
+bound `vulnerabilities.json`** (see [Vulnerability gate](#vulnerability-gate-and-exception-register))
+and verifies its own output against the committed keyring and advisories before writing, so an
+unregistered or revoked key cannot produce a release signature. Publish `manifest.json`,
+`manifest.json.sig`, `vulnerabilities.json`, `runtime.tar.gz`, the image and source parts, the
+installer assets and the SBOM/acceptance evidence as one GitHub release. Release assets become
+immutable on publication: a missing signature or scan report cannot be added afterwards, so verify
+the asset list (including `vulnerabilities.json`) before publishing. Publish the SHA-256 of
+`install-runtime.sh` in the release notes. Consumers can check
+`sha256(vulnerabilities.json) == manifest.vulnerabilityReport.sha256` offline.
+
+## Vulnerability gate and exception register
+
+`package.js` runs the gate between exporting the images and writing `manifest.json`, so a failing
+scan leaves no manifest and nothing signable (the evidence report stays in `OUT/`). Implementation:
+`tools/src/distribution/vulnerabilities.ts`; tests: `vulnerabilities.test.ts` and the signing
+refusals in `release-signing.test.ts`.
+
+* **Scanner.** Trivy 0.75.0 run as a container pinned by digest in `containers/scanner.lock.json`
+  (`aquasec/trivy:0.75.0@sha256:…`; the lock is separate from `images.lock.json`, which only lists
+  runtime images). The container runs with `--user <uid>:<gid> -e HOME=/tmp`, `--read-only`,
+  `--cap-drop=ALL` and `no-new-privileges`; its advisory database cache lives outside the checkout
+  in `~/.cache/testmaster-release-scanner/trivy` (mode `0700`) and is refreshed from the network
+  by the scanner itself. A database older than 7 days, or with unreadable metadata, fails the gate.
+* **Targets.** `runtime`: the staged production npm graph, scanned as a CycloneDX inventory with
+  package URLs (Trivy cannot read the `node_modules/.runtime` layout because it has no lockfile).
+  `image:<name>`: each locked image, exported with `docker save` and scanned from the uncompressed
+  tar. A coverage guard fails the gate when a staged dependency is missing from the scanner's package
+  list or an image scan lists no operating system packages.
+* **Policy.** CRITICAL and HIGH findings block, whether or not a fix exists; MEDIUM, LOW and
+  UNKNOWN are recorded in the report. A fixable finding is fixed (rebuild the image, bump the
+  dependency), never excepted.
+* **Exceptions.** `docs/security/vulnerability-exceptions.json` holds
+  `{ id, package, target, owner, expiresAt, reason }` entries keyed by (id, package, target). `owner`
+  is a named maintainer, `expiresAt` is a UTC timestamp at most 90 days after the scan, and `reason`
+  (20–500 characters) states why the finding is not exploitable or why no fix exists and what
+  control contains it. An expired entry fails, and so does an entry that matches no finding (delete
+  it when the finding is fixed). A malformed register is refused before Docker runs. There is no
+  switch to skip the scan.
+* **Binding.** `vulnerabilities.json` records the scanner pin, the database metadata, every finding
+  with its decision (`blocking`, `recorded`, `excepted`) and the manifest inputs it was produced for
+  (source commit, runtime archive, image lock hash, image ids and archives, exception-register
+  hash). `manifest.json` pins the report's SHA-256 and size, so the signature covers it. `sign`
+  re-verifies the pin, verdict, bindings, register hash and exception expiry at signing time.
+
+Triage procedure: run `package.js` on a clean worktree; on failure read
+`OUT/vulnerabilities.json` (`failures`, `findings` with `decision: "blocking"`), fix what has a
+fix, add an owned and expiring exception for what does not, commit the register, and package again
+(a changed register changes the report binding, so a stale report is never signed).
 
 ## Installing
 
@@ -165,5 +209,9 @@ install; the signature step is not enough to bypass it.
   installs them.
 * TestMaster has no automatic updater, so no update path can execute an unsigned binary today; any
   future updater must reuse `verifyReleaseSignature`.
-* Dependency/image vulnerability scanning and CVE exception ownership (the remaining SEC-045
-  clauses) are not implemented here.
+* The vulnerability gate (above) scans only the staged runtime npm graph and the two locked images
+  with one scanner and one advisory database snapshot; it is not a certification of absence of
+  vulnerabilities. Development dependencies, the Playwright browser binaries and the source-built
+  FFmpeg have no package database, so they are not covered. The installer does not re-scan: it
+  checks signatures and hashes only, and publishing `vulnerabilities.json` is a maintainer step
+  that no installer enforces.

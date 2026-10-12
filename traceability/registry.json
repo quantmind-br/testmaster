@@ -8950,8 +8950,20 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "implemented",
-      "scenario": [],
+      "status": "verified",
+      "scenario": [
+        "tools/src/distribution/licenses.test.ts::emits a CycloneDX 1.6 SBOM whose components carry unique refs, license names and copyleft flags",
+        "tools/src/distribution/licenses.test.ts::inventories Python distributions and Playwright browsers inside the locked images",
+        "tools/src/distribution/licenses.test.ts::records an unavailable locked image as blocked rather than complete",
+        "tools/src/distribution/licenses.test.ts::every npm package in the shipped production closure has a declared license",
+        "tools/src/security/provenance.test.ts::every E-ID cited by the requirements, specs and research report exists in SOURCES.md with an https URL",
+        "tools/src/security/provenance.test.ts::rejects an uncatalogued E-ID in the positive control",
+        "tools/src/security/provenance.test.ts::no tracked file outside the research catalogue names a TestSprite private endpoint or credential",
+        "tools/src/security/provenance.test.ts::no tracked text claims TestSprite affiliation, endorsement or interoperability except negated disclaimers",
+        "tools/src/security/provenance.test.ts::keeps the normative no-compatibility disclaimers in the specifications",
+        "tools/src/security/provenance.test.ts::separates documented, vendor-claimed and inferred statements in the feature matrix",
+        "tools/src/security/provenance.test.ts::keeps the accepted Apache-2.0 license decision and its provenance limits"
+      ],
       "oracle": [
         "Public distribution requires maintainer-selected compatible license plus release SBOM/license/provenance inventory."
       ],
@@ -8960,7 +8972,9 @@
         "NOTICE",
         "docs/adr/010-license.md",
         "containers/NOTICE",
-        "SOURCES.md"
+        "SOURCES.md",
+        "tools/src/distribution/licenses.test.ts",
+        "tools/src/security/provenance.test.ts"
       ],
       "code": [
         "docs/adr/010-license.md",
@@ -8970,8 +8984,39 @@
         "tools/src/distribution/sources.ts",
         "tools/src/distribution/package.ts"
       ],
-      "note": "Original TestMaster code is Apache-2.0 (ADR-010). Every packaged release ships a CycloneDX SBOM, per-component obligations, upstream notices, release notes and a hash-bound corresponding-source index; the experimental public prerelease runtime-4df8ba5 (https://github.com/quantmind-br/testmaster/releases/tag/runtime-4df8ba5, source 4df8ba5e4ebdb243050853bbdd8bf66956b9cb7d) publishes them with 1267 source files in 7 parts and zero residual source obligations. Installation refuses a manifest without the original LICENSE or with unbound source provenance.",
-      "blockedReason": "No copied proprietary code/prompts rests on the documented clean-room process (SOURCES.md, ADR-010) without independent audit; SBOM/license inventory is an automated audit, not legal review."
+      "note": "Automated substitute approved under ADR-012. Tests check that each licence audit emits a well-formed CycloneDX 1.6 SBOM with licence names, copyleft flags and blocked evidence for unavailable locked images; that every shipped npm package declares a licence; that every E-ID cited by the requirements, specs and research report resolves to a catalogued https source; and that tracked text contains no TestSprite private-endpoint or credential pattern. They do not prove that no proprietary code or prompt was copied, do not certify licence compliance, do not replace legal review, and do not authorise binary redistribution: binaryRedistribution stays \"blocked\" until the ADR-010 covered-source obligations are met. Browser binaries and source-built FFmpeg have no package-database coverage. Original TestMaster code is Apache-2.0 (ADR-010). Every packaged release ships a CycloneDX SBOM, per-component obligations, upstream notices, release notes and a hash-bound corresponding-source index; the experimental public prerelease runtime-4df8ba5 (https://github.com/quantmind-br/testmaster/releases/tag/runtime-4df8ba5, source 4df8ba5e4ebdb243050853bbdd8bf66956b9cb7d) publishes them with 1267 source files in 7 parts and zero residual source obligations. Installation refuses a manifest without the original LICENSE or with unbound source provenance.",
+      "coverage": {
+        "positive": [
+          "tools/src/distribution/licenses.test.ts::emits a CycloneDX 1.6 SBOM whose components carry unique refs, license names and copyleft flags",
+          "tools/src/security/provenance.test.ts::every E-ID cited by the requirements, specs and research report exists in SOURCES.md with an https URL"
+        ],
+        "negative": [
+          "tools/src/distribution/licenses.test.ts::records an unavailable locked image as blocked rather than complete",
+          "tools/src/security/provenance.test.ts::no tracked file outside the research catalogue names a TestSprite private endpoint or credential"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/distribution/licenses.test.ts",
+            "assertion": "expect(summary.binaryRedistribution).toBe(\"blocked\");"
+          },
+          {
+            "path": "tools/src/distribution/licenses.test.ts",
+            "assertion": "expect(sbom).toMatchObject({ bomFormat: \"CycloneDX\", specVersion: \"1.6\" });"
+          },
+          {
+            "path": "tools/src/distribution/licenses.test.ts",
+            "assertion": "expect(unknown).toEqual([]);"
+          },
+          {
+            "path": "tools/src/security/provenance.test.ts",
+            "assertion": "expect(uncatalogued(cited, known)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/security/provenance.test.ts",
+            "assertion": "expect(uncatalogued([\"E99\"], known)).toEqual([\"E99\"]);"
+          }
+        ]
+      }
     },
     {
       "id": "NFR-012",
@@ -16300,25 +16345,110 @@
       "status": "implemented",
       "scenario": [
         "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering",
-        "packages/sandbox/src/images/lock.test.ts::hashes build contents independent of input ordering, sensitive to path and bytes"
+        "packages/sandbox/src/images/lock.test.ts::hashes build contents independent of input ordering, sensitive to path and bytes",
+        "tools/src/distribution/vulnerabilities.test.ts::passes when every blocking finding is covered by a current owned exception and the report binds the manifest inputs",
+        "tools/src/distribution/vulnerabilities.test.ts::fails the release on an unexcepted HIGH finding and still writes the evidence report",
+        "tools/src/distribution/vulnerabilities.test.ts::fails when a covering exception has expired",
+        "tools/src/distribution/vulnerabilities.test.ts::refuses a register entry without an owner before running Docker",
+        "tools/src/distribution/vulnerabilities.test.ts::fails when an exception matches no finding",
+        "tools/src/distribution/vulnerabilities.test.ts::fails when the scan omits a staged runtime dependency",
+        "tools/src/distribution/vulnerabilities.test.ts::refuses an unattested scan when the database metadata is missing",
+        "tools/src/distribution/vulnerabilities.test.ts::accepts the report of the scan that produced it",
+        "tools/src/distribution/vulnerabilities.test.ts::refuses a report whose bindings name a different runtime archive",
+        "tools/src/distribution/vulnerabilities.test.ts::refuses a report produced under a different exception register",
+        "tools/src/distribution/release-signing.test.ts::installs a runtime whose manifest carries a valid signature from a trusted key",
+        "tools/src/distribution/release-signing.test.ts::refuses an unsigned manifest before reading any archive or touching Docker",
+        "tools/src/distribution/release-signing.test.ts::refuses a manifest with one tampered byte, including a rewritten manifest hash in the signature",
+        "tools/src/distribution/release-signing.test.ts::refuses tampered asset bytes under a valid signature before any Docker load",
+        "tools/src/distribution/release-signing.test.ts::refuses a signature by a revoked key even though the key is still in the keyring",
+        "tools/src/distribution/release-signing.test.ts::refuses a revoked release by manifest digest and by source commit",
+        "tools/src/distribution/release-signing.test.ts::refuses to sign a release without a passing vulnerability report",
+        "tools/src/distribution/release-signing.test.ts::refuses to sign when the vulnerability report bytes differ from the manifest digest",
+        "tools/src/distribution/release-signing.test.ts::refuses to sign a failing report even when its hash is pinned",
+        "tools/src/distribution/release-signing.test.ts::refuses to sign a report that names a scanner other than the pinned one"
       ],
       "oracle": [
-        "Pinned dependencies/images/build inputs and tamper refusal exist."
+        "Pinned dependencies/images/build inputs and tamper refusal exist.",
+        "A release manifest is signable only when it pins a passing vulnerability report (CRITICAL/HIGH findings absent or covered by owned, unexpired exceptions) bound to the same commit, runtime archive, image lock and image archives."
       ],
       "evidence": [
         "containers/images.lock.json",
+        "containers/scanner.lock.json",
+        "docs/security/vulnerability-exceptions.json",
+        "docs/security/release-process.md",
         "packages/sandbox/src/images/lock.test.ts",
+        "tools/src/distribution/vulnerabilities.test.ts",
+        "tools/src/distribution/release-signing.test.ts",
         "containers/NOTICE"
       ],
       "code": [
         "pnpm-lock.yaml",
         "python/uv.lock",
         "containers/images.lock.json",
+        "containers/scanner.lock.json",
+        "docs/security/vulnerability-exceptions.json",
         "packages/sandbox/src/images/lock.ts",
-        "tools/ci/check.sh"
+        "tools/ci/check.sh",
+        "tools/src/distribution/vulnerabilities.ts",
+        "tools/src/distribution/package.ts",
+        "tools/src/distribution/release-sign.ts"
       ],
-      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, tampered/wrong-pin/missing-license installer refusals, and detached Ed25519 manifest signatures with committed keyring, key/release revocation and advisories (tools/src/distribution/release-signing.test.ts). The first signed release runtime-f4e3335 was installed anonymously (installer SHA-256 and signing key ID verified, installed CLI healthy pass/semantic-negative fail, 0 model calls) and unsigned/tampered manifests were refused (validation/results/runtime-f4e3335-public-install).",
-      "blockedReason": "Dependency and image vulnerability scanning with a CVE exception register (owner, expiry) is not implemented; the signing key is a single maintainer key without transparency log or hardware enforcement; no GA release claim."
+      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, tampered/wrong-pin/missing-license installer refusals, detached Ed25519 manifest signatures with committed keyring, key/release revocation and advisories (tools/src/distribution/release-signing.test.ts), and a fail-closed vulnerability gate: Trivy 0.75.0 pinned by image digest (containers/scanner.lock.json) scans the staged runtime npm graph (CycloneDX inventory) and both locked images inside package.js before the manifest is written; CRITICAL and HIGH block whether or not a fix exists unless an owned exception (docs/security/vulnerability-exceptions.json: id, package, target, owner, expiry at most 90 days, reason) covers them; expired or stale exceptions, a stale advisory database and scans that miss a staged package fail; the manifest pins vulnerabilities.json and signRelease refuses a missing, mismatched, failing, unpinned-scanner or unbound report (tools/src/distribution/vulnerabilities.test.ts). Limits: one scanner and one advisory snapshot; browser binaries, source-built FFmpeg and dev dependencies have no package database and are not covered; the installer does not re-scan; the signing key is a single maintainer key without transparency log or hardware enforcement; no GA release claim.",
+      "blockedReason": "No real passing scan of a release candidate is committed as evidence yet: the fixture tests prove the gate logic, not a clean scan of the shipped images (the integration owner records one after the image refresh and the exception register).",
+      "coverage": {
+        "positive": [
+          "tools/src/distribution/vulnerabilities.test.ts::passes when every blocking finding is covered by a current owned exception and the report binds the manifest inputs",
+          "tools/src/distribution/release-signing.test.ts::installs a runtime whose manifest carries a valid signature from a trusted key",
+          "tools/src/distribution/vulnerabilities.test.ts::accepts the report of the scan that produced it"
+        ],
+        "negative": [
+          "tools/src/distribution/vulnerabilities.test.ts::fails the release on an unexcepted HIGH finding and still writes the evidence report",
+          "tools/src/distribution/vulnerabilities.test.ts::fails when a covering exception has expired",
+          "tools/src/distribution/vulnerabilities.test.ts::refuses a register entry without an owner before running Docker",
+          "tools/src/distribution/vulnerabilities.test.ts::fails when an exception matches no finding",
+          "tools/src/distribution/vulnerabilities.test.ts::fails when the scan omits a staged runtime dependency",
+          "tools/src/distribution/release-signing.test.ts::refuses to sign a release without a passing vulnerability report",
+          "tools/src/distribution/release-signing.test.ts::refuses to sign when the vulnerability report bytes differ from the manifest digest",
+          "tools/src/distribution/release-signing.test.ts::refuses to sign a failing report even when its hash is pinned",
+          "tools/src/distribution/vulnerabilities.test.ts::refuses a report whose bindings name a different runtime archive",
+          "tools/src/distribution/vulnerabilities.test.ts::refuses a report produced under a different exception register",
+          "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/distribution/vulnerabilities.test.ts",
+            "assertion": "await expect(scan(f)).rejects.toThrow(\"Vulnerability gate failed:\");"
+          },
+          {
+            "path": "tools/src/distribution/vulnerabilities.test.ts",
+            "assertion": "expect(await exists(f.dockerLog)).toBe(false);"
+          },
+          {
+            "path": "tools/src/distribution/release-signing.test.ts",
+            "assertion": "\"Release manifest has no vulnerability report\""
+          },
+          {
+            "path": "tools/src/distribution/release-signing.test.ts",
+            "assertion": "await expect(signRelease(options)).rejects.toThrow(\"Vulnerability report hash mismatch\");"
+          },
+          {
+            "path": "tools/src/distribution/release-signing.test.ts",
+            "assertion": "expect(await exists(dockerLog)).toBe(false);"
+          },
+          {
+            "path": "tools/src/distribution/release-signing.test.ts",
+            "assertion": "await expect(install(release, trust)).rejects.toThrow(\"Release manifest is unsigned\");"
+          },
+          {
+            "path": "tools/src/distribution/distribution.test.ts",
+            "assertion": "expect(() => verifyManifest(bytes, \"0\".repeat(64))).toThrow(\"Manifest hash mismatch\");"
+          },
+          {
+            "path": "packages/sandbox/src/images/lock.test.ts",
+            "assertion": "await expect(verifyImageLock(path, async (id) => id)).rejects.toThrow(\"seccomp_hash_mismatch\");"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-046",
@@ -16326,16 +16456,29 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M0",
       "ownerRole": "Security",
-      "status": "implemented",
-      "scenario": [],
-      "oracle": ["Public-source provenance and license decision required before public release."],
+      "status": "verified",
+      "scenario": [
+        "tools/src/security/provenance.test.ts::every E-ID cited by the requirements, specs and research report exists in SOURCES.md with an https URL",
+        "tools/src/security/provenance.test.ts::rejects an uncatalogued E-ID in the positive control",
+        "tools/src/security/provenance.test.ts::no tracked file outside the research catalogue names a TestSprite private endpoint or credential",
+        "tools/src/security/provenance.test.ts::no tracked text claims TestSprite affiliation, endorsement or interoperability except negated disclaimers",
+        "tools/src/security/provenance.test.ts::keeps the normative no-compatibility disclaimers in the specifications",
+        "tools/src/security/provenance.test.ts::separates documented, vendor-claimed and inferred statements in the feature matrix",
+        "tools/src/security/provenance.test.ts::keeps the accepted Apache-2.0 license decision and its provenance limits",
+        "tools/src/distribution/licenses.test.ts::every npm package in the shipped production closure has a declared license"
+      ],
+      "oracle": [
+        "Public-source provenance and license decision required before public release."
+      ],
       "evidence": [
         "LICENSE",
         "NOTICE",
         "docs/adr/010-license.md",
         "SOURCES.md",
         "REPORT.md",
-        "containers/NOTICE"
+        "containers/NOTICE",
+        "tools/src/security/provenance.test.ts",
+        "tools/src/distribution/licenses.test.ts"
       ],
       "code": [
         "docs/adr/010-license.md",
@@ -16344,8 +16487,35 @@
         "containers/NOTICE",
         "tools/src/distribution/licenses.ts"
       ],
-      "note": "License decision recorded before release: Apache-2.0 for original work (ADR-010); a transitive audit of the shipped Node, Python, browser and OS image graph records each component's license, notices and covered-source obligations without relicensing third-party components. Clean-room process documented.",
-      "blockedReason": "Clean-room process and dependency license review are not independently audited; automated obligations are not legal review."
+      "note": "Clean-room conduct is documented (ADR-010, SOURCES.md). It is checked automatically only for traceability (every cited E-ID resolves to a catalogued https source), vendor-identifier hygiene (no TestSprite private endpoint or credential in tracked text) and the no-affiliation and no-interoperability wording; the research report separates documented, vendor-claimed and inferred statements. Public availability is not treated as a licence (ADR-010). There is no independent clean-room audit and no legal review (ADR-012). Transitive licence flags come from the automated audit, not a legal opinion. License decision recorded before release: Apache-2.0 for original work; a transitive audit of the shipped Node, Python, browser and OS image graph records each component's license, notices and covered-source obligations without relicensing third-party components.",
+      "coverage": {
+        "positive": [
+          "tools/src/security/provenance.test.ts::every E-ID cited by the requirements, specs and research report exists in SOURCES.md with an https URL",
+          "tools/src/security/provenance.test.ts::keeps the normative no-compatibility disclaimers in the specifications"
+        ],
+        "negative": [
+          "tools/src/security/provenance.test.ts::no tracked file outside the research catalogue names a TestSprite private endpoint or credential",
+          "tools/src/security/provenance.test.ts::no tracked text claims TestSprite affiliation, endorsement or interoperability except negated disclaimers"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "docs/adr/010-license.md",
+            "assertion": "SOURCES.md records provenance, not permission to redistribute competitor materials."
+          },
+          {
+            "path": "docs/adr/010-license.md",
+            "assertion": "- Status: accepted"
+          },
+          {
+            "path": "specs/09-web-and-integrations.md",
+            "assertion": "não promete compatibilidade com seus comandos, API, tokens ou formatos internos"
+          },
+          {
+            "path": "specs/07-security.md",
+            "assertion": "Não há promessa de compatibilidade com a API TestSprite"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-047",
