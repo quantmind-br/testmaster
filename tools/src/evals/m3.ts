@@ -14,6 +14,7 @@ import type { FixtureControls, FixtureDriver } from "../../../evals/m3/fixture.m
 import * as referenceShopDriver from "../../../evals/m3/fixture.mjs";
 import { assertFrozenFiles, assertRegistrationUnchanged, committedRegistration } from "./freeze.js";
 import { checkHoldout, loadHoldout, sealHoldout } from "./holdout.js";
+import { sealedLeakageSet, startLeakageGuard } from "./leakage.js";
 import type { M3Ledger, PlannedCase, UtilityObservation } from "./m3-scoring.js";
 import { emptyLedger, plannedCases, scoreM3 } from "./m3-scoring.js";
 import { replayM3, withRetainedCopy } from "./replay.js";
@@ -1890,6 +1891,11 @@ function orderedCases(corpus: Corpus) {
     .sort((a, b) => a.id.localeCompare(b.id))
     .concat(corpus.cases.filter((row) => row.group === "integration"));
 }
+/** Plan names are visible to the model and sealed case IDs spell the group, so rounds use opaque names. */
+function opaquePlanName(id: string): string {
+  return `case-${hash(id).slice(0, 12)}`;
+}
+
 async function executeRound(
   root: string,
   r: M3Registration,
@@ -1912,6 +1918,14 @@ async function executeRound(
   );
   for (const item of ordered) item.controls = caseControls(fixture, item);
   const ledgers = ordered.map(emptyLedger);
+  const leakageGuard = await startLeakageGuard({
+    upstream: r.provider.baseUrl,
+    set: sealedLeakageSet(corpus.cases),
+  });
+  const guarded: M3Registration = {
+    ...r,
+    provider: { ...r.provider, baseUrl: leakageGuard.baseUrl },
+  };
   const flush = async () => {
     await atomic(join(root, directory, "round.json"), round);
     for (const row of ledgers) await atomic(join(root, directory, `${row.id}.json`), row);
@@ -1935,10 +1949,11 @@ async function executeRound(
       const remaining = () => Math.max(0, deadline - Date.now());
       shop = await fixture.startCase(root, corpus, item, "healthy", 0, canary);
       const port = Number(new URL(shop.url).port);
-      const setupResult = await setup(root, item, shop.url, r);
+      const setupResult = await setup(root, item, shop.url, guarded);
       app = setupResult.app;
       ledger.records.workspace = setupResult.temporary;
       const plan = structuredClone(item.plan);
+      plan.name = opaquePlanName(item.id);
       const serialized = JSON.stringify(plan);
       if (serialized.includes("@UPLOAD_ARTIFACT@")) {
         const id = await bindUploadFixture(
@@ -2194,7 +2209,10 @@ async function executeRound(
       }
       phase = "healthy";
       const healthyTest = item.healthyPlan
-        ? app.tests.create({ projectId: setupResult.projectId, plan: item.healthyPlan })
+        ? app.tests.create({
+            projectId: setupResult.projectId,
+            plan: { ...item.healthyPlan, name: opaquePlanName(item.id) },
+          })
         : test;
       const healthy = await replay(
         app,
@@ -2517,11 +2535,13 @@ async function executeRound(
           /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted|logical_command_limit|transport_attempt_limit/,
         )![0]!;
     } finally {
+      if (leakageGuard.state.invalid) round.stopReason ??= "leakage";
       app?.close();
       await shop?.close();
       await flush();
     }
   }
+  await leakageGuard.close();
   round.status = "completed";
   await report(root, round, ledgers);
 }

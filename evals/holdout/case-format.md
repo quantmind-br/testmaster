@@ -41,6 +41,12 @@ Sealing validates all required labels and writes a new file exclusively. `seal` 
 
 `--homologation` requires the `implementation` freeze, every family declared `developmentUse: "none"` and every family authored at or after `implementation.frozenAt`; same-team or agent authorship is accepted and listed in the result's limitations. The result reports `validation: "automated-only"`, `disputedCases` and `provenanceVerified: false`: authorship, implementation knowledge, development use and the freeze are declarations, not machine-verifiable facts. This check is only a prerequisite for capability evidence; it does not measure utility or approve release.
 
+## Prompt-leakage guard
+
+Labels, mutant names, case identifiers, oracle names and the author's mechanism/rationale prose must never appear in a model request ([VAL-016](../../specs/10-validation.md)). `tools/src/evals/leakage.ts` derives the forbidden set from the sealed manifest at runtime (`sealedLeakageSet`) and provides `startLeakageGuard`, a local OpenAI-compatible boundary: the evaluation profile points at it, every chat-completion body (raw and every decoded string) is scanned before dispatch, a hit is answered with HTTP 451 and never forwarded, only kinds, case IDs and a body hash are retained, and `assertRoundNotInvalidated` turns any hit into a void round. Shared action vocabulary (`collect_more_evidence`, ...) is code-owned diagnosis output and is deliberately not forbidden.
+
+Known limit, reproduced by `tools/src/evals/holdout-leakage.docker.test.ts` (evidence `validation/results/m3-holdout-prompt-leakage-audit.json`): the healing prompt builder sends the whole plan, and the sealed plans are named after their case ID (`cl-drift-02`, which spells the group). A future round must give each test an opaque name before creating it and must route the provider through the guard; rounds 4-8 predate the guard, their ledgers retain only `promptHash`, and their results are not rescored.
+
 ## Offline replay and limited model smoke
 
 ```sh

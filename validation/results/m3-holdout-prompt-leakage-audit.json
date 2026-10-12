@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "validation": "automated-only",
+  "corpus": "evals/holdout/m3-clinic/sealed.json",
+  "forbiddenValuesAllFamilies": 358,
+  "harnessFaithfulPlanName": {
+    "cl-bug-01": {
+      "analysisPrompts": 1,
+      "healingPrompts": 0,
+      "blockedKinds": [],
+      "blockedCaseIds": []
+    },
+    "cl-drift-02": {
+      "analysisPrompts": 1,
+      "healingPrompts": 0,
+      "blockedKinds": [
+        "case-id"
+      ],
+      "blockedCaseIds": [
+        "cl-drift-02"
+      ]
+    },
+    "cl-adversarial-01": {
+      "analysisPrompts": 1,
+      "healingPrompts": 0,
+      "blockedKinds": [
+        "case-id"
+      ],
+      "blockedCaseIds": [
+        "cl-adversarial-01"
+      ]
+    }
+  },
+  "opaquePlanName": {
+    "cl-drift-02": {
+      "analysisPrompts": 1,
+      "healingPrompts": 1,
+      "blockedKinds": [],
+      "blockedCaseIds": []
+    }
+  },
+  "negativeControl": {
+    "rejected": true,
+    "blockedDelta": 1,
+    "upstreamDelta": 0
+  }
+}
