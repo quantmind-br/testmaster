@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -231,6 +232,35 @@ it("serves a real loopback socket with no unauthenticated data", async () => {
   const allowed = await fetch(`${address}/v1/projects`, { headers: f.headers });
   expect(allowed.status).toBe(200);
   expect((await allowed.json()).data.items[0].id).toBe(f.init.projectId);
+});
+it("refuses any non-loopback listen host and never listens publicly", async () => {
+  const f = await fixture();
+  for (const host of ["0.0.0.0", "::", "192.168.1.20", "localhost"])
+    expect(() => f.app.listen({ host, port: 0 })).toThrow("Local server binds 127.0.0.1 only");
+  expect(f.app.server.listening).toBe(false);
+  await f.app.listen({ port: 0 });
+  expect((f.app.server.address() as AddressInfo).address).toBe("127.0.0.1");
+});
+it("a supplied correlation ID never authorizes a request", async () => {
+  const f = await fixture();
+  const headers = { "x-correlation-id": "incident-admin-123" };
+  expect((await f.app.inject({ url: "/v1/projects", headers })).statusCode).toBe(401);
+  expect(
+    (
+      await f.app.inject({
+        method: "POST",
+        url: "/v1/projects",
+        headers: { ...headers, "idempotency-key": randomUUID() },
+        payload: {},
+      })
+    ).statusCode,
+  ).toBe(401);
+  const authorized = await f.app.inject({
+    url: "/v1/projects",
+    headers: { ...f.headers, ...headers },
+  });
+  expect(authorized.statusCode).toBe(200);
+  expect(authorized.headers["x-correlation-id"]).toBe("incident-admin-123");
 });
 it("resumes durable SSE events without gaps or duplicate terminal events", async () => {
   const f = await fixture();

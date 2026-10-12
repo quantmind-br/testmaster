@@ -122,6 +122,10 @@ keys fail release, never create a replacement or resurrect a revoked secret.
 |---|---|
 | `doctor` FAIL `runtime`, runs exit 9 | Docker daemon unreachable or hardened start failed. Fix Docker; TestMaster never falls back to unsandboxed execution. |
 | `doctor` FAIL `images` | `containers/images.lock.json` does not match local images or the seccomp profile hash. Run `node containers/build.mjs`. |
+| Any command exits 6 with `unsupported_node` (embedding applications see `doctor` FAIL `node`) | Node.js is not a 24.x release (`engines` `>=24 <25`). Install Node 24; the CLI opens nothing before this check. |
+| `doctor` FAIL `writablePaths` or admission refuses `storage_not_writable` | The data directory (`TESTMASTER_DATA_DIR`) is read-only or owned by another user. Fix permissions or the mount; no Run is admitted until it is writable. |
+| `doctor` FAIL `database` | Pending migrations or a non-WAL journal. Run `testmaster db status` and `testmaster db upgrade`; never copy the `.db` file without its WAL. |
+| `doctor` WARN `browserSandbox` / `timezone` / `network` | Recommendations only: browser tests are blocked while HTTP tests stay ready; set `environment.timezone` to an IANA name; review non-loopback environment network profiles. |
 | Container fails at OCI init with a runc/libpathrs crash | Seccomp profile does not match the engine. The profile is generated from the engine's `moby/profiles` version (`containers/generate-seccomp.mjs`, `docs/adr/011-seccomp-profile.md`); regenerate after a Docker upgrade. |
 | Chromium sandbox fails to start | The attempt is `blocked` with `security_precondition_failed`; `--no-sandbox` is never used. Check that unprivileged user namespaces are enabled on the host. |
 | `secret set` refused | Neither `secret-tool` (D-Bus session) nor the vault key file is usable. Fix the keychain or create `~/.config/testmaster/vault.key` (0600), or use `--ephemeral` for the current process. |
@@ -258,6 +262,41 @@ testmaster --output json audit verify audit.json --sha256 INDEPENDENTLY_RETAINED
 The admin export is exclusively created mode 0600 and validates ordered workspace events, contracts
 and unique IDs. Preserve the digest independently: control of both export and digest permits
 replacement and is not external cryptographic anchoring. CLI token secrets never belong in argv.
+
+## Tabletop record
+
+Review of the six rows of the incident table above, local fixtures only: nothing here touches a production
+target and no row is reported as exercised without an automated test. Roles are the scope letters
+of the daemon section (R reads, W authors, X executes/cancels, A administers and revokes).
+
+### Exercised incidents
+
+- Worker loss or uncertain external mutation: `validation/journeys/crash-recovery.docker.test.ts`,
+  `validation/journeys/commit-retry.docker.test.ts` and `packages/application/src/runtime-control.test.ts`
+  cover killed publication, duplicate reconcilers and run cancellation.
+- Disk pressure or artifact tampering: `packages/application/src/upload-outage.test.ts` and
+  `packages/persistence/src/disk-pressure.docker.test.ts`.
+- Migration/startup incompatibility: `packages/persistence/src/migration-startup.test.ts`.
+- Compromised/unavailable model: `packages/application/src/ai/core.test.ts` covers consent revocation and
+  a compromised endpoint that cannot redirect the controller.
+- Worker drain/stop and the viewer refusal used by every row: `packages/application/src/governance-runtime.test.ts`.
+
+### Unexercised incidents
+
+- Suspected sandbox or egress bypass: `worker drain` and `worker stop` are exercised, but isolating the
+  host network and the independent boundary review are host-operator actions with no executable drill.
+- Secret/token exposure: single commands (`secret remove`, drain, cancel) are tested, but the whole
+  containment sequence has not been run end to end, and local token revocation is an application
+  service, not a CLI command.
+
+### Resumption decider
+
+- Suspected sandbox or egress bypass: A decides, only after the independent boundary review passes.
+- Secret/token exposure: A decides, after current revocations are merged and affected secrets rotated.
+- Compromised/unavailable model: A decides, after provider authorization, consent and budgets are reviewed.
+- Worker loss or uncertain external mutation: A decides, after `worker reconcile` leaves no uncertain handle.
+- Disk pressure or artifact tampering: A decides, after hashes verify and usage is below the 90 % watermark.
+- Migration/startup incompatibility: A decides, after the isolated restore review completes.
 
 ## JUnit consumer limitations
 

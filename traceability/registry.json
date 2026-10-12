@@ -9048,25 +9048,110 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M0",
       "ownerRole": "Operations",
-      "status": "blocked",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m1-boundaries.docker.test.ts::J01 dead DOCKER_HOST refuses execution without a local process fallback or target traffic",
-        "packages/sandbox/src/docker/executor.test.ts::doctor refuses missing seccomp or cgroup v2 and reports rootless/rootful accurately"
+        "packages/sandbox/src/docker/executor.test.ts::doctor refuses missing seccomp or cgroup v2 and reports rootless/rootful accurately",
+        "packages/application/src/doctor.test.ts::doctor fails closed on an unsupported Node major and on an unwritable data directory",
+        "packages/application/src/doctor.test.ts::doctor reports blocking failures apart from recommendations and exposes only redacted effective config",
+        "packages/application/src/doctor.test.ts::admission refuses a Run when the data directory is not writable before any container starts",
+        "apps/cli/src/cli.test.ts::refuses every command on an unsupported Node major before any state is opened",
+        "apps/cli/src/cli.test.ts::init opens no network listener",
+        "apps/server/src/server.test.ts::refuses any non-loopback listen host and never listens publicly",
+        "packages/application/src/runtime-control.test.ts::missing enforcement produces a durable typed blocked Run without a job or fallback",
+        "packages/application/src/governance-runtime.test.ts::an old local worker advertises real digests but never claims a queued action it does not understand"
       ],
       "oracle": [
-        "Doctor/admission fail closed for missing Docker/security runtime; support matrix declares actual profile."
+        "Doctor exits FAIL with reasons on an unsupported Node or unwritable data dir; the CLI refuses every command on an unsupported Node before opening state; installing/initialising opens no network listener; unwritable storage never admits a container Run; checks split blocking vs recommendation; effective config is redacted."
       ],
       "evidence": [
         "validation/results/j01-docker-unavailable.json",
         "docs/adr/003-rootful-docker.md",
-        "docs/support-matrix.md"
+        "docs/adr/014-rootless-deferral.md",
+        "docs/support-matrix.md",
+        "packages/application/src/doctor.test.ts",
+        "apps/cli/src/cli.test.ts",
+        "apps/server/src/server.test.ts",
+        "packages/sandbox/src/docker/executor.test.ts"
       ],
       "code": [
         "packages/application/src/application.ts",
-        "packages/sandbox/src/docker/executor.ts"
+        "packages/application/src/runtime-support.ts",
+        "apps/cli/src/cli.ts",
+        "packages/sandbox/src/docker/executor.ts",
+        "apps/server/src/server.ts"
       ],
-      "note": "Normative rootless reference is unavailable/unvalidated here; approved deviation uses rootful hardened Docker. Full Node/storage/distributed preflight acceptance also not recorded.",
-      "blockedReason": "Normative rootless reference is unavailable/unvalidated here; approved deviation uses rootful hardened Docker. Full Node/storage/distributed preflight acceptance also not recorded."
+      "note": "Doctor now checks Node, writable paths, database, timezone, network policy, browser sandbox (advisory, so the HTTP runner stays ready) and redacted config, and reports blocking checks apart from recommendations. Rootless validation is deferred to M4 (ADR-014); the approved rootful hardened deviation stays in force. PostgreSQL/server probe is M4 and the distributed profile refusal is M5.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/doctor.test.ts::doctor reports blocking failures apart from recommendations and exposes only redacted effective config",
+          "apps/cli/src/cli.test.ts::init opens no network listener",
+          "packages/sandbox/src/docker/executor.test.ts::doctor refuses missing seccomp or cgroup v2 and reports rootless/rootful accurately"
+        ],
+        "negative": [
+          "packages/application/src/doctor.test.ts::doctor fails closed on an unsupported Node major and on an unwritable data directory",
+          "packages/application/src/doctor.test.ts::admission refuses a Run when the data directory is not writable before any container starts",
+          "apps/cli/src/cli.test.ts::refuses every command on an unsupported Node major before any state is opened",
+          "packages/application/src/runtime-control.test.ts::missing enforcement produces a durable typed blocked Run without a job or fallback",
+          "apps/server/src/server.test.ts::refuses any non-loopback listen host and never listens publicly"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/doctor.test.ts",
+            "assertion": "expect(oldNode.blocking).toContain(\"node\");"
+          },
+          {
+            "path": "packages/application/src/doctor.test.ts",
+            "assertion": "expect(readOnly.blocking).toContain(\"writablePaths\");"
+          },
+          {
+            "path": "apps/cli/src/cli.test.ts",
+            "assertion": "expect(refused.exit).toBe(6);"
+          },
+          {
+            "path": "apps/cli/src/cli.test.ts",
+            "assertion": "expect(listen).not.toHaveBeenCalled();"
+          },
+          {
+            "path": "apps/server/src/server.test.ts",
+            "assertion": "expect(() => f.app.listen({ host, port: 0 })).toThrow(\"Local server binds 127.0.0.1 only\");"
+          },
+          {
+            "path": "packages/sandbox/src/docker/executor.test.ts",
+            "assertion": "expect(result.mode).toBe(mode);"
+          },
+          {
+            "path": "packages/application/src/runtime-control.test.ts",
+            "assertion": "expect(app.database.all(\"SELECT * FROM job_leases\")).toHaveLength(0);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Rootless Docker validation (normative reference profile)",
+          "specQuote": {
+            "path": "docs/adr/014-rootless-deferral.md",
+            "text": "Rootless Docker validation is deferred to M4"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "PostgreSQL/server connection probe and multi-user server profile",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "M4; multiusuário exige controles SEC"
+          }
+        },
+        {
+          "milestone": "M5",
+          "scope": "Distributed profile refusal when only SQLite storage is configured",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "Perfis e preflight (M0–M1/M4/M5)"
+          }
+        }
+      ]
     },
     {
       "id": "OPS-002",
@@ -10514,20 +10599,24 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/application/src/observability.test.ts::rotates at the byte ceiling, expires only its own old logs after fourteen days and preserves audit files",
         "packages/application/src/observability.test.ts::drops excess log flood immediately and serializes only the safe metadata allowlist",
+        "packages/application/src/observability.test.ts::generates safe IDs and denies overlong or injected correlation before use",
         "packages/application/src/governance-runtime.test.ts::propagates one correlation through durable admission and attempt logs without serializing secret fields",
-        "validation/journeys/governance-ops.docker.test.ts::OPS027 actual loopback API remains available during a bounded diagnostic log flood"
+        "validation/journeys/governance-ops.docker.test.ts::OPS027 actual loopback API remains available during a bounded diagnostic log flood",
+        "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox",
+        "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request"
       ],
       "oracle": [
-        "Real file rotation/14day expiry/flooddrop/canary and actual socket300 concurrent GETs succeed; durable outbox correlation preserved."
+        "One correlation ID is observable on the admitted Run, the worker log, the published Artifact and the run.completed outbox event; logs never carry the secret canary; a supplied correlation ID never authorizes; real file rotation/14 day expiry/flood drop and 300 concurrent loopback GETs succeed."
       ],
       "evidence": [
         "packages/application/src/observability.test.ts",
         "packages/application/src/governance-runtime.test.ts",
-        "validation/journeys/governance-ops.docker.test.ts"
+        "validation/journeys/governance-ops.docker.test.ts",
+        "apps/server/src/server.test.ts"
       ],
       "code": [
         "packages/application/src/observability.ts",
@@ -10539,8 +10628,59 @@
         "apps/cli/src/runtime.ts",
         "apps/mcp/src/server.ts"
       ],
-      "note": "Dedicated successful full Attempt→Artifact correlation acceptance not exercised. CLI endpoint transport is unavailable, so literal CLI→API remote chain cannot be claimed; NetworkBoundary owns separate zero-network recorder.",
-      "blockedReason": "Dedicated successful full Attempt→Artifact correlation acceptance not exercised. CLI endpoint transport is unavailable, so literal CLI→API remote chain cannot be claimed; NetworkBoundary owns separate zero-network recorder."
+      "note": "Local chain verified end to end by a real CLI Run (Run, worker log, Artifact, outbox). CLI to API remote transport and the telemetry/log export policy are M4; the zero-network recorder is owned by the network-boundary journey.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/governance-runtime.test.ts::propagates one correlation through durable admission and attempt logs without serializing secret fields",
+          "validation/journeys/governance-ops.docker.test.ts::OPS027 actual loopback API remains available during a bounded diagnostic log flood",
+          "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox"
+        ],
+        "negative": [
+          "packages/application/src/observability.test.ts::generates safe IDs and denies overlong or injected correlation before use",
+          "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request",
+          "packages/application/src/observability.test.ts::drops excess log flood immediately and serializes only the safe metadata allowlist"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/governance-runtime.test.ts",
+            "assertion": "expect(run.matrixCell).toHaveProperty(\"correlationId\", \"incident-test-123\");"
+          },
+          {
+            "path": "packages/application/src/governance-runtime.test.ts",
+            "assertion": "expect(log).not.toContain(\"do-not-log-canary\");"
+          },
+          {
+            "path": "validation/journeys/governance-ops.docker.test.ts",
+            "assertion": "expect(responses.every((response) => response.status === 200)).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/governance-ops.docker.test.ts",
+            "assertion": "expect(logs).toContain(correlation);"
+          },
+          {
+            "path": "apps/server/src/server.test.ts",
+            "assertion": "expect((await f.app.inject({ url: \"/v1/projects\", headers })).statusCode).toBe(401);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "CLI to API remote endpoint correlation chain (server profile)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "M4; multiusuário exige controles SEC"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "Telemetry and log export policy",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "OPS-027 — Correlação, logs bounded e privacidade (M1–M4)."
+          }
+        }
+      ]
     },
     {
       "id": "OPS-028",
@@ -10832,22 +10972,96 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
-        "packages/application/src/audit.test.ts::records identified grant, secret and export denials alongside authorized operations without secret payloads"
+        "packages/application/src/governance-runtime.test.ts::refuses a viewer image revocation and secret removal without changing revocation state",
+        "packages/application/src/audit.test.ts::records identified grant, secret and export denials alongside authorized operations without secret payloads",
+        "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
+        "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree",
+        "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider"
       ],
       "oracle": [
-        "Real initialized admin drain/stop and viewer refusal preserve state, denials audited; runbooks use implementedcommands and explicit stop/data rules."
+        "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only."
       ],
       "evidence": [
+        "docs/operations/local-operations.md",
+        "apps/cli/src/runbook.test.ts",
         "packages/application/src/governance-runtime.test.ts",
         "packages/application/src/audit.test.ts",
-        "docs/operations/local-operations.md"
+        "validation/journeys/runtime-control.docker.test.ts",
+        "validation/journeys/recovery-controls.docker.test.ts"
       ],
-      "code": ["docs/operations/local-operations.md", "packages/application/src/worker.ts"],
-      "note": "Executable local containment docs/tabletop subset complete; not every incident exercised, global pause/tunnel/S3/webhook and multi-user grant editor are unavailable later surfaces.",
-      "blockedReason": "Executable local containment docs/tabletop subset complete; not every incident exercised, global pause/tunnel/S3/webhook and multi-user grant editor are unavailable later surfaces."
+      "code": [
+        "docs/operations/local-operations.md",
+        "apps/cli/src/cli.ts",
+        "packages/application/src/worker.ts",
+        "packages/application/src/application.ts",
+        "packages/application/src/secrets.ts"
+      ],
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
+          "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
+          "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
+          "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree"
+        ],
+        "negative": [
+          "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
+          "packages/application/src/governance-runtime.test.ts::refuses a viewer image revocation and secret removal without changing revocation state",
+          "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/governance-runtime.test.ts",
+            "assertion": "expect(() => viewer.worker.drain()).toThrowError(expect.objectContaining({ code: \"FORBIDDEN\" }));"
+          },
+          {
+            "path": "packages/application/src/governance-runtime.test.ts",
+            "assertion": "expect(app.worker.drain()).toEqual({ requested: true });"
+          },
+          {
+            "path": "packages/application/src/governance-runtime.test.ts",
+            "assertion": "await expect(viewer.secrets.remove(\"canary\")).rejects.toMatchObject({ code: \"FORBIDDEN\" });"
+          },
+          {
+            "path": "apps/cli/src/runbook.test.ts",
+            "assertion": "expect(missing).toEqual([]);"
+          },
+          {
+            "path": "apps/cli/src/runbook.test.ts",
+            "assertion": "expect(section).toContain(\"Resumption decider\");"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Multi-user grant editor and GitHub/webhook/auth dynamic surfaces",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "M4 | OPS-005–007/010–012/015–019/024–028/032–033/035–038"
+          }
+        },
+        {
+          "milestone": "M5",
+          "scope": "Tunnel kill and global worker pause surfaces",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "M5 | OPS-007–012/015/019/028–034/037: workers distribuídos/túneis/matriz/modos avançados/memória"
+          }
+        },
+        {
+          "milestone": "M6",
+          "scope": "Remaining runbook surfaces of the OPS-035 milestone range (S3 outage repair, webhook replay)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "OPS-035 — Runbooks executáveis e autorização (M1–M6)."
+          }
+        }
+      ]
     },
     {
       "id": "OPS-036",

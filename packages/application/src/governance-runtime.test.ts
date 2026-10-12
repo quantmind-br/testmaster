@@ -186,6 +186,27 @@ it("allows the local admin to drain and stop while refusing a viewer without cha
   );
 });
 
+it("refuses a viewer image revocation and secret removal without changing revocation state", async () => {
+  const { app, init } = await fixture();
+  await app.secrets.set("canary", "NEVER-EXPORT-THIS", { ephemeral: true });
+  const viewer = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const imageId = `sha256:${"a".repeat(64)}`;
+  expect(() => viewer.revokeImage(imageId, "viewer attempt")).toThrowError(
+    expect.objectContaining({ code: "FORBIDDEN" }),
+  );
+  expect(viewer.revokedImages()).toEqual([]);
+  await expect(viewer.secrets.remove("canary")).rejects.toMatchObject({ code: "FORBIDDEN" });
+  expect(app.secrets.get("canary").revokedAt ?? null).toBeNull();
+  // The same operations succeed for the admin, so the refusals above are about the role.
+  app.revokeImage(imageId, "admin containment");
+  expect(app.revokedImages()).toEqual([imageId]);
+  const removed = await app.secrets.remove("canary");
+  expect(removed.revokedAt).toBeTruthy();
+  expect(app.secrets.list().find((entry) => entry.id === removed.id)?.revokedAt).toBe(
+    removed.revokedAt,
+  );
+});
+
 it("refuses future executable schemas and an absent image before claim", async () => {
   const { app, init } = await fixture();
   const plan = scaffoldPlan("backend");

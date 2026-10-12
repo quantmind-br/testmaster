@@ -1,3 +1,4 @@
+import { nodeSupport } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { Command, CommanderError, Option } from "commander";
 import { agentCommands } from "./agents.js";
@@ -83,6 +84,7 @@ export function createCli(runtime: Runtime): Command {
 export async function runCli(
   argv: string[] = process.argv.slice(2),
   runtime = new Runtime(),
+  nodeVersion: string = process.versions.node,
 ): Promise<void> {
   runtime.output =
     argv.includes("--json") ||
@@ -113,6 +115,13 @@ export async function runCli(
   process.on("SIGHUP", sighup);
   let failure: unknown;
   try {
+    const node = nodeSupport(nodeVersion);
+    if (!node.supported)
+      throw new ContractError("PRECONDITION_FAILED", "Unsupported Node.js runtime", {
+        reasonCode: "unsupported_node",
+        required: node.required,
+        actual: node.actual,
+      });
     await program.parseAsync(argv, { from: "user" });
     if (!runtime.pending) {
       if (runtime.signal) throw runtime.interrupted();

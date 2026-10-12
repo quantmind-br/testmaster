@@ -1,4 +1,5 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import net from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
@@ -12,9 +13,10 @@ const originalExitCode = process.exitCode;
 afterEach(async () => {
   process.exitCode = originalExitCode;
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
-async function invoke(args: string[]) {
+async function invoke(args: string[], nodeVersion?: string) {
   let stdout = "";
   let stderr = "";
   const output = new Writable({
@@ -29,7 +31,7 @@ async function invoke(args: string[]) {
       callback();
     },
   });
-  await runCli(args, new Runtime(output, diagnostics));
+  await runCli(args, new Runtime(output, diagnostics), nodeVersion);
   return {
     stdout,
     stderr,
@@ -160,6 +162,33 @@ describe("CLI machine output and offline authoring", () => {
     const result = await invoke(["--json", "run", "wait", "run_missing", "--timeout", "-1"]);
     expect(result.exit).toBe(5);
     expect(result.document.error).toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+  it("refuses every command on an unsupported Node major before any state is opened", async () => {
+    const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
+    roots.push(root);
+    for (const version of ["25.0.0", "22.12.0", "not-a-version"]) {
+      const refused = await invoke(["--json", "--cwd", root, "init", "--name", "shop"], version);
+      expect(refused.exit).toBe(6);
+      expect(refused.document.error).toMatchObject({
+        code: "PRECONDITION_FAILED",
+        details: { reasonCode: "unsupported_node", required: ">=24 <25", actual: version },
+      });
+      expect(await readdir(root)).toEqual([]);
+    }
+    const supported = await invoke(["--json", "--cwd", root, "config", "show"], "24.21.0");
+    expect(supported.exit).toBe(0);
+  });
+  it("init opens no network listener", async () => {
+    const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
+    roots.push(root);
+    await mkdir(join(root, "home"));
+    vi.stubEnv("HOME", join(root, "home"));
+    vi.stubEnv("XDG_CONFIG_HOME", join(root, "home", ".config"));
+    const listen = vi.spyOn(net.Server.prototype, "listen");
+    const result = await invoke(["--json", "--cwd", root, "init", "--name", "shop"]);
+    expect(result.exit).toBe(0);
+    expect(result.document.data).toMatchObject({ projectId: expect.any(String) });
+    expect(listen).not.toHaveBeenCalled();
   });
   it("preserves partial receipt ownership in one signal envelope", async () => {
     let stdout = "";

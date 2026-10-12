@@ -1,10 +1,11 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { Application, issueLocalToken } from "@testmaster/application";
 import { expect, it } from "vitest";
 import { createServer } from "../../apps/server/src/server.js";
-import { journey } from "./harness.js";
+import { controlledShop, healthPlan, journey, object, text } from "./harness.js";
 
 it("OPS002 actual hardened runner readiness follows migration and admission without target or model probes", async () => {
   await journey(
@@ -105,3 +106,58 @@ it("OPS027 actual loopback API remains available during a bounded diagnostic log
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+it("OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox", async () => {
+  await journey("ops027-correlation-chain", async (session) => {
+    const target = await controlledShop();
+    try {
+      await session.init(target.url);
+      const test = await session.createTest(healthPlan());
+      const worker = await session.worker();
+      const receipt = await session.command(["test", "run", text(test.id)]);
+      const runId = text(receipt.runId);
+      const completed = await session.observe(runId, (run) => run.phase === "completed");
+      expect(completed.outcome).toBe("passed");
+      const correlation = String(object(completed.matrixCell).correlationId);
+      expect(correlation).toMatch(/^cli_[0-9a-f-]{36}$/);
+      worker.child.kill("SIGTERM");
+      await worker.result;
+      // Worker log files are flushed on shutdown; they carry IDs and status, never payloads.
+      const logDirectory = join(session.dataDir, "logs", "worker");
+      let logs = "";
+      for (const name of await readdir(logDirectory))
+        logs += await readFile(join(logDirectory, name), "utf8");
+      expect(logs).toContain(correlation);
+      expect(logs).toContain(runId);
+      let artifactCount = 0;
+      const db = new DatabaseSync(join(session.dataDir, "testmaster.db"), { readOnly: true });
+      try {
+        expect(
+          db
+            .prepare(
+              "SELECT COUNT(*) AS n FROM outbox WHERE aggregate_id=? AND type='run.completed' AND data_json LIKE ?",
+            )
+            .get(runId, `%${correlation}%`)?.n,
+        ).toBe(1);
+        const artifacts = db
+          .prepare("SELECT data_json FROM artifacts WHERE run_id=?")
+          .all(runId)
+          .map((row) => String(row.data_json));
+        expect(artifacts.length).toBeGreaterThan(0);
+        expect(artifacts.every((json) => json.includes(correlation))).toBe(true);
+        artifactCount = artifacts.length;
+      } finally {
+        db.close();
+      }
+      session.oracles.push({
+        check: "ops027OneCorrelationAcrossRunLogArtifactOutbox",
+        healthy: true,
+        runId,
+        correlation,
+        artifacts: artifactCount,
+      });
+    } finally {
+      await target.close();
+    }
+  });
+}, 180000);

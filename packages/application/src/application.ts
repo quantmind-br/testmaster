@@ -1,6 +1,16 @@
-import { chmod, lstat, mkdir, mkdtemp, rm, statfs, writeFile } from "node:fs/promises";
+import {
+  access,
+  chmod,
+  constants,
+  lstat,
+  mkdir,
+  mkdtemp,
+  rm,
+  statfs,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ContractError,
@@ -46,7 +56,12 @@ import {
 import { BackupsService } from "./backups.js";
 import { CiService } from "./ci.js";
 import { ComparisonsService } from "./comparisons.js";
-import { type ResolveConfigOptions, type ResolvedConfig, resolveConfig } from "./config.js";
+import {
+  exportEffectiveConfig,
+  type ResolveConfigOptions,
+  type ResolvedConfig,
+  resolveConfig,
+} from "./config.js";
 import { entity, type Scope, type ServiceContext } from "./context.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
@@ -57,6 +72,7 @@ import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
 import { measureRuntimeIdentities } from "./runtime-identity.js";
+import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
 import { SecretsService } from "./secrets.js";
 import { SelectionService } from "./selection.js";
 import { WorkerService } from "./worker.js";
@@ -540,11 +556,26 @@ export class Application {
         "PRECONDITION_FAILED",
         "Database admission is suspended pending restore review",
       );
+    try {
+      await access(this.config.dataDir, constants.W_OK);
+    } catch {
+      throw new ContractError("PRECONDITION_FAILED", "Data directory is not writable", {
+        reasonCode: "storage_not_writable",
+      });
+    }
     const storage = await statfs(this.config.dataDir);
     const used = 1 - Number(storage.bavail) / Number(storage.blocks);
     if (used >= 0.9)
       throw new ContractError("QUOTA_EXCEEDED", "Storage admission suspended at high watermark", {
+        reasonCode: "storage_high_watermark",
         usedFraction: used,
+        usedPercent: Math.floor(used * 100 + 1e-9),
+        path: "<data-dir>",
+        options: [
+          "testmaster worker reconcile runs eligible retention GC",
+          "free space on the data-directory volume outside TestMaster",
+          "expand the volume; retention is not shortened automatically",
+        ],
       });
     if (executor === "process") {
       if (!unsafeLocal || !this.config.profilePolicy.security.allowUnsafeProcessExecution)
@@ -648,45 +679,7 @@ export class Application {
             [image],
             revokedImageIds(this.database),
           );
-          if (runner === "playwright") {
-            const probe = await mkdtemp(join(tmpdir(), "tm-ready-"));
-            try {
-              await mkdir(join(probe, "input"));
-              await mkdir(join(probe, "sockets"));
-              const browser = await new DockerExecutor().doctor({
-                attemptId: uuidV7IdGenerator.next("att"),
-                runId: uuidV7IdGenerator.next("run"),
-                kind: "browser",
-                imageId: lock[image].imageId,
-                inputDir: join(probe, "input"),
-                socketsDir: join(probe, "sockets"),
-                seccompPath: this.seccompPath,
-              });
-              ready = browser.available;
-              if (ready) {
-                const launched = await new DockerExecutor().execute({
-                  attemptId: uuidV7IdGenerator.next("att"),
-                  runId: uuidV7IdGenerator.next("run"),
-                  kind: "browser",
-                  imageId: lock[image].imageId,
-                  inputDir: join(probe, "input"),
-                  socketsDir: join(probe, "sockets"),
-                  seccompPath: this.seccompPath,
-                  entrypoint: ["node"],
-                  command: [
-                    "--input-type=module",
-                    "-e",
-                    "import {chromium} from 'playwright-core'; const browser=await chromium.launch({headless:true,chromiumSandbox:true}); await browser.close();",
-                  ],
-                  attemptTimeoutMs: 10000,
-                  cancellationGraceMs: 0,
-                });
-                ready = launched.code === 0;
-              }
-            } finally {
-              await rm(probe, { recursive: true, force: true });
-            }
-          }
+          if (runner === "playwright") ready = await this.probeBrowserSandbox(lock[image].imageId);
         } catch {
           ready = false;
         }
@@ -707,7 +700,47 @@ export class Application {
       },
     };
   }
-  async doctor(options: { target?: string } = {}) {
+  /** Starts Chromium with its own sandbox inside the hardened browser container; true when it launches. */
+  private async probeBrowserSandbox(imageId: string): Promise<boolean> {
+    const probe = await mkdtemp(join(tmpdir(), "tm-ready-"));
+    try {
+      await mkdir(join(probe, "input"));
+      await mkdir(join(probe, "sockets"));
+      const attempt = {
+        attemptId: uuidV7IdGenerator.next("att"),
+        runId: uuidV7IdGenerator.next("run"),
+        kind: "browser" as const,
+        imageId,
+        inputDir: join(probe, "input"),
+        socketsDir: join(probe, "sockets"),
+        seccompPath: this.seccompPath,
+      };
+      const browser = await new DockerExecutor().doctor(attempt);
+      if (!browser.available) return false;
+      const launched = await new DockerExecutor().execute({
+        ...attempt,
+        attemptId: uuidV7IdGenerator.next("att"),
+        runId: uuidV7IdGenerator.next("run"),
+        entrypoint: ["node"],
+        command: [
+          "--input-type=module",
+          "-e",
+          "import {chromium} from 'playwright-core'; const browser=await chromium.launch({headless:true,chromiumSandbox:true}); await browser.close();",
+        ],
+        attemptTimeoutMs: 10000,
+        cancellationGraceMs: 0,
+      });
+      return launched.code === 0;
+    } finally {
+      await rm(probe, { recursive: true, force: true });
+    }
+  }
+  /**
+   * Preflight report. `blocking` names the checks that refuse execution; `recommendations` are
+   * advisory (WARN) and never change `status`.
+   */
+  async doctor(options: { target?: string; nodeVersion?: string } = {}) {
+    const node = nodeSupport(options.nodeVersion ?? process.versions.node);
     let lock: ImageLock | null = null;
     let images = "PASS";
     try {
@@ -741,6 +774,92 @@ export class Application {
     } catch {
       storage = "FAIL";
     }
+    let writablePaths: { status: string; pendingCreate?: boolean; diagnostics?: string[] } = {
+      status: "PASS",
+    };
+    try {
+      try {
+        await access(this.config.dataDir, constants.W_OK);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        await access(dirname(this.config.dataDir), constants.W_OK);
+        writablePaths = { status: "PASS", pendingCreate: true };
+      }
+    } catch {
+      writablePaths = { status: "FAIL", diagnostics: ["data_dir_not_writable"] };
+    }
+    let database: {
+      status: string;
+      schemaVersion?: number;
+      journalMode?: string;
+      diagnostics?: string[];
+    };
+    try {
+      const migrations = this.database.status();
+      const journalMode = String(this.database.get("PRAGMA journal_mode")?.journal_mode);
+      database = {
+        status: migrations.pending.length === 0 && journalMode === "wal" ? "PASS" : "FAIL",
+        schemaVersion: migrations.currentVersion,
+        journalMode,
+        ...(migrations.pending.length
+          ? { diagnostics: ["migrations_pending"] }
+          : journalMode === "wal"
+            ? {}
+            : { diagnostics: ["database_unavailable"] }),
+      };
+    } catch {
+      database = { status: "FAIL", diagnostics: ["database_unavailable"] };
+    }
+    const configuredTimezone = this.config.effectiveConfig.config.environment?.timezone;
+    const timezone = {
+      status:
+        configuredTimezone !== undefined && isValidTimeZone(configuredTimezone) ? "PASS" : "WARN",
+      configured: configuredTimezone ?? null,
+      host: new Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ...(configuredTimezone !== undefined && isValidTimeZone(configuredTimezone)
+        ? {}
+        : { diagnostics: ["timezone_not_iana"] }),
+    };
+    let network: {
+      status: string;
+      nonLoopbackEnvironmentRevisions?: number;
+      telemetry: "enabled" | "disabled";
+      diagnostics?: string[];
+    } = {
+      status: "NOT_CHECKED",
+      telemetry:
+        this.config.effectiveConfig.config.telemetry?.enabled === true ? "enabled" : "disabled",
+    };
+    try {
+      const revisions = Number(
+        this.database.get(
+          "SELECT COUNT(*) AS n FROM environment_revisions WHERE network_profile<>'local-loopback'",
+        )?.n,
+      );
+      network = {
+        ...network,
+        status: revisions > 0 ? "WARN" : "PASS",
+        nonLoopbackEnvironmentRevisions: revisions,
+        ...(revisions > 0 ? { diagnostics: ["non_loopback_network_profile"] } : {}),
+      };
+    } catch {
+      /* The database check already reports an unreadable store. */
+    }
+    let browserSandbox: { status: string; diagnostics?: string[]; reason?: string } = {
+      status: "NOT_CHECKED",
+      reason: "Docker runtime or image lock is unavailable",
+    };
+    if (lock && runtime.available) {
+      let launched = false;
+      try {
+        launched = await this.probeBrowserSandbox(lock["testmaster-runner"].imageId);
+      } catch {
+        launched = false;
+      }
+      browserSandbox = launched
+        ? { status: "PASS" }
+        : { status: "WARN", diagnostics: ["browser_sandbox_unavailable"] };
+    }
     const secrets = await this.secrets.health();
     let target: { status: string; diagnostics?: string[] } = { status: "NOT_CHECKED" };
     if (options.target) {
@@ -761,27 +880,56 @@ export class Application {
         target = { status: "FAIL", diagnostics: ["target_unreachable"] };
       }
     }
-    return {
-      status:
-        !runtime.available || images === "FAIL" || storage === "FAIL" || target.status === "FAIL"
-          ? "FAIL"
-          : "PASS",
-      checks: {
-        runtime: { status: runtime.available ? "PASS" : "FAIL", ...runtime },
-        images: { status: images },
-        storage: { status: storage, availableBytes },
-        secrets: { status: secrets.writable ? "PASS" : "WARN", ...secrets },
-        config: { status: "PASS", effectiveConfig: this.config.effectiveConfig },
-        target,
-        model: this.config.modelProviders.some(
-          (provider) =>
-            this.config.profilePolicy.allowedModelProviders.includes(provider.id) &&
-            provider.models.length,
-        )
-          ? { status: "NOT_CHECKED", reason: "Model is configured; replay does not contact it" }
-          : { status: "ABSENT", diagnostics: ["model_not_configured"], requiredForReplay: false },
+    const checks = {
+      node: {
+        status: node.supported ? "PASS" : "FAIL",
+        required: node.required,
+        actual: node.actual,
       },
+      runtime: { status: runtime.available ? "PASS" : "FAIL", ...runtime },
+      images: { status: images },
+      storage: { status: storage, availableBytes },
+      writablePaths,
+      database,
+      timezone,
+      network,
+      browserSandbox,
+      secrets: { status: secrets.writable ? "PASS" : "WARN", ...secrets },
+      config: { status: "PASS", effectiveConfig: exportEffectiveConfig(this.config) },
+      target,
+      model: this.config.modelProviders.some(
+        (provider) =>
+          this.config.profilePolicy.allowedModelProviders.includes(provider.id) &&
+          provider.models.length,
+      )
+        ? { status: "NOT_CHECKED", reason: "Model is configured; replay does not contact it" }
+        : { status: "ABSENT", diagnostics: ["model_not_configured"], requiredForReplay: false },
     };
+    const blocking = (
+      ["node", "runtime", "images", "storage", "writablePaths", "database", "target"] as const
+    ).filter((name) => checks[name].status === "FAIL");
+    const recommendations = [
+      ...(storage === "WARN" ? ["Less than 1 GiB is free on the data-directory volume."] : []),
+      ...(timezone.status === "WARN"
+        ? ["Set environment.timezone to an IANA name such as UTC or America/Sao_Paulo."]
+        : []),
+      ...(network.status === "WARN"
+        ? ["An environment uses a non-loopback network profile; review its egress allowlist."]
+        : []),
+      ...(browserSandbox.status === "WARN"
+        ? ["Browser sandbox is unavailable; HTTP tests stay ready and browser tests are blocked."]
+        : []),
+      ...(secrets.writable
+        ? []
+        : ["No writable secure secret backend; secrets need explicit ephemeral mode."]),
+      ...(target.status === "WARN" ? ["The probed target answered with a server error."] : []),
+      ...(runtime.available && runtime.mode === "rootful"
+        ? [
+            "Rootful Docker host; rootless is the normative reference and its validation is deferred to M4.",
+          ]
+        : []),
+    ];
+    return { status: blocking.length ? "FAIL" : "PASS", blocking, recommendations, checks };
   }
   async capabilities() {
     const docker = await new DockerExecutor().doctor();

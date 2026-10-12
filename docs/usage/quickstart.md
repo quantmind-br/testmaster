@@ -59,9 +59,14 @@ checkout or project `.testmaster` data. A process kill may leave a staging direc
 `.testmaster-install.lock`; inspect the prefix before removing stale installation state.
 
 
-`testmaster doctor` refuses execution (exit 9) when Docker, the image lock or the seccomp profile is not
-usable. There is no silent fallback to unsandboxed execution; `--unsafe-local` additionally requires
-`execution.executor: "process"` and a user-level opt-in, and reports mark the run as not isolated.
+`testmaster doctor` refuses execution (exit 9) when Docker, the image lock or the seccomp profile is
+not usable, the data directory is not writable, or the database has pending migrations. The report
+separates `blocking` checks from advisory `recommendations` (timezone not an IANA name, non-loopback
+network profile, unavailable browser sandbox, low disk, rootful Docker) and prints only the redacted
+effective configuration. On a Node.js major other than 24 every command, `doctor` included, exits 6
+(`unsupported_node`) before it opens any state. There is no silent fallback to unsandboxed execution;
+`--unsafe-local` additionally requires `execution.executor: "process"` and a user-level opt-in, and
+reports mark the run as not isolated.
 
 ## Deterministic path (no model, no internet)
 

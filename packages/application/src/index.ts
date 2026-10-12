@@ -35,6 +35,7 @@ export * from "./release.js";
 export * from "./resources.js";
 export * from "./retention.js";
 export * from "./runs.js";
+export * from "./runtime-support.js";
 export * from "./secrets.js";
 export * from "./selection.js";
 export * from "./worker.js";
