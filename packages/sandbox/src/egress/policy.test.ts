@@ -46,6 +46,12 @@ describe("SEC-008 canonical origins", () => {
       policy.authorize("http://allowed.test.attacker.test", async () => ["8.8.8.8"]),
     ).rejects.toThrow("origin_denied");
   });
+  it("refuses an insecure TLS network policy at construction", () => {
+    expect(
+      () => new EgressPolicy({ ...testPolicy(["https://target.test"]), allowInsecureTls: true }),
+    ).toThrow("unsafe_network_policy");
+    expect(() => new EgressPolicy(testPolicy(["https://target.test"]))).not.toThrow();
+  });
 });
 describe("SEC-009 restricted IP corpus", () => {
   it.each([

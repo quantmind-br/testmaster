@@ -303,6 +303,7 @@ it("SEC-039 exact destructive approval permits one audited effect and rejects bo
           environmentRevisionId: environment.activeRevisionId,
           originSet: [url],
           policyHash: app!.config.effectiveConfig.policyHash,
+          reason: "Exact destructive action approved for the acceptance run",
         });
       const admit = (environmentId = environment.id, revisionId = revision.id) =>
         app!.runs.admit({ testId: test.id, revisionId, environmentId }, { wait: true });

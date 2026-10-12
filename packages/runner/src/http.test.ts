@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import {
   createServer,
   request as httpRequest,
@@ -5,7 +7,11 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
+import { createServer as createTlsServer } from "node:https";
 import { connect, type Socket } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import {
   type ExecutablePlan,
   type PlanStep,
@@ -898,4 +904,70 @@ it("emits real HTTP business comparisons and redacts a secret-derived expected v
   expect(payload).not.toHaveProperty("observed");
   expect(payload).not.toHaveProperty("expected");
   expect(JSON.stringify(secret.events)).not.toContain("canary-secret");
+});
+it("refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tm-http-tls-"));
+  let hits = 0;
+  const secure = createTlsServer({}, (_req, res) => {
+    hits++;
+    res.end("ok");
+  });
+  try {
+    await promisify(execFile)("openssl", [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-keyout",
+      join(directory, "key.pem"),
+      "-out",
+      join(directory, "cert.pem"),
+      "-days",
+      "1",
+      "-subj",
+      "/CN=127.0.0.1",
+      "-addext",
+      "subjectAltName=IP:127.0.0.1",
+    ]);
+    const cert = await readFile(join(directory, "cert.pem"));
+    secure.setSecureContext({ key: await readFile(join(directory, "key.pem")), cert });
+    await new Promise<void>((resolve) => secure.listen(0, "127.0.0.1", resolve));
+    const address = secure.address();
+    if (!address || typeof address === "string") throw new Error("Missing TLS fixture address");
+    const base = `https://127.0.0.1:${address.port}`;
+    // The default dispatcher verifies certificates against the system trust store only.
+    const untrusted = fixture(base);
+    await expect(untrusted.engine.perform(requestStep("health", []))).rejects.toMatchObject({
+      reasonCode: "insufficient_evidence",
+    });
+    expect(hits).toBe(0);
+    const pinned = new Agent({ connect: { ca: cert } });
+    agents.push(pinned);
+    const trusted = fixture(base);
+    const engine = new HttpEngine(trusted.runtime, { dispatcher: pinned });
+    engines.push(engine);
+    await engine.perform(requestStep("health", []));
+    expect(responseOf(engine, "health").status).toBe(200);
+    expect(hits).toBe(1);
+  } finally {
+    secure.closeAllConnections();
+    if (secure.listening) await new Promise<void>((resolve) => secure.close(() => resolve()));
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+it("refuses storage-state input as unsupported before any HTTP request", async () => {
+  let hits = 0;
+  const base = await serve((_req, res) => {
+    hits++;
+    res.end("ok");
+  });
+  const { runtime } = fixture(base, { plan: plan([requestStep("health", [])]) });
+  Object.assign(runtime.input, { storageState: { cookies: [], origins: [] } });
+  vi.stubEnv("TESTMASTER_EGRESS_PROXY", base);
+  expect(await runHttp(runtime)).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "unsupported_capability",
+  });
+  expect(hits).toBe(0);
 });

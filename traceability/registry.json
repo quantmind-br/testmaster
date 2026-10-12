@@ -8676,19 +8676,23 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/sandbox/src/docker/isolation.docker.test.ts::reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access",
+        "packages/sandbox/src/attempt/adversarial.docker.test.ts::blocks service-worker registration rather than permitting a worker fetch bypass",
+        "packages/sandbox/src/attempt/adversarial.docker.test.ts::controller withholds compromised runner PII corpus and malformed JSON with no raw fallback",
         "packages/evidence/src/evidence.test.ts::refuses path, hardlink, symlink and swapped ancestor escapes",
         "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA"
       ],
       "oracle": [
-        "Local hostile network/code/path controls exercise sandbox and supervisor enforcement."
+        "Hostile target host, malicious runner code, path escape and DNS rebinding are blocked by sandbox, supervisor and evidence-root enforcement, each with an approved positive control."
       ],
       "evidence": [
         "packages/sandbox/src/docker/isolation.docker.test.ts",
+        "packages/sandbox/src/attempt/adversarial.docker.test.ts",
         "packages/evidence/src/evidence.test.ts",
         "packages/sandbox/src/egress/proxy.test.ts",
+        "validation/results/sandbox-adversarial.json",
         "docs/security/threat-model.md"
       ],
       "code": [
@@ -8696,8 +8700,43 @@
         "packages/sandbox/src/egress/proxy.ts",
         "packages/evidence/src/path.ts"
       ],
-      "note": "Single-user local profile only; hostile multi-tenant/cross-tenant server execution is unavailable in M0–M2.",
-      "blockedReason": "Single-user local profile only; hostile multi-tenant/cross-tenant server execution is unavailable in M0–M2."
+      "note": "Single-user local profile. Malicious host, code, path escape and DNS rebinding are exercised; cross-tenant hostile execution is deferred to M4 (SEC-030).",
+      "coverage": {
+        "positive": [
+          "packages/sandbox/src/docker/isolation.docker.test.ts::reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access",
+          "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA"
+        ],
+        "negative": [
+          "packages/sandbox/src/attempt/adversarial.docker.test.ts::blocks service-worker registration rather than permitting a worker fetch bypass",
+          "packages/sandbox/src/attempt/adversarial.docker.test.ts::controller withholds compromised runner PII corpus and malformed JSON with no raw fallback",
+          "packages/evidence/src/evidence.test.ts::refuses path, hardlink, symlink and swapped ancestor escapes",
+          "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/evidence/src/evidence.test.ts",
+            "assertion": "await expect(root.openFile(\"hard\")).rejects.toThrow();"
+          },
+          {
+            "path": "packages/sandbox/src/egress/proxy.test.ts",
+            "assertion": "expect(upstream.requests()).toBe(1);"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/adversarial.docker.test.ts",
+            "assertion": "expect(network).toContain(\"Service Worker registration blocked\");"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Cross-tenant isolation of hostile execution; the local single-user profile is the only enabled profile through M3.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "**SEC-030 — Isolamento multi-tenant (M4–M5).**"
+          }
+        }
+      ]
     },
     {
       "id": "NFR-004",
@@ -9173,18 +9212,83 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
-      "scenario": ["Real claim/publication interrupted commit restart matrix"],
-      "oracle": ["No false published artifact and stable durable receipt; SQLite integrity"],
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/commit-retry.docker.test.ts::OPS-005 SIGKILL before and after revision/admission commit preserves all-or-none ownership",
+        "packages/persistence/src/persistence.test.ts::allows exactly one of two OS processes to claim",
+        "packages/persistence/src/persistence.test.ts::rejects stale owner fencing after expiry and a new claim",
+        "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits",
+        "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses a real SQLite connection forced into non-WAL journal storage before migrations",
+        "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses SQLite on network or FUSE storage before creating the database",
+        "packages/persistence/src/persistence.test.ts::upgrades populated evidence while preserving code artifact foreign keys",
+        "packages/persistence/src/persistence.test.ts::rolls back an invalid rebuild upgrade and restores runtime foreign keys",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs"
+      ],
+      "oracle": [
+        "Real SQLite connection refused before migrations on non-WAL storage and on NFS/SMB/FUSE statfs types; a second connection hitting the writer lock fails with UNAVAILABLE writer_contention within its busy timeout, never starts a transaction, and succeeds after the holder commits; after a SIGKILL around revision/admission commit no orphan revision/Run; exactly one of two OS processes wins a claim and a stale fence cannot finalize."
+      ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
         "validation/results/j17-publication-crash-matrix.json",
         "validation/journeys/commit-retry.docker.test.ts",
-        "packages/persistence/src/storage-profile.test.ts"
+        "packages/persistence/src/storage-profile.test.ts",
+        "packages/persistence/src/persistence.test.ts",
+        "docs/adr/002-storage.md"
       ],
-      "code": ["packages/persistence/src/database.ts", "packages/persistence/src/repositories.ts"],
-      "note": "Revision/admission before/after-commit SIGKILL and WAL-incompatible connection refusal passed; NFS/CIFS/FUSE prohibited by statfs guard, no distributed database runtime claim.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Revision/admission before/after-commit SIGKILL and WAL-incompatible connection refusal passed; NFS/CIFS/FUSE prohibited by statfs guard, no distributed database runtime claim."
+      "code": [
+        "packages/persistence/src/database.ts",
+        "packages/persistence/src/repositories.ts"
+      ],
+      "note": "Verified for the local SQLite profile: WAL with normal locking, foreign keys on, busy_timeout 5 s, a single controller writer, and refusal of non-WAL and NFS/SMB/FUSE storage before any migration. A busy writer lock surfaces as the typed retryable UNAVAILABLE error (reasonCode writer_contention) from BEGIN IMMEDIATE only; errors raised after the transaction started are not remapped. Migrations take BEGIN EXCLUSIVE directly and are outside this mapping. PostgreSQL has no runtime (ADR-002); its DDL mirror is not runtime support.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/commit-retry.docker.test.ts::OPS-005 SIGKILL before and after revision/admission commit preserves all-or-none ownership",
+          "packages/persistence/src/persistence.test.ts::allows exactly one of two OS processes to claim",
+          "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits"
+        ],
+        "negative": [
+          "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses a real SQLite connection forced into non-WAL journal storage before migrations",
+          "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses SQLite on network or FUSE storage before creating the database",
+          "packages/persistence/src/persistence.test.ts::rejects stale owner fencing after expiry and a new claim",
+          "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/persistence/src/storage-profile.test.ts",
+            "assertion": "await expect(PersistenceDatabase.open(join(root, \"testmaster.db\"))).rejects.toMatchObject({"
+          },
+          {
+            "path": "packages/persistence/src/storage-profile.test.ts",
+            "assertion": "expect(existsSync(join(root, \"testmaster.db\"))).toBe(false);"
+          },
+          {
+            "path": "packages/persistence/src/persistence.test.ts",
+            "assertion": "expect(db.get(\"PRAGMA foreign_keys\")?.foreign_keys).toBe(1);"
+          },
+          {
+            "path": "packages/persistence/src/persistence.test.ts",
+            "assertion": "details: { reasonCode: \"writer_contention\", retryable: true },"
+          },
+          {
+            "path": "packages/persistence/src/persistence.test.ts",
+            "assertion": "expect(results.filter((text) => text.includes(\"winner\"))).toHaveLength(1);"
+          },
+          {
+            "path": "validation/journeys/commit-retry.docker.test.ts",
+            "assertion": "expect(retained.prepare(\"PRAGMA integrity_check\").get()?.integrity_check).toBe(\"ok\");"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "PostgreSQL constraints, transactions and tenant-scoped rows for claims, finalization and outbox",
+          "specQuote": {
+            "path": "docs/adr/002-storage.md",
+            "text": "PostgreSQL runtime remains an M4 disabled capability."
+          }
+        }
+      ]
     },
     {
       "id": "OPS-006",
@@ -9929,21 +10033,86 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "J17 backup during active Docker execution is coherent, incomplete objects explicit and restore merges later revocation"
+        "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/application/src/backup-alert.test.ts::OPS-024 real backup destination failure emits a durable non-green alert",
+        "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
+        "packages/application/src/input-fixtures.test.ts::backs up fixture bytes and reapplies post-backup deletion tombstones before restored use",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds"
       ],
       "oracle": [
-        "Online snapshot contains active Run and valid DB; manifest secretIncluded=false/no canary; unavailable blob in incomplete evidence index and durable warning"
+        "Online snapshot (SQLite backup API, never a raw .db copy) contains the active Run and a valid DB; manifest secretIncluded=false with no canary and lists key IDs, config digests and the unavailable objects (missingObjects) before the backup can be called complete; an unavailable blob makes the evidence index incomplete and raises a durable artifact_unavailable alert (outbox backup.failed plus operational_state backup:last-warning) instead of a green report; a destination failure raises storage_unavailable."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
         "validation/results/j17-active-backup-revocation.json",
-        "validation/journeys/recovery-controls.docker.test.ts"
+        "validation/journeys/recovery-controls.docker.test.ts",
+        "packages/application/src/backup-alert.test.ts",
+        "packages/persistence/src/persistence.test.ts",
+        "packages/application/src/input-fixtures.test.ts"
       ],
-      "code": ["packages/persistence/src/database.ts", "packages/application/src/backups.ts"],
-      "note": "Active online backup, object holds/GC grace, key-ID manifest, missing-object alerts and secret-free manifests implemented and tested locally.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Active online backup, object holds/GC grace, key-ID manifest, missing-object alerts and secret-free manifests implemented and tested locally."
+      "code": [
+        "packages/persistence/src/database.ts",
+        "packages/application/src/backups.ts",
+        "packages/contracts/src/operations.ts"
+      ],
+      "note": "Verified for the local SQLite profile. BackupManifest gained the optional missingObjects list (artifact or fixture IDs, and snapshot metadata keys, that could not be copied); older manifests stay valid. The remote-backup and PostgreSQL clauses deferred to M4 rest on the OPS-024 heading range (M1–M4); the sentence itself names no milestone.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+          "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+          "packages/application/src/input-fixtures.test.ts::backs up fixture bytes and reapplies post-backup deletion tombstones before restored use",
+          "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds",
+          "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert"
+        ],
+        "negative": [
+          "packages/application/src/backup-alert.test.ts::OPS-024 real backup destination failure emits a durable non-green alert",
+          "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
+          "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/crash-recovery.docker.test.ts",
+            "assertion": "expect(manifest.secretIncluded).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/crash-recovery.docker.test.ts",
+            "assertion": "expect(index.missingObjects).toContain(artifact?.artifactId);"
+          },
+          {
+            "path": "validation/journeys/crash-recovery.docker.test.ts",
+            "assertion": "expect(incompleteManifest.missingObjects).toContain(artifact?.artifactId);"
+          },
+          {
+            "path": "packages/application/src/backup-alert.test.ts",
+            "assertion": "expect(JSON.parse(String(warning?.value))).toMatchObject({ reasonCode: \"storage_unavailable\" });"
+          },
+          {
+            "path": "packages/application/src/backup-alert.test.ts",
+            "assertion": "expect(manifest.missingObjects).toEqual([imported.id]);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Remote encrypted backup with its own access control and retention (7 daily, 4 weekly, 3 monthly defaults), separate from active retention",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "**OPS-024 — Backup consistente (M1–M4).**"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "PostgreSQL consistent dump or base backup plus WAL (the local profile backs up SQLite only; PostgreSQL DDL is not runtime support per docs/support-matrix.md)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "**OPS-024 — Backup consistente (M1–M4).**"
+          }
+        }
+      ]
     },
     {
       "id": "OPS-025",
@@ -9951,19 +10120,96 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
-      "scenario": ["Active backup restored suspended with later revocation merged"],
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-025 isolated restore opens no outbound connection and dispatches no outbox message",
+        "validation/journeys/m1-recovery.docker.test.ts::J17 backup restores to an isolated suspended destination with retained identities and no replayed effects",
+        "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
+        "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
+        "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
+        "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
+        "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
+        "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs"
+      ],
       "oracle": [
-        "Revoked metadata cannot resurrect; jobs/outbox nondispatchable, tokens invalidated; terminal identities retained"
+        "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
         "validation/results/j17-active-backup-revocation.json",
-        "validation/journeys/recovery-controls.docker.test.ts"
+        "validation/journeys/recovery-controls.docker.test.ts",
+        "validation/results/ops-025-restore-zero-egress.json",
+        "validation/journeys/network-recorder.ts",
+        "validation/journeys/m1-recovery.docker.test.ts",
+        "packages/persistence/src/persistence.test.ts",
+        "packages/application/src/release.test.ts"
       ],
-      "code": ["packages/application/src/backups.ts", "packages/persistence/src/database.ts"],
-      "note": "Isolated restore replays current revocations/tombstones, remains suspended until audited admin review, and requires explicit new-attempt decision. Lost-host remote ledger remains unavailable M4.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Isolated restore replays current revocations/tombstones, remains suspended until audited admin review, and requires explicit new-attempt decision. Lost-host remote ledger remains unavailable M4."
+      "code": [
+        "packages/application/src/backups.ts",
+        "packages/persistence/src/database.ts",
+        "apps/cli/src/backups.ts"
+      ],
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+          "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
+          "validation/journeys/m1-recovery.docker.test.ts::J17 backup restores to an isolated suspended destination with retained identities and no replayed effects",
+          "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
+          "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
+          "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens"
+        ],
+        "negative": [
+          "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
+          "validation/journeys/recovery-controls.docker.test.ts::OPS-025 isolated restore opens no outbound connection and dispatches no outbox message",
+          "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
+          "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
+          "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/recovery-controls.docker.test.ts",
+            "assertion": "expect(target.hits()).toBe(before);"
+          },
+          {
+            "path": "validation/journeys/recovery-controls.docker.test.ts",
+            "assertion": "expect(segment.some((event) => event.kind === \"loaded\")).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/release.test.ts",
+            "assertion": "expect([...revokedImageIds(database)]).toEqual([imageA]);"
+          },
+          {
+            "path": "packages/application/src/release.test.ts",
+            "assertion": "postBackupLedger: \"unavailable\","
+          },
+          {
+            "path": "packages/application/src/release.test.ts",
+            "assertion": "exclusionsGuaranteed: false,"
+          },
+          {
+            "path": "packages/application/src/release.test.ts",
+            "assertion": "database.get(\"SELECT revoked_at FROM consents WHERE id=?\", consentId)?.revoked_at,"
+          },
+          {
+            "path": "packages/persistence/src/persistence.test.ts",
+            "assertion": "expect(target.get(\"SELECT COUNT(*) AS n FROM server_tokens\")?.n).toBe(0);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Scheduler activation and webhook registration of the server profile; the SQLite schema has no scheduler or webhook table, and restore already marks every outbox row non-dispatchable",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "| M4 | OPS-005–007/010–012/015–019/024–028/032–033/035–038: servidor/team/scheduler"
+          }
+        }
+      ]
     },
     {
       "id": "OPS-026",
@@ -10457,7 +10703,7 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M0",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/persistence/src/migration-startup.test.ts::refuses incompatible controller startup even when migrations are disabled without mutating newer data",
         "packages/persistence/src/upgrade.test.ts::plans irreversible pending migrations read-only and refuses a newer schema with restore guidance",
@@ -10472,7 +10718,8 @@
         "packages/application/src/release.test.ts::resumes with the new release on the upgraded data directory with the same identities",
         "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering",
         "tools/src/distribution/release-notes.test.ts::publishes every shipped SQLite migration in the changelog with its checksum",
-        "tools/src/distribution/release-notes.test.ts::keeps the support matrix statements for Node, Playwright and Python tied to the repository"
+        "tools/src/distribution/release-notes.test.ts::keeps the support matrix statements for Node, Playwright and Python tied to the repository",
+        "tools/src/distribution/release-notes.test.ts::ties the OS, SQLite and container runtime rows of the support matrix to repository evidence"
       ],
       "oracle": [
         "Real SQLite databases at schema N-1 are upgraded through preflight, drain, backup, migrate and readiness. The backup is the old schema and is taken before migration. In-flight work stops the upgrade before backup or migration. A schema newer than the candidate, or a pinned revoked image, refuses the install or upgrade with a clear error and no mutation of the installation or database. A --keep-schema restore of the pre-upgrade backup is the only route to an older release. The same flow ran end to end between two real consecutive releases (see the smoke log)."
@@ -10500,9 +10747,10 @@
         "apps/cli/src/database.ts",
         "apps/cli/src/images.ts",
         "apps/cli/src/backups.ts",
-        "docs/operations/local-operations.md"
+        "docs/operations/local-operations.md",
+        "tools/src/distribution/release-notes.test.ts"
       ],
-      "note": "Verified for the local single-user profile only. Upgrade is offline: preflight, drain, backup, migrate, readiness. Rollback is allowed only when the installed schema is compatible; otherwise it is a planned restore with --keep-schema. Install, upgrade and rollback never write config, policy or secrets. Revoked image IDs are refused and are carried into restores. Not covered and not claimed: per-component rolling upgrades (the local profile has one controller with an embedded worker; resumption is a controller restart), distributed profiles (M4+), release signatures and license approval (other items). Consents, approvals and grants revoked after the backup are not merged automatically on restore. The review step's --revocations-confirmed is the operator's reconciliation.",
+      "note": "Verified for the local single-user profile only. Upgrade is offline: preflight, drain, backup, migrate, readiness. Rollback is allowed only when the installed schema is compatible; otherwise it is a planned restore with --keep-schema. Install, upgrade and rollback never write config, policy or secrets. Revoked image IDs are refused and are carried into restores. Not covered and not claimed: per-component rolling upgrades (the local profile has one controller with an embedded worker; resumption is a controller restart), distributed profiles (M4+), release signatures and license approval (other items). Consent and approval revocations made after a backup are merged into the restored directory (OPS-025), and a restore that cannot read its post-backup ledger says so and stays suspended until --ledger-loss-accepted. The support matrix cites only repository paths that exist, and labels host facts that no repository file pins (Docker 29.x, host OS and kernel, image Node version) as observations.",
       "coverage": {
         "positive": [
           "packages/persistence/src/upgrade.test.ts::upgrades in order: preflight, drain, backup of the old schema, migrate, readiness",
@@ -10510,7 +10758,8 @@
           "packages/application/src/release.test.ts::resumes with the new release on the upgraded data directory with the same identities",
           "packages/persistence/src/upgrade.test.ts::restores the pre-upgrade backup at its own schema so the older release can open it",
           "tools/src/distribution/release-notes.test.ts::publishes every shipped SQLite migration in the changelog with its checksum",
-          "tools/src/distribution/release-notes.test.ts::keeps the support matrix statements for Node, Playwright and Python tied to the repository"
+          "tools/src/distribution/release-notes.test.ts::keeps the support matrix statements for Node, Playwright and Python tied to the repository",
+          "tools/src/distribution/release-notes.test.ts::ties the OS, SQLite and container runtime rows of the support matrix to repository evidence"
         ],
         "negative": [
           "packages/persistence/src/migration-startup.test.ts::refuses incompatible controller startup even when migrations are disabled without mutating newer data",
@@ -10590,10 +10839,27 @@
           {
             "path": "tools/src/distribution/release-notes.test.ts",
             "assertion": "expect(rows).toEqual(shipped);"
+          },
+          {
+            "path": "tools/src/distribution/release-notes.test.ts",
+            "assertion": "expect(matrix).toContain(\"node:sqlite\");"
+          },
+          {
+            "path": "tools/src/distribution/release-notes.test.ts",
+            "assertion": "for (const path of paths) await expect(stat(join(root, path))).resolves.toBeDefined();"
           }
         ]
       },
-      "blockedReason": "Local single-user profile acceptance is exercised (ordered preflight/drain/backup/migrate/readiness upgrade, compatible-only application rollback, revoked-image refusal and --keep-schema restore; see the linked scenarios); full release certification includes later-profile acceptance not exercised: per-component rolling upgrade/resumption (the local profile has one controller with an embedded worker), distributed-profile rollback (M4+), and consents, approvals and grants revoked after a backup, which are reconciled only by the operator review step and not merged automatically on restore."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Per-component rolling upgrade and per-component resumption (the local profile is one controller with an embedded worker; resumption is a controller restart)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "| M4 | OPS-005–007/010–012/015–019/024–028/032–033/035–038: servidor/team/scheduler"
+          }
+        }
+      ]
     },
     {
       "id": "REQ-001",
@@ -13877,16 +14143,74 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M1",
       "ownerRole": "Security",
-      "status": "implemented",
-      "scenario": ["Local self-signed HTTPS target denied by real Chromium before login."],
-      "oracle": ["ERR_CERT_AUTHORITY_INVALID; HTTPS HTTP callback requests=0, login effects=0."],
+      "status": "verified",
+      "scenario": [
+        "packages/sandbox/src/attempt/adversarial.docker.test.ts::invalid TLS certificate is rejected before the page can perform login",
+        "packages/runner/src/http.test.ts::refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA",
+        "packages/sandbox/src/egress/policy.test.ts::refuses an insecure TLS network policy at construction",
+        "packages/runner/src/http.test.ts::rejects secret queries, header injection, unsafe URLs and artifacts before IO",
+        "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+      ],
+      "oracle": [
+        "Untrusted TLS is refused before any login or request (browser login and request counters 0; runner server hits 0), while the same server succeeds through an explicitly pinned CA; an insecure-TLS network policy is refused at construction; cross-origin redirects drop authorization, cookies and API keys."
+      ],
       "evidence": [
         "packages/sandbox/src/attempt/adversarial.docker.test.ts",
-        "validation/results/sandbox-adversarial.json"
+        "packages/runner/src/http.test.ts",
+        "packages/sandbox/src/egress/policy.test.ts",
+        "validation/results/sandbox-adversarial.json",
+        "docs/security/threat-model.md"
       ],
-      "code": ["packages/runner/src/browser.ts", "packages/runner/src/http.ts"],
-      "note": "M1 certificate acceptance verified. Full normative item remains implemented: M4 session/CSRF/reverse-proxy TLS and signed-webhook/replay scenarios unavailable and not exercised.",
-      "blockedReason": "M1 certificate acceptance verified. Full normative item remains implemented: M4 session/CSRF/reverse-proxy TLS and signed-webhook/replay scenarios unavailable and not exercised."
+      "code": [
+        "packages/runner/src/browser.ts",
+        "packages/runner/src/http.ts",
+        "packages/sandbox/src/egress/policy.ts"
+      ],
+      "note": "Local chain and hostname verification, insecure-TLS refusal, query-secret rejection and cross-origin credential stripping verified. The specification sentence that a private CA is preferred is a preference, not an acceptance criterion, and no user-facing CA option exists; it is not claimed. Server TLS, cookies, CSRF and signed webhooks are deferred to M4.",
+      "coverage": {
+        "positive": [
+          "packages/runner/src/http.test.ts::refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA",
+          "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+        ],
+        "negative": [
+          "packages/sandbox/src/attempt/adversarial.docker.test.ts::invalid TLS certificate is rejected before the page can perform login",
+          "packages/runner/src/http.test.ts::refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA",
+          "packages/sandbox/src/egress/policy.test.ts::refuses an insecure TLS network policy at construction",
+          "packages/runner/src/http.test.ts::rejects secret queries, header injection, unsafe URLs and artifacts before IO"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/sandbox/src/attempt/adversarial.docker.test.ts",
+            "assertion": "expect(logins).toBe(0);\n    expect(requests).toBe(0);"
+          },
+          {
+            "path": "packages/runner/src/http.test.ts",
+            "assertion": "expect(hits).toBe(0);\n    const pinned = new Agent({ connect: { ca: cert } });"
+          },
+          {
+            "path": "packages/runner/src/http.test.ts",
+            "assertion": "expect(responseOf(engine, \"health\").status).toBe(200);\n    expect(hits).toBe(1);"
+          },
+          {
+            "path": "packages/sandbox/src/egress/policy.test.ts",
+            "assertion": ").toThrow(\"unsafe_network_policy\");"
+          },
+          {
+            "path": "packages/runner/src/http.test.ts",
+            "assertion": "expect(observed.authorization).toBeUndefined();"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Server TLS, secure cookies, CSRF and signed webhook/replay scenarios belong to the hosted M4 surface.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "**SEC-013 — TLS e conteúdo autenticado (M1–M4).**"
+          }
+        }
+      ]
     },
     {
       "id": "SEC-014",
@@ -14384,21 +14708,88 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M1",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "executes all six static authentication bindings against independent HTTP oracles",
-        "never reuses cookie/profile state between attempts or staging and production targets"
+        "validation/journeys/browser-matrix.docker.test.ts::executes all six static authentication bindings against independent HTTP oracles",
+        "validation/journeys/browser-matrix.docker.test.ts::captures real frame, popup, upload/download, hook/wait and opt-in evidence channels",
+        "validation/journeys/browser-matrix.docker.test.ts::never reuses cookie/profile state between attempts or staging and production targets",
+        "packages/runner/src/browser.test.ts::launches Chromium with explicit password-store and keychain isolation and no default-arg override",
+        "packages/runner/src/browser.test.ts::blocks a fill whose secret reference is absent from the snapshot before typing",
+        "packages/runner/src/browser.test.ts::keeps a proven assertion failure when a later revocation cancels the attempt",
+        "packages/runner/src/browser.test.ts::refuses storage-state input as unsupported before launching Chromium",
+        "packages/runner/src/http.test.ts::refuses storage-state input as unsupported before any HTTP request",
+        "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
       ],
       "oracle": [
-        "Credential positive/negative independent HTTP controls; fresh browser cookies at each new Attempt and different target; same Attempt cookie reuse positive control."
+        "Credential positive/negative independent HTTP controls; fresh browser cookies at each new Attempt and different target; absent secret reference blocks before typing; Chromium launches with the basic password store and mock keychain; storage-state input is refused as unsupported before any browser or HTTP effect."
       ],
       "evidence": [
         "validation/journeys/browser-matrix.docker.test.ts",
-        "packages/runner/src/http.test.ts"
+        "packages/runner/src/browser.test.ts",
+        "packages/runner/src/http.test.ts",
+        "docs/security/threat-model.md"
       ],
-      "code": ["packages/runner/src/browser.ts", "packages/runner/src/http.ts"],
-      "note": "Static secret bindings, login form, cookie non-reuse and existing cross-origin credential stripping verified. Residual: authProfile/storage-state import+TTL/expired-state reauthentication is not implemented in M1-M2 runner input; dynamic browser storageState is disabled M4. Therefore expired storage-state acceptance cannot honestly be claimed.",
-      "blockedReason": "Static secret bindings, login form, cookie non-reuse and existing cross-origin credential stripping verified. Residual: authProfile/storage-state import+TTL/expired-state reauthentication is not implemented in M1-M2 runner input; dynamic browser storageState is disabled M4. Therefore expired storage-state acceptance cannot honestly be claimed."
+      "code": [
+        "packages/runner/src/browser.ts",
+        "packages/runner/src/http.ts",
+        "packages/runner/src/runtime.ts"
+      ],
+      "note": "Static secret bindings, form login, cookie non-reuse, cross-origin credential stripping, absent-secret blocking and password-store/keychain isolation verified; the flags are asserted at the launch boundary, not against a running host password manager. Storage-state input is refused as unsupported_capability; import, TTL and reauthentication are deferred to M4.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/browser-matrix.docker.test.ts::executes all six static authentication bindings against independent HTTP oracles",
+          "validation/journeys/browser-matrix.docker.test.ts::captures real frame, popup, upload/download, hook/wait and opt-in evidence channels",
+          "packages/runner/src/browser.test.ts::launches Chromium with explicit password-store and keychain isolation and no default-arg override"
+        ],
+        "negative": [
+          "validation/journeys/browser-matrix.docker.test.ts::never reuses cookie/profile state between attempts or staging and production targets",
+          "packages/runner/src/browser.test.ts::blocks a fill whose secret reference is absent from the snapshot before typing",
+          "packages/runner/src/browser.test.ts::keeps a proven assertion failure when a later revocation cancels the attempt",
+          "packages/runner/src/browser.test.ts::refuses storage-state input as unsupported before launching Chromium",
+          "packages/runner/src/http.test.ts::refuses storage-state input as unsupported before any HTTP request",
+          "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/runner/src/browser.test.ts",
+            "assertion": "expect.arrayContaining([\"--password-store=basic\", \"--use-mock-keychain\"]),"
+          },
+          {
+            "path": "packages/runner/src/browser.test.ts",
+            "assertion": "expect(secret).not.toHaveBeenCalled();\n  expect(context.page.locator(\"password\").fill).not.toHaveBeenCalled();"
+          },
+          {
+            "path": "packages/runner/src/browser.test.ts",
+            "assertion": "reasonCode: \"unsupported_capability\",\n    });\n  }\n  expect(launch).not.toHaveBeenCalled();"
+          },
+          {
+            "path": "packages/runner/src/http.test.ts",
+            "assertion": "outcome: \"blocked\",\n    reasonCode: \"unsupported_capability\",\n  });\n  expect(hits).toBe(0);"
+          },
+          {
+            "path": "packages/runner/src/http.test.ts",
+            "assertion": "expect(observed.authorization).toBeUndefined();"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Browser storage-state import, TTL and expired-state reauthentication.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "checkpoint autorizado em M4"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "Cross-organization credential sharing.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "**SEC-030 — Isolamento multi-tenant (M4–M5).**"
+          }
+        }
+      ]
     },
     {
       "id": "SEC-023",
@@ -14947,17 +15338,67 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M1",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "SEC-036 restores real backup metadata but missing vault key denies release without replacement"
+        "packages/application/src/secrets.test.ts::persists authenticated ciphertext with private permissions and metadata-only database rows",
+        "packages/application/src/secrets.test.ts::fails closed on vault tampering and missing keys after metadata restore",
+        "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
+        "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes",
+        "packages/application/src/secrets.test.ts::SEC-036 backup files alone cannot reveal secrets and never contain the vault key"
       ],
       "oracle": [
-        "PRECONDITION_FAILED on restored release; no replacement key; admission suspended"
+        "Vault ciphertext is authenticated, key-ID versioned and stored 0600 outside the data directory; rewrap precedes old-key retirement and a retired or missing key is refused (PRECONDITION_FAILED, no replacement key, restored admission suspended); a backup directory contains no vault file, no secret canary and no vault key bytes, so backup access alone reveals no secret."
       ],
-      "evidence": ["packages/application/src/secrets.test.ts"],
-      "code": ["packages/application/src/secrets.ts", "packages/persistence/src/database.ts"],
-      "note": "Versioned ciphertext key IDs, authenticated rewrap, explicit old-key retirement and missing/retired-key refusal passed. Server KMS/TLS remains disabled M4.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Versioned ciphertext key IDs, authenticated rewrap, explicit old-key retirement and missing/retired-key refusal passed. Server KMS/TLS remains disabled M4."
+      "evidence": [
+        "packages/application/src/secrets.test.ts",
+        "packages/application/src/backups.ts"
+      ],
+      "code": [
+        "packages/application/src/secrets.ts",
+        "packages/persistence/src/database.ts",
+        "packages/application/src/backups.ts"
+      ],
+      "note": "Verified for the local single-user vault. Backups copy only the SQLite snapshot and evidence objects: the vault ciphertext and key live under home and are never inside a backup, so the old-key retirement rule (rewrap first, then retire) needs no backup catalogue; the retention of an old key for backups is satisfied by construction and proven by the backup-secrecy test. The TLS, server at-rest and decrypt-grant clauses deferred to M4 rest on the SEC-036 heading range (M1–M4).",
+      "coverage": {
+        "positive": [
+          "packages/application/src/secrets.test.ts::persists authenticated ciphertext with private permissions and metadata-only database rows",
+          "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes",
+          "packages/application/src/secrets.test.ts::SEC-036 backup files alone cannot reveal secrets and never contain the vault key"
+        ],
+        "negative": [
+          "packages/application/src/secrets.test.ts::fails closed on vault tampering and missing keys after metadata restore",
+          "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
+          "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/secrets.test.ts",
+            "assertion": "expect((await stat(path)).mode & 0o777).toBe(0o600);"
+          },
+          {
+            "path": "packages/application/src/secrets.test.ts",
+            "assertion": "expect((await service.retireKey(oldId)).references).toContain(`${first.id}.1.vault`);"
+          },
+          {
+            "path": "packages/application/src/secrets.test.ts",
+            "assertion": "expect(await (await service.release(first.id)).resolve()).toBe(\"first-value\");"
+          },
+          {
+            "path": "packages/application/src/secrets.test.ts",
+            "assertion": "expect(bytes.includes(key)).toBe(false);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "TLS on remote channels, server at-rest encryption of database, object storage and backups, server envelope encryption with KMS key IDs, and decrypt-grant access control for operators",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "**SEC-036 — Criptografia e gestão de chaves (M1–M4).**"
+          }
+        }
+      ]
     },
     {
       "id": "SEC-037",
@@ -15098,34 +15539,48 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
         "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
         "packages/application/src/approvals.test.ts::rejects changes to policy, actor, revision and environment",
         "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
-        "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer"
+        "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer",
+        "packages/application/src/approvals.test.ts::defaults an execution approval to a 30-minute window",
+        "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval",
+        "apps/mcp/src/mcp.test.ts::exposes no MCP tool that creates or revokes approvals"
       ],
       "oracle": [
-        "Real owned-account DELETE occurs exactly once under bound approval, leaving sibling intact and audit verified/consumed request_id equal to admitted Run. Missing/body/environment/consumed/rotated-credential approvals refuse before target recorder advances."
+        "Real owned-account DELETE occurs exactly once under bound approval, leaving sibling intact and audit verified/consumed request_id equal to admitted Run. Missing/body/environment/consumed/rotated-credential approvals refuse before target recorder advances.",
+        "Every new approval stores a 1 to 200 character reason, defaults to a 30-minute window, and no MCP tool creates or revokes approvals; rows stored before the reason field stay readable and usable."
       ],
       "evidence": [
         "packages/application/src/approvals.test.ts",
         "validation/journeys/m3-live-security-acceptance.docker.test.ts",
-        "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-bound-destructive-approval.json"
+        "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-bound-destructive-approval.json",
+        "apps/mcp/src/mcp.test.ts"
       ],
-      "code": ["packages/application/src/approvals.ts"],
+      "code": [
+        "packages/application/src/approvals.ts",
+        "packages/contracts/src/catalog.ts",
+        "packages/contracts/src/entities.ts",
+        "apps/cli/src/approvals.ts"
+      ],
       "coverage": {
         "positive": [
           "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
-          "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once"
+          "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
+          "packages/application/src/approvals.test.ts::defaults an execution approval to a 30-minute window",
+          "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval"
         ],
         "negative": [
           "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
           "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
           "packages/application/src/approvals.test.ts::rejects changes to policy, actor, revision and environment",
           "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
-          "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer"
+          "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer",
+          "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval",
+          "apps/mcp/src/mcp.test.ts::exposes no MCP tool that creates or revokes approvals"
         ],
         "criticalAssertions": [
           {
@@ -15155,10 +15610,32 @@
           {
             "path": "packages/application/src/approvals.test.ts",
             "assertion": "expect(approvals.get(approval.id).revokedAt).toBeNull();"
+          },
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "expect(window).toBeLessThanOrEqual(30 * 60_000);"
+          },
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "code(() => approvals.create({ ...input, reason: \"\" }), \"INVALID_ARGUMENT\");"
+          },
+          {
+            "path": "apps/mcp/src/mcp.test.ts",
+            "assertion": "expect(names.filter((name) => /approv|revoke/.test(name))).toEqual([\n    \"testmaster_approve_healing\",\n  ]);"
           }
         ]
       },
-      "blockedReason": "External M4: dual independent approvers and separation-of-functions policy acceptance remain unexercised. M3 exact destructive approval/body/environment/credential/single-use binding and audit-to-real-effect controls are retained."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Dual independent approvers and separation-of-duties policy acceptance.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "**SEC-039 — Aprovação vinculada e sem TOCTOU (M3–M4).**"
+          }
+        }
+      ],
+      "note": "Exact destructive approval, body, environment, credential and single-use binding with audit-to-effect correlation, a required human-entered reason and the 30-minute default window verified. Dual approvers and separation of duties are deferred to M4 and not claimed. The m3-bound-destructive-approval evidence file predates the reason field and is refreshed by the next docker run."
     },
     {
       "id": "SEC-040",
@@ -15346,21 +15823,80 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M2",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "Malicious local fork workflow/head and Git configuration analyzed through real CLI without privileged checkout or execution"
+        "validation/journeys/hostile-repository.test.ts::SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers, filters, submodules or workflows and leaves remotes unchanged",
+        "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
+        "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
       ],
       "oracle": [
-        "No hook/helper/filter/submodule/workflow marker exists; origin/upstream config unchanged; no token disclosure or Internet connection"
+        "No hook, helper, filter, submodule or workflow marker exists after fork analysis; origin and upstream config unchanged; the generated workflow denies forks before setup and uses no pull_request_target; child processes receive no provider, GitHub or loader secrets; publication refuses a newer SHA than the frozen assessed one."
       ],
       "evidence": [
         "validation/journeys/hostile-repository.test.ts",
+        "apps/cli/src/ci-workflow.test.ts",
+        "tools/src/github-action/inputs.test.ts",
+        "packages/application/src/delivery.test.ts",
         "validation/results/hostile-repository-boundary.json",
         "validation/results/hostile-repository-boundary-hostile-network.json"
       ],
-      "code": ["packages/planner/src/code/diff.ts", "validation/journeys/network-recorder.ts"],
-      "note": "Local M2 fork analysis part verified and passing. Whole item remains implemented: GitHub App installation token lifetime/permissions, immutable check-SHA publishing, privileged base/head separation, branch/PR authorization and protection controls are blocked-by-milestone M4, not simulated or claimed.",
-      "blockedReason": "Local M2 fork analysis part verified and passing. Whole item remains implemented: GitHub App installation token lifetime/permissions, immutable check-SHA publishing, privileged base/head separation, branch/PR authorization and protection controls are blocked-by-milestone M4, not simulated or claimed."
+      "code": [
+        "packages/planner/src/code/diff.ts",
+        "validation/journeys/network-recorder.ts",
+        "apps/cli/src/ci-workflow.ts",
+        "tools/src/github-action/inputs.ts",
+        "packages/application/src/delivery.ts"
+      ],
+      "note": "Fork analysis executes nothing, the generated workflow denies forks before setup, child environments are stripped and publication is bound to the assessed SHA, all verified locally. GitHub App tokens, privileged base/head separation, immutable checks and agent branch/PR creation are deferred to M4 and not simulated.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/hostile-repository.test.ts::SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers, filters, submodules or workflows and leaves remotes unchanged",
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+        ],
+        "negative": [
+          "validation/journeys/hostile-repository.test.ts::SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers, filters, submodules or workflows and leaves remotes unchanged",
+          "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
+          "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment",
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/hostile-repository.test.ts",
+            "assertion": "expect(await readdir(markers)).toEqual([]);"
+          },
+          {
+            "path": "apps/cli/src/ci-workflow.test.ts",
+            "assertion": "expect(workflow.on.pull_request_target).toBeUndefined();"
+          },
+          {
+            "path": "tools/src/github-action/inputs.test.ts",
+            "assertion": "expect(Object.values(env)).not.toContain(\"provider-secret\");"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "validatePublication(resultFixture(), \"owner/repo\", \"c\".repeat(40))"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "GitHub App installation token lifetime and permissions, base/head separation and immutable check-SHA publishing.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "Integração GitHub App em M4 usa installation token curto e permissions mínimas"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "Agent branch and pull-request creation authorization.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "**SEC-047 — Forks e GitHub seguro (M2–M4).**"
+          }
+        }
+      ]
     },
     {
       "id": "SEC-048",

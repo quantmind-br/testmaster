@@ -71,6 +71,7 @@ describe("selection", () => {
         environmentRevisionId: String(environment.activeRevisionId),
         originSet: env.targetOrigins as string[],
         policyHash: app.config.effectiveConfig.policyHash,
+        reason: "Allow the selected write run",
       });
       const approval = vi.spyOn(app.runs.host, "verifyApproval");
       const before = rows(app);

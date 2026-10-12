@@ -23,6 +23,7 @@ class LocatorStub {
   readonly click = vi.fn(async () => {
     this.owner.onClick?.();
   });
+  readonly fill = vi.fn(async () => undefined);
   readonly waitFor = vi.fn(async () => undefined);
   readonly selectOption = vi.fn(async () => []);
   readonly setInputFiles = vi.fn(async () => undefined);
@@ -638,4 +639,86 @@ it("retains business assertion values for diagnosis but omits secret-derived and
   const last = events.filter((event) => event.type === "step.finished").at(-1)!.payload;
   expect(last).not.toHaveProperty("observed");
   expect(last).not.toHaveProperty("expected");
+});
+it("launches Chromium with explicit password-store and keychain isolation and no default-arg override", async () => {
+  expect(await runBrowser(runtime([assertion]))).toMatchObject({ outcome: "passed" });
+  const options = launch.mock.calls[0]?.[0];
+  expect(options.args).toEqual(
+    expect.arrayContaining(["--password-store=basic", "--use-mock-keychain"]),
+  );
+  expect(options.ignoreDefaultArgs).toBeUndefined();
+  expect(options.args).toEqual(
+    expect.arrayContaining([
+      "--disable-quic",
+      "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+    ]),
+  );
+});
+it("blocks a fill whose secret reference is absent from the snapshot before typing", async () => {
+  const fill: PlanStep = {
+    id: "fill-password",
+    kind: "action",
+    operation: "fill",
+    description: "Fill password",
+    input: {
+      locator: { by: "testId", value: "password" },
+      value: { secretRef: "sec_019bf434-20c0-7000-8000-000000000001" },
+    },
+  };
+  const attempt = runtime([fill, click]);
+  const secret = vi.spyOn(attempt.protocol, "secret");
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "missing_secret",
+  });
+  expect(secret).not.toHaveBeenCalled();
+  expect(context.page.locator("password").fill).not.toHaveBeenCalled();
+  expect(context.page.locator("submit").click).not.toHaveBeenCalled();
+  expect(events).toContainEqual(
+    expect.objectContaining({
+      type: "step.finished",
+      payload: expect.objectContaining({
+        stepId: "fill-password",
+        status: "blocked",
+        reasonCode: "missing_secret",
+      }),
+    }),
+  );
+});
+it("keeps a proven assertion failure when a later revocation cancels the attempt", async () => {
+  context.page.locator("message").text = "unexpected";
+  const attempt = runtime([assertion, click]);
+  const emit = vi.mocked(attempt.protocol.emit);
+  const record = emit.getMockImplementation();
+  if (!record) throw new Error("Missing emit double");
+  emit.mockImplementation(async (type, payload) => {
+    await record(type, payload);
+    // Revocation lands after the oracle has already produced its negative verdict.
+    if (
+      type === "step.finished" &&
+      typeof payload === "object" &&
+      payload !== null &&
+      "stepId" in payload &&
+      payload.stepId === "assert"
+    )
+      attempt.protocol.controller.abort();
+  });
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(context.page.locator("submit").click).not.toHaveBeenCalled();
+});
+it("refuses storage-state input as unsupported before launching Chromium", async () => {
+  for (const carrier of ["input", "browser", "policy"] as const) {
+    const attempt = runtime([assertion]);
+    const state = { cookies: [], origins: [] };
+    if (carrier === "input") Object.assign(attempt.input, { storageState: state });
+    else Object.assign((attempt.input[carrier] ??= {}), { storageState: state });
+    expect(await runBrowser(attempt)).toMatchObject({
+      outcome: "blocked",
+      reasonCode: "unsupported_capability",
+    });
+  }
+  expect(launch).not.toHaveBeenCalled();
 });

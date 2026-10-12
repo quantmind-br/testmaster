@@ -131,6 +131,8 @@ it("manually compensates an orphan through the sandbox and preserves the owning 
       baseUrl,
       "--policy-hash",
       text(approvalSpec.policyHash),
+      "--reason",
+      text(approvalSpec.reason),
     ]);
     interruptDelete = false;
     proxy.closeAllConnections();

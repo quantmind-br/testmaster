@@ -18,7 +18,7 @@ import {
   type Page,
 } from "playwright-core";
 import { authorizeUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
-import { type RunnerResult, type Runtime, RuntimeError } from "./runtime.js";
+import { type RunnerResult, type Runtime, RuntimeError, storageStateRefusal } from "./runtime.js";
 
 type Scope = Page | Frame;
 type AssertionStep = Extract<PlanStep, { operation: "assert" }>;
@@ -33,6 +33,8 @@ const ARTIFACT_BYTES = 64 * 1024 * 1024;
 
 /** One isolated browser context, with egress enforced by the supervisor's mandatory proxy. */
 export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
+  const unsupported = storageStateRefusal(runtime.input);
+  if (unsupported) return unsupported;
   const proxy = process.env.TESTMASTER_EGRESS_PROXY;
   if (!proxy) return { outcome: "blocked", reasonCode: "security_precondition_failed" };
   let proxyUrl: URL;
@@ -1238,6 +1240,9 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         "--disable-quic",
         "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
         "--disable-background-networking",
+        // Never let a host password manager or OS keychain autofill or leak into the target.
+        "--password-store=basic",
+        "--use-mock-keychain",
       ],
     });
     if (runtime.signal.aborted)

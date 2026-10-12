@@ -91,6 +91,12 @@ Reports also project persisted resource identities, owning Attempts/steps and un
 
 M3–M6 capabilities, including multi-user tenancy, remote tunnels, SSO and plugins, must return `CAPABILITY_UNAVAILABLE` with milestone until enabled by their gates. Documentation of their boundary is not implementation.
 
+## Target TLS, authenticated content and browser credential stores
+
+- **TLS (SEC-013).** The browser context sets `ignoreHTTPSErrors: false` and the HTTP runner uses a verifying dispatcher; a self-signed or otherwise untrusted target is refused before any request is sent (a test dispatcher that pins the target CA explicitly reaches the same server). The egress policy refuses `allowInsecureTls` at construction (`unsafe_network_policy`); there is no insecure-TLS switch. Query-string secrets are rejected before I/O and credentials are stripped on cross-origin redirects. Trusting a private CA is a preference of the specification, not an enabled capability: no user-facing CA option exists. Server TLS, cookies, CSRF and signed webhooks belong to the M4 hosted surface and are not claimed here.
+- **Password managers (SEC-022).** Chromium starts with `--password-store=basic` and `--use-mock-keychain`, so neither a host password manager nor the OS keychain can autofill into or be read by a target page, and each Attempt gets a fresh context with no profile reuse. This is a launch-flag control; it is not verified against a running host password manager.
+- **Storage state (SEC-022).** Importing a browser `storageState` is not implemented before M4 (M4-03). Runner input that carries one is refused as `unsupported_capability` before Chromium is launched or any request is sent, instead of being ignored. Static authentication bindings remain the only supported credential path.
+
 ## Change and review policy
 
 The Security owner must update this versioned model before enabling a new executor, transport, integration, secret-access path, raw evidence format or agent target. Review assets, all new edges, enforcement outside untrusted code, positive/negative controls and residual risks; update the owning SEC/scenario/oracle/evidence links. High/critical release-scope risks and evidence falsification block release (VAL-046); no average benchmark score compensates for them. No status becomes `verified` from this document alone.

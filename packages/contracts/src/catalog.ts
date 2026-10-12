@@ -585,6 +585,7 @@ const httpInputs = {
     originSet: names,
     expiresAt: Type.Optional(P.Timestamp),
     policyHash: P.ContentDigest,
+    reason: P.Name,
   }),
 };
 export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({

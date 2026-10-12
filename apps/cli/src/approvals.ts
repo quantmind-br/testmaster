@@ -11,6 +11,7 @@ export function approvalCommands(program: Command, runtime: Runtime): void {
       .requiredOption("--environment-revision <id>")
       .requiredOption("--origin <origin>", "Origin (repeatable)", collect, [])
       .requiredOption("--policy-hash <hash>")
+      .requiredOption("--reason <text>", "Why this approval is granted (1-200 characters)")
       .option("--actor <id>")
       .option("--reviewer <id>")
       .option("--expires-at <timestamp>"),
@@ -25,6 +26,7 @@ export function approvalCommands(program: Command, runtime: Runtime): void {
           environmentRevisionId: required(options, "environmentRevision"),
           originSet: strings(options, "origin"),
           policyHash: required(options, "policyHash"),
+          reason: required(options, "reason"),
           ...(actorId ? { actorId } : {}),
           ...(reviewerId ? { reviewerId } : {}),
           ...(expiresAt ? { expiresAt } : {}),

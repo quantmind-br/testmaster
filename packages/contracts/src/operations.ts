@@ -324,6 +324,7 @@ export const BackupManifest = Obj({
   keyIds: Type.Optional(Type.Array(ContentDigest)),
   configDigests: Type.Optional(Type.Array(ContentDigest)),
 });
+  missingObjects: Type.Optional(Type.Array(Type.String())),
 export const RestoreRequest = Obj({
   manifest: BackupManifest,
   destination: Name,

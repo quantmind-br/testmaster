@@ -269,6 +269,7 @@ export class RequirementsService {
         expiresAt: "9999-12-31T23:59:59.000Z",
         revokedAt: null,
         policyHash: this.model.config.effectiveConfig.policyHash,
+        reason: `Approve requirement ${id}`,
       });
       this.ctx.entities.insert("Approval", approval);
       this.audit("requirement.approved", id, current, approval);

@@ -76,6 +76,7 @@ async function setup(plan?: ExecutablePlan) {
     environmentRevisionId: env.id,
     originSet: ["https://example.com"],
     policyHash: "a".repeat(64),
+    reason: "Approved by the production change review",
   };
   return {
     ctx,
@@ -245,6 +246,36 @@ describe("bound production approvals", () => {
       disabledAt: null,
     });
     code(() => new ApprovalsService({ ...ctx, principalId }).create(input), "FORBIDDEN");
+  });
+  it("defaults an execution approval to a 30-minute window", async () => {
+    const { approvals, input } = await setup();
+    const before = Date.now();
+    const approval = approvals.create(input);
+    const window = Date.parse(approval.expiresAt) - before;
+    expect(window).toBeLessThanOrEqual(30 * 60_000);
+    expect(window).toBeGreaterThan(29 * 60_000);
+  });
+  it("requires a non-empty reason and stores it on the approval", async () => {
+    const { approvals, run, test, env, input, ctx } = await setup();
+    code(() => approvals.create({ ...input, reason: "" }), "INVALID_ARGUMENT");
+    code(() => approvals.create({ ...input, reason: "   " }), "INVALID_ARGUMENT");
+    code(() => approvals.create({ ...input, reason: "r".repeat(201) }), "INVALID_ARGUMENT");
+    const { reason: _omitted, ...withoutReason } = input;
+    code(() => approvals.create(withoutReason as typeof input), "INVALID_ARGUMENT");
+    expect(approvals.list()).toHaveLength(0);
+    const approval = approvals.create({ ...input, reason: "r".repeat(200) });
+    expect(approvals.get(approval.id).reason).toBe("r".repeat(200));
+    // Rows stored before the reason field existed stay readable and usable.
+    const { reason: _legacy, ...legacy } = approval;
+    ctx.entities.update(
+      "Approval",
+      ctx.workspaceId,
+      approval.id,
+      approval.version as number,
+      legacy,
+    );
+    expect(approvals.get(approval.id).reason).toBeUndefined();
+    expect(approvals.verify(run, test, env)?.id).toBe(approval.id);
   });
   it("permits read-only production without approval and denies cross-project bindings", async () => {
     const { approvals, run, test, env, ctx } = await setup(scaffoldPlan("backend"));

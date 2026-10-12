@@ -53,6 +53,21 @@ export class RuntimeError extends Error {
     super(message);
   }
 }
+/**
+ * Browser storage state import is not implemented before M4 (ROADMAP M4-03). Input that
+ * carries it is refused as unsupported instead of being ignored, so a run can never look
+ * authenticated while silently executing without the requested state.
+ */
+export function storageStateRefusal(input: RunnerInput): RunnerResult | undefined {
+  const present = [input, input.browser, input.policy].some(
+    (carrier) =>
+      typeof carrier === "object" &&
+      carrier !== null &&
+      "storageState" in carrier &&
+      carrier.storageState !== undefined,
+  );
+  return present ? { outcome: "blocked", reasonCode: "unsupported_capability" } : undefined;
+}
 export class Runtime {
   readonly secrets = new Set<string>();
   readonly variables: Map<string, { value: unknown; sensitive: boolean }>;

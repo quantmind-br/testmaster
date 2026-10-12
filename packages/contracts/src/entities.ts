@@ -463,6 +463,8 @@ export const entities = {
     expiresAt: Timestamp,
     revokedAt: nullable(Timestamp),
     policyHash: ContentDigest,
+    /** Required on every new approval; optional only because rows stored before M3 carry none. */
+    reason: Type.Optional(Name),
   }),
   AuthProfile: entity("aup", {
     projectId: id("prj"),

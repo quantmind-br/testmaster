@@ -84,6 +84,7 @@ export class ResourcesService {
         environmentRevisionId: env.id,
         originSet: env.targetOrigins,
         policyHash: effective.policyHash,
+        reason: `Compensate orphaned resource ${id}`,
       },
     };
   }

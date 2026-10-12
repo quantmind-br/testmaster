@@ -11,7 +11,7 @@ import {
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { type Dispatcher, ProxyAgent, request } from "undici";
-import { type RunnerResult, type Runtime, RuntimeError } from "./runtime.js";
+import { type RunnerResult, type Runtime, RuntimeError, storageStateRefusal } from "./runtime.js";
 
 /** Shared with the sandbox egress proxy (packages/sandbox/src/egress/proxy.ts). */
 const EGRESS_DIAGNOSTICS_HEADER = "x-testmaster-egress-diagnostics";
@@ -943,6 +943,8 @@ export class HttpEngine {
 }
 
 export async function runHttp(runtime: Runtime): Promise<RunnerResult> {
+  const unsupported = storageStateRefusal(runtime.input);
+  if (unsupported) return unsupported;
   if (!runtime.input.plan)
     throw new RuntimeError("security_precondition_failed", "Executable HTTP plan is missing");
   const engine = new HttpEngine(runtime);

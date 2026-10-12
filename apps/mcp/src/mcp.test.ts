@@ -275,3 +275,10 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+it("exposes no MCP tool that creates or revokes approvals", () => {
+  const names = mcpToolCatalog.map((tool) => tool.name);
+  expect(names.filter((name) => /approv|revoke/.test(name))).toEqual([
+    "testmaster_approve_healing",
+  ]);
+});

@@ -377,6 +377,7 @@ it("audits raw evidence denials and authorized exports with scoped grants and pr
           environmentRevisionId: env.id,
           originSet: env.targetOrigins as string[],
           policyHash: app.config.effectiveConfig.policyHash,
+          reason: "Release raw restricted artifact for audit",
         };
         const wrong = app.approvals.create({ ...binding, policyHash: "f".repeat(64) });
         await expect(

@@ -25,6 +25,7 @@ export interface ApprovalInput {
   originSet: string[];
   expiresAt?: string;
   policyHash: string;
+  reason: string;
 }
 export type RiskClass = "read" | "write" | "destructive" | "securityProbe";
 
@@ -162,10 +163,17 @@ export class ApprovalsService {
           "originSet",
           "expiresAt",
           "policyHash",
+          "reason",
         ].includes(key)
       )
         throw new ContractError("INVALID_ARGUMENT", "Unknown approval field", { field: key });
     }
+    if (typeof input.reason !== "string" || !input.reason.trim() || input.reason.length > 200)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Approval requires a reason of 1 to 200 characters",
+        { field: "reason" },
+      );
     return authoringTransaction(this.ctx, () => {
       const projectId = this.projectId(input.environmentRevisionId);
       this.ctx.authorize("W", projectId);
@@ -196,6 +204,7 @@ export class ApprovalsService {
         expiresAt,
         revokedAt: null,
         policyHash: input.policyHash,
+        reason: input.reason,
       }) as Stored<Approval>;
       validate("Approval", value);
       if (
