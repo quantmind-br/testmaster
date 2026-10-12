@@ -1,0 +1,330 @@
+Scope: all 22 workspace projects
+[WARN] The store at /home/diogo/.local/share/pnpm/store/v11 is not used because packages cannot be hard linked from it into this project. Using the store at /home/diogo/dev/.pnpm-store/v11 instead. Set storeDir to choose the store.
+✓ Lockfile passes supply-chain policies (verified 16h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+Done in 189ms using pnpm v12.9.1
+$ tsc -b && chmod +x apps/cli/dist/main.js
+$ biome check .
+apps/cli/src/ci-workflow.ts:89:407 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    87 │   const download = {
+    88 │     name: "Download anonymous pinned public runtime",
+  > 89 │ ...) || asset === "runtime.tar.gz" ? asset : "images/" + asset}"`).join("\n")}\nprintf '%s  %s\\n' "$TE...
+       │                                              ^^^^^^^^^^^^^^^^^
+    90 │   };
+    91 │   const trusted = {
+  
+  i Unsafe fix: Use a template literal.
+  
+     87  87 │     const download = {
+     88  88 │       name: "Download anonymous pinned public runtime",
+     89     │ - ....json")·||·asset·===·"runtime.tar.gz"·?·asset·:·"images/"·+·asset}"`).join("\n")}\nprintf·'%s··%s\\n...
+         89 │ + ....json")·||·asset·===·"runtime.tar.gz"·?·asset·:·`images/${asset}`}"`).join("\n")}\nprintf·'%s··%s\\n...
+     90  90 │     };
+     91  91 │     const trusted = {
+  
+
+apps/cli/src/ci-workflow.ts:102:5 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    100 │   };
+    101 │   const manifest =
+  > 102 │     expression("runner.temp") + `/testmaster-release/manifest.json#${manifestSha256}`;
+        │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    103 │   const workflow = {
+    104 │     name: "TestMaster",
+  
+  i Unsafe fix: Use a template literal.
+  
+    100 100 │     };
+    101 101 │     const manifest =
+    102     │ - ····expression("runner.temp")·+·`/testmaster-release/manifest.json#${manifestSha256}`;
+        102 │ + ····`${expression("runner.temp")}/testmaster-release/manifest.json#${manifestSha256}`;
+    103 103 │     const workflow = {
+    104 104 │       name: "TestMaster",
+  
+
+apps/cli/src/ci-workflow.ts:180:21 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    178 │             uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    179 │             with: {
+  > 180 │               name: "testmaster-ci-" + expression("steps.identity.outputs.job-id"),
+        │                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    181 │               path: expression("runner.temp") + "/testmaster-envelope/*",
+    182 │               "if-no-files-found": "error",
+  
+  i Unsafe fix: Use a template literal.
+  
+    178 178 │               uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    179 179 │               with: {
+    180     │ - ··············name:·"testmaster-ci-"·+·expression("steps.identity.outputs.job-id"),
+        180 │ + ··············name:·`testmaster-ci-${expression("steps.identity.outputs.job-id")}`,
+    181 181 │                 path: expression("runner.temp") + "/testmaster-envelope/*",
+    182 182 │                 "if-no-files-found": "error",
+  
+
+apps/cli/src/ci-workflow.ts:181:21 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    179 │             with: {
+    180 │               name: "testmaster-ci-" + expression("steps.identity.outputs.job-id"),
+  > 181 │               path: expression("runner.temp") + "/testmaster-envelope/*",
+        │                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    182 │               "if-no-files-found": "error",
+    183 │               "retention-days": 3,
+  
+  i Unsafe fix: Use a template literal.
+  
+    179 179 │               with: {
+    180 180 │                 name: "testmaster-ci-" + expression("steps.identity.outputs.job-id"),
+    181     │ - ··············path:·expression("runner.temp")·+·"/testmaster-envelope/*",
+        181 │ + ··············path:·`${expression("runner.temp")}/testmaster-envelope/*`,
+    182 182 │                 "if-no-files-found": "error",
+    183 183 │                 "retention-days": 3,
+  
+
+apps/cli/src/ci-workflow.ts:221:10 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    219 │   };
+    220 │   // JSON is YAML 1.2: scalar quoting prevents user input from injecting workflow structure.
+  > 221 │   return JSON.stringify(workflow, null, 2) + "\n";
+        │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    222 │ }
+    223 │ 
+  
+  i Unsafe fix: Use a template literal.
+  
+    219 219 │     };
+    220 220 │     // JSON is YAML 1.2: scalar quoting prevents user input from injecting workflow structure.
+    221     │ - ··return·JSON.stringify(workflow,·null,·2)·+·"\n";
+        221 │ + ··return·`${JSON.stringify(workflow,·null,·2)}\n`;
+    222 222 │   }
+    223 223 │   
+  
+
+apps/cli/src/ci-workflow.test.ts:32:29 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    30 │     for (const job of Object.values(workflow.jobs) as {
+    31 │       if: string;
+  > 32 │       steps: Record<string, any>[];
+       │                             ^^^
+    33 │     }[]) {
+    34 │       expect(job.if).toContain(
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+apps/cli/src/ci-workflow.test.ts:41:24 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    39 │       );
+    40 │       expect(checkout.every((step) => step.with["persist-credentials"] === false)).toBe(true);
+  > 41 │       const download = job.steps.find((step) => String(step.run).includes("curl --fail"))!;
+       │                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    42 │       expect(download.run).not.toContain("TOKEN");
+    43 │       expect(download.run).toContain("sha256sum --check");
+  
+
+apps/cli/src/ci-workflow.test.ts:47:31 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    45 │     expect(
+    46 │       workflow.jobs.publish.steps.some(
+  > 47 │         (step: Record<string, any>) =>
+       │                               ^^^
+    48 │           step.with?.repository !== undefined && step.with.ref === "a".repeat(40),
+    49 │       ),
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+apps/cli/src/ci-workflow.test.ts:52:62 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    50 │     ).toBe(true);
+    51 │     expect(
+  > 52 │       workflow.jobs.publish.steps.some((step: Record<string, any>) =>
+       │                                                              ^^^
+    53 │         String(step.run).includes(options.setupScript),
+    54 │       ),
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+apps/cli/src/ci-workflow.test.ts:57:62 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    55 │     ).toBe(false);
+    56 │     expect(
+  > 57 │       workflow.jobs.execute.steps.find((step: Record<string, any>) => step.id === "upload").with
+       │                                                              ^^^
+    58 │         .path,
+    59 │     ).not.toContain("data");
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+apps/cli/src/ci-workflow.test.ts:61:29 lint/suspicious/noExplicitAny ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected any. Specify a different type.
+  
+    59 │     ).not.toContain("data");
+    60 │     const action = workflow.jobs.execute.steps.find(
+  > 61 │       (step: Record<string, any>) => step.id === "testmaster",
+       │                             ^^^
+    62 │     );
+    63 │     expect(action.with["quarantine-policy"]).toBe("strict");
+  
+  i any disables many type checking rules. Its use should be avoided.
+  
+
+apps/cli/src/ci-workflow.test.ts:66:60 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    64 │     expect(action.with["publish-check"]).toBe("false");
+    65 │     const publisher = workflow.jobs.publish.steps.at(-1);
+  > 66 │     expect(publisher.env.TESTMASTER_WORKFLOW_RUN_ID).toBe("${{ github.run_id }}");
+       │                                                            ^^^^^^^^^^^^^^^^^^^
+    67 │     expect(publisher.env.TESTMASTER_EXECUTION_JOB_ID).toBe("${{ needs.execute.outputs.job-id }}");
+    68 │   });
+  
+  i Turn the string into a template string.
+  
+
+apps/cli/src/ci-workflow.test.ts:67:61 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━━━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    65 │     const publisher = workflow.jobs.publish.steps.at(-1);
+    66 │     expect(publisher.env.TESTMASTER_WORKFLOW_RUN_ID).toBe("${{ github.run_id }}");
+  > 67 │     expect(publisher.env.TESTMASTER_EXECUTION_JOB_ID).toBe("${{ needs.execute.outputs.job-id }}");
+       │                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    68 │   });
+    69 │   it("uses only contexts GitHub allows at job level", () => {
+  
+  i Turn the string into a template string.
+  
+
+apps/cli/src/heal.test.ts:79:47 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    77 │     expect(stdout).toContain("Production healing requires manual review");
+    78 │     expect(stdout).toContain("Risk: read");
+  > 79 │     expect(stdout).toContain(`Verification: ${review.verification!.runId} — failed/failed`);
+       │                                               ^^^^^^^^^^^^^^^^^^^^
+    80 │     expect(stdout).toContain(
+    81 │       `testmaster heal approve ${review.approval.proposalId} --expected-version 3`,
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     77  77 │       expect(stdout).toContain("Production healing requires manual review");
+     78  78 │       expect(stdout).toContain("Risk: read");
+     79     │ - ····expect(stdout).toContain(`Verification:·${review.verification!.runId}·—·failed/failed`);
+         79 │ + ····expect(stdout).toContain(`Verification:·${review.verification?.runId}·—·failed/failed`);
+     80  80 │       expect(stdout).toContain(
+     81  81 │         `testmaster heal approve ${review.approval.proposalId} --expected-version 3`,
+  
+
+apps/cli/src/runs.ts:113:51 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    111 │       const page = {
+    112 │         ...(typeof options.limit === "number" ? { limit: options.limit } : {}),
+  > 113 │         ...(string(options, "cursor") ? { cursor: string(options, "cursor")! } : {}),
+        │                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    114 │       };
+    115 │       if (left.startsWith("run_") && right.startsWith("run_"))
+  
+
+apps/cli/src/usage.ts:19:47 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    17 │       const data = (await rt.app()).usage.get({
+    18 │         ...(projectId ? { projectId } : {}),
+  > 19 │         ...(string(options, "run") ? { runId: string(options, "run")! } : {}),
+       │                                               ^^^^^^^^^^^^^^^^^^^^^^^
+    20 │         ...(string(options, "model") ? { model: string(options, "model")! } : {}),
+    21 │         ...(string(options, "since") ? { since: string(options, "since")! } : {}),
+  
+
+apps/cli/src/usage.ts:20:49 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    18 │         ...(projectId ? { projectId } : {}),
+    19 │         ...(string(options, "run") ? { runId: string(options, "run")! } : {}),
+  > 20 │         ...(string(options, "model") ? { model: string(options, "model")! } : {}),
+       │                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+    21 │         ...(string(options, "since") ? { since: string(options, "since")! } : {}),
+    22 │         ...(string(options, "until") ? { until: string(options, "until")! } : {}),
+  
+
+apps/cli/src/usage.ts:21:49 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    19 │         ...(string(options, "run") ? { runId: string(options, "run")! } : {}),
+    20 │         ...(string(options, "model") ? { model: string(options, "model")! } : {}),
+  > 21 │         ...(string(options, "since") ? { since: string(options, "since")! } : {}),
+       │                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+    22 │         ...(string(options, "until") ? { until: string(options, "until")! } : {}),
+    23 │       });
+  
+
+apps/cli/src/usage.ts:22:49 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    20 │         ...(string(options, "model") ? { model: string(options, "model")! } : {}),
+    21 │         ...(string(options, "since") ? { since: string(options, "since")! } : {}),
+  > 22 │         ...(string(options, "until") ? { until: string(options, "until")! } : {}),
+       │                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+    23 │       });
+    24 │       const out = string(options, "out");
+  
+
+.pi/tasks/01a1205d-3d73-77ea-9c71-ff92a698037a-986687/bed81fd5e.json format ━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+    21 21 │       "policy": "inherit",
+    22 22 │       "executable": "/usr/bin/zsh",
+    23    │ - ····"argvPrefix":·[
+    24    │ - ······"-c"
+    25    │ - ····],
+       23 │ + ····"argvPrefix":·["-c"],
+    26 24 │       "dialect": "posix"
+    27 25 │     }
+  
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 801.
+Checked 531 files in 122ms. No fixes applied.
+Found 2 errors.
+Found 782 warnings.
+Found 37 infos.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+[ELIFECYCLE] Command failed with exit code 1.
