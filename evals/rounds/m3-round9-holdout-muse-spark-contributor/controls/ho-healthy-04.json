@@ -1,0 +1,298 @@
+{
+  "id": "ho-healthy-04",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a13056-724f-74ef-966b-75ab524c77d0",
+    "revisionId": "rev_01a13056-7200-750f-a95d-3f312a0a218e",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "assign",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "bump",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "held",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "52024f1a7a535775243dbbf0edf2776dfd819a918bce2c79c27738d568853e37",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a13056-71ea-7233-877f-1e37f572a0be",
+    "admissionHash": "91d255dae8a587342f05f0e792aee3e27b7540eeb32e34979e0dc72c90c53573"
+  },
+  "transformed": {
+    "runId": "run_01a13056-7613-7550-a0fc-ef432834bd58",
+    "revisionId": "rev_01a13056-7200-750f-a95d-3f312a0a218e",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "assign",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "bump",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "held",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "52024f1a7a535775243dbbf0edf2776dfd819a918bce2c79c27738d568853e37",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a13056-71ea-7233-877f-1e37f572a0be",
+    "admissionHash": "91d255dae8a587342f05f0e792aee3e27b7540eeb32e34979e0dc72c90c53573"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "bumpPersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "responseTier": "private",
+      "persistedTier": "private"
+    }
+  },
+  "transformedOracle": {
+    "check": "bumpPersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "responseTier": "private",
+      "persistedTier": "private"
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "ho-healthy-04",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "handle": "front@marlow.test",
+                "pin": "marlow-pin-77"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/accessToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "assign",
+        "kind": "action",
+        "operation": "request",
+        "description": "assign",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            },
+            {
+              "literal": "s1"
+            },
+            {
+              "literal": "assign"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "bump",
+        "kind": "action",
+        "operation": "request",
+        "description": "bump",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            },
+            {
+              "literal": "s1"
+            },
+            {
+              "literal": "bump"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "held",
+        "kind": "action",
+        "operation": "request",
+        "description": "held",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "holder"
+              },
+              "value": {
+                "literal": "me"
+              }
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "held",
+          "jsonPointer": "/rows/0/tier"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "private"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

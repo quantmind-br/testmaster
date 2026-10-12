@@ -1,0 +1,279 @@
+{
+  "id": "ho-bug-06",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a1304a-124c-743e-8e4b-94f1c1c604df",
+    "revisionId": "rev_01a1304a-1211-71fd-9209-0f60ec2cdd56",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "stays",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "9570a54ec3b48d7923be30ada52a6dc005de6f71020d5e1cb261e13d70bcc117",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1304a-11fb-7025-a6b8-f1ba2ccd29f6",
+    "admissionHash": "92a277dd12cc02c968010e5cf60d6d5ae803d289b443f38b4bc3c90402cc620b"
+  },
+  "transformed": {
+    "runId": "run_01a1304a-15e4-7702-91d1-e7a59c3b3d30",
+    "revisionId": "rev_01a1304a-1211-71fd-9209-0f60ec2cdd56",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "stays",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "9570a54ec3b48d7923be30ada52a6dc005de6f71020d5e1cb261e13d70bcc117",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a1304a-11fb-7025-a6b8-f1ba2ccd29f6",
+    "admissionHash": "92a277dd12cc02c968010e5cf60d6d5ae803d289b443f38b4bc3c90402cc620b"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "staySchema",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "rows": [
+        {
+          "id": "s1",
+          "guest": "Ines Calderon",
+          "tier": "pod",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 3600
+        },
+        {
+          "id": "s2",
+          "guest": "Tomasz Wirth",
+          "tier": "private",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 6800
+        },
+        {
+          "id": "s3",
+          "guest": "Aiko Brandt",
+          "tier": "pod",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 3600
+        },
+        {
+          "id": "s4",
+          "guest": "Lucas Ferreira",
+          "tier": "dorm",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 2400
+        },
+        {
+          "id": "s5",
+          "guest": "Mireille Dupont",
+          "tier": "suite",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 12500
+        }
+      ],
+      "total": 5,
+      "nextPage": 2
+    }
+  },
+  "transformedOracle": {
+    "check": "staySchema",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "rows": [
+        {
+          "id": "s1",
+          "guest": "Ines Calderon",
+          "grade": "pod",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 3600
+        },
+        {
+          "id": "s2",
+          "guest": "Tomasz Wirth",
+          "grade": "private",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 6800
+        },
+        {
+          "id": "s3",
+          "guest": "Aiko Brandt",
+          "grade": "pod",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 3600
+        },
+        {
+          "id": "s4",
+          "guest": "Lucas Ferreira",
+          "grade": "dorm",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 2400
+        },
+        {
+          "id": "s5",
+          "guest": "Mireille Dupont",
+          "grade": "suite",
+          "state": "booked",
+          "holder": null,
+          "nightlyCents": 12500
+        }
+      ],
+      "total": 5,
+      "nextPage": 2
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "ho-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "handle": "front@marlow.test",
+                "pin": "marlow-pin-77"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/accessToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "stays",
+        "kind": "action",
+        "operation": "request",
+        "description": "stays",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "stays",
+          "jsonPointer": "/rows/0/tier"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "pod"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

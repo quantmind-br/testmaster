@@ -1,0 +1,255 @@
+{
+  "id": "ho-bug-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a13049-f9d9-7785-b77e-6ec34b55e365",
+    "revisionId": "rev_01a13049-f9a0-762b-b5c5-f4c0831f3f4c",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "assign",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "depart",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "3ad189f823f015c356420d447598539c1e5e55d309c2323ceb08cd4cd0c2ac3b",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a13049-f98a-70c7-a8f0-2d7f4e1bca39",
+    "admissionHash": "64fa7a05e4563e9e952c9e265879a5259cf2962d628b0099e2928f96051f500e"
+  },
+  "transformed": {
+    "runId": "run_01a13049-fd70-7489-8651-03190d60ab4f",
+    "revisionId": "rev_01a13049-f9a0-762b-b5c5-f4c0831f3f4c",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "assign",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "depart",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "3ad189f823f015c356420d447598539c1e5e55d309c2323ceb08cd4cd0c2ac3b",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a13049-f98a-70c7-a8f0-2d7f4e1bca39",
+    "admissionHash": "64fa7a05e4563e9e952c9e265879a5259cf2962d628b0099e2928f96051f500e"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "keyTagRequired",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 422,
+      "persistedState": "booked"
+    }
+  },
+  "transformedOracle": {
+    "check": "keyTagRequired",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "status": 200,
+      "persistedState": "departed"
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "ho-bug-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "handle": "front@marlow.test",
+                "pin": "marlow-pin-77"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/accessToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "assign",
+        "kind": "action",
+        "operation": "request",
+        "description": "assign",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            },
+            {
+              "literal": "s1"
+            },
+            {
+              "literal": "assign"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "depart",
+        "kind": "action",
+        "operation": "request",
+        "description": "depart",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "stays"
+            },
+            {
+              "literal": "s1"
+            },
+            {
+              "literal": "depart"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "keyTag": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "depart"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            422
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

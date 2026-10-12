@@ -1,0 +1,218 @@
+{
+  "id": "ho-drift-07",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a1305a-3c75-7734-b869-81c80d49511e",
+    "revisionId": "rev_01a1305a-3c2c-77cd-ad06-5cb4f62cc0b7",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "handle",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "pin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "open_desk",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "arrivals_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "guest",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "fc703baf0306d20cca4eeaf8c47b2254cd761ab070c229f14fddb12cccce17d2",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a1305a-3c05-71ed-a3cb-21a86d7228b7",
+    "admissionHash": "6f61317cebb7f78c3d0ff4fec762778c95e42301c99aa2d2010465d8ba735563"
+  },
+  "transformed": {
+    "runId": "run_01a1305a-427e-7519-971e-3ca9aad4420f",
+    "revisionId": "rev_01a1305a-3c2c-77cd-ad06-5cb4f62cc0b7",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "handle",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "pin",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "open_desk",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "arrivals_ready",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "guest",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "fc703baf0306d20cca4eeaf8c47b2254cd761ab070c229f14fddb12cccce17d2",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a1305a-3c05-71ed-a3cb-21a86d7228b7",
+    "admissionHash": "6f61317cebb7f78c3d0ff4fec762778c95e42301c99aa2d2010465d8ba735563"
+  },
+  "proposal": {
+    "analysisId": "ana_01a1305a-bddb-7768-9335-be31c37d1116",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a1305a-3c2c-77cd-ad06-5cb4f62cc0b7",
+    "candidateRevisionId": "rev_01a1305a-be86-70fe-82df-5cde8f32d143",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "pin",
+        "value": {
+          "by": "testId",
+          "value": "signin-pin"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T13:43:35.816Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "98f169483bbaeb6118e748449ee3d2e373d4bfcae00c9e3476440fc35d866778",
+        "runId": "run_01a1305a-427e-7519-971e-3ca9aad4420f"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a1305a-3bf0-7552-997e-8dfb469bd09d"
+    },
+    "failedRunId": "run_01a1305a-427e-7519-971e-3ca9aad4420f",
+    "id": "hea_01a1305a-be86-70fe-82df-59a76db7e04d",
+    "limitations": [],
+    "modelCallId": "mdl_01a1305a-be3b-7771-858d-507b22a5368c",
+    "policyHash": "3d8d6e47cc02587eea2fecf99487bdc1951ed2c524b1891cf3b192475ca7926d",
+    "preservedAssertionsHash": "6ff60b26fe49cd500584d7bae2bc57f6a435b63207629305fb05c53c7a9c5f6d",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a1305a-3c2a-75d9-8532-9e8df4adcab3",
+    "verificationRunId": "run_01a1305a-bed9-77ec-bb1f-bc19a69c458b",
+    "version": 3,
+    "workspaceId": "ws_01a1305a-3bf0-7552-997e-8b79c5563016"
+  }
+}

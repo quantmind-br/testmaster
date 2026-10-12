@@ -1,0 +1,235 @@
+{
+  "id": "ho-drift-08",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a1305a-c089-753e-bd12-c91dbd7e66f5",
+    "revisionId": "rev_01a1305a-c03d-768c-94ae-79960a1c7579",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid_open",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_handle",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_pin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_signin_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "open_signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "handle",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "pin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "open_desk",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "arrivals_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0d664b9148d4aca14ecdbbd06360099f692be6e67227e5722ccdb13382236bc3",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a1305a-c01e-760d-9ce3-391ad31f1c21",
+    "admissionHash": "818045935763d89563cf4839b89760763dbe5ec2d74453a40655a6851deab72d"
+  },
+  "transformed": {
+    "runId": "run_01a1305a-c694-75a3-8ba4-6c323099818b",
+    "revisionId": "rev_01a1305a-c03d-768c-94ae-79960a1c7579",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "invalid_open",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_handle",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "invalid_pin",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "invalid_submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "invalid_signin_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "open_signin",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "handle",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "pin",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "open_desk",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "arrivals_ready",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0d664b9148d4aca14ecdbbd06360099f692be6e67227e5722ccdb13382236bc3",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a1305a-c01e-760d-9ce3-391ad31f1c21",
+    "admissionHash": "818045935763d89563cf4839b89760763dbe5ec2d74453a40655a6851deab72d"
+  },
+  "proposal": {
+    "analysisId": "ana_01a1305b-4148-72de-a51f-0ada620531d5",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a1305a-c03d-768c-94ae-79960a1c7579",
+    "candidateRevisionId": "rev_01a1305b-41c9-74af-8f7d-7f97d55d2b0e",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "invalid_handle",
+        "value": {
+          "by": "testId",
+          "value": "signin-handle"
+        }
+      },
+      {
+        "path": "/input/locator",
+        "stepId": "handle",
+        "value": {
+          "by": "testId",
+          "value": "signin-handle"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T13:44:09.418Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "75356e565c90f12e03397c4b13a896bfbd74a0f017cdf1c8cfdcd2fd4675ff99",
+        "runId": "run_01a1305a-c694-75a3-8ba4-6c323099818b"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a1305a-c00b-72f8-a222-4b0280f50c35",
+      "testmaster:deferredLocatorProofs": [
+        {
+          "baselineEvidenceHash": "ba0d21341f78fb9cf6163f5baea65bead6e418dbff6b279bf2cbb09c9a328920",
+          "baselineRunId": "run_01a1305a-c089-753e-bd12-c91dbd7e66f5",
+          "path": "/input/locator",
+          "stepId": "handle"
+        }
+      ]
+    },
+    "failedRunId": "run_01a1305a-c694-75a3-8ba4-6c323099818b",
+    "id": "hea_01a1305b-41c8-7799-a3d4-b42e731a00f9",
+    "limitations": [],
+    "modelCallId": "mdl_01a1305b-4182-7682-91cb-058b8f9321b3",
+    "policyHash": "6f8dba72b72be3d5edf2725061d225247114de4dc63613e4ae90afa02ba538f1",
+    "preservedAssertionsHash": "6106863d9fafff9218572f8c61d942357c3d321a480fb3eaedb1f319758a3af1",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a1305a-c03b-77ba-ad4f-e56a674d526f",
+    "verificationRunId": "run_01a1305b-4214-758b-b9e5-d7b9eb547d18",
+    "version": 3,
+    "workspaceId": "ws_01a1305a-c00a-72fc-972a-bb4f41a0f69d"
+  }
+}
