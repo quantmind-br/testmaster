@@ -1,7 +1,7 @@
 import { mkdtemp, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { installRuntime } from "../distribution/install.js";
+import { bundledReleaseTrust, installRuntime } from "../distribution/install.js";
 import { downloadEnvelope } from "./download.js";
 import { ActionInputError } from "./inputs.js";
 import { publishEnvelope } from "./publisher.js";
@@ -41,6 +41,7 @@ export async function runPublisher(env: NodeJS.ProcessEnv = process.env): Promis
   });
   const runtime = await installRuntime({
     manifestPath: manifest.slice(0, split),
+    ...bundledReleaseTrust(manifest.slice(0, split)),
     manifestSha256: manifest.slice(split + 1),
     destination: join(cwd, "runtime"),
   });

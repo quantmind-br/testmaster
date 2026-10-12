@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { copyFile, lstat, mkdir, open, readFile, realpath, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   type ArchiveDigest,
   type DistributionManifest,
@@ -16,10 +16,23 @@ import {
   safeArchivePath,
   sha256,
 } from "./archive.js";
+import {
+  loadReleaseSignature,
+  loadReleaseTrust,
+  type VerifiedRelease,
+  verifyReleaseSignature,
+} from "./signing.js";
 
 export interface InstallRuntimeOptions {
   manifestPath: string;
-  manifestSha256: string;
+  /** Detached signature over the exact manifest bytes (conventionally `<manifest>.sig`). */
+  signaturePath: string;
+  /** Trusted public keys. */
+  keyringPath: string;
+  /** Advisory/revocation lists; at least one. A revocation in any list refuses the release. */
+  advisoryPaths: string[];
+  /** Optional extra pin of the manifest SHA-256 obtained through a separate channel. */
+  manifestSha256?: string;
   destination: string;
 }
 export interface InstalledRuntime {
@@ -27,6 +40,24 @@ export interface InstalledRuntime {
   cliPath: string;
   sourceCommit: string;
   manifestSha256: string;
+  signingKeyId: string;
+}
+/**
+ * Trust files shipped beside the installer code: in a checkout and in the Action distribution
+ * both live at the same repository-relative paths, three directories above this module.
+ */
+export function bundledReleaseTrust(
+  manifestPath: string,
+): Pick<InstallRuntimeOptions, "signaturePath" | "keyringPath" | "advisoryPaths"> {
+  return {
+    signaturePath: `${manifestPath}.sig`,
+    keyringPath: fileURLToPath(
+      new URL("../../../docs/security/release-keys/keyring.json", import.meta.url),
+    ),
+    advisoryPaths: [
+      fileURLToPath(new URL("../../../docs/security/advisories.json", import.meta.url)),
+    ],
+  };
 }
 function validDigest(value: unknown, bound: number): value is ArchiveDigest {
   if (!value || typeof value !== "object") return false;
@@ -210,7 +241,24 @@ async function docker(args: string[], timeout: number): Promise<string> {
 }
 export async function installRuntime(options: InstallRuntimeOptions): Promise<InstalledRuntime> {
   const manifestPath = resolve(options.manifestPath);
-  const manifest = verifyManifest(await readFile(manifestPath), options.manifestSha256);
+  // The signature, signer key and revocation lists are checked before the manifest is parsed
+  // and before any archive is read, extracted or loaded into Docker.
+  const manifestStat = await lstat(manifestPath);
+  if (!manifestStat.isFile() || manifestStat.size > 32 * 1024 * 1024)
+    throw new Error("Unsupported distribution manifest file");
+  const manifestBytes = await readFile(manifestPath);
+  const verified: VerifiedRelease = verifyReleaseSignature({
+    manifest: manifestBytes,
+    signature: await loadReleaseSignature(resolve(options.signaturePath)),
+    trust: await loadReleaseTrust(
+      resolve(options.keyringPath),
+      options.advisoryPaths.map((path) => resolve(path)),
+    ),
+    ...(options.manifestSha256 !== undefined
+      ? { pinnedManifestSha256: options.manifestSha256 }
+      : {}),
+  });
+  const manifest = verifyManifest(manifestBytes, verified.manifestSha256);
   const destination = resolve(options.destination);
   const parent = await realpath(dirname(destination));
   if (parent !== dirname(destination))
@@ -300,7 +348,8 @@ export async function installRuntime(options: InstallRuntimeOptions): Promise<In
       runtimeDir: destination,
       cliPath,
       sourceCommit: manifest.sourceCommit,
-      manifestSha256: options.manifestSha256,
+      manifestSha256: verified.manifestSha256,
+      signingKeyId: verified.keyId,
     };
   } finally {
     if (!installed) await rm(destination, { recursive: true, force: true });
@@ -308,21 +357,42 @@ export async function installRuntime(options: InstallRuntimeOptions): Promise<In
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   const args = process.argv.slice(2);
-  const values: Record<string, string> = {};
+  const usage =
+    "Usage: install.js --manifest PATH --keyring PATH --advisories PATH [--advisories PATH ...] --dest DIR [--signature PATH] [--manifest-sha256 HEX]";
+  const single = new Map<string, string>();
+  const advisories: string[] = [];
   try {
     for (let index = 0; index < args.length; index += 2) {
       const key = args[index]!;
       const value = args[index + 1];
-      if (!["--manifest", "--manifest-sha256", "--dest"].includes(key) || !value || values[key])
-        throw new Error("Usage: install.js --manifest PATH --manifest-sha256 HEX --dest DIR");
-      values[key] = value;
+      if (
+        ![
+          "--manifest",
+          "--signature",
+          "--keyring",
+          "--advisories",
+          "--manifest-sha256",
+          "--dest",
+        ].includes(key) ||
+        !value
+      )
+        throw new Error(usage);
+      if (key === "--advisories") advisories.push(value);
+      else if (single.has(key)) throw new Error(usage);
+      else single.set(key, value);
     }
-    if (!values["--manifest"] || !values["--manifest-sha256"] || !values["--dest"])
-      throw new Error("Missing installation argument");
+    const manifestPath = single.get("--manifest");
+    const keyringPath = single.get("--keyring");
+    const destination = single.get("--dest");
+    if (!manifestPath || !keyringPath || !destination || !advisories.length) throw new Error(usage);
+    const pin = single.get("--manifest-sha256");
     installRuntime({
-      manifestPath: values["--manifest"],
-      manifestSha256: values["--manifest-sha256"],
-      destination: values["--dest"],
+      manifestPath,
+      signaturePath: single.get("--signature") ?? `${manifestPath}.sig`,
+      keyringPath,
+      advisoryPaths: advisories,
+      ...(pin !== undefined ? { manifestSha256: pin } : {}),
+      destination,
     })
       .then((result) => console.log(JSON.stringify(result)))
       .catch((error: unknown) => {

@@ -16,6 +16,13 @@ export const ACTION_FILES = [
   "github-action/inputs.js",
   "distribution/install.js",
   "distribution/archive.js",
+  "distribution/signing.js",
+] as const;
+// Release trust anchors the Action verifies runtimes against, shipped at their repository paths
+// (three directories above tools/dist/distribution/install.js).
+export const ACTION_TRUST_FILES = [
+  "docs/security/release-keys/keyring.json",
+  "docs/security/advisories.json",
 ] as const;
 export async function stageAction(root: string, out: string, sourceCommit: string) {
   if (!/^[a-f0-9]{40}$/u.test(sourceCommit)) throw new Error("Invalid Action source commit");
@@ -25,6 +32,7 @@ export async function stageAction(root: string, out: string, sourceCommit: strin
     "action.yml",
     ...LICENSE_ASSETS,
     ...ACTION_FILES.map((file) => `tools/dist/${file}`),
+    ...ACTION_TRUST_FILES,
   ]) {
     const source = join(root, path);
     if (path.endsWith(".js")) {

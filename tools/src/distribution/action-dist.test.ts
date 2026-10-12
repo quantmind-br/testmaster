@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ACTION_FILES, stageAction } from "./action-dist.js";
+import { ACTION_FILES, ACTION_TRUST_FILES, stageAction } from "./action-dist.js";
 import { LICENSE_ASSETS } from "./archive.js";
 import { licenseObligations } from "./licenses.js";
 
@@ -15,6 +15,7 @@ describe("downloaded Action distribution", () => {
         "action.yml",
         ...LICENSE_ASSETS,
         ...ACTION_FILES.map((path) => `tools/dist/${path}`),
+        ...ACTION_TRUST_FILES,
       ]) {
         await mkdir(dirname(join(source, path)), { recursive: true });
         await writeFile(
@@ -29,6 +30,10 @@ describe("downloaded Action distribution", () => {
         "tools/dist/github-action/publish.js",
       );
       expect(result.files.map((file) => file.path)).toContain("LICENSE");
+      expect(result.files.map((file) => file.path)).toContain("tools/dist/distribution/signing.js");
+      expect(result.files.map((file) => file.path)).toContain(
+        "docs/security/release-keys/keyring.json",
+      );
       expect(result.files.some((file) => file.path.includes("node_modules"))).toBe(false);
       expect(
         JSON.parse(await readFile(join(root, "out/source-commit.json"), "utf8")).sourceCommit,

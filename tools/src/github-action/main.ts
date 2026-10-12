@@ -3,7 +3,7 @@ import { appendFile, mkdtemp, readFile, realpath } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import type * as ApplicationRuntime from "@testmaster/application";
-import { installRuntime } from "../distribution/install.js";
+import { bundledReleaseTrust, installRuntime } from "../distribution/install.js";
 import {
   ActionInputError as ContractError,
   executionEnvironment,
@@ -45,8 +45,10 @@ export async function runAction(env: NodeJS.ProcessEnv = process.env): Promise<n
       "Action requires workflow_dispatch or a same-repository pull request",
     );
   const invocation = await mkdtemp(join(env.RUNNER_TEMP, "testmaster-action-"));
+  const manifestPath = resolve(inputs.runtimeManifest);
   const install = await installRuntime({
-    manifestPath: resolve(inputs.runtimeManifest),
+    manifestPath,
+    ...bundledReleaseTrust(manifestPath),
     manifestSha256: inputs.manifestSha256,
     destination: join(invocation, "runtime"),
   });

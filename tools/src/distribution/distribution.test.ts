@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createPrivateKey } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ import {
 } from "./archive.js";
 import { installRuntime, reassembleParts, verifyManifest } from "./install.js";
 import { RUNTIME_RESOURCES, splitArchive, stageRuntime } from "./package.js";
+import { generateReleaseKey, signManifestBytes } from "./signing.js";
 
 const roots: string[] = [];
 async function temporary(): Promise<string> {
@@ -201,9 +203,32 @@ describe("license-bound installation", () => {
     );
     await writeFile(join(root, "manifest.json"), bytes);
     await writeFile(join(root, "runtime.tar.gz"), "bad");
+    // A valid signature authenticates the manifest; the runtime bytes it pins are still checked.
+    const signer = generateReleaseKey("throwaway test key");
+    await writeFile(
+      join(root, "manifest.json.sig"),
+      JSON.stringify(signManifestBytes(bytes, createPrivateKey(signer.privateKeyPem))),
+    );
+    await writeFile(
+      join(root, "keyring.json"),
+      JSON.stringify({ schemaVersion: "1.0.0", keys: [signer.key] }),
+    );
+    await writeFile(
+      join(root, "advisories.json"),
+      JSON.stringify({
+        schemaVersion: "1.0.0",
+        updatedAt: "2026-10-11T00:00:00Z",
+        advisories: [],
+        revokedKeys: [],
+        revokedReleases: [],
+      }),
+    );
     await expect(
       installRuntime({
         manifestPath: join(root, "manifest.json"),
+        signaturePath: join(root, "manifest.json.sig"),
+        keyringPath: join(root, "keyring.json"),
+        advisoryPaths: [join(root, "advisories.json")],
         manifestSha256: sha256(bytes),
         destination: join(root, "runtime"),
       }),

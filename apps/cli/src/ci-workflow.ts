@@ -42,13 +42,14 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
     !/^[A-Za-z0-9_./-]+\.sh$/u.test(setupScript) ||
     setupScript.startsWith("/") ||
     setupScript.split("/").some((part) => !part || part === "." || part === "..") ||
-    runtimeAssets.length < 4 ||
+    runtimeAssets.length < 5 ||
     new Set(runtimeAssets).size !== runtimeAssets.length ||
     !runtimeAssets.includes("manifest.json") ||
+    !runtimeAssets.includes("manifest.json.sig") ||
     !runtimeAssets.includes("runtime.tar.gz") ||
     runtimeAssets.some(
       (asset) =>
-        !/^(?:manifest\.json|runtime\.tar\.gz|testmaster-runner(?:-python)?\.tar\.gz\.part-[0-9]{4})$/u.test(
+        !/^(?:manifest\.json(?:\.sig)?|runtime\.tar\.gz|testmaster-runner(?:-python)?\.tar\.gz\.part-[0-9]{4})$/u.test(
           asset,
         ),
     ) ||
@@ -85,7 +86,7 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
   };
   const download = {
     name: "Download anonymous pinned public runtime",
-    run: `set -euo pipefail\nmkdir -m 700 "$TESTMASTER_RELEASE_DIR" "$TESTMASTER_RELEASE_DIR/images"\n${runtimeAssets.map((asset) => `curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/${runtimeRepo}/releases/download/${runtimeTag}/${asset}' --output "$TESTMASTER_RELEASE_DIR/${asset.endsWith(".json") || asset === "runtime.tar.gz" ? asset : "images/" + asset}"`).join("\n")}\nprintf '%s  %s\\n' "$TESTMASTER_MANIFEST_SHA256" "$TESTMASTER_RELEASE_DIR/manifest.json" | sha256sum --check --status`,
+    run: `set -euo pipefail\nmkdir -m 700 "$TESTMASTER_RELEASE_DIR" "$TESTMASTER_RELEASE_DIR/images"\n${runtimeAssets.map((asset) => `curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' 'https://github.com/${runtimeRepo}/releases/download/${runtimeTag}/${asset}' --output "$TESTMASTER_RELEASE_DIR/${asset.startsWith("manifest.json") || asset === "runtime.tar.gz" ? asset : "images/" + asset}"`).join("\n")}\nprintf '%s  %s\\n' "$TESTMASTER_MANIFEST_SHA256" "$TESTMASTER_RELEASE_DIR/manifest.json" | sha256sum --check --status`,
   };
   const trusted = {
     name: "Checkout trusted distribution only",
@@ -139,7 +140,7 @@ export function githubWorkflow(options: GithubWorkflowOptions): string {
           download,
           {
             name: "Install verified runtime",
-            run: `node .testmaster-trusted/tools/dist/distribution/install.js --manifest "$TESTMASTER_RELEASE_DIR/manifest.json" --manifest-sha256 "$TESTMASTER_MANIFEST_SHA256" --dest "$TESTMASTER_RUNTIME_DIR"`,
+            run: `node .testmaster-trusted/tools/dist/distribution/install.js --manifest "$TESTMASTER_RELEASE_DIR/manifest.json" --signature "$TESTMASTER_RELEASE_DIR/manifest.json.sig" --keyring .testmaster-trusted/docs/security/release-keys/keyring.json --advisories .testmaster-trusted/docs/security/advisories.json --manifest-sha256 "$TESTMASTER_MANIFEST_SHA256" --dest "$TESTMASTER_RUNTIME_DIR"`,
           },
           {
             id: "identity",

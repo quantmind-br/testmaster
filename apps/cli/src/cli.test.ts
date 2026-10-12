@@ -119,6 +119,7 @@ describe("CLI machine output and offline authoring", () => {
       "--runtime-assets",
       JSON.stringify([
         "manifest.json",
+        "manifest.json.sig",
         "runtime.tar.gz",
         "testmaster-runner.tar.gz.part-0000",
         "testmaster-runner-python.tar.gz.part-0000",

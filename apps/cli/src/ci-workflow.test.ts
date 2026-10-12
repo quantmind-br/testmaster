@@ -13,6 +13,7 @@ const options: GithubWorkflowOptions = {
   runtimeTag: "experimental",
   runtimeAssets: [
     "manifest.json",
+    "manifest.json.sig",
     "runtime.tar.gz",
     "testmaster-runner.tar.gz.part-0000",
     "testmaster-runner-python.tar.gz.part-0000",
@@ -132,6 +133,17 @@ describe("operational public GitHub onboarding", () => {
     expect(() =>
       githubWorkflow({ ...options, runtimeAssets: ["manifest.json", "runtime.tar.gz"] }),
     ).toThrow();
+    // A signed release is mandatory: an otherwise complete asset set without the detached
+    // signature is refused, and the installer receives the signature and trust anchors.
+    expect(() =>
+      githubWorkflow({
+        ...options,
+        runtimeAssets: options.runtimeAssets.filter((asset) => asset !== "manifest.json.sig"),
+      }),
+    ).toThrow();
+    const install = JSON.stringify(JSON.parse(githubWorkflow(options)).jobs.execute.steps);
+    expect(install).toContain("--signature");
+    expect(install).toContain("docs/security/advisories.json");
   });
   it.each([
     "https://staging.example.com",
