@@ -8,6 +8,12 @@ RUN sh /recipe/build.sh /out && cp /recipe/provenance.json /out/TESTMASTER_FFMPE
 
 FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 AS base
 COPY --from=ffmpeg /out/ /ms-playwright/ffmpeg-1011/
+# Security updates for fixable findings (OpenSSL), and drop the image-global npm: nothing in the
+# runner invokes npm or npx, and its bundled dependencies carry unfixed advisories.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade openssl libssl3t64 \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/lib/node_modules/npm /usr/bin/npm /usr/bin/npx /usr/local/bin/npm /usr/local/bin/npx
 
 # Flatten so the replaced vendor ffmpeg binary (no public build recipe) is not redistributed
 # in a lower layer. Environment mirrors the base image configuration.

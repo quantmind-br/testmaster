@@ -8,13 +8,18 @@ RUN sh /recipe/build.sh /out && cp /recipe/provenance.json /out/TESTMASTER_FFMPE
 
 FROM mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0 AS base
 COPY --from=ffmpeg /out/ /ms-playwright/ffmpeg-1011/
+# Security updates for fixable findings (OpenSSL).
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade openssl libssl3t64 \
+    && rm -rf /var/lib/apt/lists/*
 RUN python -m pip install --no-cache-dir uv==0.12.23
 COPY python/ /opt/testmaster/python/
 WORKDIR /opt/testmaster/python
 RUN uv sync --frozen --no-dev --python python3.12 --no-editable \
     && chmod -R a+rX /opt/testmaster/python \
-    && python -m pip uninstall -y pip uv \
-    && rm -f /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12
+    && python -m pip uninstall -y pip uv virtualenv distlib filelock platformdirs python-discovery \
+    && rm -rf /root/.cache/virtualenv /root/.cache/uv \
+    && rm -f /usr/local/bin/virtualenv /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12
 
 # Flatten so the replaced vendor ffmpeg binary (no public build recipe) is not redistributed
 # in a lower layer. Environment mirrors the base image configuration.
