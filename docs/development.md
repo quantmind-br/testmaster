@@ -86,6 +86,11 @@ sources are refused) after building the CLI and freezing the runner image lock:
    notice obligation. The manifest records source commit, file hashes (including `LICENSE`,
    `NOTICE`, `containers/NOTICE` and upstream notices), image-lock hash, sources-index hash and
    full/part archive hashes. Packaging saves both locked image IDs; it does not rebuild images.
+   It then runs the vulnerability gate (Trivy container pinned in `containers/scanner.lock.json`;
+   CRITICAL/HIGH findings block unless covered by an owned, unexpired exception in
+   `docs/security/vulnerability-exceptions.json`; the advisory database cache is
+   `~/.cache/testmaster-release-scanner/trivy`) and writes `vulnerabilities.json`, pinned by the
+   manifest. A failing scan leaves no `manifest.json`; see `docs/security/release-process.md`.
 
 Playwright's own ffmpeg build recipe is not public, so both images build FFmpeg 7.0.1 from
 `containers/ffmpeg/build.sh` (LGPL configuration, SHA-256 pinned tarballs, provenance at
@@ -462,7 +467,7 @@ slow clients disconnect and reattach instead of dropping terminal events. Upload
 use `application/octet-stream` and `X-Upload-Token` in addition to the bearer installation token;
 only explicit completion after exact size/hash verification permits ingestion. OpenAPI is served
 at `/v1/openapi.json`. M4+ routes return `CAPABILITY_UNAVAILABLE` with their milestone. Manual
-resource compensation is available through `resource get` (approval binding), `approval create`,
+resource compensation is available through `resource get` (approval binding), `approval create --reason TEXT`,
 and `resource cleanup --approval ID --expected-version N --idempotency-key KEY`. It replays only
 the recorded compensation inside a fresh hardened sandbox with the original environment policy,
 protected handle, ownership proof and a consumed resource-bound approval. Failed or uncertain

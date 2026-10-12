@@ -6,7 +6,8 @@
     "revisionHash",
     "environmentRevisionId",
     "originSet",
-    "policyHash"
+    "policyHash",
+    "reason"
   ],
   "properties": {
     "actorId": {
@@ -48,6 +49,11 @@
     },
     "policyHash": {
       "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 200,
       "type": "string"
     }
   },

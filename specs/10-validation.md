@@ -50,7 +50,7 @@ Definir `N_selected` como todas as células requeridas resolvidas na seleção c
 | `inconclusiveRate` | `N_inconclusive / N_selected` | Resultado sem conclusão confiável; jamais incluído como passed. |
 | `retryRecoveryRate` | `N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried` | Somente infra retry-safe sem assertion comprovadamente falha; denominador inclui todos os Runs infra elegíveis que receberam retry. Não mede confiabilidade do produto. |
 | `diagnosticRetryPassRate` | `N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried` | Observação posterior `passedOnRetry`, nunca recuperação do outcome; todos esses Runs permanecem failed e seus first failures contam. |
-| `gatePassRate` | `N_requiredRunsWithGatePassed / N_selected` | Exige outcome/evidência/política e cleanup obrigatório aprovados; notDispatched/cancelled/blocked/inconclusive e passed com cleanup obrigatório failed não entram no numerador. Gate BatchRun ainda exige completude da seleção não vazia e dependências requeridas. |
+| `gatePassRate` (end-to-end) | `N_requiredRunsWithGatePassed / N_selected` | Exige outcome/evidência/política e cleanup obrigatório aprovados; notDispatched/cancelled/blocked/inconclusive e passed com cleanup obrigatório failed não entram no numerador. Gate BatchRun ainda exige completude da seleção não vazia e dependências requeridas. |
 | `requirementMappingCoverage` | `N_inScopeRequirementsWithAcceptedScenario / N_inScopeRequirements` | Cobertura de mapeamento, não comportamento provado. |
 | `verifiedRequirementCoverage` | `N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements` | Escopo e policy de freshness publicados; exigir evidência nova de Run/gate passed, não retry diagnóstico de Run failed; caso sem Run é uncovered. |
 | `endpointContractCoverage` | `N_inScopeOperationStatusSchemaPairsExercised / N_declaredInScopeOperationStatusSchemaPairs` | `operation` inclui método/rota; status/schema sem teste não entram como cobertos. Não equivale a cobertura de negócio. |
@@ -422,7 +422,7 @@ Todos os alvos desta seção são **propostos e não medidos**. M0 define protoc
 | `m3-assistive-diagnosis` | holdout selado, próxima ação/overclaim nas metas e ganho sobre regras | bloqueado: holdout selado e ganho de utilidade ainda não medidos; fork não é prerequisite |
 | `m3-automatic-healing` | zero inseguro/false repair, eligibleSuccess no holdout com elegibilidade pré-declarada e evidência automatizada de segurança | bloqueado: holdout selado com elegibilidade pré-declarada ainda não executado |
 | `m3-assisted-healing` | aceitação automatizada da superfície de revisão e verificação | bloqueado: aceitação automatizada da superfície de revisão ainda não registrada como área medida |
-| `m3-ci-integration` | aceite hospedado e isolamento de token em fork cross-owner automatizado | bloqueado: aceite same-repo público existe; prova cross-owner automatizada (owner distinto do repositório base, ex. organização) ainda não executada |
+| `m3-ci-integration` | aceite hospedado e isolamento de token em fork cross-owner automatizado | aprovado em 2026-10-11: aceite same-repo público e prova cross-owner automatizada (fork de owner distinto) executados |
 
 Nenhuma linha afirma homologação. Resultados históricos falhos permanecem intactos e o milestone M3 continua vermelho.
 

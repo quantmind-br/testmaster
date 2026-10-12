@@ -110,11 +110,23 @@ Review requires admin authority and an explicit assertion that current revocatio
 were reconciled; incomplete evidence also requires `--accept-incomplete-evidence`. Old in-flight
 jobs remain nondispatchable until their separate decision. A resumed job creates a fresh Attempt;
 known uncertain mutation resources are refused. No restore command sends target traffic.
+When the post-backup revocation ledger is unreadable or absent, the restore declares
+`postBackupLedger: "unavailable"`, stays suspended, and review additionally requires
+`--ledger-loss-accepted`.
 Vault ciphertext envelopes carry authenticated encryption and a content-derived key ID.
 Rewrap retains prior keys during atomic per-object updates; interruption can be retried. Retirement
 refuses active keys or any still-referencing ciphertext and durably records a retired-key denylist
 before deleting old key bytes. Preserve segregated vault/key recovery material; missing or retired
 keys fail release, never create a replacement or resurrect a revoked secret.
+
+## Check deliveries and dead letters
+
+A check delivery retries with exponential equal-jitter backoff (1 s base, 300 s cap) after the in-request
+retries, and becomes a queryable dead letter after 10 attempts or 24 hours. List them with
+`testmaster ci deliveries [--state pending|delivered|dead_letter]`; reopen one with
+`testmaster ci deliveries-requeue DELIVERY_ID` (write authority, audited; it never reruns the local
+test), then publish again with `testmaster ci publish`. The maintenance outbox sweep marks outbox events
+delivered without sending anything; the delivery state lives in the Delivery entity.
 
 ## Troubleshooting
 
@@ -315,7 +327,9 @@ silently losing the canonical result. Null monotonic durations omit XML time rat
 ## Governance and clean reproduction
 
 After committing the full candidate, the orchestrator runs
-`node validation/journeys/reproduce-clean-checkout.mjs . validation/results/clean-checkout-no-key.json`.
+`node validation/journeys/reproduce-clean-checkout.mjs .`, which writes the write-once record
+`validation/results/clean-checkout/<commit>.json` (a failed reproduction gets its own
+`<commit>.failed-<UTC>.json`; a `.json` second argument is refused).
 It clones into a private temporary checkout, uses a populated local pnpm store with frozen offline
 installation, clears key/token/secret environment variables, builds, runs unit tests and exercises
 canonical CLI capabilities/scaffold/init. Failed commands are recorded; no-key/offline flags are not
