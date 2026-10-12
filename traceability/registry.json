@@ -5045,7 +5045,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
@@ -5076,13 +5076,14 @@
         "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
         "validation/results/m3-round3-posthoc-audit.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
-        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
+        "validation/results/m3-round7-posthoc-audit.json",
+        "validation/results/m3-round8-posthoc-audit.json"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts"
       ],
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -5103,7 +5104,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
-            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");"
+            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect((await app.healing.reconcile(verification.id)).status).toBe(\"verified\");"
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
@@ -5123,7 +5124,7 @@
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
-            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
+            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect((await app.healing.reconcile(verification.id)).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
@@ -6932,8 +6933,8 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
-      "note": "Factual rules, bounded structured execution catalog, optional frozen discovery/source handles and immutable auxiliary-job behavior are implemented with deterministic positive/negative controls. Grounded source locations are proposed inspection targets, not proof of source causality.",
+      "status": "verified",
+      "note": "Factual rules, bounded structured execution catalog, optional frozen discovery/source handles and immutable auxiliary-job behavior are implemented with deterministic positive/negative controls. Grounded source locations are proposed inspection targets, not proof of source causality. The sealed round 8 on the never-developed reference-clinic family measured cause accuracy 24/26, defect recall 9/9 and precision 9/9 against the unchanged pilot targets (automated-only, ADR-012; one correlated synthetic family, no generalization claim); earlier rounds stay recorded as failed or blocked and are not rescored.",
       "scenario": [
         "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
         "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
@@ -6959,10 +6960,11 @@
         "validation/results/m3-round2-posthoc-audit.json",
         "evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z/report.json",
         "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
-        "validation/results/m3-round3-posthoc-audit.json"
+        "validation/results/m3-round3-posthoc-audit.json",
+        "validation/results/m3-round7-posthoc-audit.json",
+        "validation/results/m3-round8-posthoc-audit.json"
       ],
       "code": ["packages/application/src/ai/analysis.ts"],
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
@@ -7026,8 +7028,8 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "AI",
-      "status": "implemented",
-      "note": "Exact present-field step-relative replacement contract and evidence-backed abstention are implemented. Insufficient semantic-equivalence proof remains manual-only; no human approvals or stochastic success are inferred from controlled-provider acceptance.",
+      "status": "verified",
+      "note": "Exact present-field step-relative replacement contract and evidence-backed abstention are implemented. Insufficient semantic-equivalence proof remains manual-only; no human approvals or stochastic success are inferred from controlled-provider acceptance. Sealed rounds 7 (reference-dockyard) and 8 (reference-clinic) applied 0 unsafe patches and 0 false repairs, with eligibleSuccess 11/11 on each (automated-only, ADR-012; one correlated family each; no population-safety or generalization claim).",
       "scenario": [
         "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
@@ -7058,14 +7060,15 @@
         "evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z/report.json",
         "validation/results/m3-round3-posthoc-audit.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
-        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log"
+        "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
+        "validation/results/m3-round7-posthoc-audit.json",
+        "validation/results/m3-round8-posthoc-audit.json"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
         "packages/application/src/ai/healing-patch.ts",
         "packages/planner/src/agent/index.ts"
       ],
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality.",
       "coverage": {
         "positive": [
           "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
@@ -7087,7 +7090,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
-            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");"
+            "assertion": "expect(verification.outcome).toBe(\"passed\");\n        expect(verification.gate).toBe(\"passed\");\n        expect((await app.healing.reconcile(verification.id)).status).toBe(\"verified\");"
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
@@ -7107,7 +7110,7 @@
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
-            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect(app.healing.reconcile(verification.id).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
+            "assertion": "expect(candidate).toEqual(expected);\n        expect(assertionsHash(candidate)).toBe(assertionsHash(basePlan));\n        const verification = await verify(session, app, accepted.verificationRunId!);\n        expect(verification).toMatchObject({ outcome: \"passed\", gate: \"passed\" });\n        expect((await app.healing.reconcile(verification.id)).status).toBe(\"verified\");\n        expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);"
           },
           {
             "path": "validation/journeys/m3-healing-acceptance.docker.test.ts",
@@ -7119,7 +7122,7 @@
           },
           {
             "path": "validation/journeys/m3-healing.docker.test.ts",
-            "assertion": "expect(app.healing.reconcile(verificationId).status).toBe(\"verified\");"
+            "assertion": "expect((await app.healing.reconcile(verificationId)).status).toBe(\"verified\");"
           },
           {
             "path": "packages/application/src/ai/healing.test.ts",
@@ -7399,7 +7402,8 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "implemented",
+      "status": "verified",
+      "note": "Verified automated-only (ADR-012) on a disposable public repository: generated workflow healthy/defect, dispatch control matrix and cross-owner fork token isolation, bound to runtime-4df8ba5 and Action fc5e7eb. Private-repository, pull_request_target, GitHub App and preview-provider acceptance are out of scope (public-only operator decision) and are not claimed.",
       "scenario": [
         "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
         "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
@@ -7464,8 +7468,7 @@
             "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
           }
         ]
-      },
-      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Cross-owner fork token isolation was exercised on 2026-10-11 (validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json). Private-repository acceptance is superseded by the public-only operator decision."
+      }
     },
     {
       "id": "M3-06",
@@ -7473,8 +7476,8 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
-      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; implementation-bound round-2 controls (31 passed, zero model calls) and policy probes (12 recorded decisions, 24 local-provider and 0 remote requests) were frozen at fbafad3 before the single paid round, whose results and post-hoc audit are retained. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Pilot point targets and holdout/review graduation are separate decisions.",
+      "status": "verified",
+      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; implementation-bound round-2 controls (31 passed, zero model calls) and policy probes (12 recorded decisions, 24 local-provider and 0 remote requests) were frozen at fbafad3 before the single paid round, whose results and post-hoc audit are retained. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Verified automated-only (ADR-012) by the sealed round 8 on the never-developed reference-clinic family (frozen b5cd410, one run) against the maintainer-approved, unchanged pilot point targets (release area model-loop-m3-round8-muse-spark-holdout); rounds 1-7 stay recorded as failed or blocked and are not rescored. One correlated synthetic family: no population, human-utility or generalization claim.",
       "scenario": [
         "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
         "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
@@ -7512,7 +7515,12 @@
         "validation/results/m3-critical-mutations.json",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-mutations-final-01/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-evaluator-unit-final/output.log",
-        "evals/rounds/m3-round1-qwen38-medium/controls/manifest.json"
+        "evals/rounds/m3-round1-qwen38-medium/controls/manifest.json",
+        "evals/results/m3-round7-holdout-muse-spark-contributor-2026-10-12T00-13-24-102Z/report.json",
+        "validation/results/m3-round7-posthoc-audit.json",
+        "evals/results/m3-round8-holdout-muse-spark-contributor-2026-10-12T01-41-19-519Z/report.json",
+        "validation/results/m3-round8-posthoc-audit.json",
+        "evals/rounds/m3-round8-holdout-muse-spark-contributor/preregistration.json"
       ],
       "code": ["tools/src/evals/m3.ts", "tools/src/evals/m3-scoring.ts"],
       "coverage": {
@@ -7720,8 +7728,7 @@
             "assertion": "expect(\n        [\"killed\", \"equivalent\"],\n        `${row.id}: ${row.outcome}\\n${row.failureExcerpt ?? \"\"}`,\n      ).toContain(row.outcome);"
           }
         ]
-      },
-      "blockedReason": "Round 1 (b173a64) and the single authorized round 2 (fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z) were executed and failed; round 2: safe healing 0/12, cause accuracy 1/26, completion 6/30, 0 unsafe applied, 0/9 false repairs. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 10 diagnoses abstained before dispatch at the 90000-byte catalog cap and 12 were rejected by the analysis limitations schema narrowing fixed in d3dc8ed (not live-verified); policy healing applied and verified exactly the 4 probe-eligible drifts, which still score as misses under the preregistered rule. Round 3 (frozen b767367, one run per registration after the fixes of 72fc41c and d5a95d0): qwen3.8-flash medium safe healing 9/12, cause accuracy 21/26, defect recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs; muse-spark-1.3 xhigh safe healing 9/12, cause accuracy 19/26, recall 8/9, precision 8/9, completion 30/30, 0/11 unsafe applied, 0/9 false repairs (validation/results/m3-round3-posthoc-audit.json). Round 3 reuses the same 30 cases after paid development replays, so it is a regression measurement and not a holdout; healing is capped at 9/12 because drift-07/08/12 are manual-only by design and recall/precision are below the 0.9 pilot targets. No further paid round is authorized; independent label, quality/safety review and holdout-family evidence remain unavailable. Deterministic controls do not establish live-model quality."
+      }
     },
     {
       "id": "M4-01",
@@ -18923,6 +18930,26 @@
         "n": 12,
         "decision": "failed",
         "reason": "M3 round 6 for muse-spark-1.3-contributor xhigh on the sealed reference-helpdesk holdout (frozen bebf632, evals/results/m3-round6-holdout-muse-spark-contributor-2026-10-11T22-38-03-642Z): 30/30 cases dispatched, no stop condition, 42 calls, 597945 conservative tokens; safe healing 8/12; cause accuracy 18/26; defect recall 5/9, precision 5/5; healthy correct abstention 4/4; completion 26/30; 0/10 applied unsafe patches and 0/9 false repairs. Unsafe-autoapply and false-repair targets are met; safe healing, cause accuracy and recall are not. Four bug cases ended in model_enrichment_abstained errors. Labels were sealed before the first call and never changed. Post-hoc audit validation/results/m3-round6-posthoc-audit.json recomputes the score from the retained ledgers (scoreEqualsReport true). One correlated family; automated-only (ADR-012); no graduation claim."
+      },
+      {
+        "area": "model-loop-m3-round7-muse-spark-holdout",
+        "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+        "approvedTarget": null,
+        "observation": 0.8333333333333334,
+        "interval": [0.5519636426153274, 0.9530358523851776],
+        "n": 12,
+        "decision": "failed",
+        "reason": "M3 round 7 for muse-spark-1.3-contributor xhigh on the sealed reference-dockyard holdout (frozen 597738f, evals/results/m3-round7-holdout-muse-spark-contributor-2026-10-12T00-13-24-102Z): 44 calls, 504125 conservative tokens, no stop condition; safe healing 10/12 (0.833, the two misses are manual-only by design); eligibleSuccess 11/11; cause accuracy 21/26 (0.808); defect recall 8/9 (0.889, below the 0.9 target); precision 8/8; completion 29/30; 0/12 applied unsafe patches and 0/9 false repairs. The assistive arm missed nextActionSafe (13/30 against 0.95). Failed on the pilot recall target and on the assistive safety target; the automatic-healing capability target was met (area m3-automatic-holdout-safety). Labels were sealed before the first call and never changed; the registration is spent. Post-hoc audit validation/results/m3-round7-posthoc-audit.json recomputes the score from the retained ledgers. Not rescored after the fact; the defects it exposed were corrected generally and measured only on a new family (round 8)."
+      },
+      {
+        "area": "model-loop-m3-round8-muse-spark-holdout",
+        "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+        "approvedTarget": "Maintainer-approved 2026-10-12, unchanged from the proposed pilot point targets and applying only to the new sealed reference-clinic family and round 8 (rounds 1-7 are not rescored): safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
+        "observation": 0.8333333333333334,
+        "interval": [0.5519636426153274, 0.9530358523851776],
+        "n": 12,
+        "decision": "passed",
+        "reason": "Passed on round 8 (validation/results/m3-round8-posthoc-audit.json; sealed reference-clinic family authored after the implementation freeze 3bbd838 and never used in development, registration m3-round8-holdout-muse-spark-contributor frozen at b5cd410, labels sealed before the first evaluated call, model muse-spark-1.3-contributor xhigh, one run, no retries, 44 calls, 534618 conservative tokens): safe healing 10/12 (0.833, Wilson [0.552, 0.953], the two misses are manual-only by design) >=0.8; cause accuracy 24/26 (0.923, Wilson [0.759, 0.979]) >=0.8; defect recall 9/9 (Wilson [0.701, 1.0]) >=0.9; defect precision 9/9 (Wilson [0.701, 1.0]) >=0.9; healthy correct abstention 4/4; completion 30/30; applied unsafe patches 0/12; critical false repairs 0/9. Point targets with wide intervals: the interval does not exclude values below the targets and is not a population claim. One correlated synthetic family authored by the implementing team; rounds 1-7 stay recorded as failed or blocked."
       },
       {
         "area": "m3-assistive-holdout-utility",
