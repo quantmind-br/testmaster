@@ -1,0 +1,307 @@
+{
+  "oracle": "shipmentSchema",
+  "mutant": "schema-field-renamed",
+  "expectedFailingStepIds": [
+    "business_assertion"
+  ],
+  "digests": {
+    "healthy": {
+      "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+      "dockyard.html": "e6773beb1bc29132f139704fa800747391f8409360cae1f066724e319a922f2a"
+    },
+    "transformed": {
+      "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+      "dockyard.html": "e6773beb1bc29132f139704fa800747391f8409360cae1f066724e319a922f2a"
+    }
+  },
+  "familyId": "reference-dockyard",
+  "id": "dy-bug-06",
+  "group": "bug",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "clerk@dockyard.test",
+                "secret": "dock-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "shipments",
+        "kind": "action",
+        "operation": "request",
+        "description": "shipments",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "shipments"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "shipments",
+          "jsonPointer": "/items/0/tier"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "standard"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "shipmentSchema",
+    "mutant": "schema-field-renamed",
+    "expectedFailingStepIds": [
+      "business_assertion"
+    ],
+    "digests": {
+      "healthy": {
+        "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+        "dockyard.html": "e6773beb1bc29132f139704fa800747391f8409360cae1f066724e319a922f2a"
+      },
+      "transformed": {
+        "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+        "dockyard.html": "e6773beb1bc29132f139704fa800747391f8409360cae1f066724e319a922f2a"
+      }
+    }
+  },
+  "labels": {
+    "healingEligibility": "none",
+    "expectedHealingAdvice": "not_indicated",
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "correctActions": [
+      "compare_contract"
+    ],
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "contract_violation",
+      "mechanism": "schema-field-renamed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "contract_violation",
+      "rationale": "The required field /items/0/tier does not resolve in a successful response whose items carry a differently named field; an unresolved required field in a 200 response establishes a contract violation."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "contract_violation",
+  "controls": {},
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": false
+  },
+  "diagnosis": {
+    "failureKind": "contract_violation",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": false,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": false,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false
+  },
+  "usage": {
+    "inputTokens": 2714,
+    "outputTokens": 9074,
+    "reasoningTokens": 8531,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 1,
+    "conservativeCharge": 11788,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-wBEFtv",
+    "baseRevision": {
+      "id": "rev_01a12d9a-5c54-7277-97b9-2d1e1157b8cb",
+      "protectedHash": "f29447f112379c20dc2d941d2e745937b71581491df8ed9fcb2e39d1d538c5c1"
+    },
+    "healthy": {
+      "runId": "run_01a12d9a-5c8e-71ad-bca0-7cb33a36564e",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12d9a-608a-743d-9b69-643f5edd3005",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12d9a-664a-74fb-b49b-1da2d01c07a4",
+      "hash": "3f25e46e53fc475c73cfedd8c6ed39324d5ac228e1845399c37af8ab8c20e52f",
+      "failureKind": "contract_violation"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12d9b-6fc6-76fe-bfe9-3495c80a7619",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "1a2bc0aa69d94d0f63d5355e85408e345e390f5fb7ef18bc018443d489cac5b1",
+        "responseHash": "06ff9faa0805668731125bf71e622907228f58c4503b51bf7e5966433d64607a",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 2714,
+          "outputTokens": 9074,
+          "reasoningTokens": 8531
+        },
+        "cost": "unknown",
+        "latencyMs": 67842,
+        "createdAt": "2026-10-12T00:55:23.846Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12d9b-6fc7-7657-8058-47f1328f36f3",
+      "hash": "20f707b433d507b0ed1b31b6cadfba7c086e4a39abb38244edb505535196ddbf"
+    },
+    "refusal": {
+      "code": "PRECONDITION_FAILED",
+      "reason": "semantic_failure",
+      "messageHash": "a1cd2339c6dfe17d80ae05881e18456cbb72d08790b76db91956201445d7c197",
+      "detail": "PRECONDITION_FAILED: Healing abstained",
+      "jobId": "job_01a12d9b-6fcd-750e-b621-4324bb5ea1a2",
+      "job": {
+        "state": "completed",
+        "result": {
+          "reason": "semantic_failure",
+          "refused": true
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "compare_contract",
+      "recommendedActions": [
+        {
+          "action": "compare_contract",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "contract_violation"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "compare_contract",
+      "recommendedActions": [
+        {
+          "action": "compare_contract",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "contract_violation"
+      },
+      "healing": {
+        "advice": "not_indicated"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

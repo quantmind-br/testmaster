@@ -755,6 +755,27 @@ bounded, scrubbed copy of the model's stated reason in the job result for audit.
 measures the drift oracle and semantic negative for any case carrying a semantic-candidate control,
 not only the `drift` group. Round 6 is not rescored; the next measurement needs a new sealed family.
 
+Round 7 (`597738f`, one run, sealed reference-dockyard family, `muse-spark-1.3-contributor` xhigh):
+safe healing 10/12, eligibleSuccess 11/11, cause accuracy 21/26, recall 8/9, precision 8/8, completion
+29/30, 0/12 unsafe applications, 0/9 false repairs, 44 calls, 504125 conservative tokens
+(`validation/results/m3-round7-posthoc-audit.json`). That closes `m3-automatic-healing`. The
+assistive arm was non-inferior to rules (0 regressed, 25 vs 25 correct) but its nextActionSafe was
+13/30, so `m3-assistive-diagnosis` stays blocked. The analysis of the retained ledgers found four
+general defects, corrected after the round (prompt `analyze-7-code-owned-advice`; the dockyard family
+is now development evidence and is not reused as holdout): a model could add an
+actionable step beside a code-owned recommendation, and an evidence step to a passed Run; a
+credential-establishing request (one that captures a sensitive value) counted as the entity write
+that makes a later read a persistence suspect, which made a renamed response field a product bug and
+made the model's correct contract cause contradict the rules; a wrong value on a read after a write
+was advised as a requirement comparison instead of a persistence inspection; and a locator timeout
+on a named password input never reached a baseline-equivalence proof because those inputs have no ARIA
+role. Now the model may only add evidence collection once the rules advised an action and nothing to
+a passed Run, a required field missing from an existing object of a 2xx response without an
+explaining write is a `contract_violation`, a value mismatch on a read after a write inspects the
+write and the read, and a named password input is proven equivalent through its recorded test id.
+Paid development probes on the burned dockyard cases (`evals/results/dev-dev-rules2-*`) gave a safe
+rules and model arm on all six probed cases; that is development evidence only.
+
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
 targets/controls, waived invariants or critical/high findings. It does not require unrelated release
