@@ -1,8 +1,13 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ContractError } from "@testmaster/contracts";
-import { ExecutionRepository, LeaseRepository, StaleFenceError } from "@testmaster/persistence";
+import {
+  ExecutionRepository,
+  LeaseRepository,
+  OutboxRepository,
+  StaleFenceError,
+} from "@testmaster/persistence";
 import { afterEach, expect, it, vi } from "vitest";
 import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
@@ -151,4 +156,43 @@ it("restarted old owner cannot publish after a replacement claim even with the s
     }),
   ).toThrow(StaleFenceError);
   expect(app.runs.get(receipt.runId).outcome).toBeNull();
+});
+it("dry-run reports pending outbox and missing artifact references without mutating", async () => {
+  const { app, init, test } = await fixture();
+  const workspaceId = init.workspaceId;
+  const insertArtifact = (id: string, storageKey: string) =>
+    app.database.run(
+      "INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES(?,?,?,?,?,?,?,'available','not_applicable')",
+      workspaceId,
+      id,
+      "2026-10-05T00:00:00.000Z",
+      String(test.activeRevisionId),
+      "hash",
+      1,
+      storageKey,
+    );
+  insertArtifact("art-bytes-present", "authored-code/art-bytes-present.json");
+  insertArtifact("art-bytes-missing", "authored-code/art-bytes-missing.json");
+  await mkdir(join(app.config.dataDir, "authored-code"), { recursive: true });
+  await writeFile(join(app.config.dataDir, "authored-code/art-bytes-present.json"), "{}");
+  const baseline = new OutboxRepository(app.database).pending(workspaceId).length;
+  app.database.withTx(() =>
+    new OutboxRepository(app.database).append(workspaceId, workspaceId, "test.pending", {}),
+  );
+  const before = {
+    outbox: app.database.all("SELECT * FROM outbox ORDER BY id"),
+    artifacts: app.database.all("SELECT * FROM artifacts ORDER BY id"),
+    leases: app.database.all("SELECT * FROM job_leases ORDER BY id"),
+  };
+  const preview = await app.worker.reconcile({ dryRun: true });
+  expect(preview).toMatchObject({
+    dryRun: true,
+    pendingOutbox: baseline + 1,
+    missingArtifactReferences: 1,
+  });
+  expect({
+    outbox: app.database.all("SELECT * FROM outbox ORDER BY id"),
+    artifacts: app.database.all("SELECT * FROM artifacts ORDER BY id"),
+    leases: app.database.all("SELECT * FROM job_leases ORDER BY id"),
+  }).toEqual(before);
 });

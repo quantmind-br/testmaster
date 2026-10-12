@@ -10,10 +10,11 @@ import {
   verifyBundle,
 } from "@testmaster/evidence";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { UploadsService } from "./ai/sources.js";
 import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
-import { RetentionService } from "./retention.js";
+import { assertArtifactPublishable, RetentionService } from "./retention.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => ({
   ...(await importOriginal<typeof fs>()),
@@ -540,5 +541,180 @@ describe("artifact retention maintenance", () => {
     expect(
       f.ctx.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
     ).toBe("maintenance");
+  });
+
+  it("warns once at 80 percent and clears the warning below 80 percent", async () => {
+    const f = await fixture({ completed: false });
+    const storage = vi.spyOn(fs, "statfs");
+    const warnings = () =>
+      f.ctx.database.all("SELECT data_json FROM outbox WHERE type='storage.high_watermark'");
+    const state = () =>
+      f.ctx.database.get("SELECT value FROM operational_state WHERE key='storage:high-watermark'");
+    storage.mockResolvedValue({ blocks: 100, bavail: 21 } as StatsFs);
+    await f.service.maintenance();
+    expect(warnings()).toHaveLength(0);
+    storage.mockResolvedValue({ blocks: 100, bavail: 20 } as StatsFs);
+    await f.service.maintenance();
+    await f.service.maintenance();
+    expect(warnings()).toHaveLength(1);
+    expect(JSON.parse(String(warnings()[0]?.data_json))).toMatchObject({
+      reasonCode: "storage_high_watermark",
+      thresholdFraction: 0.8,
+    });
+    storage.mockResolvedValue({ blocks: 100, bavail: 30 } as StatsFs);
+    await f.service.maintenance();
+    expect(state()).toBeUndefined();
+    storage.mockResolvedValue({ blocks: 100, bavail: 10 } as StatsFs);
+    await f.service.maintenance();
+    expect(warnings()).toHaveLength(2);
+  });
+
+  it("artifact expiry leaves audit events and run metadata untouched", async () => {
+    const f = await fixture();
+    f.service.requestDeletion(f.artifactId);
+    const auditBefore = f.ctx.database.all("SELECT id FROM audit_events ORDER BY id");
+    const runBefore = f.ctx.database.get("SELECT * FROM runs WHERE id=?", f.runId);
+    expect(await f.service.maintenance()).toMatchObject({ removed: [f.storageKey] });
+    expect(f.ctx.database.all("SELECT id FROM audit_events ORDER BY id")).toEqual(
+      expect.arrayContaining(auditBefore),
+    );
+    expect(f.ctx.database.get("SELECT * FROM runs WHERE id=?", f.runId)).toEqual(runBefore);
+  });
+
+  it("keeps audit rows and revoked secret tombstones when artifact bytes are collected", async () => {
+    const f = await fixture();
+    const secret = await f.app.secrets.set("canary", "CANARY-retention", { ephemeral: true });
+    await f.app.secrets.remove(secret.id);
+    const auditBefore = f.ctx.database.all("SELECT id FROM audit_events ORDER BY id");
+    expect(auditBefore.length).toBeGreaterThan(0);
+    expect(await f.service.maintenance()).toMatchObject({ removed: [f.storageKey] });
+    expect(f.ctx.database.all("SELECT id FROM audit_events ORDER BY id")).toEqual(
+      expect.arrayContaining(auditBefore),
+    );
+    expect(
+      f.ctx.database.get("SELECT revoked_at FROM secret_references WHERE id=?", secret.id)
+        ?.revoked_at,
+    ).not.toBeNull();
+    expect(
+      f.ctx.database.get("SELECT 1 AS n FROM audit_events WHERE action='secret.revoke.allowed'"),
+    ).toBeDefined();
+  });
+
+  it("does not retain bytes merely because another artifact records the same hash", async () => {
+    const f = await fixture();
+    const source = artifact(f)!;
+    const otherKey = `runs/${f.ctx.workspaceId}/${f.runId}/${f.attemptId}/same-hash-other-bytes.txt`;
+    await fs.writeFile(join(f.app.config.dataDir, otherKey), "retained evidence");
+    f.ctx.entities.insert("Artifact", {
+      ...source,
+      id: uuidV7IdGenerator.next("art"),
+      storageKey: otherKey,
+      createdAt: new Date().toISOString(),
+    });
+    expect(await f.service.maintenance()).toMatchObject({ removed: [f.storageKey] });
+    await expect(fs.access(f.file)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await fs.readFile(join(f.app.config.dataDir, otherKey), "utf8")).toBe(
+      "retained evidence",
+    );
+  });
+
+  it("dedup protects a shared blob only among artifacts of the same workspace", async () => {
+    const f = await fixture();
+    expect(f.storageKey.startsWith(`runs/${f.ctx.workspaceId}/`)).toBe(true);
+    const siblingId = uuidV7IdGenerator.next("art");
+    f.ctx.entities.insert("Artifact", { ...artifact(f)!, id: siblingId });
+    expect(await f.service.maintenance()).toMatchObject({ expiredArtifacts: 0, removed: [] });
+    expect(await fs.readFile(f.file, "utf8")).toBe("retained evidence");
+    f.ctx.database.run("DELETE FROM artifacts WHERE id=?", siblingId);
+    f.ctx.database.db.exec("PRAGMA foreign_keys=OFF");
+    try {
+      f.ctx.database.run(
+        "INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-foreign','art-foreign',?,'rev-foreign','hash',1,?,'available','not_applicable')",
+        old,
+        f.storageKey,
+      );
+    } finally {
+      f.ctx.database.db.exec("PRAGMA foreign_keys=ON");
+    }
+    expect(
+      f.ctx.database.get("SELECT COUNT(*) AS n FROM artifacts WHERE storage_key=?", f.storageKey)
+        ?.n,
+    ).toBe(2);
+    expect(await f.service.maintenance()).toMatchObject({ removed: [f.storageKey] });
+    await expect(fs.access(f.file)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("a valid-lease upload staged file survives maintenance until its lease expires", async () => {
+    const f = await fixture({ completed: false });
+    const uploads = new UploadsService(f.ctx, {
+      ...f.app.config,
+      profilePolicy: { ...f.app.config.profilePolicy, allowUpload: true },
+    });
+    const receipt = uploads.create({
+      mediaType: "application/json",
+      sizeBytes: 10,
+      contentHash: "0".repeat(64),
+    });
+    const directory = join(f.app.config.dataDir, "uploads", f.ctx.workspaceId);
+    await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+    const staged = join(directory, `${receipt.uploadId}.0123456789abcdef.pending`);
+    await fs.writeFile(staged, "staged bytes");
+    await f.service.maintenance();
+    expect(await fs.readFile(staged, "utf8")).toBe("staged bytes");
+    f.ctx.database.run("UPDATE upload_leases SET expires_at=?", new Date(0).toISOString());
+    await f.service.maintenance();
+    await expect(fs.access(staged)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("unavailable storage during GC emits a delayed-deletion event with its deadline", async () => {
+    const f = await fixture();
+    const remove = vi
+      .spyOn(ConfinedRoot.prototype, "remove")
+      .mockRejectedValue(Object.assign(new Error("EIO"), { code: "EIO" }));
+    expect(await f.service.maintenance()).toMatchObject({ removed: [] });
+    expect(await f.service.maintenance()).toMatchObject({ removed: [] });
+    const events = f.ctx.database.all(
+      "SELECT data_json FROM outbox WHERE type='storage.gc_delayed'",
+    );
+    expect(events).toHaveLength(1);
+    expect(JSON.parse(String(events[0]?.data_json))).toEqual({
+      artifactId: f.artifactId,
+      reasonCode: "storage_unavailable",
+      physicalDeletionDeadlineAt: new Date(
+        Date.parse(record(f).expiredAt) + 86400000,
+      ).toISOString(),
+    });
+    expect(record(f).stage).toBe("tombstoned");
+    expect(await fs.readFile(f.file, "utf8")).toBe("retained evidence");
+    remove.mockRestore();
+    expect(await f.service.maintenance()).toMatchObject({ removed: [f.storageKey] });
+    expect(record(f).stage).toBe("deleted");
+  });
+
+  it("tombstone metadata in the outbox never carries storage keys or bytes", async () => {
+    const f = await fixture();
+    f.service.requestDeletion(f.artifactId);
+    await f.service.maintenance();
+    const rows = f.ctx.database.all<{ data_json: string }>(
+      "SELECT data_json FROM outbox WHERE type LIKE 'artifact.%'",
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => !row.data_json.includes(f.storageKey))).toBe(true);
+    expect(rows.every((row) => !row.data_json.includes("retained evidence"))).toBe(true);
+  });
+
+  it("refuses publication of an artifact tombstoned during its upload", async () => {
+    const f = await fixture();
+    f.service.requestDeletion(f.artifactId);
+    expect(() =>
+      assertArtifactPublishable(f.ctx.database, f.ctx.workspaceId, f.artifactId),
+    ).toThrow("Artifact publication revoked by tombstone");
+    expect(() =>
+      assertArtifactPublishable(
+        f.ctx.database,
+        f.ctx.workspaceId,
+        "art_00000000-0000-7000-8000-000000000000",
+      ),
+    ).not.toThrow();
   });
 });

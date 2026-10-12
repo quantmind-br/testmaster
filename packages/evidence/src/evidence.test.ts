@@ -147,6 +147,31 @@ describe("evidence integrity boundaries", () => {
     ).rejects.toThrow();
     await stage.abandon("test");
   });
+  it("default staging orphan grace is 24 hours", async () => {
+    const { rootDir, ids } = await fixture();
+    const stage = await new FileEvidenceStore({
+      rootDir,
+      beforeCommit: async () => {
+        throw new Error("simulated kill");
+      },
+    }).openAttempt(ids);
+    const artifact = await stage.beginArtifact({
+      relativePath: "result.json",
+      kind: "result",
+      mimeType: "application/json",
+    });
+    await artifact.write(Buffer.from("{}"));
+    await artifact.end();
+    await expect(stage.commit({ redactionPolicyHash: "0".repeat(64) })).rejects.toThrow(
+      "simulated kill",
+    );
+    const now = Date.now();
+    const hour = 3600 * 1000;
+    expect(await findOrphanStaging(rootDir, undefined, now)).toEqual([]);
+    expect(await findOrphanStaging(rootDir, undefined, now + 24 * hour - 60_000)).toEqual([]);
+    expect(await findOrphanStaging(rootDir, undefined, now + 24 * hour + 60_000)).toHaveLength(1);
+    await stage.abandon("test");
+  });
   it("refuses path, hardlink, symlink and swapped ancestor escapes", async () => {
     const { rootDir } = await fixture();
     const outside = await mkdtemp(join(tmpdir(), "tm-outside-"));

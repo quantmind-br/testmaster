@@ -59,6 +59,8 @@ export function exportEffectiveConfig(
       tunnel: "M4",
       automatedServerBackup: "M4",
       schedule: "M4",
+      metadataRetentionPurge: "M4",
+      auditRetentionPurge: "M4",
       distributed: "M5",
     },
   };

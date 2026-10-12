@@ -76,6 +76,7 @@ export const defaults = Object.freeze({
   batchCells: 500,
   workerHeartbeatMs: 10000,
   workerLeaseMs: 30000,
+  reconcilerIntervalMs: 30000,
   cancellationGraceMs: 10000,
   tempBytes: 1073741824,
   bodyBytes: 10485760,

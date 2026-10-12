@@ -23,6 +23,7 @@ import {
   semanticHash,
 } from "@testmaster/domain";
 import {
+  ConfinedRoot,
   collectGarbage,
   EvidenceQuotaError,
   FileEvidenceStore,
@@ -57,6 +58,7 @@ import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import { fixtureRevoked, planRunnerPolicy, stageFixtureInputs } from "./input-fixtures.js";
 import { correlationId, OperationalLogger } from "./observability.js";
 import { reproduction, verifyAdmission } from "./provenance.js";
+import { assertArtifactPublishable } from "./retention.js";
 import { captureDeclarations, type ResolvedDependency, type RunsService } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
 import { RuntimeTimer } from "./timing.js";
@@ -969,16 +971,7 @@ export class WorkerService {
             executionSnapshot: sealedSnapshot,
           });
           for (const entry of bundle.manifest.entries) {
-            if (
-              database.get(
-                "SELECT 1 FROM operational_state WHERE key=?",
-                `retention:artifact:${this.ctx.workspaceId}:${entry.artifactId}`,
-              )
-            )
-              throw new ContractError(
-                "PRECONDITION_FAILED",
-                "Artifact publication revoked by tombstone",
-              );
+            assertArtifactPublishable(database, this.ctx.workspaceId, entry.artifactId);
             execution.publish(fence, "Artifact", {
               id: entry.artifactId,
               workspaceId: this.ctx.workspaceId,
@@ -1184,9 +1177,36 @@ export class WorkerService {
           new Date().toISOString(),
         ),
         orphanStaging: await findOrphanStaging(this.host.config.dataDir),
+        pendingOutbox: Number(
+          this.ctx.database.get(
+            "SELECT COUNT(*) AS n FROM outbox WHERE workspace_id=? AND delivery_state='pending' AND dispatchable=1",
+            this.ctx.workspaceId,
+          )?.n ?? 0,
+        ),
+        missingArtifactReferences: await this.countMissingArtifactReferences(),
       };
     }
     return this.maintenance();
+  }
+  private async countMissingArtifactReferences(): Promise<number> {
+    const root = new ConfinedRoot(this.host.config.dataDir);
+    let missing = 0;
+    try {
+      for (const row of this.ctx.database.all(
+        "SELECT storage_key FROM artifacts WHERE workspace_id=? AND state='available'",
+        this.ctx.workspaceId,
+      )) {
+        try {
+          await (await root.openFile(String(row.storage_key))).close();
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+          missing++;
+        }
+      }
+    } finally {
+      root.close();
+    }
+    return missing;
   }
   private quarantineWorker(info: {
     runId: string;
@@ -1729,7 +1749,7 @@ export class WorkerService {
           Number(next?.matrixCell.maxConcurrency ?? 2),
         );
         if (this.isQuarantined()) {
-          if (Date.now() - lastMaintenance >= 30000) {
+          if (Date.now() - lastMaintenance >= defaults.reconcilerIntervalMs) {
             await this.maintenance();
             lastMaintenance = Date.now();
           }
@@ -1789,7 +1809,7 @@ export class WorkerService {
             tasks.add(task);
           }
         }
-        if (Date.now() - lastMaintenance >= 30000) {
+        if (Date.now() - lastMaintenance >= defaults.reconcilerIntervalMs) {
           await this.maintenance();
           lastMaintenance = Date.now();
         }

@@ -98,6 +98,25 @@ it("records identified grant, secret and export denials alongside authorized ope
   await expect(stat(join(cwd, "denied.json"))).rejects.toMatchObject({ code: "ENOENT" });
   await expect(stat(join(cwd, "denied-code"))).rejects.toMatchObject({ code: "ENOENT" });
 });
+it("stores audit actors and denials without the contact data that a caller supplies", async () => {
+  const { app, init } = await fixture();
+  const contact = "buyer@example.test";
+  const plan = { ...scaffoldPlan("backend"), name: `Checkout for ${contact}` };
+  const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  expect(() => reader.tests.create({ projectId: init.projectId, plan })).toThrowError(
+    expect.objectContaining({ code: "FORBIDDEN" }),
+  );
+  await expect(
+    reader.secrets.set("buyer-login", `password-for-${contact}`, { ephemeral: true }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  const test = app.tests.create({ projectId: init.projectId, plan });
+  expect(test.name).toContain(contact);
+  await app.secrets.set("buyer-login", `password-for-${contact}`, { ephemeral: true });
+  const rows = app.database.all("SELECT * FROM audit_events");
+  expect(rows.some((row) => row.action === "authorization.denied")).toBe(true);
+  expect(rows.some((row) => row.action === "secret.set.allowed")).toBe(true);
+  expect(JSON.stringify(rows)).not.toContain(contact);
+});
 it("exports a consistent private ledger and verifies independently retained digest, ownership, order and append-only history", async () => {
   const { app, init, cwd } = await fixture();
   await app.secrets.set("canary", "NEVER-EXPORT-THIS", { ephemeral: true });

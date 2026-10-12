@@ -1,16 +1,18 @@
 import { readdir, statfs } from "node:fs/promises";
-import { type DeletionOperation, defaults, validate } from "@testmaster/contracts";
+import { ContractError, type DeletionOperation, defaults, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import {
   ConfinedRoot,
   collectGarbage,
   type GcCandidate,
+  type GcPort,
   type GcSafety,
   validateRelativePath,
 } from "@testmaster/evidence";
 import {
   AuditRepository,
   OutboxRepository,
+  type PersistenceDatabase,
   releaseControlPlaneReserve,
 } from "@testmaster/persistence";
 import type { ResolvedConfig } from "./config.js";
@@ -22,7 +24,47 @@ interface RetentionRecord {
   expiredAt: string;
   tombstonedAt?: string;
   deletedAt?: string;
+  /** Set once a storage outage delayed physical removal, so the alert is emitted once per artifact. */
+  gcDelayedAt?: string;
 }
+
+/** Fraction of used storage at which one warning event is emitted. */
+const storageWarningFraction = 0.8;
+/** Fraction of used storage at which admission is suspended. */
+const storageSuspendFraction = 0.9;
+/** Errno codes meaning the storage backend, not the artifact, failed to remove an object. */
+const storageUnavailableCodes: Record<string, true> = {
+  EIO: true,
+  EROFS: true,
+  ENODEV: true,
+  ENXIO: true,
+  ESTALE: true,
+  ETIMEDOUT: true,
+  ENOTCONN: true,
+};
+
+function artifactRetentionKey(workspaceId: string, artifactId: string): string {
+  return `retention:artifact:${workspaceId}:${artifactId}`;
+}
+
+/**
+ * Publication of an artifact whose retention record exists (marked, tombstoned or deleted) is
+ * revoked: an upload that was in flight when deletion was requested must not republish it.
+ */
+export function assertArtifactPublishable(
+  database: PersistenceDatabase,
+  workspaceId: string,
+  artifactId: string,
+): void {
+  if (
+    database.get(
+      "SELECT 1 FROM operational_state WHERE key=?",
+      artifactRetentionKey(workspaceId, artifactId),
+    )
+  )
+    throw new ContractError("PRECONDITION_FAILED", "Artifact publication revoked by tombstone");
+}
+
 interface ArtifactRow extends Record<string, unknown> {
   id: string;
   run_id: string;
@@ -375,7 +417,27 @@ export class RetentionService {
   }
 
   private key(id: string): string {
-    return `retention:artifact:${this.ctx.workspaceId}:${id}`;
+    return artifactRetentionKey(this.ctx.workspaceId, id);
+  }
+  /** Storage failed while removing a tombstoned object: keep it tombstoned and alert once. */
+  private delayDeletion(row: ArtifactRow): void {
+    this.ctx.database.withTx(() => {
+      const record = this.record(row.id);
+      if (!record || record.gcDelayedAt) return;
+      this.save(row.id, { ...record, gcDelayedAt: new Date().toISOString() });
+      new OutboxRepository(this.ctx.database).append(
+        this.ctx.workspaceId,
+        this.ctx.workspaceId,
+        "storage.gc_delayed",
+        {
+          artifactId: row.id,
+          reasonCode: "storage_unavailable",
+          physicalDeletionDeadlineAt: new Date(
+            Date.parse(record.expiredAt) + 86400000,
+          ).toISOString(),
+        },
+      );
+    });
   }
   private record(id: string): RetentionRecord | null {
     const row = this.ctx.database.get(
@@ -414,8 +476,30 @@ export class RetentionService {
     const usedFraction =
       total > 0 ? Math.min(1, Math.max(0, 1 - Number(storage.bavail) / total)) : 1;
     const database = this.ctx.database;
-    if (usedFraction >= 0.9) releaseControlPlaneReserve(database.path);
+    if (usedFraction >= storageSuspendFraction) releaseControlPlaneReserve(database.path);
     database.withTx(() => {
+      const warningKey = "storage:high-watermark";
+      const warned = database.get("SELECT 1 FROM operational_state WHERE key=?", warningKey);
+      if (usedFraction >= storageWarningFraction && !warned) {
+        const warning = {
+          reasonCode: "storage_high_watermark",
+          usedFraction,
+          thresholdFraction: storageWarningFraction,
+        };
+        database.run(
+          "INSERT INTO operational_state(key,value) VALUES(?,?)",
+          warningKey,
+          canonicalJson({ ...warning, observedAt: new Date().toISOString() }),
+        );
+        new OutboxRepository(database).append(
+          this.ctx.workspaceId,
+          this.ctx.workspaceId,
+          "storage.high_watermark",
+          warning,
+        );
+      } else if (usedFraction < storageWarningFraction && warned) {
+        database.run("DELETE FROM operational_state WHERE key=?", warningKey);
+      }
       const pressureKey = "retention:storage-pressure";
       const admission = database.get(
         "SELECT value FROM operational_state WHERE key='admission'",
@@ -423,7 +507,7 @@ export class RetentionService {
       const owned =
         database.get("SELECT value FROM operational_state WHERE key=?", pressureKey)?.value ===
         "suspended";
-      if (usedFraction >= 0.9 && admission === "enabled") {
+      if (usedFraction >= storageSuspendFraction && admission === "enabled") {
         database.run(
           "UPDATE operational_state SET value='suspended_storage' WHERE key='admission' AND value='enabled'",
         );
@@ -431,7 +515,7 @@ export class RetentionService {
           "INSERT INTO operational_state(key,value) VALUES(?,'suspended') ON CONFLICT(key) DO UPDATE SET value=excluded.value",
           pressureKey,
         );
-      } else if (usedFraction < 0.9 && owned) {
+      } else if (usedFraction < storageSuspendFraction && owned) {
         database.run(
           "UPDATE operational_state SET value='enabled' WHERE key='admission' AND value='suspended_storage'",
         );
@@ -548,146 +632,149 @@ export class RetentionService {
     };
     let expiredArtifacts = 0;
     const root = new ConfinedRoot(this.config.dataDir);
-    let removed: string[];
+    const removed: string[] = [];
     try {
-      removed = await collectGarbage(
-        this.config.dataDir,
-        [...candidates.values()].map((row) => ({
-          relativePath: row.storage_key,
-          version: Number(row.version),
-        })),
-        {
-          inspect: async (candidate): Promise<GcSafety> => {
-            const safe = Boolean(current(candidate));
-            if (safe) {
-              try {
-                const file = await root.openFile(candidate.relativePath);
-                await file.close();
-              } catch (error) {
-                if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-              }
+      const port: GcPort = {
+        inspect: async (candidate): Promise<GcSafety> => {
+          const safe = Boolean(current(candidate));
+          if (safe) {
+            try {
+              const file = await root.openFile(candidate.relativePath);
+              await file.close();
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
             }
-            return {
-              activeAttempt: !safe,
-              validUploadLease: false,
-              legalHold: false,
-              liveReferences: 0,
+          }
+          return {
+            activeAttempt: !safe,
+            validUploadLease: false,
+            legalHold: false,
+            liveReferences: 0,
+          };
+        },
+        mark: async (candidate) =>
+          database.withTx(() => {
+            const row = current(candidate);
+            if (!row) return null;
+            const previous = this.record(row.id);
+            if (previous?.stage === "deleted") return null;
+            if (row.state === "expired" && previous) return { version: Number(row.version) };
+            const record: RetentionRecord = {
+              stage: "marked",
+              expiredAt: new Date().toISOString(),
             };
-          },
-          mark: async (candidate) =>
-            database.withTx(() => {
-              const row = current(candidate);
-              if (!row) return null;
-              const previous = this.record(row.id);
-              if (previous?.stage === "deleted") return null;
-              if (row.state === "expired" && previous) return { version: Number(row.version) };
-              const record: RetentionRecord = {
-                stage: "marked",
-                expiredAt: new Date().toISOString(),
-              };
-              const changed = database.run(
-                `UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state=? AND ${eligible}`,
-                this.ctx.workspaceId,
-                row.id,
-                candidate.version,
-                row.state,
-                cutoff,
-                cutoff,
-                new Date().toISOString(),
-              );
-              if (!changed.changes) return null;
-              this.save(row.id, record);
-              this.event(
-                row,
-                "artifact.expired",
-                { state: row.state, retention: previous },
-                { state: "expired", retention: record },
-              );
-              database.run(
-                "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,(SELECT COUNT(*) FROM artifacts WHERE workspace_id=? AND storage_key=? AND state IN ('available','partial')),?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=excluded.references_count,checked_at=excluded.checked_at",
-                this.ctx.workspaceId,
-                row.storage_key,
-                this.ctx.workspaceId,
-                row.storage_key,
-                new Date().toISOString(),
-              );
-              if (row.state !== "expired") expiredArtifacts++;
-              return { version: candidate.version + 1 };
-            }),
-          tombstone: async (candidate) =>
-            database.withTx(() => {
-              const row = current(candidate);
-              if (row?.state !== "expired") return null;
-              const previous = this.record(row.id);
-              if (!previous || previous.stage === "deleted") return null;
-              const changed = database.run(
-                `UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired' AND ${eligible}`,
-                this.ctx.workspaceId,
-                row.id,
-                candidate.version,
-                cutoff,
-                cutoff,
-                new Date().toISOString(),
-              );
-              if (!changed.changes) return null;
-              if (previous.stage !== "tombstoned") {
-                const record: RetentionRecord = {
-                  ...previous,
-                  stage: "tombstoned",
-                  tombstonedAt: new Date().toISOString(),
-                };
-                this.save(row.id, record);
-                this.event(row, "artifact.tombstoned", previous, record);
-              }
-              return { version: candidate.version + 1 };
-            }),
-          deleted: async (candidate) =>
-            database.withTx(() => {
-              const original = candidates.get(candidate.relativePath);
-              if (!original) return;
-              const previous = this.record(original.id);
-              if (previous?.stage !== "tombstoned") return;
-              const changed = database.run(
-                "UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired'",
-                this.ctx.workspaceId,
-                original.id,
-                candidate.version,
-              );
-              if (!changed.changes) return;
+            const changed = database.run(
+              `UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state=? AND ${eligible}`,
+              this.ctx.workspaceId,
+              row.id,
+              candidate.version,
+              row.state,
+              cutoff,
+              cutoff,
+              new Date().toISOString(),
+            );
+            if (!changed.changes) return null;
+            this.save(row.id, record);
+            this.event(
+              row,
+              "artifact.expired",
+              { state: row.state, retention: previous },
+              { state: "expired", retention: record },
+            );
+            database.run(
+              "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,(SELECT COUNT(*) FROM artifacts WHERE workspace_id=? AND storage_key=? AND state IN ('available','partial')),?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=excluded.references_count,checked_at=excluded.checked_at",
+              this.ctx.workspaceId,
+              row.storage_key,
+              this.ctx.workspaceId,
+              row.storage_key,
+              new Date().toISOString(),
+            );
+            if (row.state !== "expired") expiredArtifacts++;
+            return { version: candidate.version + 1 };
+          }),
+        tombstone: async (candidate) =>
+          database.withTx(() => {
+            const row = current(candidate);
+            if (row?.state !== "expired") return null;
+            const previous = this.record(row.id);
+            if (!previous || previous.stage === "deleted") return null;
+            const changed = database.run(
+              `UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired' AND ${eligible}`,
+              this.ctx.workspaceId,
+              row.id,
+              candidate.version,
+              cutoff,
+              cutoff,
+              new Date().toISOString(),
+            );
+            if (!changed.changes) return null;
+            if (previous.stage !== "tombstoned") {
               const record: RetentionRecord = {
                 ...previous,
-                stage: "deleted",
-                deletedAt: new Date().toISOString(),
+                stage: "tombstoned",
+                tombstonedAt: new Date().toISOString(),
               };
-              this.save(original.id, record);
-              const deletion = database.get(
-                "SELECT value FROM operational_state WHERE key=?",
-                `retention:deletion:${this.ctx.workspaceId}:${original.id}`,
+              this.save(row.id, record);
+              this.event(row, "artifact.tombstoned", previous, record);
+            }
+            return { version: candidate.version + 1 };
+          }),
+        deleted: async (candidate) =>
+          database.withTx(() => {
+            const original = candidates.get(candidate.relativePath);
+            if (!original) return;
+            const previous = this.record(original.id);
+            if (previous?.stage !== "tombstoned") return;
+            const changed = database.run(
+              "UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired'",
+              this.ctx.workspaceId,
+              original.id,
+              candidate.version,
+            );
+            if (!changed.changes) return;
+            const record: RetentionRecord = {
+              ...previous,
+              stage: "deleted",
+              deletedAt: new Date().toISOString(),
+            };
+            this.save(original.id, record);
+            const deletion = database.get(
+              "SELECT value FROM operational_state WHERE key=?",
+              `retention:deletion:${this.ctx.workspaceId}:${original.id}`,
+            );
+            if (deletion) {
+              const operation = requireEntity(
+                this.ctx,
+                "DeletionOperation",
+                String(deletion.value),
               );
-              if (deletion) {
-                const operation = requireEntity(
-                  this.ctx,
-                  "DeletionOperation",
-                  String(deletion.value),
-                );
-                this.ctx.entities.update(
-                  "DeletionOperation",
-                  this.ctx.workspaceId,
-                  operation.id,
-                  Number(operation.version),
-                  {
-                    ...operation,
-                    version: Number(operation.version) + 1,
-                    physicalState: "completed",
-                    backupHolds: [],
-                    errors: [],
-                  },
-                );
-              }
-              this.event(original, "artifact.deleted", previous, record);
-            }),
-        },
-      );
+              this.ctx.entities.update(
+                "DeletionOperation",
+                this.ctx.workspaceId,
+                operation.id,
+                Number(operation.version),
+                {
+                  ...operation,
+                  version: Number(operation.version) + 1,
+                  physicalState: "completed",
+                  backupHolds: [],
+                  errors: [],
+                },
+              );
+            }
+            this.event(original, "artifact.deleted", previous, record);
+          }),
+      };
+      for (const row of candidates.values()) {
+        const candidate = { relativePath: row.storage_key, version: Number(row.version) };
+        try {
+          removed.push(...(await collectGarbage(this.config.dataDir, [candidate], port)));
+        } catch (error) {
+          const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+          if (!code || !Object.hasOwn(storageUnavailableCodes, code)) throw error;
+          this.delayDeletion(row);
+        }
+      }
     } finally {
       root.close();
     }

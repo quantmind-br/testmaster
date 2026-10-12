@@ -246,6 +246,7 @@ it("exports the normative local defaults and labels future operational controls 
     batchCells: 500,
     workerHeartbeatMs: 10000,
     workerLeaseMs: 30000,
+    reconcilerIntervalMs: 30000,
     cancellationGraceMs: 10000,
     tempBytes: 1073741824,
     bodyBytes: 10485760,
@@ -262,6 +263,10 @@ it("exports the normative local defaults and labels future operational controls 
     telemetryEnabled: false,
   });
   expect(result.unavailable.schedule).toBe("M4");
+  expect(result.unavailable).toMatchObject({
+    metadataRetentionPurge: "M4",
+    auditRetentionPurge: "M4",
+  });
   expect(result.config.telemetry?.enabled).toBe(false);
 });
 

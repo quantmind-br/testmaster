@@ -9692,21 +9692,79 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "Duplicate real reconciler process race after claim/upload/publication kills",
-        "Admin repair dry-run and viewer denial"
+        "validation/journeys/commit-retry.docker.test.ts::OPS-012 duplicate reconcilers create exactly one eligible retry Attempt",
+        "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
+        "packages/application/src/config.test.ts::exports the normative local defaults and labels future operational controls unavailable",
+        "packages/application/src/execution-risk.test.ts::does not retry after an accepted %s assertion, and preserves reliable failure",
+        "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
+        "packages/application/src/runtime-control.test.ts::dry-run reports pending outbox and missing artifact references without mutating"
       ],
-      "oracle": ["One terminal event; dry-run jobs/runs/outbox unchanged; forbidden viewer"],
+      "oracle": [
+        "Exactly one retry Attempt under duplicate reconcilers; a lost active Run keeps completed assertions and never turns a failure green; the repair dry-run is read-only and lists pending outbox and missing artifact references besides leases and staging; the default 30 s reconciler cadence is exported as reconcilerIntervalMs."
+      ],
       "evidence": [
+        "packages/application/src/execution-risk.test.ts",
+        "packages/application/src/runtime-control.test.ts",
+        "packages/application/src/config.test.ts",
+        "packages/application/src/retention.test.ts",
+        "validation/journeys/commit-retry.docker.test.ts",
         "validation/journeys/crash-recovery.docker.test.ts",
-        "validation/results/j17-publication-crash-matrix.json",
-        "packages/application/src/application.test.ts",
-        "validation/journeys/commit-retry.docker.test.ts"
+        "validation/results/j17-publication-crash-matrix.json"
       ],
-      "code": ["packages/application/src/worker.ts", "apps/cli/src/workers.ts"],
-      "note": "Eligible duplicate-reconciler retry CAS tested with exactly one retry; authorized reconciliation preview does not mutate. Local SQLite profile.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Eligible duplicate-reconciler retry CAS tested with exactly one retry; authorized reconciliation preview does not mutate. Local SQLite profile."
+      "code": [
+        "packages/application/src/worker.ts",
+        "packages/contracts/src/operations.ts",
+        "apps/cli/src/workers.ts"
+      ],
+      "note": "Reconciler cadence exported as defaults.reconcilerIntervalMs (30 s) and used by the worker loop. The dry-run preview lists expired leases, orphan staging, pending outbox events and available artifacts whose bytes are missing, and mutates nothing. The maintenance outbox sweep marks pending rows delivered without sending (swept, not sent). Local SQLite profile; distributed reconciliation is not claimed.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/commit-retry.docker.test.ts::OPS-012 duplicate reconcilers create exactly one eligible retry Attempt",
+          "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
+          "packages/application/src/config.test.ts::exports the normative local defaults and labels future operational controls unavailable"
+        ],
+        "negative": [
+          "packages/application/src/execution-risk.test.ts::does not retry after an accepted %s assertion, and preserves reliable failure",
+          "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
+          "packages/application/src/runtime-control.test.ts::dry-run reports pending outbox and missing artifact references without mutating"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/execution-risk.test.ts",
+            "assertion": "expectTerminal(app, receipt.runId, status === \"failed\" ? \"failed\" : \"inconclusive\");"
+          },
+          {
+            "path": "packages/application/src/execution-risk.test.ts",
+            "assertion": ").toHaveLength(preceding === \"none\" ? 1 : plan.steps.length + 2);"
+          },
+          {
+            "path": "validation/journeys/commit-retry.docker.test.ts",
+            "assertion": "expect(completed.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/crash-recovery.docker.test.ts",
+            "assertion": "expect(preview.dryRun).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "result: { outcome: \"passed\", gate: \"passed\" },"
+          },
+          {
+            "path": "packages/application/src/runtime-control.test.ts",
+            "assertion": "pendingOutbox: baseline + 1,"
+          },
+          {
+            "path": "packages/application/src/runtime-control.test.ts",
+            "assertion": "missingArtifactReferences: 1,"
+          },
+          {
+            "path": "packages/application/src/config.test.ts",
+            "assertion": "reconcilerIntervalMs: 30000,"
+          }
+        ]
+      }
     },
     {
       "id": "OPS-013",
@@ -9978,24 +10036,85 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "Filesystem publication versus GC recheck unit case",
-        "Existing retention CAS safety"
+        "packages/application/src/retention.test.ts::tombstones before physical removal, preserves sealed metadata/verdict, and exposes verified expired reports",
+        "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
+        "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
+        "packages/evidence/src/evidence.test.ts::default staging orphan grace is 24 hours",
+        "packages/application/src/retention.test.ts::unavailable storage during GC emits a delayed-deletion event with its deadline",
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+        "packages/application/src/retention.test.ts::rechecks legal holds at tombstone and resumes only after release",
+        "packages/application/src/retention.test.ts::dedup protects a shared blob only among artifacts of the same workspace",
+        "packages/application/src/retention.test.ts::a valid-lease upload staged file survives maintenance until its lease expires",
+        "packages/evidence/src/evidence.test.ts::GC rechecks CAS safety before deletion",
+        "packages/application/src/retention.test.ts::retries a crashed delete without duplicating expiry/tombstone audit or losing metadata"
       ],
-      "oracle": ["Published reference prevents tombstone/delete; immutable bytes remain"],
+      "oracle": [
+        "Only expired, unreferenced, unheld, lease-free blobs are removed through mark, tombstone and delete with compare-and-set; audit and Run rows survive artifact expiry; dedup protects a blob only inside its workspace; staging orphans wait a 24 h default grace; a storage outage during delete leaves the object tombstoned and emits one storage.gc_delayed event with its visible deadline instead of marking it deleted."
+      ],
       "evidence": [
+        "packages/application/src/retention.test.ts",
+        "packages/evidence/src/evidence.test.ts",
         "packages/evidence/src/publication-recovery.test.ts",
         "validation/journeys/recovery-controls.docker.test.ts",
         "validation/results/ops-021-publication-gc-backup-holds.json"
       ],
       "code": [
-        "packages/evidence/src/store.ts",
         "packages/application/src/retention.ts",
-        "packages/evidence/src/gc.ts"
+        "packages/evidence/src/gc.ts",
+        "packages/evidence/src/store.ts"
       ],
-      "note": "Local SQLite real concurrent publication/GC, backup holds and admin reference recomputation passed in integrated Docker gate; distributed storage remains M4+.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Local SQLite real concurrent publication/GC, backup holds and admin reference recomputation passed in integrated Docker gate; distributed storage remains M4+."
+      "note": "Artifact GC is enforced and tested; metadata (90 d) and audit (365 d) windows are declared, not enforced, and nothing deletes metadata or audit rows (exportEffectiveConfig reports metadataRetentionPurge and auditRetentionPurge as M4). A storage outage during physical removal keeps the artifact tombstoned and raises storage.gc_delayed once, with the 24 h physical-deletion deadline. Retention references are keyed by storage key and workspace, so equal hashes alone never keep bytes.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/retention.test.ts::tombstones before physical removal, preserves sealed metadata/verdict, and exposes verified expired reports",
+          "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
+          "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
+          "packages/evidence/src/evidence.test.ts::default staging orphan grace is 24 hours",
+          "packages/application/src/retention.test.ts::unavailable storage during GC emits a delayed-deletion event with its deadline"
+        ],
+        "negative": [
+          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+          "packages/application/src/retention.test.ts::rechecks legal holds at tombstone and resumes only after release",
+          "packages/application/src/retention.test.ts::dedup protects a shared blob only among artifacts of the same workspace",
+          "packages/application/src/retention.test.ts::a valid-lease upload staged file survives maintenance until its lease expires",
+          "packages/evidence/src/evidence.test.ts::GC rechecks CAS safety before deletion",
+          "packages/application/src/retention.test.ts::retries a crashed delete without duplicating expiry/tombstone audit or losing metadata"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(f.ctx.database.get(\"SELECT * FROM runs WHERE id=?\", f.runId)).toEqual(runBefore);"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(report.runs[0]?.result.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "reasonCode: \"storage_unavailable\","
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(await f.service.maintenance()).toMatchObject({ expiredArtifacts: 0, removed: [] });"
+          },
+          {
+            "path": "packages/evidence/src/evidence.test.ts",
+            "assertion": "expect(await findOrphanStaging(rootDir, undefined, now + 24 * hour - 60_000)).toEqual([]);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Metadata and audit retention windows (90 and 365 days) are declared in operationalDefaults but no purge job enforces them; only the artifact class is collected. Enforcement of the other classes belongs to the server profile.",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "OPS-021 — Retention e GC concorrente (M1–M4)."
+          }
+        }
+      ]
     },
     {
       "id": "OPS-022",
@@ -10003,13 +10122,17 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M3",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
         "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
         "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
-        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+        "packages/application/src/retention.test.ts::tombstone metadata in the outbox never carries storage keys or bytes",
+        "packages/application/src/retention.test.ts::refuses publication of an artifact tombstoned during its upload",
+        "packages/application/src/retention.test.ts::tombstones before physical removal, preserves sealed metadata/verdict, and exposes verified expired reports",
+        "packages/application/src/retention.test.ts::rolls back the delete permit if tombstone audit cannot commit"
       ],
       "oracle": [
         "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission."
@@ -10025,21 +10148,26 @@
       "code": [
         "packages/application/src/retention.ts",
         "packages/application/src/backups.ts",
-        "packages/application/src/artifacts.ts"
+        "packages/application/src/artifacts.ts",
+        "packages/application/src/worker.ts"
       ],
       "coverage": {
         "positive": [
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
-          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold"
+          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+          "packages/application/src/retention.test.ts::tombstone metadata in the outbox never carries storage keys or bytes",
+          "packages/application/src/retention.test.ts::refuses publication of an artifact tombstoned during its upload"
         ],
         "negative": [
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
-          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+          "packages/application/src/retention.test.ts::refuses publication of an artifact tombstoned during its upload",
+          "packages/application/src/retention.test.ts::rolls back the delete permit if tombstone audit cannot commit"
         ],
         "criticalAssertions": [
           {
@@ -10081,10 +10209,28 @@
           {
             "path": "packages/application/src/retention.test.ts",
             "assertion": "expect(f.service.deletionStatus(operation.id).physicalState).toBe(\"completed\");"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(rows.every((row) => !row.data_json.includes(f.storageKey))).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": ").toThrow(\"Artifact publication revoked by tombstone\");"
           }
         ]
       },
-      "blockedReason": "External M4: no externally addressable in-flight Artifact exists in local M3 (Artifact is published only at final worker commit; source-document upload IDs are not Artifact IDs), so distributed worker upload/delete republication race remains unexercised. S3 version/lifecycle removal and server multi-organization export isolation remain unexercised. Local requested-deletion restart, durable status/separate physical/backup deadlines and artifact/revoked-secret restore controls are retained; backup hold expiry is not automatic erasure of operator-held backup files."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "S3 versioned blob lifecycle and version removal (no S3 storage is implemented)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility; PostgreSQL/S3 profiles"
+          }
+        }
+      ],
+      "note": "Delete, tombstone, read revocation, outbox and report contracts are proven; in-flight publication is proven at predicate level (assertArtifactPublishable, called by the worker inside the publication transaction) because local Artifacts are published only at the final worker commit; S3 versioned lifecycle is M4."
     },
     {
       "id": "OPS-023",
@@ -10092,25 +10238,79 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts"
+        "packages/application/src/retention.test.ts::suspends at 90%, resumes only its own pressure suspension, and preserves independent maintenance",
+        "packages/application/src/retention.test.ts::warns once at 80 percent and clears the warning below 80 percent",
+        "packages/application/src/execution-risk.test.ts::a Run leased before storage pressure still finalizes while admission is suspended",
+        "packages/application/src/execution-risk.test.ts::a lost Run is still terminalized by reconciliation while storage admission is suspended",
+        "packages/application/src/doctor.test.ts::at 90 percent refuses admission with redacted recovery options",
+        "packages/application/src/retention.test.ts::honors configured retention without shortening it under storage pressure",
+        "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
+        "packages/application/src/upload-outage.test.ts::OPS-023 storage outage keeps eight leased uploads bounded, emits alert and refuses further backlog"
       ],
       "oracle": [
-        "Real artifact/DB/audit ENOSPC; 4MiB nonsparse reserve released; recovery write succeeds; missing artifact storage_unavailable; integrity_check ok"
+        "At 80 % exactly one storage.high_watermark warning per crossing; at 90 % admission is suspended and refused with a redacted reason code, path placeholder and recovery options while eligible GC still runs and retention is never shortened; a Run leased before the pressure still finalizes and a lost Run is still terminalized by reconciliation; on ENOSPC SQLite integrity holds and no fictitious artifact is published; the upload backlog stays bounded."
       ],
       "evidence": [
-        "packages/persistence/src/disk-pressure.docker.test.ts",
+        "packages/application/src/retention.test.ts",
+        "packages/application/src/execution-risk.test.ts",
+        "packages/application/src/doctor.test.ts",
         "packages/application/src/upload-outage.test.ts",
+        "packages/persistence/src/disk-pressure.docker.test.ts",
         "validation/journeys/limits-recovery.docker.test.ts"
       ],
       "code": [
+        "packages/application/src/retention.ts",
+        "packages/application/src/application.ts",
         "packages/persistence/src/disk-reserve.ts",
-        "packages/persistence/src/database.ts",
-        "packages/application/src/retention.ts"
+        "packages/persistence/src/database.ts"
       ],
-      "note": "Physical bounded tmpfs ENOSPC, control-plane reserve and eight/100MiB upload backlog with durable outage alert passed. Remote object storage unavailable M4.",
-      "blockedReason": "Local acceptance is exercised; full release certification includes later-profile acceptance not exercised. Physical bounded tmpfs ENOSPC, control-plane reserve and eight/100MiB upload backlog with durable outage alert passed. Remote object storage unavailable M4."
+      "note": "80 % warning (one event per crossing) and 90 % suspension are implemented; the 90 % refusal carries a redacted path placeholder and recovery options (proven by doctor.test.ts, written by the operations-runtime slice); finalization is not blocked by pressure. Remote object-store outage is not applicable to the local filesystem profile.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/retention.test.ts::suspends at 90%, resumes only its own pressure suspension, and preserves independent maintenance",
+          "packages/application/src/retention.test.ts::warns once at 80 percent and clears the warning below 80 percent",
+          "packages/application/src/execution-risk.test.ts::a Run leased before storage pressure still finalizes while admission is suspended",
+          "packages/application/src/execution-risk.test.ts::a lost Run is still terminalized by reconciliation while storage admission is suspended"
+        ],
+        "negative": [
+          "packages/application/src/doctor.test.ts::at 90 percent refuses admission with redacted recovery options",
+          "packages/application/src/retention.test.ts::honors configured retention without shortening it under storage pressure",
+          "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
+          "packages/application/src/upload-outage.test.ts::OPS-023 storage outage keeps eight leased uploads bounded, emits alert and refuses further backlog"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "usedFraction: 0.9,"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "admissionSuspended: true,"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "thresholdFraction: 0.8,"
+          },
+          {
+            "path": "packages/application/src/execution-risk.test.ts",
+            "assertion": "expect(app.runs.get(receipt.runId)).toMatchObject({ phase: \"completed\", outcome: \"passed\" });"
+          },
+          {
+            "path": "packages/persistence/src/disk-pressure.docker.test.ts",
+            "assertion": "throw new Error('Fictitious artifact');"
+          },
+          {
+            "path": "packages/application/src/upload-outage.test.ts",
+            "assertion": ").toMatchObject({ n: 8, bytes: 80 });"
+          },
+          {
+            "path": "packages/application/src/upload-outage.test.ts",
+            "assertion": ").toThrow(expect.objectContaining({ code: \"QUOTA_EXCEEDED\" }));"
+          }
+        ]
+      }
     },
     {
       "id": "OPS-024",
@@ -15491,13 +15691,17 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M3",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
         "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
         "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
-        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+        "packages/application/src/retention.test.ts::keeps audit rows and revoked secret tombstones when artifact bytes are collected",
+        "packages/application/src/retention.test.ts::does not retain bytes merely because another artifact records the same hash",
+        "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
+        "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched"
       ],
       "oracle": [
         "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission."
@@ -15508,7 +15712,8 @@
         "validation/results/m3-acceptance/001-privacy-lifecycle-docker-2/created/validation/results/m3-deletion-secret-restore-acceptance.json",
         "validation/journeys/m3-ci.docker.test.ts",
         "packages/application/src/retention.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json",
+        "packages/application/src/audit.test.ts"
       ],
       "code": [
         "packages/application/src/retention.ts",
@@ -15520,14 +15725,18 @@
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
-          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold"
+          "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+          "packages/application/src/retention.test.ts::keeps audit rows and revoked secret tombstones when artifact bytes are collected",
+          "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched"
         ],
         "negative": [
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
-          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS"
+          "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+          "packages/application/src/retention.test.ts::does not retain bytes merely because another artifact records the same hash",
+          "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies"
         ],
         "criticalAssertions": [
           {
@@ -15569,10 +15778,32 @@
           {
             "path": "packages/application/src/retention.test.ts",
             "assertion": "expect(f.service.deletionStatus(operation.id).physicalState).toBe(\"completed\");"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "f.ctx.database.get(\"SELECT revoked_at FROM secret_references WHERE id=?\", secret.id)"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(await fs.readFile(join(f.app.config.dataDir, otherKey), \"utf8\")).toBe("
+          },
+          {
+            "path": "packages/application/src/audit.test.ts",
+            "assertion": "expect(JSON.stringify(rows)).not.toContain(contact);"
           }
         ]
       },
-      "blockedReason": "External M4: no externally addressable in-flight Artifact exists in local M3 (Artifact is published only at final worker commit; source-document upload IDs are not Artifact IDs), so distributed worker upload/delete republication race remains unexercised. S3 version/lifecycle removal and server multi-organization export isolation remain unexercised. Local requested-deletion restart, durable status/separate physical/backup deadlines and artifact/revoked-secret restore controls are retained; backup hold expiry is not automatic erasure of operator-held backup files."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "Multi-organization export isolation (user export never includes another organization) and enforcement of the declared metadata and audit retention windows belong to the server profile; nothing in the local profile deletes metadata or audit rows.",
+          "specQuote": {
+            "path": "specs/07-security.md",
+            "text": "SEC-037 — Retenção, exportação e exclusão (M3–M4)."
+          }
+        }
+      ],
+      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret names used by revoke/rotate are recorded as audit resource ids when addressed by name; callers should address secrets by id when names are sensitive."
     },
     {
       "id": "SEC-038",

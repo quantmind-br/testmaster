@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import type { StatsFs } from "node:fs";
+import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type ExecutionLimits, type RunnerEvent, validate } from "@testmaster/contracts";
@@ -14,6 +15,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Application, type PermissionGrant } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
 
+vi.mock("node:fs/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof fs>()),
+}));
+
 const roots: string[] = [];
 const applications: Application[] = [];
 
@@ -24,18 +29,18 @@ beforeEach(() => {
 afterEach(async () => {
   vi.restoreAllMocks();
   for (const app of applications.splice(0)) app.close();
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) await fs.rm(root, { recursive: true, force: true });
 });
 
 async function fixture(limits?: ExecutionLimits) {
-  const root = await mkdtemp(join(tmpdir(), "tm-execution-risk-"));
+  const root = await fs.mkdtemp(join(tmpdir(), "tm-execution-risk-"));
   roots.push(root);
   const home = join(root, "home");
-  await mkdir(home);
+  await fs.mkdir(home);
   if (limits) {
     const policyDirectory = join(home, ".config", "testmaster");
-    await mkdir(policyDirectory, { recursive: true });
-    await writeFile(join(policyDirectory, "policy.json"), JSON.stringify({ limits }), {
+    await fs.mkdir(policyDirectory, { recursive: true });
+    await fs.writeFile(join(policyDirectory, "policy.json"), JSON.stringify({ limits }), {
       mode: 0o600,
     });
   }
@@ -437,6 +442,50 @@ describe("admission risk boundaries", () => {
       baseUrl: "http://127.0.0.1:3000",
     });
     expect(app.secrets.get(secret.id).allowedOrigins).toEqual(["http://127.0.0.1:3000"]);
+  });
+
+  it("a Run leased before storage pressure still finalizes while admission is suspended", async () => {
+    const { app, receipt, fence, execution } = await claimed();
+    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+    await app.worker.reconcile();
+    expect(
+      app.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+    ).toBe("suspended_storage");
+    expect(
+      app.database.get("SELECT state FROM job_leases WHERE resource_id=?", receipt.runId)?.state,
+    ).toBe("leased");
+    expect(
+      execution.finalize(fence, {
+        ...app.runs.get(receipt.runId),
+        phase: "completed",
+        outcome: "passed",
+        status: "passed",
+        gate: "passed",
+      }),
+    ).toBe(true);
+    expect(app.runs.get(receipt.runId)).toMatchObject({ phase: "completed", outcome: "passed" });
+  });
+
+  it("a lost Run is still terminalized by reconciliation while storage admission is suspended", async () => {
+    const { app, receipt, fence, observe } = await claimed();
+    observe({ type: "step.started", payload: { stepId: "get-health", index: 0 } });
+    observe({
+      type: "resource.created",
+      payload: {
+        resourceId: uuidV7IdGenerator.next("res"),
+        resourceType: "http-mutation",
+        correlationKey: "pressure-risk",
+        state: "created",
+      },
+    });
+    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+    expire(app, fence);
+    const result = await app.worker.reconcile();
+    expect(result.expired).toEqual([fence.jobId]);
+    expect(
+      app.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+    ).toBe("suspended_storage");
+    expectTerminal(app, receipt.runId, "inconclusive");
   });
 
   it.each([false, true])(
