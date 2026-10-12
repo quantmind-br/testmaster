@@ -20,4 +20,59 @@
 
 ## Consequences
 
-The M3 gate can pass only through measured, verified evidence for M3 scope plus explicit, quoted deferrals; nothing historical is rewritten and no target is relaxed. Heading-range deferrals (a quote such as `**OPS-024 — Backup consistente (M1–M4).**` for an item whose heading spans milestones) are a judgment by the maintainer and are listed below so a reviewer can reject any one. Claims after M3 remain limited: failed qwen3.8 rounds, generation quality claim-only, no GA, rootful Docker only ([ADR-014](014-rootless-deferral.md)).
+The M3 gate can pass only through measured, verified evidence for M3 scope plus explicit, quoted deferrals; nothing historical is rewritten and no target is relaxed. Heading-range deferrals (a quote such as `**OPS-024 — Backup consistente (M1–M4).**` for an item whose heading spans milestones) are a judgment by the maintainer and are listed below so a reviewer can reject any one: every `deferred` entry in the registry, split by the kind of quote it relies on (generated from `traceability/registry.json`; 28 items, 45 entries). Claims after M3 remain limited: failed qwen3.8 rounds, generation quality claim-only, no GA, rootful Docker only ([ADR-014](014-rootless-deferral.md)).
+
+## Deferred scope relying on a heading range or milestone section header
+
+| Item | Deferred | Document | Quote |
+| --- | --- | --- | --- |
+| NFR-003 | M4 | `specs/07-security.md` | `**SEC-030 — Isolamento multi-tenant (M4–M5).**` |
+| OPS-021 | M4 | `specs/08-operations.md` | `OPS-021 — Retention e GC concorrente (M1–M4).` |
+| OPS-022 | M4 | `specs/10-validation.md` | `**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** \| UI/autorização/accessibility; PostgreSQL/S3...` |
+| OPS-024 | M4 | `specs/08-operations.md` | `**OPS-024 — Backup consistente (M1–M4).**` |
+| OPS-024 | M4 | `specs/08-operations.md` | `**OPS-024 — Backup consistente (M1–M4).**` |
+| OPS-027 | M4 | `specs/08-operations.md` | `OPS-027 — Correlação, logs bounded e privacidade (M1–M4).` |
+| OPS-035 | M6 | `specs/08-operations.md` | `OPS-035 — Runbooks executáveis e autorização (M1–M6).` |
+| OPS-037 | M4 | `specs/10-validation.md` | `**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** \| UI/autorização/accessibility; PostgreSQL/S3...` |
+| REQ-028 | M5 | `specs/10-validation.md` | `**M5 — remote/distributed/matrix/advanced/memory** \| Workers remotos com leases/fencing/partições, tunnels...` |
+| SEC-013 | M4 | `specs/07-security.md` | `**SEC-013 — TLS e conteúdo autenticado (M1–M4).**` |
+| SEC-022 | M4 | `specs/07-security.md` | `**SEC-030 — Isolamento multi-tenant (M4–M5).**` |
+| SEC-036 | M4 | `specs/07-security.md` | `**SEC-036 — Criptografia e gestão de chaves (M1–M4).**` |
+| SEC-037 | M4 | `specs/07-security.md` | `SEC-037 — Retenção, exportação e exclusão (M3–M4).` |
+| SEC-039 | M4 | `specs/07-security.md` | `**SEC-039 — Aprovação vinculada e sem TOCTOU (M3–M4).**` |
+| SEC-047 | M4 | `specs/07-security.md` | `**SEC-047 — Forks e GitHub seguro (M2–M4).**` |
+| VAL-007 | M4 | `specs/10-validation.md` | `**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** \| UI/autorização/accessibility` |
+| VAL-035 | M5 | `specs/10-validation.md` | `**M5 — remote/distributed/matrix/advanced/memory** \| Workers remotos com leases/fencing/partições, tunnels...` |
+| VAL-035 | M6 | `specs/10-validation.md` | `**M6 — SSO/SCIM/plugins/portability/governance/GA** \| SSO OIDC/SAML/SCIM, import/export nativo/TestSprite ...` |
+| VAL-045 | M6 | `specs/10-validation.md` | `**M6 — SSO/SCIM/plugins/portability/governance/GA** \| SSO OIDC/SAML/SCIM, import/export nativo/TestSprite ...` |
+
+## Deferred scope relying on a table row or sentence naming the milestone
+
+| Item | Deferred | Document | Quote |
+| --- | --- | --- | --- |
+| ARCH-004 | M4 | `ROADMAP.md` | `M4-08 — Notificações e workers de equipe` |
+| INV-014 | M4 | `specs/09-web-and-integrations.md` | `\| M4 \| Web self-hosted/team, settings/sources/auth dinâmica, listas cross-project, schedules/notificações...` |
+| J05 | M4 | `specs/10-validation.md` | `M3 core/M4 UI` |
+| J08 | M5 | `specs/10-validation.md` | `VAL-010–013/040; M3/M5` |
+| J12 | M4 | `specs/10-validation.md` | `M3 checks básicos/M4 App e previews` |
+| J12 | M5 | `specs/10-validation.md` | `Túnel de INT-024 é variante M5` |
+| OPS-001 | M4 | `docs/adr/014-rootless-deferral.md` | `Rootless Docker validation is deferred to M4` |
+| OPS-001 | M4 | `specs/08-operations.md` | `M4; multiusuário exige controles SEC` |
+| OPS-001 | M5 | `specs/08-operations.md` | `Perfis e preflight (M0–M1/M4/M5)` |
+| OPS-005 | M4 | `docs/adr/002-storage.md` | `PostgreSQL runtime remains an M4 disabled capability.` |
+| OPS-011 | M4 | `ROADMAP.md` | `VAL-033 webhook scopes remain M4/M5 obligations` |
+| OPS-011 | M4 | `ROADMAP.md` | `M4-08 — Notificações e workers de equipe` |
+| OPS-025 | M4 | `specs/08-operations.md` | `\| M4 \| OPS-005–007/010–012/015–019/024–028/032–033/035–038: servidor/team/scheduler` |
+| OPS-027 | M4 | `specs/08-operations.md` | `M4; multiusuário exige controles SEC` |
+| OPS-035 | M4 | `specs/08-operations.md` | `M4 \| OPS-005–007/010–012/015–019/024–028/032–033/035–038` |
+| OPS-035 | M5 | `specs/08-operations.md` | `M5 \| OPS-007–012/015/019/028–034/037: workers distribuídos/túneis/matriz/modos avançados/memória` |
+| OPS-037 | M4 | `specs/08-operations.md` | ``server` \| API/web/controller/scheduler e pool local segregado de workers \| PostgreSQL + filesystem ou S3...` |
+| OPS-037 | M4 | `ROADMAP.md` | `M4-08 — Notificações e workers de equipe` |
+| OPS-037 | M4 | `ROADMAP.md` | `VAL-033 webhook scopes remain M4/M5 obligations` |
+| OPS-037 | M4 | `ROADMAP.md` | `M4-07 — GitHub App e previews` |
+| OPS-038 | M4 | `specs/08-operations.md` | `\| M4 \| OPS-005–007/010–012/015–019/024–028/032–033/035–038: servidor/team/scheduler` |
+| SEC-022 | M4 | `specs/07-security.md` | `checkpoint autorizado em M4` |
+| SEC-047 | M4 | `specs/07-security.md` | `Integração GitHub App em M4 usa installation token curto e permissions mínimas` |
+| VAL-033 | M4 | `specs/10-validation.md` | `VAL-026/027/033–037/041/043/045/052 no escopo M4` |
+| VAL-035 | M4 | `specs/10-validation.md` | `VAL-026/027/033–037/041/043/045/052 no escopo M4; J09/J10/J12 App/J13 schedule/J16/J17 server` |
+| VAL-045 | M4 | `specs/10-validation.md` | `VAL-026/027/033–037/041/043/045/052 no escopo M4` |
