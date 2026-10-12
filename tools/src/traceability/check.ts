@@ -2,6 +2,7 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { type Definition, extractSpecifications } from "./extract.js";
 import {
+  type AreaSummary,
   type CapabilityGateDecision,
   type CapabilityLink,
   type CapabilitySummary,
@@ -16,6 +17,11 @@ import {
 } from "./release.js";
 
 export type Milestone = `M${0 | 1 | 2 | 3 | 4 | 5 | 6}`;
+export interface Deferred {
+  milestone: Milestone;
+  scope: string;
+  specQuote: { path: string; text: string };
+}
 export interface RegistryItem {
   id: string;
   title: string;
@@ -31,6 +37,8 @@ export interface RegistryItem {
   blockedReason?: string;
   coverage?: Coverage;
   waiver?: Waiver;
+  /** Residual scope of a verified item that a later milestone still owns. */
+  deferred?: Deferred[];
 }
 export interface Registry {
   items: RegistryItem[];
@@ -43,6 +51,7 @@ export interface CheckResult {
   errors: string[];
   capabilitySummary?: CapabilitySummary[];
   capabilityGate?: CapabilityGateDecision;
+  areaSummary?: AreaSummary[];
 }
 
 const statuses: Record<RegistryItem["status"], true> = {
@@ -52,6 +61,65 @@ const statuses: Record<RegistryItem["status"], true> = {
   blocked: true,
   waived: true,
 };
+
+/** True when `path` is a repository-relative entry that resolves inside `root` after symlinks. */
+async function confinedEntry(root: string, path: string, fileOnly: boolean): Promise<boolean> {
+  try {
+    if (isAbsolute(path)) return false;
+    const target = await realpath(resolve(root, path));
+    const confined = relative(root, target);
+    if (confined === ".." || confined.startsWith(`..${sep}`) || isAbsolute(confined)) return false;
+    return fileOnly ? (await stat(target)).isFile() : true;
+  } catch {
+    return false;
+  }
+}
+
+const deferredQuotePath = /^(SPEC\.md|ROADMAP\.md|specs\/[^/]+\.md|docs\/adr\/[^/]+\.md)$/u;
+
+async function checkDeferred(root: string, item: RegistryItem, errors: string[]): Promise<void> {
+  if (item.status !== "verified")
+    errors.push(`${item.id}: deferred residual scope is only allowed on verified items`);
+  if (!Array.isArray(item.deferred) || !item.deferred.length) {
+    errors.push(`${item.id}: deferred must be a non-empty array`);
+    return;
+  }
+  for (const entry of item.deferred) {
+    const label = `${item.id}: deferred ${entry?.milestone ?? "?"}`;
+    if (
+      !entry ||
+      !/^M[0-6]$/u.test(entry.milestone) ||
+      entry.milestone <= item.milestone ||
+      typeof entry.scope !== "string" ||
+      !entry.scope.trim()
+    ) {
+      errors.push(`${label}: milestone later than ${item.milestone} and a scope are required`);
+      continue;
+    }
+    const quote = entry.specQuote;
+    if (
+      !quote ||
+      typeof quote.path !== "string" ||
+      !deferredQuotePath.test(quote.path) ||
+      typeof quote.text !== "string" ||
+      !quote.text.trim()
+    ) {
+      errors.push(`${label}: specQuote requires a normative document path and literal text`);
+      continue;
+    }
+    if (!new RegExp(`(^|[^A-Za-z0-9])${entry.milestone}([^0-9]|$)`, "u").test(quote.text)) {
+      errors.push(`${label}: specQuote text must name ${entry.milestone}`);
+      continue;
+    }
+    try {
+      if (!(await confinedEntry(root, quote.path, true))) throw new Error("unsafe path");
+      const source = await readFile(resolve(root, quote.path), "utf8");
+      if (!source.includes(quote.text)) throw new Error("quote not found");
+    } catch {
+      errors.push(`${label}: specQuote not found literally in ${quote.path}`);
+    }
+  }
+}
 
 export async function checkRegistry(
   root: string,
@@ -94,11 +162,21 @@ export async function checkRegistry(
     ) {
       errors.push(`${item.id}: planned ${item.milestone} item blocks milestone gate ${gate}`);
     }
+    if (item.status === "verified" && item.blockedReason?.trim())
+      errors.push(`${item.id}: verified item must not keep a blockedReason`);
     if (
       item.status === "waived" ||
+      item.status === "verified" ||
       (gate && /^M[0-6]$/u.test(item.milestone) && item.milestone <= gate)
     )
       await checkReleaseItem(canonicalRoot, item, errors, now);
+    if (item.deferred !== undefined) await checkDeferred(canonicalRoot, item, errors);
+    if (gate && item.status === "verified")
+      for (const entry of Array.isArray(item.deferred) ? item.deferred : [])
+        if (entry && /^M[0-6]$/u.test(entry.milestone) && entry.milestone <= gate)
+          errors.push(
+            `${item.id}: deferred ${entry.milestone} scope blocks milestone gate ${gate} (${entry.scope})`,
+          );
     if (
       item.status !== "verified" &&
       !(gate && item.milestone <= gate && item.coverage && !item.blockedReason)
@@ -108,18 +186,14 @@ export async function checkRegistry(
       if (!Array.isArray(item[field]) || item[field].length === 0)
         errors.push(`${item.id}: verified requires ${field}`);
     }
-    if (!Array.isArray(item.evidence)) continue;
-    for (const path of item.evidence) {
-      if (typeof path !== "string") continue;
-      try {
-        if (isAbsolute(path)) throw new Error("absolute path");
-        const target = await realpath(resolve(canonicalRoot, path));
-        const confined = relative(canonicalRoot, target);
-        if (confined === ".." || confined.startsWith(`..${sep}`) || isAbsolute(confined))
-          throw new Error("outside repository");
-        if (!(await stat(target)).isFile()) throw new Error("not a file");
-      } catch {
-        errors.push(`${item.id}: evidence path missing, unsafe or not a file: ${path}`);
+    for (const field of ["evidence", "code"] as const) {
+      if (!Array.isArray(item[field])) continue;
+      for (const path of item[field]) {
+        if (typeof path !== "string") continue;
+        if (!(await confinedEntry(canonicalRoot, path, field === "evidence")))
+          errors.push(
+            `${item.id}: ${field} path missing, unsafe${field === "evidence" ? " or not a file" : ""}: ${path}`,
+          );
       }
     }
   }
@@ -141,12 +215,13 @@ export async function checkRegistry(
   checkCapabilityGateDefinitions(registry, errors);
   if (gate) {
     const capabilitySummary = releaseSummary(registry, advertisedCapabilities, errors);
-    checkReleaseDecision(registry.release, errors);
+    const areaSummary = checkReleaseDecision(registry.release, errors, { kind: "milestone", gate });
     return {
       ok: errors.length === 0,
       definitionCount: definitions.length,
       errors,
       capabilitySummary,
+      areaSummary,
     };
   }
   return { ok: errors.length === 0, definitionCount: definitions.length, errors };

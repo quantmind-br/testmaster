@@ -800,6 +800,15 @@ targets/controls, waived invariants or critical/high findings. It does not requi
 areas, but the full normative inventory still applies. `check --milestone-gate M3` remains the
 cumulative red gate; this scoped pass does not graduate M3 or GA.
 
+Release areas carry `gate` (`M0`..`M6` or `claim`) and `series`. A cumulative milestone gate is
+blocked by a non-passed area only when its `gate` is not `claim`, is not later than the gate being
+checked and the area has no valid `supersededBy` (a passed area of the same series that appears
+later in the register); `check --milestone-gate Mx` prints the per-area effect as an `areaSummary`
+line. Supersession is additive metadata: a failed area keeps its decision and numbers. A verified
+registry item may declare `deferred` residual scope owned by a later milestone with a literal
+specification quote; it blocks every gate at or after that milestone. See
+[ADR-013](adr/013-release-area-supersession.md).
+
 Reproduce the assisted-review journey after `pnpm build` with
 `TMPDIR=/tmp pnpm exec vitest run --project docker validation/journeys/m3-healing-acceptance.docker.test.ts -t 'HEAL-003 automated assisted review'`
 through the result-preservation wrapper. It uses one local controlled provider response and no

@@ -107,13 +107,23 @@ describe("traceability release denials", () => {
     const root = await temp();
     const verified = item({
       status: "verified",
-      scenario: ["positive and negative"],
+      scenario: ["result.test.ts::positive", "result.test.ts::negative"],
       oracle: ["independent oracle"],
       code: ["implementation.ts"],
       evidence: ["result.json"],
+      coverage: {
+        positive: ["result.test.ts::positive"],
+        negative: ["result.test.ts::negative"],
+        criticalAssertions: [{ path: "result.test.ts", assertion: "expect(outcome).toBe(1)" }],
+      },
     });
     expect((await checkRegistry(root, [definition], { items: [verified] })).ok).toBe(false);
     await writeFile(join(root, "result.json"), "{}\n");
+    await writeFile(join(root, "implementation.ts"), "export {};\n");
+    await writeFile(
+      join(root, "result.test.ts"),
+      'it("positive", () => { expect(outcome).toBe(1); }); it("negative", () => {});\n',
+    );
     expect((await checkRegistry(root, [definition], { items: [verified] })).ok).toBe(true);
     expect(
       (await checkRegistry(root, [definition], { items: [item({ status: "verified" })] })).ok,
@@ -158,6 +168,8 @@ describe("capability gate CLI", () => {
           areas: [
             {
               area: "holdout",
+              gate: "M3",
+              series: "holdout",
               proposedTarget: "Reviewed holdout",
               approvedTarget: null,
               observation: null,
@@ -196,6 +208,69 @@ describe("capability gate CLI", () => {
     expect(result.stderr).toContain("Independent safety reviewer unavailable");
     expect(result.stderr).toContain("External holdout not authored");
     expect(result.stderr).not.toContain("Cannot discover public capability catalog");
+  });
+
+  it("prints per-area gate effects for a milestone gate and exits nonzero only for blocking areas", async () => {
+    const root = await temp();
+    await mkdir(join(root, "specs"));
+    await mkdir(join(root, "traceability"));
+    await mkdir(join(root, "packages/contracts/src"), { recursive: true });
+    await writeFile(
+      join(root, "packages/contracts/src/registries.ts"),
+      'const features: Record<string, string> = {\n  "alpha": "x",\n};\n',
+    );
+    await writeFile(join(root, "SPEC.md"), "SEC-001: Threat model.\n");
+    await writeFile(join(root, "ROADMAP.md"), "Reference SEC-001\n");
+    const area = (name: string, extra: Record<string, unknown>) => ({
+      area: name,
+      series: name.replace(/-.*/u, ""),
+      proposedTarget: "target",
+      approvedTarget: name === "loop-new" ? "target" : null,
+      observation: name === "loop-new" ? 1 : null,
+      interval: name === "loop-new" ? [0.9, 1] : null,
+      n: name === "loop-new" ? 10 : 0,
+      reason: "recorded",
+      ...extra,
+    });
+    await writeFile(
+      join(root, "traceability/registry.json"),
+      JSON.stringify({
+        items: [item({ milestone: "M4", status: "planned" })],
+        capabilities: [
+          { id: "alpha", milestone: "M4", requirements: ["SEC-001"], gate: "alpha gate" },
+        ],
+        release: {
+          findings: [],
+          areas: [
+            area("loop-old", { gate: "M3", decision: "failed", supersededBy: "loop-new" }),
+            area("loop-new", { gate: "M3", decision: "passed" }),
+            area("gen-1", { gate: "claim", decision: "failed" }),
+            area("ga-1", { gate: "M6", decision: "blocked" }),
+          ],
+        },
+      }),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../../dist/traceability/cli.js", import.meta.url)),
+        "check",
+        "--milestone-gate",
+        "M3",
+      ],
+      { cwd: root, encoding: "utf8" },
+    );
+    const summary = result.stdout
+      .split("\n")
+      .filter((line) => line.startsWith('{"areaSummary"'))
+      .map((line) => JSON.parse(line).areaSummary as { area: string; effect: string }[])[0];
+    expect(summary?.map((entry) => [entry.area, entry.effect])).toEqual([
+      ["loop-old", "superseded"],
+      ["loop-new", "passed"],
+      ["gen-1", "claim"],
+      ["ga-1", "out-of-scope"],
+    ]);
+    expect(result.stderr).not.toContain("Release area");
   });
 
   it("rejects capability and milestone options combined rather than silently ignoring one gate", () => {

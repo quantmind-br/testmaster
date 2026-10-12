@@ -32,6 +32,23 @@ export interface CapabilityGateDecision {
   status: "passed" | "blocked";
   reasons: string[];
 }
+export type AreaGate = Milestone | "claim";
+export interface ReleaseArea {
+  area: string;
+  /** Milestone whose cumulative gate this area blocks, or "claim" for a claim-only area. */
+  gate: AreaGate;
+  /** Measurement series; supersession only links areas of the same series. */
+  series: string;
+  /** Passed area of the same series, later in `areas`, that defines the claim scope instead. */
+  supersededBy?: string;
+  proposedTarget: string;
+  approvedTarget: string | null;
+  observation: number | null;
+  interval: [number, number] | null;
+  n: number;
+  decision: "passed" | "failed" | "blocked";
+  reason: string;
+}
 export interface ReleaseDecision {
   findings: {
     id: string;
@@ -39,17 +56,16 @@ export interface ReleaseDecision {
     status: "open" | "resolved";
     requirement: string;
   }[];
-  areas: {
-    area: string;
-    proposedTarget: string;
-    approvedTarget: string | null;
-    observation: number | null;
-    interval: [number, number] | null;
-    n: number;
-    decision: "passed" | "failed" | "blocked";
-    reason: string;
-  }[];
+  areas: ReleaseArea[];
   capabilityGates?: CapabilityGate[];
+}
+export type ReleaseScope = { kind: "all" } | { kind: "milestone"; gate: Milestone };
+export interface AreaSummary {
+  area: string;
+  gate: AreaGate;
+  series: string;
+  decision: ReleaseArea["decision"];
+  effect: "blocking" | "passed" | "superseded" | "out-of-scope" | "claim";
 }
 export interface CapabilitySummary extends Omit<CapabilityLink, "milestone"> {
   milestone: Milestone | null;
@@ -216,12 +232,60 @@ export function releaseSummary(
   return summary;
 }
 
-export function checkReleaseDecision(release: ReleaseDecision | undefined, errors: string[]): void {
+const areaGates = /^(M[0-6]|claim)$/u;
+
+/** Validates gate/series/supersededBy metadata over the complete area list. */
+export function checkReleaseAreaMetadata(
+  release: ReleaseDecision | undefined,
+  errors: string[],
+): void {
+  const areas = release?.areas;
+  if (!Array.isArray(areas)) return;
+  const index = new Map(areas.map((area, position) => [area?.area, position]));
+  for (const area of areas) {
+    if (!area || typeof area.area !== "string") continue;
+    if (typeof area.gate !== "string" || !areaGates.test(area.gate))
+      errors.push(`Release area ${area.area}: gate must be M0..M6 or claim`);
+    if (typeof area.series !== "string" || !area.series.trim())
+      errors.push(`Release area ${area.area}: series is required`);
+    if (area.supersededBy === undefined) continue;
+    const target = areas[index.get(area.supersededBy) ?? -1];
+    const problem =
+      area.decision === "passed"
+        ? "a passed area cannot be superseded"
+        : !target
+          ? `unknown area ${String(area.supersededBy)}`
+          : target.series !== area.series
+            ? "superseding area must belong to the same series"
+            : target.decision !== "passed"
+              ? "superseding area must have passed"
+              : (index.get(target.area) ?? -1) <= (index.get(area.area) ?? -1)
+                ? "superseding area must appear later in the release area list"
+                : target.supersededBy !== undefined
+                  ? "superseding area cannot itself be superseded"
+                  : undefined;
+    if (problem) errors.push(`Release area ${area.area}: invalid supersededBy (${problem})`);
+  }
+}
+
+function areaEffect(area: ReleaseArea, scope: ReleaseScope): AreaSummary["effect"] {
+  if (scope.kind === "all") return area.decision === "passed" ? "passed" : "blocking";
+  if (area.gate === "claim") return "claim";
+  if (area.gate > scope.gate) return "out-of-scope";
+  if (area.decision === "passed") return "passed";
+  return area.supersededBy === undefined ? "blocking" : "superseded";
+}
+
+export function checkReleaseDecision(
+  release: ReleaseDecision | undefined,
+  errors: string[],
+  scope: ReleaseScope = { kind: "all" },
+): AreaSummary[] {
   if (!release) {
     errors.push(
       "Release decision: missing per-area targets, observations, intervals, n and findings register",
     );
-    return;
+    return [];
   }
   for (const finding of release.findings ?? []) {
     if (
@@ -238,6 +302,7 @@ export function checkReleaseDecision(release: ReleaseDecision | undefined, error
   }
   if (!release.areas?.length || !Array.isArray(release.findings))
     errors.push("Release decision: areas and findings register required");
+  const summary: AreaSummary[] = [];
   for (const area of release.areas ?? []) {
     if (
       !area.area ||
@@ -257,12 +322,22 @@ export function checkReleaseDecision(release: ReleaseDecision | undefined, error
           area.interval[0] > area.interval[1]))
     )
       errors.push(`Release area ${area.area}: unmeasured or malformed decision cannot pass`);
-    if (area.decision !== "passed")
+    const effect = areaEffect(area, scope);
+    summary.push({
+      area: area.area,
+      gate: area.gate,
+      series: area.series,
+      decision: area.decision,
+      effect,
+    });
+    if (effect === "blocking")
       errors.push(`Release area ${area.area}: ${area.decision} (${area.reason})`);
   }
+  return summary;
 }
 
 export function checkCapabilityGateDefinitions(registry: Registry, errors: string[]): void {
+  checkReleaseAreaMetadata(registry.release, errors);
   const gates = registry.release?.capabilityGates;
   if (gates === undefined) return;
   if (!Array.isArray(gates)) {
@@ -295,6 +370,11 @@ export function checkCapabilityGateDefinitions(registry: Registry, errors: strin
         new Set(values).size !== values.length
       )
         errors.push(`Capability gate ${gate.id}: ${field} requires unique existing references`);
+    }
+    for (const required of Array.isArray(gate.requiredAreas) ? gate.requiredAreas : []) {
+      const area = registry.release.areas.find((entry) => entry.area === required);
+      if (area?.supersededBy !== undefined)
+        errors.push(`Capability gate ${gate.id}: required area ${required} is superseded`);
     }
   }
 }

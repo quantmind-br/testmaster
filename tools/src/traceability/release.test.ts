@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -22,6 +22,7 @@ async function fixture() {
     join(root, "acceptance.test.ts"),
     `it("healthy", () => {}); it("mutant", () => { ${assertion}; });`,
   );
+  await writeFile(join(root, "implementation.ts"), "export {};\n");
   const item: RegistryItem = {
     id: "VAL-019",
     title: "critical mutation controls",
@@ -47,6 +48,8 @@ function decision(): ReleaseDecision {
     areas: [
       {
         area: "security",
+        gate: "M0",
+        series: "security",
         proposedTarget: "zero critical",
         approvedTarget: "zero critical",
         observation: 0,
@@ -442,4 +445,202 @@ it("blocks a required critical finding despite passed numeric capability targets
   );
   expect(result.ok).toBe(false);
   expect(result.errors).toContain("Release blocked by critical finding unsafe-autoapply (VAL-019)");
+});
+
+async function supersessionFixture() {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const release = decision();
+  const base = release.areas[0];
+  if (!base) throw new Error("Missing area fixture");
+  release.areas = [
+    {
+      ...base,
+      area: "loop-old",
+      gate: "M3",
+      series: "loop",
+      decision: "failed",
+      reason: "qwen target missed",
+      supersededBy: "loop-new",
+    },
+    { ...base, area: "loop-new", gate: "M3", series: "loop" },
+  ];
+  return { root, item, definitions, release };
+}
+
+it("a superseded failed area does not block the milestone gate while its decision stays unchanged", async () => {
+  const { root, item, definitions, release } = await supersessionFixture();
+  const result = await checkRegistry(root, definitions, { items: [item], release }, "M3");
+  expect(result.errors).toEqual([]);
+  expect(result.areaSummary?.map((entry) => [entry.area, entry.effect])).toEqual([
+    ["loop-old", "superseded"],
+    ["loop-new", "passed"],
+  ]);
+  expect(release.areas[0]?.decision).toBe("failed");
+  delete release.areas[0]?.supersededBy;
+  const blocked = await checkRegistry(root, definitions, { items: [item], release }, "M3");
+  expect(blocked.errors).toEqual(["Release area loop-old: failed (qwen target missed)"]);
+});
+
+it("refuses supersession by a failed, earlier, other-series or unknown area", async () => {
+  const { root, item, definitions, release } = await supersessionFixture();
+  const pristine = structuredClone(release.areas);
+  const attempt = async (mutate: () => void) => {
+    release.areas = structuredClone(pristine);
+    mutate();
+    return (await checkRegistry(root, definitions, { items: [item], release }, "M3")).errors.join();
+  };
+  expect(
+    await attempt(() => {
+      const target = release.areas[1];
+      if (target) {
+        target.decision = "failed";
+        target.reason = "also failed";
+      }
+    }),
+  ).toContain("superseding area must have passed");
+  expect(
+    await attempt(() => {
+      release.areas.reverse();
+    }),
+  ).toContain("must appear later");
+  expect(
+    await attempt(() => {
+      const target = release.areas[1];
+      if (target) target.series = "other";
+    }),
+  ).toContain("same series");
+  expect(
+    await attempt(() => {
+      const source = release.areas[0];
+      if (source) source.supersededBy = "ghost";
+    }),
+  ).toContain("unknown area ghost");
+  expect(
+    await attempt(() => {
+      const source = release.areas[1];
+      if (source) source.supersededBy = "loop-old";
+    }),
+  ).toContain("a passed area cannot be superseded");
+});
+
+it("claim-scoped and later-milestone areas never block an earlier milestone gate", async () => {
+  const { root, item, definitions, release } = await supersessionFixture();
+  const base = release.areas[1];
+  if (!base) throw new Error("Missing area fixture");
+  release.areas = [
+    { ...base, area: "claim-only", gate: "claim", series: "gen", decision: "failed" },
+    { ...base, area: "ga", gate: "M6", series: "ga", decision: "blocked" },
+    { ...base, area: "m3-open", gate: "M3", series: "open", decision: "blocked" },
+  ];
+  const m3 = await checkRegistry(root, definitions, { items: [item], release }, "M3");
+  expect(m3.errors).toEqual(["Release area m3-open: blocked (real controls pass)"]);
+  expect(m3.areaSummary?.map((entry) => entry.effect)).toEqual([
+    "claim",
+    "out-of-scope",
+    "blocking",
+  ]);
+  const m6 = await checkRegistry(root, definitions, { items: [item], release }, "M6");
+  expect(m6.errors.join()).toContain("Release area ga: blocked");
+  expect(m6.errors.join()).not.toContain("claim-only");
+});
+
+it("a capability gate cannot require a superseded area", async () => {
+  const { root, item, definitions, release } = await supersessionFixture();
+  release.capabilityGates = [
+    {
+      id: "gate",
+      requiredAreas: ["loop-old"],
+      requiredItems: [item.id],
+      nonNegotiable: [item.id],
+    },
+  ];
+  const result = await checkRegistry(
+    root,
+    definitions,
+    { items: [item], release },
+    undefined,
+    [],
+    Date.now(),
+    "gate",
+  );
+  expect(result.ok).toBe(false);
+  expect(result.errors.join()).toContain("required area loop-old is superseded");
+});
+
+it("deferred residual scope blocks the gate at its milestone and requires a literal milestone quote", async () => {
+  const { root, item } = await fixture();
+  await writeFile(
+    join(root, "ROADMAP.md"),
+    "**OPS-001 - Local operations (M1-M4).** Rootless Docker is validated in M4.\n",
+  );
+  await mkdir(join(root, "docs"), { recursive: true });
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const release = decision();
+  const deferred = (text: string, path = "ROADMAP.md", milestone: "M4" | "M0" = "M4") => ({
+    milestone,
+    scope: "rootless validation",
+    specQuote: { path, text },
+  });
+  const run = async (entry: ReturnType<typeof deferred>, gate?: "M3" | "M4") => {
+    item.deferred = [entry];
+    return (await checkRegistry(root, definitions, { items: [item], release }, gate)).errors.join(
+      "\n",
+    );
+  };
+  expect(await run(deferred("Rootless Docker is validated in M4."), undefined)).toBe("");
+  expect(await run(deferred("Rootless Docker is validated in M4."), "M3")).toBe("");
+  expect(await run(deferred("Rootless Docker is validated in M4."), "M4")).toContain(
+    "deferred M4 scope blocks milestone gate M4 (rootless validation)",
+  );
+  expect(await run(deferred("Rootless Docker is validated"))).toContain("must name M4");
+  expect(await run(deferred("Rootless Docker is validated in M4!"))).toContain(
+    "not found literally",
+  );
+  expect(await run(deferred("validated in M4", "../outside.md"))).toContain("normative document");
+  expect(await run(deferred("validated in M0", "ROADMAP.md", "M0"))).toContain("later than M0");
+  item.status = "implemented";
+  expect(await run(deferred("Rootless Docker is validated in M4."))).toContain(
+    "only allowed on verified items",
+  );
+});
+
+it("verified items cannot keep a blockedReason or cite missing code paths", async () => {
+  const { root, item } = await fixture();
+  const definitions = [
+    {
+      id: item.id,
+      title: item.title,
+      sourceFile: "SPEC.md",
+      sourceLine: 1,
+      declaredMilestones: ["M0"],
+    },
+  ];
+  const registry: Registry = { items: [item], release: decision() };
+  expect((await checkRegistry(root, definitions, registry)).errors).toEqual([]);
+  item.code = ["missing-implementation.ts"];
+  expect((await checkRegistry(root, definitions, registry)).errors.join()).toContain(
+    "code path missing, unsafe: missing-implementation.ts",
+  );
+  item.code = ["implementation.ts"];
+  item.blockedReason = "stale reason";
+  expect((await checkRegistry(root, definitions, registry)).errors.join()).toContain(
+    "verified item must not keep a blockedReason",
+  );
 });

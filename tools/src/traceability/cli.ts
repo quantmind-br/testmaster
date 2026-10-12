@@ -25,6 +25,7 @@ if (
     );
     if (result.capabilitySummary)
       console.log(JSON.stringify({ capabilitySummary: result.capabilitySummary }));
+    if (result.areaSummary) console.log(JSON.stringify({ areaSummary: result.areaSummary }));
     if (result.capabilityGate)
       console.log(JSON.stringify({ capabilityGate: result.capabilityGate }));
     if (result.ok)

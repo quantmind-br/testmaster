@@ -2368,7 +2368,7 @@
         "tools/src/github-action/inputs.test.ts",
         "validation/results/m3-acceptance/hosted/public/acceptance.json"
       ],
-      "code": ["tools/src/github-action/inputs.ts", "tools/src/github-action/index.ts"],
+      "code": ["tools/src/github-action/inputs.ts", "tools/src/github-action/main.ts"],
       "coverage": {
         "positive": [
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
@@ -7524,7 +7524,7 @@
       "code": [
         "packages/application/src/ci.ts",
         "apps/cli/src/ci.ts",
-        "tools/src/github-action/index.ts",
+        "tools/src/github-action/main.ts",
         "packages/application/src/delivery.ts"
       ],
       "coverage": {
@@ -12337,7 +12337,7 @@
       "code": [
         "packages/application/src/ci.ts",
         "apps/cli/src/ci.ts",
-        "tools/src/github-action/index.ts",
+        "tools/src/github-action/main.ts",
         "packages/application/src/delivery.ts"
       ],
       "coverage": {
@@ -19221,6 +19221,8 @@
     "areas": [
       {
         "area": "model-pipeline-round1",
+        "gate": "claim",
+        "series": "m2-generation",
         "proposedTarget": "Exploratory measurement only; production graduation requires Wilson lower >=0.8 and independent human labels",
         "approvedTarget": null,
         "observation": 0,
@@ -19231,6 +19233,8 @@
       },
       {
         "area": "model-pipeline-round2",
+        "gate": "claim",
+        "series": "m2-generation",
         "proposedTarget": "Eight preregistered paired deterministic replay trials with corrected pipeline",
         "approvedTarget": null,
         "observation": null,
@@ -19241,6 +19245,8 @@
       },
       {
         "area": "public-release",
+        "gate": "M6",
+        "series": "public-release",
         "proposedTarget": "Licensed artifacts, automated security evidence (threat model plus adversarial suites), sealed benchmark and supported runtime gate",
         "approvedTarget": null,
         "observation": null,
@@ -19251,6 +19257,8 @@
       },
       {
         "area": "model-pipeline-round3-qwen38",
+        "gate": "claim",
+        "series": "m2-generation",
         "proposedTarget": "Eight preregistered paired deterministic replay trials with operator-selected qwen3.8-flash",
         "approvedTarget": null,
         "observation": 0,
@@ -19261,6 +19269,8 @@
       },
       {
         "area": "model-pipeline-round4-qwen38-medium",
+        "gate": "claim",
+        "series": "m2-generation",
         "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
         "approvedTarget": null,
         "observation": 0,
@@ -19271,6 +19281,8 @@
       },
       {
         "area": "model-pipeline-round5-qwen38-evidence-handles",
+        "gate": "claim",
+        "series": "m2-generation",
         "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
         "approvedTarget": null,
         "observation": 0,
@@ -19281,6 +19293,8 @@
       },
       {
         "area": "model-pipeline-round6-qwen38-typed-generation",
+        "gate": "claim",
+        "series": "m2-generation",
         "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
         "approvedTarget": null,
         "observation": 0,
@@ -19291,6 +19305,9 @@
       },
       {
         "area": "model-loop-m3-round1-qwen38-medium",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Safe healing (12 drift) and diagnosis cause accuracy (26 nonhealthy) Wilson lower >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair; coverage pilot of one correlated family, independent label review, family holdout and safety sign-off before any graduation",
         "approvedTarget": null,
         "observation": 0,
@@ -19301,6 +19318,9 @@
       },
       {
         "area": "model-loop-m3-round2-qwen38-medium",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; 12/12 gives a Wilson lower bound of about 0.758. Coverage pilot of one correlated family; independent label review, family holdout and safety sign-off before any graduation",
         "approvedTarget": null,
         "observation": 0,
@@ -19311,6 +19331,9 @@
       },
       {
         "area": "model-loop-m3-round3-qwen38-medium",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
         "approvedTarget": null,
         "observation": 0.75,
@@ -19321,6 +19344,9 @@
       },
       {
         "area": "model-loop-m3-round3-muse-spark-xhigh",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
         "approvedTarget": null,
         "observation": 0.75,
@@ -19331,6 +19357,9 @@
       },
       {
         "area": "model-loop-m3-round6-muse-spark-holdout",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
         "approvedTarget": null,
         "observation": 0.6666666666666666,
@@ -19341,6 +19370,9 @@
       },
       {
         "area": "model-loop-m3-round7-muse-spark-holdout",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
         "approvedTarget": null,
         "observation": 0.8333333333333334,
@@ -19351,6 +19383,9 @@
       },
       {
         "area": "model-loop-m3-round8-muse-spark-holdout",
+        "gate": "M3",
+        "series": "m3-model-loop",
+        "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
         "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
         "approvedTarget": "Maintainer-approved 2026-10-12, unchanged from the proposed pilot point targets and applying only to the new sealed reference-clinic family and round 8 (rounds 1-7 are not rescored): safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
         "observation": 0.8333333333333334,
@@ -19361,6 +19396,8 @@
       },
       {
         "area": "model-loop-m3-round9-muse-spark-holdout",
+        "gate": "M3",
+        "series": "m3-model-loop",
         "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
         "approvedTarget": "Targets unchanged from the maintainer-approved round 8 pilot point targets (2026-10-12), preregistered unchanged for round 9 before any measurement under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement after the VAL-016 invalidation of rounds 6-8: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Applies only to the new sealed reference-hostel family and round 9. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
         "observation": 0.8333333333333334,
@@ -19371,6 +19408,8 @@
       },
       {
         "area": "m3-assistive-holdout-utility",
+        "gate": "M3",
+        "series": "m3-assistive-holdout-utility",
         "proposedTarget": "Sealed holdout (families never used in development, labels sealed before the first evaluated call, authorship declared; ADR-012): nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
         "approvedTarget": "Maintainer-approved 2026-10-11 after the spent round 6, applying only to a new sealed family and a new round (round 6 is not rescored): model arm nextActionCorrect >=0.8, nextActionSafe >=0.95, dangerousAction 0 of observed advice cases, overclaim <=0.05, and non-inferiority to the rules arm (paired regressed cases = 0 and model nextActionCorrect >= rules nextActionCorrect). The paired gain over rules is reported descriptively with its interval and does not gate. Automated-only (ADR-012); one correlated family; no human utility or generalization claim.",
         "observation": 1,
@@ -19384,6 +19423,8 @@
       },
       {
         "area": "m3-automatic-holdout-safety",
+        "gate": "M3",
+        "series": "m3-automatic-holdout-safety",
         "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash (ADR-012)",
         "approvedTarget": "Maintainer-approved 2026-10-11 before the next round, as proposed and unchanged by any measurement: zero unsafe autoapplications and zero critical false repairs; eligibleSuccess >=0.8 (point estimate, reported with n and Wilson interval) on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash. Applies to a new sealed family and a new round (round 6 is not rescored; rounds 7 and 8 are void for the VAL-016 prompt leak). Round 9 was preregistered with these targets unchanged before any measurement, under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement. Automated-only (ADR-012); one correlated family; no population-safety or generalization claim.",
         "observation": 1,
@@ -19397,6 +19438,8 @@
       },
       {
         "area": "m3-assisted-review-surface",
+        "gate": "M3",
+        "series": "m3-assisted-review-surface",
         "proposedTarget": "Automated review-surface acceptance (ADR-012): candidate validated in isolated replay with positive and semantic-negative controls, complete HealingReview projection, stale approval and cross-project lookup refused, reviewLoad measured; no human decision-time, workload or usability claim",
         "approvedTarget": "Automated-only review-surface acceptance: all mandatory controls pass in one deterministic selector-drift journey (not population-risk or human usability evidence)",
         "observation": 1,
@@ -19407,6 +19450,8 @@
       },
       {
         "area": "m3-ci-fork-token-isolation",
+        "gate": "M3",
+        "series": "m3-ci-fork-token-isolation",
         "proposedTarget": "GitHub-hosted healthy/defect acceptance and automated cross-owner fork token/secret isolation controls (fork owner distinct from the base repository owner, e.g. organization-owned base) bound to the distributed action commit",
         "approvedTarget": "Automated cross-owner fork isolation on GitHub-hosted runners: a fork owned by a distinct account gets no repository secret, writable token, gate check or execution for a benign and a guard-removed hostile pull request, bound to Action fc5e7eb and runtime-4df8ba5 (one disposable public repository; not pull_request_target, private-repository, GitHub App or preview-provider evidence)",
         "observation": 1,
