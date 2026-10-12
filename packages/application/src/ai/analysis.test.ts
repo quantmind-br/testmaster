@@ -1030,6 +1030,96 @@ it("a passed creation followed by an empty collection recommends persistence ins
   expect(analysis.hypotheses[0]?.support).toBe("partially_supported");
 });
 
+async function persistenceRun(plan: ExecutablePlan, step: Partial<StepResult>) {
+  const f = await fixture({ plan, step: { index: 2, ...step } });
+  for (const [index, id] of ["create", "read"].entries())
+    f.ctx.entities.insert("StepResult", {
+      ...f.step,
+      id: `stp_00000000-0000-4000-8000-0000000000${index + 10}`,
+      workspaceId: f.ctx.workspaceId,
+      planStepId: id,
+      index,
+      status: "passed",
+      reasonCode: undefined,
+      expected: null,
+      observed: 200,
+      error: null,
+    });
+  return f;
+}
+it("a wrong value on a read that follows a passed write recommends persistence inspection", async () => {
+  const f = await persistenceRun(persistencePlan, {});
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(
+    "Inspect the creation response at step create and the read at step read, including entity identity and environment.",
+  );
+});
+it("a wrong value on the write's own response compares the requirement instead", async () => {
+  const plan: ExecutablePlan = {
+    ...persistencePlan,
+    steps: [
+      persistencePlan.steps[0]!,
+      {
+        id: "price",
+        kind: "assertion",
+        operation: "assert",
+        required: true,
+        input: { responseStepId: "create", jsonPointer: "/price" },
+        expectation: { predicate: "jsonEquals", value: { literal: 10 } },
+      },
+    ],
+  };
+  const f = await fixture({ plan, step: { index: 1 } });
+  f.ctx.entities.insert("StepResult", {
+    ...f.step,
+    id: "stp_00000000-0000-4000-8000-000000000010",
+    workspaceId: f.ctx.workspaceId,
+    planStepId: "create",
+    index: 0,
+    status: "passed",
+    reasonCode: undefined,
+    expected: null,
+    observed: 200,
+    error: null,
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(
+    "Compare the observed value at step price with the approved requirement before changing product code or the test.",
+  );
+});
+it("a request that only captures a credential is not a write the read can be blamed on", async () => {
+  const credential: ExecutablePlan = {
+    ...persistencePlan,
+    steps: [
+      {
+        id: "create",
+        kind: "action",
+        operation: "request",
+        input: {
+          method: "POST",
+          pathSegments: [{ literal: "session" }],
+          capture: [
+            {
+              name: "token",
+              from: "jsonPointer",
+              pointer: "/sessionToken",
+              valueType: "string",
+              sensitive: true,
+            },
+          ],
+        },
+      },
+      ...persistencePlan.steps.slice(1),
+    ],
+  };
+  const f = await persistenceRun(credential, {});
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toBe(
+    "Compare the observed value at step price with the approved requirement before changing product code or the test.",
+  );
+});
+
 it.each([
   {
     diagnostic: {
@@ -1118,7 +1208,10 @@ it("model next steps enrich evidence without overriding code-owned conclusion an
       recommendedAction: "fix_test",
       fixTargetHandle: null,
       limitations: [],
-      nextSteps: [{ action: "inspect_persistence", evidence: ["E2"] }],
+      nextSteps: [
+        { action: "inspect_persistence", evidence: ["E2"] },
+        { action: "collect_more_evidence", evidence: ["E2"] },
+      ],
       evidenceGaps: ["Source cause is unavailable"],
     },
   }));
@@ -1132,6 +1225,11 @@ it("model next steps enrich evidence without overriding code-owned conclusion an
     source: "model",
     evidenceRefs: [expect.objectContaining({ stepId: f.step.id })],
   });
+  // The rules already advised an action, so the model's different actionable step is not shown.
+  expect(analysis.diagnosis?.nextSteps).toHaveLength(2);
+  expect(analysis.limitations).toContain(
+    "1 model next steps outside the recorded cause were not recorded.",
+  );
   expect(analysis.diagnosis?.evidenceGaps).toContain("Source cause is unavailable");
   expect(analysis.hypotheses[0]?.support).toBe("partially_supported");
   const request = f.complete.mock.calls[0]![0] as {
@@ -1238,7 +1336,7 @@ it("a model cause without an execution-supported hypothesis keeps the rules caus
       recommendedAction: "fix_product",
       fixTargetHandle: null,
       limitations: [],
-      nextSteps: [{ action: "inspect_persistence", evidence: ["E2"] }],
+      nextSteps: [{ action: "collect_more_evidence", evidence: ["E2"] }],
       evidenceGaps: [],
     },
   }));
@@ -1255,8 +1353,30 @@ it("a model cause without an execution-supported hypothesis keeps the rules caus
   );
   expect(analysis.diagnosis?.nextSteps.at(-1)).toMatchObject({
     source: "model",
-    text: "Inspect the creation response and the subsequent read for step price, including entity identity and environment.",
+    text: "Collect the response and execution evidence for step price to distinguish product, contract, and environment explanations.",
   });
+});
+
+it("a passed Run records no model next steps because there is no failure to advise on", async () => {
+  const f = await fixture({ passed: true });
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [{ action: "collect_more_evidence", evidence: ["E1"] }],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.modelCallId).toBe(f.modelCallId);
+  expect(analysis.diagnosis?.nextSteps.filter((item) => item.source === "model")).toEqual([]);
+  expect(analysis.limitations).toContain(
+    "1 model next steps outside the recorded cause were not recorded.",
+  );
 });
 
 it("relational chain caps at 64 while retaining the failed step and its early response", async () => {
