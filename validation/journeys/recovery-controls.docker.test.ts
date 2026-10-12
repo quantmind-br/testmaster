@@ -12,6 +12,7 @@ import {
   root,
   text,
 } from "./harness.js";
+import { assertOnlyTargetConnections, recordNetwork } from "./network-recorder.js";
 
 it("OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds", async () => {
   await journey("ops-021-publication-gc-backup-holds", async (session) => {
@@ -198,3 +199,61 @@ it("OPS-025 restore requires explicit admin review and new Attempt decision with
     }
   });
 }, 180000);
+
+it("OPS-025 isolated restore opens no outbound connection and dispatches no outbox message", async () => {
+  await journey("ops-025-restore-zero-egress", async (session) => {
+    const target = await controlledShop();
+    try {
+      const recorder = await recordNetwork(session, "restore");
+      await session.init(target.url);
+      const test = await session.createTest(healthPlan());
+      await session.command(["test", "run", text(test.id), "--wait", "--timeout", "120"]);
+      await recorder.checkpoint();
+      // Positive control: the recorder really sees the replay connecting to the authorized target.
+      assertOnlyTargetConnections((await recorder.all()).trace, target.url);
+      await session.command(["backup", "create", "--out", join(session.temporary, "backup")]);
+      await recorder.checkpoint();
+      const before = (await recorder.read()).events.length;
+      const hits = target.hits();
+      const isolated = join(session.temporary, "restore");
+      await session.command([
+        "backup",
+        "restore",
+        join(session.temporary, "backup"),
+        "--out",
+        isolated,
+      ]);
+      // The strace file is reopened per CLI invocation, so this trace is the restore process tree only.
+      const restore = await recorder.read();
+      const segment = restore.events.slice(before);
+      expect(segment.some((event) => event.kind === "loaded")).toBe(true);
+      expect(
+        restore.trace.split("\n").filter((line) => /sa_family=AF_INET6?[,}]/.test(line)),
+      ).toEqual([]);
+      expect(
+        segment.filter((event) =>
+          ["fetch", "undici", "dns", "tls", "net"].includes(String(event.kind)),
+        ),
+      ).toEqual([]);
+      expect(target.hits()).toBe(hits);
+      const db = new DatabaseSync(join(isolated, "testmaster.db"), { readOnly: true });
+      try {
+        expect(db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE dispatchable=1").get()?.n).toBe(
+          0,
+        );
+        expect(db.prepare("SELECT COUNT(*) AS n FROM outbox").get()?.n).toBeGreaterThan(0);
+      } finally {
+        db.close();
+      }
+      session.oracles.push({
+        check: "isolatedRestoreZeroEgress",
+        healthy: true,
+        restoreConnections: 0,
+        targetHitsDuringRestore: target.hits() - hits,
+      });
+    } finally {
+      target.release();
+      await target.close();
+    }
+  });
+}, 300000);

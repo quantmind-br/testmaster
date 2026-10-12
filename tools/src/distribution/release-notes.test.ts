@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadMigrations } from "@testmaster/persistence";
@@ -36,4 +36,26 @@ it("keeps the support matrix statements for Node, Playwright and Python tied to 
   expect(lock["testmaster-runner-python"]?.baseDigest).toContain(`v${playwright}-noble`);
   const python = /CPython (3\.\d+)/u.exec(matrix)?.[1];
   expect(await read("containers/python/Dockerfile")).toContain(`python${python}`);
+});
+
+it("ties the OS, SQLite and container runtime rows of the support matrix to repository evidence", async () => {
+  const matrix = await read("docs/support-matrix.md");
+  for (const row of [
+    "| Linux x64, rootful hardened Docker |",
+    "| Node.js / SQLite |",
+    "| Local release upgrade and rollback |",
+  ])
+    expect(matrix).toContain(row);
+  // Host facts that no repository file pins stay labelled as observations, never as guarantees.
+  expect(matrix).toMatch(/Docker 29\.x \(observed 29\.\d+\.\d+/u);
+  expect(matrix).toContain("host OS observed");
+  expect(matrix).toContain("node:sqlite");
+  // Every repository path the matrix cites as evidence must exist; host facts are labelled observed.
+  const paths = [
+    ...matrix.matchAll(
+      /`((?:packages|validation|tools|containers|python|docs|apps|evals)\/[^`\s]+)`/gu,
+    ),
+  ].map((match) => match[1] ?? "");
+  expect(paths.length).toBeGreaterThan(0);
+  for (const path of paths) await expect(stat(join(root, path))).resolves.toBeDefined();
 });

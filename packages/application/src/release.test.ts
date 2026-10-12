@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PersistenceDatabase } from "@testmaster/persistence";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { Application } from "./application.js";
 import { assessRelease, revokedImageIds, revokeImage, upgradeLocalProfile } from "./release.js";
 
@@ -87,6 +87,117 @@ it("carries image revocations into a restored data directory and keeps the resto
   }
 });
 
+it("declares an unverifiable post-backup ledger and keeps the restore suspended", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "tm-ledger-lost-"));
+  roots.push(cwd);
+  const app = await Application.open({ cwd, home: join(cwd, "home") });
+  try {
+    await app.init();
+    const backup = join(cwd, "backup");
+    await app.backups.create(backup);
+    const original = app.database.all.bind(app.database);
+    const unreadable = vi
+      .spyOn(app.database, "all")
+      .mockImplementation((sql: string, ...args: unknown[]) => {
+        if (sql.includes("FROM secret_references"))
+          throw new Error("post-backup ledger unreadable");
+        return original(sql, ...args);
+      });
+    const restoredDir = join(cwd, "restored");
+    const result = await app.backups.restore(backup, restoredDir);
+    unreadable.mockRestore();
+    expect(result).toMatchObject({
+      postBackupLedger: "unavailable",
+      exclusionsGuaranteed: false,
+      requiresOperatorReview: true,
+    });
+    const database = await PersistenceDatabase.open(join(restoredDir, "testmaster.db"), {
+      migrate: false,
+    });
+    try {
+      expect(
+        database.get("SELECT value FROM operational_state WHERE key='restore_review'")?.value,
+      ).toBe("post_backup_ledger_unavailable");
+      expect(database.get("SELECT value FROM operational_state WHERE key='admission'")?.value).toBe(
+        "suspended_restore",
+      );
+    } finally {
+      database.close();
+    }
+    // Operator review refuses to open the restore until the loss is explicitly accepted.
+    const restoredApp = await Application.open({
+      cwd,
+      home: app.config.home,
+      env: { TESTMASTER_DATA_DIR: restoredDir },
+    });
+    try {
+      expect(restoredApp.backups.review()).toMatchObject({ postBackupLedger: "unavailable" });
+      expect(() => restoredApp.backups.review({ apply: true, revocationsConfirmed: true })).toThrow(
+        /ledger is unavailable/,
+      );
+      expect(
+        restoredApp.database.get("SELECT value FROM operational_state WHERE key='admission'")
+          ?.value,
+      ).toBe("suspended_restore");
+      expect(
+        restoredApp.backups.review({
+          apply: true,
+          revocationsConfirmed: true,
+          ledgerLossAccepted: true,
+        }),
+      ).toMatchObject({ dryRun: false, admission: "enabled" });
+    } finally {
+      restoredApp.close();
+    }
+  } finally {
+    app.close();
+  }
+});
+
+it("carries consent revocations made after the backup into the restored directory", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "tm-consent-restore-"));
+  roots.push(cwd);
+  const app = await Application.open({ cwd, home: join(cwd, "home") });
+  try {
+    const { projectId, workspaceId } = await app.init();
+    const consentId = "consent-restore-probe";
+    app.database.run(
+      "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at) VALUES(?,?,?,?,?,?,?)",
+      workspaceId,
+      consentId,
+      new Date().toISOString(),
+      projectId,
+      "fake",
+      '["documents"]',
+      new Date().toISOString(),
+    );
+    const backup = join(cwd, "backup");
+    await app.backups.create(backup);
+    app.database.run(
+      "UPDATE consents SET revoked_at=? WHERE id=?",
+      new Date().toISOString(),
+      consentId,
+    );
+    const restored = join(cwd, "restored");
+    expect(await app.backups.restore(backup, restored)).toMatchObject({
+      postBackupLedger: "replayed",
+      exclusionsGuaranteed: true,
+    });
+    const database = await PersistenceDatabase.open(join(restored, "testmaster.db"), {
+      migrate: false,
+    });
+    try {
+      expect(
+        database.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at,
+      ).not.toBeNull();
+    } finally {
+      database.close();
+    }
+  } finally {
+    app.close();
+  }
+});
+
 it("resumes with the new release on the upgraded data directory with the same identities", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "tm-resume-"));
   roots.push(cwd);
@@ -95,10 +206,10 @@ it("resumes with the new release on the upgraded data directory with the same id
   const dataDir = first.config.dataDir;
   first.close();
 
-  // Re-create the previous release's state: the application rows are real, only migration 8 is undone.
+  // Re-create the previous release's state: the application rows are real, only migration 9 is undone.
   const old = await PersistenceDatabase.open(join(dataDir, "testmaster.db"), { migrate: false });
   old.db.exec(
-    "DROP TRIGGER artifacts_fixture_namespace; DROP TABLE fixture_inputs; DELETE FROM schema_migrations WHERE version=8",
+    "DROP TRIGGER deliveries_frozen_subject; CREATE TRIGGER deliveries_frozen_subject BEFORE UPDATE ON deliveries WHEN NEW.destination_ref<>OLD.destination_ref OR NEW.subject_sha<>OLD.subject_sha OR NEW.report_hash<>OLD.report_hash OR NEW.check_name<>OLD.check_name OR NEW.payload_hash<>OLD.payload_hash OR NEW.event_id<>OLD.event_id OR (OLD.external_id IS NOT NULL AND (NEW.external_id IS NULL OR NEW.external_id<>OLD.external_id)) OR OLD.state IN ('delivered','dead_letter') BEGIN SELECT RAISE(ABORT,'delivery_subject_frozen'); END; DELETE FROM schema_migrations WHERE version=9",
   );
   old.run(
     "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES(?, 'wrk_previous',?, 'ready',?)",
@@ -107,7 +218,7 @@ it("resumes with the new release on the upgraded data directory with the same id
     new Date(Date.now() - 3_600_000).toISOString(),
   );
   const before = old.all("SELECT id,created_at,data_json FROM projects ORDER BY id");
-  expect(old.status().currentVersion).toBe(7);
+  expect(old.status().currentVersion).toBe(8);
   old.close();
 
   const { receipt } = await upgradeLocalProfile({
@@ -115,11 +226,11 @@ it("resumes with the new release on the upgraded data directory with the same id
     backupDir: join(cwd, "before-upgrade"),
     drainTimeoutMs: 0,
   });
-  expect(receipt).toMatchObject({ upgraded: true, fromVersion: 7, irreversible: true });
+  expect(receipt).toMatchObject({ upgraded: true, fromVersion: 8, irreversible: true });
 
   const resumed = await Application.open({ cwd, home: join(cwd, "home") });
   try {
-    expect(resumed.database.status()).toMatchObject({ currentVersion: 8, pending: [] });
+    expect(resumed.database.status()).toMatchObject({ currentVersion: 9, pending: [] });
     expect(
       resumed.database.all("SELECT id,created_at,data_json FROM projects ORDER BY id"),
     ).toEqual(before);

@@ -9,6 +9,7 @@ import {
   EntityRepository,
   OutboxRepository,
   PersistenceDatabase,
+  type SqlRow,
 } from "@testmaster/persistence";
 import type { ResolvedConfig } from "./config.js";
 import type { ServiceContext } from "./context.js";
@@ -83,25 +84,61 @@ export class BackupsService {
       throw error;
     }
   }
+  /**
+   * Reads the live ledger of revocations and tombstones made after the snapshot. A live database
+   * that cannot be read, or has no workspace row (fresh or replaced data directory), is not an
+   * empty ledger: the restore declares the loss instead of silently replaying nothing.
+   */
+  private postBackupLedger():
+    | {
+        revocations: SqlRow[];
+        tombstones: SqlRow[];
+        consentRevocations: SqlRow[];
+        approvalRevocations: SqlRow[];
+      }
+    | undefined {
+    try {
+      if (!this.ctx.database.get("SELECT 1 AS ok FROM workspaces WHERE id=?", this.ctx.workspaceId))
+        return undefined;
+      return {
+        revocations: this.ctx.database.all(
+          "SELECT workspace_id,id,secret_version,revoked_at FROM secret_references",
+        ),
+        tombstones: this.ctx.database.all(
+          "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%' OR key LIKE 'image:revoked:%'",
+        ),
+        consentRevocations: this.ctx.database.all(
+          "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
+        ),
+        approvalRevocations: this.ctx.database.all(
+          "SELECT workspace_id,id,revoked_at FROM approvals WHERE revoked_at IS NOT NULL",
+        ),
+      };
+    } catch {
+      return undefined;
+    }
+  }
   async restore(path: string, out: string, options: { keepSchema?: boolean } = {}) {
     this.ctx.authorize("A");
     const source = resolve(this.config.cwd, path);
     const destination = resolve(this.config.cwd, out);
+    const ledger = this.postBackupLedger();
     const result = await PersistenceDatabase.restore(source, destination, {
       keepSchema: options.keepSchema === true,
-      revocations: this.ctx.database.all(
-        "SELECT workspace_id,id,secret_version,revoked_at FROM secret_references",
-      ),
-      tombstones: this.ctx.database.all(
-        "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%' OR key LIKE 'image:revoked:%'",
-      ),
+      ledgerAvailable: ledger !== undefined,
+      revocations: ledger?.revocations ?? [],
+      tombstones: ledger?.tombstones ?? [],
+      consentRevocations: ledger?.consentRevocations ?? [],
+      approvalRevocations: ledger?.approvalRevocations ?? [],
     });
     result.database.withTx(() => {
       const restored = new EntityRepository(result.database);
-      for (const row of this.ctx.database.all<{ data_json: string }>(
-        "SELECT data_json FROM deletion_operations WHERE workspace_id=?",
-        this.ctx.workspaceId,
-      )) {
+      for (const row of ledger
+        ? this.ctx.database.all<{ data_json: string }>(
+            "SELECT data_json FROM deletion_operations WHERE workspace_id=?",
+            this.ctx.workspaceId,
+          )
+        : []) {
         const operation = JSON.parse(row.data_json);
         const previous = restored.get("DeletionOperation", this.ctx.workspaceId, operation.id);
         if (!previous) restored.insert("DeletionOperation", operation);
@@ -134,6 +171,8 @@ export class BackupsService {
         out: destination,
         manifest: result.manifest,
         evidenceComplete: result.evidenceComplete,
+        postBackupLedger: result.postBackupLedger,
+        exclusionsGuaranteed: result.exclusionsGuaranteed,
         requiresOperatorReview: true,
       };
     } finally {
@@ -145,6 +184,8 @@ export class BackupsService {
       apply?: boolean;
       revocationsConfirmed?: boolean;
       incompleteEvidenceAccepted?: boolean;
+      /** Operator accepts that revocations and tombstones after the snapshot could not be replayed. */
+      ledgerLossAccepted?: boolean;
     } = {},
   ) {
     this.ctx.authorize("A");
@@ -169,6 +210,14 @@ export class BackupsService {
     const complete =
       database.get("SELECT value FROM operational_state WHERE key='restore:evidence-complete'")
         ?.value !== "false";
+    const ledgerUnavailable =
+      database.get("SELECT value FROM operational_state WHERE key='restore_review'")?.value ===
+      "post_backup_ledger_unavailable";
+    if (options.apply && ledgerUnavailable && options.ledgerLossAccepted !== true)
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Post-backup ledger is unavailable; revocations and tombstones after the snapshot cannot be guaranteed",
+      );
     if (
       options.apply &&
       (!options.revocationsConfirmed ||
@@ -207,6 +256,7 @@ export class BackupsService {
       dryRun: !options.apply,
       activeRunsRequireDecision: active,
       missingArtifacts: missing,
+      postBackupLedger: ledgerUnavailable ? "unavailable" : "replayed",
       admission: options.apply ? "enabled" : admission,
     };
   }

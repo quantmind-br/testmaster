@@ -8,12 +8,17 @@ export function backupCommands(program: Command, runtime: Runtime): void {
       .command("review")
       .option("--apply")
       .option("--revocations-confirmed")
-      .option("--accept-incomplete-evidence"),
+      .option("--accept-incomplete-evidence")
+      .option(
+        "--ledger-loss-accepted",
+        "Accept that revocations and tombstones made after the snapshot could not be replayed",
+      ),
     async (rt, _args, options) => ({
       data: (await rt.app()).backups.review({
         apply: options.apply === true,
         revocationsConfirmed: options.revocationsConfirmed === true,
         incompleteEvidenceAccepted: options.acceptIncompleteEvidence === true,
+        ledgerLossAccepted: options.ledgerLossAccepted === true,
       }),
     }),
   );

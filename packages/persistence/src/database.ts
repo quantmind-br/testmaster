@@ -124,7 +124,18 @@ export class PersistenceDatabase {
     this.db.close();
   }
   withTx<T>(fn: (db: DatabaseSync) => T): T {
-    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db.exec("BEGIN IMMEDIATE");
+    } catch (error) {
+      // BEGIN IMMEDIATE is the only statement that waits for the writer lock, so a busy error
+      // here means the transaction never started and the caller can retry safely.
+      if (error instanceof Error && /database is locked|SQLITE_BUSY/.test(error.message))
+        throw new ContractError("UNAVAILABLE", "Local writer is busy; retry the operation", {
+          reasonCode: "writer_contention",
+          retryable: true,
+        });
+      throw error;
+    }
     try {
       const value = fn(this.db);
       if (value instanceof Promise) throw new Error("withTx callback must be synchronous");
@@ -364,6 +375,7 @@ export class PersistenceDatabase {
       secretIncluded: false,
       keyIds: options.keyIds ?? [],
       configDigests: options.configDigests ?? [],
+      missingObjects: index.missingObjects,
     });
     for (const file of files) {
       const fd = await open(join(destination, file.relativePath), "r");
@@ -382,6 +394,11 @@ export class PersistenceDatabase {
     options: {
       revocations?: SqlRow[];
       tombstones?: SqlRow[];
+      /** Consent and approval rows revoked in the live ledger after the backup was taken. */
+      consentRevocations?: SqlRow[];
+      approvalRevocations?: SqlRow[];
+      /** False when the caller could not read the post-backup ledger; the restore stays suspended and says so. */
+      ledgerAvailable?: boolean;
       /** Keep the backup's schema version instead of migrating forward (older-release rollback). */
       keepSchema?: boolean;
     } = {},
@@ -434,6 +451,7 @@ export class PersistenceDatabase {
       if (restored.status().currentVersion !== manifest.databaseVersion)
         throw new Error("Backup database schema version mismatch");
       if (!options.keepSchema) await restored.migrate();
+      const ledgerAvailable = options.ledgerAvailable !== false;
       restored.withTx(() => {
         for (const current of options.revocations ?? []) {
           const row = restored.get(
@@ -455,6 +473,35 @@ export class PersistenceDatabase {
             "UPDATE secret_references SET revoked_at=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=?",
             revokedAt,
             JSON.stringify(reference),
+            current.workspace_id,
+            current.id,
+          );
+        }
+        const revokedNow = new Date().toISOString();
+        for (const current of options.consentRevocations ?? []) {
+          // Consents carry their state in columns; a restore only ever tightens them.
+          restored.run(
+            "UPDATE consents SET revoked_at=?,version=version+1 WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
+            current.revoked_at ?? revokedNow,
+            current.workspace_id,
+            current.id,
+          );
+        }
+        for (const current of options.approvalRevocations ?? []) {
+          const row = restored.get(
+            "SELECT data_json FROM approvals WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
+            current.workspace_id,
+            current.id,
+          );
+          if (!row) continue;
+          const approval = JSON.parse(String(row.data_json)) as Record<string, unknown>;
+          const revokedAt = current.revoked_at ?? revokedNow;
+          approval.revokedAt = revokedAt;
+          approval.version = Number(approval.version ?? 1) + 1;
+          restored.run(
+            "UPDATE approvals SET revoked_at=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
+            revokedAt,
+            JSON.stringify(approval),
             current.workspace_id,
             current.id,
           );
@@ -486,7 +533,10 @@ export class PersistenceDatabase {
           "UPDATE operational_state SET value='suspended_restore' WHERE key='admission'",
         );
         restored.run(
-          "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore_review','post_backup_revocations_and_tombstones_unverified')",
+          "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore_review',?)",
+          ledgerAvailable
+            ? "post_backup_revocations_and_tombstones_unverified"
+            : "post_backup_ledger_unavailable",
         );
         restored.run(
           "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore:evidence-complete',?)",
@@ -503,6 +553,8 @@ export class PersistenceDatabase {
         database: restored,
         manifest,
         evidenceComplete: index.complete,
+        postBackupLedger: ledgerAvailable ? "replayed" : "unavailable",
+        exclusionsGuaranteed: ledgerAvailable,
         requiresOperatorReview: true,
       };
     } catch (error) {
@@ -525,6 +577,7 @@ export interface BackupManifest {
   secretIncluded: false;
   keyIds?: string[];
   configDigests?: string[];
+  missingObjects?: string[];
 }
 export interface BackupOptions {
   evidenceRoot?: string;
@@ -544,6 +597,10 @@ export interface RestoreResult {
   database: PersistenceDatabase;
   manifest: BackupManifest;
   evidenceComplete: boolean;
+  /** `unavailable` when the caller could not read the live post-backup ledger. */
+  postBackupLedger: "replayed" | "unavailable";
+  /** False when revocations and tombstones made after the snapshot cannot be guaranteed. */
+  exclusionsGuaranteed: boolean;
   requiresOperatorReview: true;
 }
 export async function fileSha256(path: string): Promise<string> {

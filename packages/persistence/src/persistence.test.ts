@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import fc from "fast-check";
 import { afterEach, describe, expect, it } from "vitest";
@@ -352,6 +353,43 @@ describe("SQLite persistence", () => {
     expect(results.filter((text) => text.includes("winner"))).toHaveLength(1);
     expect(db.all("SELECT * FROM attempts")).toHaveLength(1);
   });
+  it("bounds writer contention with a typed retryable error and succeeds once the writer commits", async () => {
+    const db = await createDatabase();
+    const other = await PersistenceDatabase.open(db.path);
+    connections.push(other);
+    expect(other.get("PRAGMA busy_timeout")?.timeout).toBe(5000);
+    other.db.exec("PRAGMA busy_timeout=50");
+    const holder = new DatabaseSync(db.path);
+    try {
+      holder.exec("PRAGMA busy_timeout=5000; BEGIN IMMEDIATE");
+      const started = Date.now();
+      let ran = false;
+      let error: unknown;
+      try {
+        other.withTx(() => {
+          ran = true;
+        });
+      } catch (caught) {
+        error = caught;
+      }
+      expect(Date.now() - started).toBeLessThan(2000);
+      expect(error).toMatchObject({
+        code: "UNAVAILABLE",
+        details: { reasonCode: "writer_contention", retryable: true },
+      });
+      expect(ran).toBe(false);
+      expect(other.db.isTransaction).toBe(false);
+      holder.exec("COMMIT");
+    } finally {
+      holder.close();
+    }
+    other.withTx(() =>
+      other.run("INSERT INTO operational_state(key,value) VALUES('contention-probe','ok')"),
+    );
+    expect(
+      other.get("SELECT value FROM operational_state WHERE key='contention-probe'")?.value,
+    ).toBe("ok");
+  });
   it("enforces audit append-only even with direct SQL", async () => {
     const { db, ws, run } = await createSeeded();
     const id = new AuditRepository(db).append({
@@ -586,6 +624,135 @@ describe("SQLite persistence", () => {
     await expect(
       PersistenceDatabase.restore(backupDir, join(root, "tampered-restore")),
     ).rejects.toThrow("integrity");
+  });
+  it("OPS-025 replays post-backup consent and approval revocations and invalidates server tokens", async () => {
+    const { db, ws, project, environmentRevision } = await createSeeded();
+    const entities = new EntityRepository(db);
+    const principal = uuidV7IdGenerator.next("usr");
+    const kept = uuidV7IdGenerator.next("apr");
+    const revoked = uuidV7IdGenerator.next("apr");
+    const approval = (id: string) => ({
+      id,
+      workspaceId: ws,
+      createdAt: new Date().toISOString(),
+      version: 1,
+      actorId: principal,
+      reviewerId: principal,
+      actionSet: ["run"],
+      revisionHash: "b".repeat(64),
+      environmentRevisionId: environmentRevision,
+      originSet: ["http://127.0.0.1:3000"],
+      expiresAt: new Date(Date.now() + 1_800_000).toISOString(),
+      revokedAt: null,
+      policyHash: "c".repeat(64),
+    });
+    db.withTx(() => {
+      entities.insert("Principal", {
+        id: principal,
+        workspaceId: ws,
+        kind: "human",
+        displayName: "Owner",
+        disabledAt: null,
+      });
+      entities.insert("Approval", approval(kept));
+      entities.insert("Approval", approval(revoked));
+      db.run(
+        "INSERT INTO server_tokens(workspace_id,id,created_at,principal_id,token_hash) VALUES(?,?,?,?,?)",
+        ws,
+        "tok-1",
+        new Date().toISOString(),
+        principal,
+        "d".repeat(64),
+      );
+    });
+    new SqliteConsentStore(db).grant(
+      { workspaceId: ws, projectId: project, providerId: "fake" },
+      ["documents"],
+      principal,
+    );
+    const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
+    const root = directories[0] ?? "";
+    const backupDir = join(root, "backup-ledger");
+    await db.backup(backupDir);
+    const revokedAt = new Date().toISOString();
+    db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
+    db.withTx(() =>
+      entities.update("Approval", ws, revoked, 1, { ...approval(revoked), revokedAt, version: 2 }),
+    );
+    const restored = await PersistenceDatabase.restore(backupDir, join(root, "restore-ledger"), {
+      consentRevocations: db.all(
+        "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
+      ),
+      approvalRevocations: db.all(
+        "SELECT workspace_id,id,revoked_at FROM approvals WHERE revoked_at IS NOT NULL",
+      ),
+    });
+    connections.push(restored.database);
+    const target = restored.database;
+    expect(target.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at).toBe(
+      revokedAt,
+    );
+    expect(target.get("SELECT revoked_at FROM approvals WHERE id=?", revoked)?.revoked_at).toBe(
+      revokedAt,
+    );
+    expect(
+      JSON.parse(
+        String(target.get("SELECT data_json FROM approvals WHERE id=?", revoked)?.data_json),
+      ).revokedAt,
+    ).toBe(revokedAt);
+    expect(target.get("SELECT revoked_at FROM approvals WHERE id=?", kept)?.revoked_at).toBeNull();
+    expect(target.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(0);
+    expect(db.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(1);
+    expect(restored).toMatchObject({ postBackupLedger: "replayed", exclusionsGuaranteed: true });
+  });
+  it("OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it", async () => {
+    const { db, ws, project } = await createSeeded();
+    new SqliteConsentStore(db).grant(
+      { workspaceId: ws, projectId: project, providerId: "fake" },
+      ["documents"],
+      "owner",
+    );
+    const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
+    const revokedAt = "2026-01-01T00:00:00.000Z";
+    db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
+    const root = directories[0] ?? "";
+    await db.backup(join(root, "backup-prior"));
+    db.run("UPDATE consents SET revoked_at=NULL WHERE id=?", consentId);
+    const restored = await PersistenceDatabase.restore(
+      join(root, "backup-prior"),
+      join(root, "restore-prior"),
+      {
+        consentRevocations: db.all(
+          "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
+        ),
+      },
+    );
+    connections.push(restored.database);
+    expect(
+      restored.database.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at,
+    ).toBe(revokedAt);
+  });
+  it("OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended", async () => {
+    const { db } = await createSeeded();
+    const root = directories[0] ?? "";
+    await db.backup(join(root, "backup-noledger"));
+    const restored = await PersistenceDatabase.restore(
+      join(root, "backup-noledger"),
+      join(root, "restore-noledger"),
+      { ledgerAvailable: false },
+    );
+    connections.push(restored.database);
+    expect(restored).toMatchObject({
+      postBackupLedger: "unavailable",
+      exclusionsGuaranteed: false,
+    });
+    expect(
+      restored.database.get("SELECT value FROM operational_state WHERE key='restore_review'")
+        ?.value,
+    ).toBe("post_backup_ledger_unavailable");
+    expect(
+      restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+    ).toBe("suspended_restore");
   });
   it.each(constraintFixtures)("constraint fixture: $name", async (fixture) => {
     const db = await createDatabase();

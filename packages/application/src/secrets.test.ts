@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, expect, it, vi } from "vitest";
+import { BackupsService } from "./backups.js";
 import { type ResolvedConfig, resolveConfig } from "./config.js";
 import type { ServiceContext } from "./context.js";
 import { health, SecretsService } from "./secrets.js";
@@ -191,6 +192,30 @@ it("SEC-036 restores real backup metadata but missing vault key denies release w
   expect(
     restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
   ).toBe("suspended_restore");
+});
+
+it("SEC-036 backup files alone cannot reveal secrets and never contain the vault key", async () => {
+  const { service, ctx, home, config } = await fixture();
+  const secret = await service.set("backup-probe", "backup-canary-sec036", {
+    allowedOrigins: ["https://shop.example"],
+  });
+  const backup = join(home, "backup-sec036");
+  await new BackupsService(ctx, config, service).create(backup);
+  const key = await readFile(join(home, ".config", "testmaster", "vault.key"));
+  const files = (await readdir(backup, { recursive: true })) as string[];
+  expect(files.filter((name) => /vault/u.test(name))).toEqual([]);
+  for (const name of files) {
+    if (!(await stat(join(backup, name))).isFile()) continue;
+    const bytes = await readFile(join(backup, name));
+    expect(bytes.includes(Buffer.from("backup-canary-sec036"))).toBe(false);
+    expect(bytes.includes(key)).toBe(false);
+  }
+  expect(JSON.parse(await readFile(join(backup, "manifest.json"), "utf8")).secretIncluded).toBe(
+    false,
+  );
+  expect(await readdir(join(home, ".local", "share", "testmaster"))).toContain(
+    `${secret.id}.1.vault`,
+  );
 });
 
 it("SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes", async () => {

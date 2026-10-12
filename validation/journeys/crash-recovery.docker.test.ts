@@ -205,12 +205,13 @@ it("J17 backup during active Docker execution is coherent, incomplete objects ar
       expect(artifact).toBeDefined();
       await rm(join(bundle.directory, artifact?.relativePath ?? ""));
       const incomplete = join(session.temporary, "incomplete-backup");
-      await session.command(["backup", "create", "--out", incomplete]);
+      const incompleteManifest = await session.command(["backup", "create", "--out", incomplete]);
       const index = object(
         JSON.parse(await readFile(join(incomplete, "evidence-index.json"), "utf8")),
       );
       expect(index.complete).toBe(false);
       expect(index.missingObjects).toContain(artifact?.artifactId);
+      expect(incompleteManifest.missingObjects).toContain(artifact?.artifactId);
       worker.child.kill("SIGTERM");
       await worker.result;
       session.oracles.push({
