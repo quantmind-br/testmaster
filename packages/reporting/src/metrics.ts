@@ -118,16 +118,16 @@ export function executionMetrics(snapshot: ReportSnapshot): ExecutionMetrics {
       );
     }),
     selected,
-    "N_firstAttemptPassed under strict/no-heal / N_selected",
+    "First-attempt: N_firstAttemptPassed under strict/no-heal / N_selected",
   );
-  add("terminalPassRate", outcomes.passed, selected, "N_passed / N_selected");
+  add("terminalPassRate", outcomes.passed, selected, "Terminal: N_passed / N_selected");
   add("blockedRate", outcomes.blocked, selected, "N_blocked / N_selected");
   add("inconclusiveRate", outcomes.inconclusive, selected, "N_inconclusive / N_selected");
   add(
     "gatePassRate",
     count((item) => item.result.gate === "passed"),
     selected,
-    "N_requiredRunsWithGatePassed / N_selected",
+    "End-to-end gate: N_requiredRunsWithGatePassed / N_selected; blocked, inconclusive and cleanup-failed runs never count as passed",
   );
   add(
     "retryRecoveryRate",
@@ -145,7 +145,7 @@ export function executionMetrics(snapshot: ReportSnapshot): ExecutionMetrics {
     "firstAttemptFailureRate",
     firstFailed,
     firstFailed + firstPassed,
-    "N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally",
+    "Conditional: N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally",
   );
   add(
     "artifactCompletenessRate",

@@ -146,6 +146,17 @@ export function logicalRunKey(run: Run): string {
     repetitionIndex: cell.repetitionIndex ?? null,
   });
 }
+/** Fields of `left` whose semantic hash differs from the same field of `right`, in `left` key order. */
+export function metadataDifferences(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+): { field: string; left: unknown; right: unknown }[] {
+  return Object.keys(left).flatMap((field) => {
+    const a = left[field];
+    const b = right[field];
+    return semanticHash(a) === semanticHash(b) ? [] : [{ field, left: a, right: b }];
+  });
+}
 export class ComparisonsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -228,11 +239,7 @@ export class ComparisonsService {
     };
     const l = metadata(left);
     const r = metadata(right);
-    const differences = Object.keys(l).flatMap((field) => {
-      const a = l[field as keyof typeof l];
-      const b = r[field as keyof typeof r];
-      return semanticHash(a) === semanticHash(b) ? [] : [{ field, left: a, right: b }];
-    });
+    const differences = metadataDifferences(l, r);
     const comparability = runComparability(left, right);
     if (l.runner !== r.runner) {
       comparability.comparability = "incomparable";

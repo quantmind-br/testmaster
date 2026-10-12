@@ -1,11 +1,36 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { promisify } from "node:util";
 
 // Orchestrator-only: run after committing the complete release candidate. No network install or model key.
+// Usage: node reproduce-clean-checkout.mjs [source repository] [record directory]
+// Records are write-once evidence (VAL-054): <commit>.json for a pass, <commit>.failed-<UTC time>.json for
+// a failure. A passing record for a commit is never replaced and a failure never overwrites a pass.
 const source = resolve(process.argv[2] ?? ".");
-const output = resolve(process.argv[3] ?? "validation/results/clean-checkout-no-key.json");
+const outputDirectory = resolve(
+  process.argv[3] ?? join(source, "validation/results/clean-checkout"),
+);
+if (outputDirectory.endsWith(".json"))
+  throw new Error("The output argument is a record directory; records are named by commit");
+const git = async (...args) =>
+  (await promisify(execFile)("git", ["-c", "core.hooksPath=/dev/null", ...args], { cwd: source }))
+    .stdout;
+// The clone below contains HEAD only, so tracked changes would make the recorded commit a false claim.
+if ((await git("status", "--porcelain", "--untracked-files=no")).trim() !== "")
+  throw new Error(
+    "Clean-checkout reproduction requires a committed tree; commit tracked changes first",
+  );
+const sourceCommit = (await git("rev-parse", "HEAD")).trim();
+const passedRecord = join(outputDirectory, `${sourceCommit}.json`);
+if (
+  await readFile(passedRecord).then(
+    () => true,
+    () => false,
+  )
+)
+  throw new Error(`Clean-checkout reproduction already recorded for ${sourceCommit}`);
 const temporary = await mkdtemp(join(tmpdir(), "tm-clean-checkout-"));
 const checkout = join(temporary, "checkout");
 const home = join(temporary, "home");
@@ -63,6 +88,8 @@ let error;
 try {
   await run("git", ["clone", "--no-local", source, checkout], source);
   const commit = (await run("git", ["rev-parse", "HEAD"])).trim();
+  if (commit !== sourceCommit)
+    throw new Error("Cloned HEAD differs from the audited source commit");
   // Reuse dependency bytes and registry metadata, never operator config or credentials.
   const storeEnv = { ...env, HOME: process.env.HOME };
   const { promise, resolve: done, reject } = Promise.withResolvers();
@@ -105,9 +132,9 @@ try {
       throw new Error("CLI smoke did not return successful canonical JSON");
   }
   const lock = JSON.parse(await readFile(join(checkout, "containers/images.lock.json"), "utf8"));
-  await mkdir(join(output, ".."), { recursive: true });
+  await mkdir(outputDirectory, { recursive: true });
   await writeFile(
-    output,
+    passedRecord,
     JSON.stringify(
       {
         schemaVersion: "1.0.0",
@@ -127,23 +154,27 @@ try {
       null,
       2,
     ),
+    { flag: "wx" },
   );
 } catch (failure) {
   error = failure;
-  await mkdir(join(output, ".."), { recursive: true });
+  const observedAt = new Date().toISOString();
+  await mkdir(outputDirectory, { recursive: true });
   await writeFile(
-    output,
+    join(outputDirectory, `${sourceCommit}.failed-${observedAt.replace(/[:.]/g, "-")}.json`),
     JSON.stringify(
       {
         schemaVersion: "1.0.0",
         passed: false,
-        observedAt: new Date().toISOString(),
+        commit: sourceCommit,
+        observedAt,
         error: String(failure),
         commands,
       },
       null,
       2,
     ),
+    { flag: "wx" },
   );
 } finally {
   await rm(temporary, { recursive: true, force: true });

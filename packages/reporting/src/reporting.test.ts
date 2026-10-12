@@ -189,6 +189,27 @@ it("exports honest partial evidence while retaining original failure in every fo
   expect(Object.values(exportAllure(input)).join("\n")).toContain("failed");
 });
 
+it("partial evidence fails the gate while the persisted passed outcome stays passed", () => {
+  const input = snapshot();
+  const run = input.runs[0];
+  if (!run) throw new Error("Missing fixture");
+  run.result = {
+    ...run.result,
+    phase: "completed",
+    status: "passed",
+    outcome: "passed",
+    gate: "passed",
+    cleanupOutcome: "not_required",
+  };
+  expect(reportGate(input)).toBe("passed");
+  input.completeness = { state: "partial", reasons: ["committed bundle missing"] };
+  expect(reportGate(input)).toBe("failed");
+  expect(JSON.parse(exportJson(input)).runs[0].result).toMatchObject({
+    outcome: "passed",
+    gate: "passed",
+  });
+});
+
 it("bounds large JUnit output and exposes truncation without losing the gate", () => {
   const input = snapshot();
   const run = input.runs[0];

@@ -716,22 +716,73 @@
       "sourceFile": "specs/02-architecture.md",
       "milestone": "M1",
       "ownerRole": "Core",
-      "status": "implemented",
-      "scenario": ["Post-rename SQLite publication failure after passed assertions"],
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
+        "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
+        "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
+        "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed"
+      ],
       "oracle": [
-        "Run outcome passed immutable; gate failed due incomplete evidence; zero false Artifact rows"
+        "Run outcome passed stays immutable when storage publication or export fails; incomplete evidence is surfaced as completeness partial and fails the gate; zero false Artifact rows."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
-        "validation/results/j17-publication-crash-matrix.json"
+        "validation/results/j17-publication-crash-matrix.json",
+        "packages/application/src/retention.test.ts",
+        "packages/reporting/src/reporting.test.ts"
       ],
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/reporting/src/index.ts",
+        "packages/application/src/ci.ts"
       ],
-      "note": "Storage publication failure preserving assertion verdict verified. Residual: separate notification delivery/export failure acceptance absent; notifications disabled until M4. No artificial notification mock substitutes that surface.",
-      "blockedReason": "Storage publication failure preserving assertion verdict verified. Residual: separate notification delivery/export failure acceptance absent; notifications disabled until M4. No artificial notification mock substitutes that surface."
+      "note": "Storage export failure keeps the persisted outcome and surfaces partial completeness through reportGate (packages/application/src/ci.ts gate computation). Notification clause is M4-08: notifications are disabled until M4 and no mock substitutes that surface.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
+          "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
+          "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed"
+        ],
+        "negative": [
+          "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
+          "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/crash-recovery.docker.test.ts",
+            "assertion": "expect(state?.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/crash-recovery.docker.test.ts",
+            "assertion": "expect(state?.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "packages/application/src/retention.test.ts",
+            "assertion": "expect(snapshot.completeness.state).toBe(\"partial\");"
+          },
+          {
+            "path": "packages/reporting/src/reporting.test.ts",
+            "assertion": "expect(reportGate(input)).toBe(\"failed\");"
+          },
+          {
+            "path": "packages/reporting/src/reporting.test.ts",
+            "assertion": "expect(JSON.parse(exportJson(input)).runs[0].result).toMatchObject({"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "notification delivery/export failure acceptance: a notifier outage must not change the assertion verdict or the gate",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "M4-08 — Notificações e workers de equipe"
+          }
+        }
+      ]
     },
     {
       "id": "ARCH-005",
@@ -5955,19 +6006,49 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M0",
       "ownerRole": "Maintainer",
-      "status": "blocked",
-      "scenario": ["validation/journeys/reproduce-clean-checkout.mjs"],
+      "status": "implemented",
+      "scenario": [
+        "validation/journeys/reproduce-clean-checkout.test.ts::records a clean-checkout reproduction without model credentials for the audited commit",
+        "validation/journeys/reproduce-clean-checkout.test.ts::refuses a dirty tree and keeps every failed reproduction as its own immutable record"
+      ],
       "oracle": [
-        "Orchestrator-only fresh gitclone+frozenofflineinstall+build+unit+CLI no-key smoke script; syntaxcheck passed."
+        "Orchestrator-only fresh git clone + frozen offline install + build + unit + built-CLI no-key smoke; each run writes a write-once per-commit record (a failure never overwrites a pass) and the audited record must name the tested commit with every command exiting 0 and no model key."
       ],
       "evidence": [
         "validation/journeys/reproduce-clean-checkout.mjs",
+        "validation/journeys/reproduce-clean-checkout.test.ts",
         "validation/results/smoke-fresh-clone-m1.md",
-        "validation/results/clean-checkout-no-key.json"
+        "validation/results/clean-checkout-no-key.json",
+        "docs/adr/010-license.md",
+        "LICENSE",
+        "NOTICE"
       ],
-      "code": ["validation/journeys/reproduce-clean-checkout.mjs"],
-      "note": "Fresh git clone at5c23e1ca627a94effe1a3c9aa497c478d4a4bf55 passed frozen offline install, build,516 unit tests and built CLI capabilities/scaffold/init without model credentials. Publication independently blocked by maintainer license/sign-off.",
-      "blockedReason": "Publication license/sign-off pending; clean-checkout acceptance passed."
+      "code": [
+        "validation/journeys/reproduce-clean-checkout.mjs"
+      ],
+      "note": "The license decision is ADR-010 (Apache-2.0) and maintainer sign-off is superseded by ADR-012. Recorded reproduction: fresh git clone at 5c23e1ca627a94effe1a3c9aa497c478d4a4bf55 passed frozen offline install, build, 516 unit tests and built CLI capabilities/scaffold/init without model credentials (history, not the release commit). The script now writes validation/results/clean-checkout/<commit>.json write-once; flip to verified only after a passing record for the release commit exists and is added to evidence. Does not certify other operating systems or Docker acceptance.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/reproduce-clean-checkout.test.ts::records a clean-checkout reproduction without model credentials for the audited commit"
+        ],
+        "negative": [
+          "validation/journeys/reproduce-clean-checkout.test.ts::refuses a dirty tree and keeps every failed reproduction as its own immutable record"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/reproduce-clean-checkout.test.ts",
+            "assertion": "expect(historical).toMatchObject({ passed: true, noModelKey: true, install: \"frozen offline\" });"
+          },
+          {
+            "path": "validation/journeys/reproduce-clean-checkout.test.ts",
+            "assertion": "expect(record.commands.every((command) => command.exitCode === 0)).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/reproduce-clean-checkout.test.ts",
+            "assertion": "stderr: expect.stringContaining(\"requires a committed tree\"),"
+          }
+        ]
+      }
     },
     {
       "id": "M0-06",
@@ -7065,13 +7146,19 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M2",
       "ownerRole": "Integrations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
-        "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth"
+        "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth",
+        "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests",
+        "tools/src/evals/m3.test.ts::writes the registered provider as a profile the product configuration accepts",
+        "tools/src/evals/freeze.test.ts::refuses changed thresholds, removed cases and changed budgets before round execution",
+        "tools/src/evals/evidence.test.ts::refuses simulated and controlled benchmark reports as release evidence",
+        "tools/src/evals/evidence.test.ts::refuses loopback, private, link-local and non-public provider endpoints",
+        "tools/src/evals/evidence.test.ts::makes the live evaluation refuse a controlled endpoint before any result directory exists"
       ],
       "oracle": [
-        "Skills preserve ownership; preregistration freezes model/prompt/decoding/dataset/budget and paired mutant oracle scoring."
+        "Skills install/update/remove preserve foreign bytes; preregistration freezes model/prompt/decoding/dataset/budget; paired mutant oracle scoring; a live-model-evaluation report can only come from a public provider endpoint, and simulated or controlled benchmark classes are never classified as live evidence."
       ],
       "evidence": [
         "evals/results/m2-round6-qwen38-typed-generation-reference-shop-2026-10-06-2026-10-06T18-07-09-532Z/report.json",
@@ -7098,16 +7185,61 @@
         "validation/results/model-provider-inventory.json",
         "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
         "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
-        "evals/rounds/m2-round3-qwen38/preregistration.json"
+        "evals/rounds/m2-round3-qwen38/preregistration.json",
+        "tools/src/evals/evidence.test.ts",
+        "validation/journeys/j14-agent-skills.test.ts",
+        "tools/src/evals/m3.test.ts",
+        "tools/src/evals/freeze.test.ts"
       ],
       "code": [
         "packages/application/src/agent-skills/installer.ts",
         "packages/application/src/agent-skills/targets.ts",
         "tools/src/evals/run.ts",
-        "tools/src/evals/scoring.ts"
+        "tools/src/evals/scoring.ts",
+        "tools/src/evals/evidence.ts"
       ],
-      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
-      "blockedReason": "Rounds 5 and 6 (after evidence-handle and typed-generation fixes): primary 0/8 each (Wilson 95% [0,0.3244156195108769]); Round 5 healthy false failures 3/5 and proposal validity 14/14; Round 6 conditional 0/1, healthy false failures 1/1, proposal validity 12/12. Most trials ended on provider HTTP 500 at ~127 s or 180 s deadlines; Round 6 healthy HTTP plans for UI requirements were inconclusive (evaluator forced backend, since replaced by auto type). No detection, so generation quality is not established. Independent-family holdout, human intent/ground-truth review and two-reviewer adjudication remain unmet. Rounds 1-4 remain unchanged."
+      "note": "Claim limit: generation quality is not established. Round 3 (qwen3.8-flash, provider HTTP 500) and Rounds 4-6 scored primary 0/8 each (Wilson95% [0,0.3244]); the M2 generation claim is claim-only per ROADMAP.md Gate M2 and these rounds stay recorded unchanged. The endpoint guard is lexical (no DNS resolution): a public-looking name that resolves to a private address is not detected. Reports written before the providerHost field was added classify as non-live under benchmarkEvidenceClass.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+          "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth",
+          "tools/src/evals/m3.test.ts::writes the registered provider as a profile the product configuration accepts",
+          "tools/src/evals/evidence.test.ts::refuses simulated and controlled benchmark reports as release evidence"
+        ],
+        "negative": [
+          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+          "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests",
+          "tools/src/evals/freeze.test.ts::refuses changed thresholds, removed cases and changed budgets before round execution",
+          "tools/src/evals/evidence.test.ts::refuses loopback, private, link-local and non-public provider endpoints",
+          "tools/src/evals/evidence.test.ts::makes the live evaluation refuse a controlled endpoint before any result directory exists"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j14-agent-skills.test.ts",
+            "assertion": "expect(await readFile(path)).toEqual(original);"
+          },
+          {
+            "path": "validation/journeys/j14-agent-skills.test.ts",
+            "assertion": "expect(await readFile(path)).toEqual(Buffer.concat([foreignBefore, foreignAfter]));"
+          },
+          {
+            "path": "tools/src/evals/m3.test.ts",
+            "assertion": "expect(config.modelProviders).toMatchObject(["
+          },
+          {
+            "path": "tools/src/evals/evidence.test.ts",
+            "assertion": "expect(benchmarkEvidenceClass({ class: \"deterministic-e2e\" })).toBe(\"non-live\");"
+          },
+          {
+            "path": "tools/src/evals/evidence.test.ts",
+            "assertion": "expect(benchmarkEvidenceClass({ ...live, runner: \"in-process\" })).toBe(\"non-live\");"
+          },
+          {
+            "path": "tools/src/evals/evidence.test.ts",
+            "assertion": "await expect(runEvaluation(root, \"a\".repeat(40), \"registration.json\")).rejects.toThrow("
+          }
+        ]
+      }
     },
     {
       "id": "M3-01",
@@ -12163,14 +12295,16 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
         "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
         "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
-        "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions"
+        "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions",
+        "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
+        "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability"
       ],
       "oracle": [
         "Immutable run comparisons distinguish outcome from logical identity/revision provenance; pagination binds both inputs; batch logical keys exclude correlation noise and preserve repetition."
@@ -12184,20 +12318,26 @@
         "packages/application/src/comparisons.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
       ],
-      "code": ["packages/application/src/comparisons.ts"],
+      "code": [
+        "packages/application/src/comparisons.ts"
+      ],
       "coverage": {
         "positive": [
           "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
           "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
-          "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes"
+          "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
+          "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
+          "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability"
         ],
         "negative": [
           "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
           "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
           "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
           "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
-          "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions"
+          "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions",
+          "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
+          "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability"
         ],
         "criticalAssertions": [
           {
@@ -12231,10 +12371,28 @@
           {
             "path": "packages/application/src/comparisons.test.ts",
             "assertion": "expect(logicalRunKey(left)).not.toBe(logicalRunKey(right));"
+          },
+          {
+            "path": "packages/application/src/comparisons.test.ts",
+            "assertion": "expect(runComparability(modelLeft, modelRight).reasons).toEqual([\"generationModel-changed\"]);"
+          },
+          {
+            "path": "packages/application/src/comparisons.test.ts",
+            "assertion": ").toEqual([{ field: \"steps\", left: [{ status: \"passed\" }], right: [{ status: \"failed\" }] }]);"
           }
         ]
       },
-      "blockedReason": "External M5: real persisted visual-baseline-bearing Run comparison remains unexercised because even optional visualMatches is CAPABILITY_UNAVAILABLE before persistence. Local persisted BatchRun matching/additions/removals/ambiguity and generated-to-manual model provenance are retained; baseline-difference metadata alone is not visual execution acceptance."
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "visual baseline execution and cross-browser visual comparison (matriz cross-browser visual)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M5 — remote/distributed/matrix/advanced/memory** | Workers remotos com leases/fencing/partições, tunnels, issue import/link; matriz cross-browser visual/a11y"
+          }
+        }
+      ],
+      "note": "Run and batch comparison discriminates revision, environment, execution config, admission provenance, generation model and step differences; outcome is a difference, never identity. A persisted Run comparison carrying a visual baseline is CAPABILITY_UNAVAILABLE before persistence; baseline-difference metadata is not visual execution acceptance (M5)."
     },
     {
       "id": "REQ-029",
@@ -16108,13 +16266,16 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth",
-        "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests"
+        "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests",
+        "tools/src/evals/freeze.test.ts::refuses changed frozen implementation or oracle bytes without repairing their hashes",
+        "tools/src/evals/leakage.test.ts::finds no sealed label, mutant, case or oracle identifier in any authorized executable plan",
+        "tools/src/evals/holdout.test.ts::rejects review records, declared label status and missing presealed healing eligibility"
       ],
       "oracle": [
-        "Scoring requires independent oracle, healthy pass and same generated revision mutant failure; no self-judge approval."
+        "Scoring credits a trial only with an independent confirmed oracle, a healthy pass and a mutant failing the same generated revision; frozen oracle bytes cannot be repaired by the generator; sealed labels never reach generation prompts; no self-judge approval."
       ],
       "evidence": [
         "evals/results/m2-round6-qwen38-typed-generation-reference-shop-2026-10-06-2026-10-06T18-07-09-532Z/report.json",
@@ -16138,15 +16299,54 @@
         "validation/results/model-provider-inventory.json",
         "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.json",
         "evals/results/m2-round3-qwen38-reference-shop-2026-10-06-2026-10-06T09-28-54-148Z/report.md",
-        "evals/rounds/m2-round3-qwen38/preregistration.json"
+        "evals/rounds/m2-round3-qwen38/preregistration.json",
+        "tools/src/evals/freeze.test.ts",
+        "tools/src/evals/leakage.test.ts",
+        "tools/src/evals/holdout.test.ts",
+        "docs/adr/012-automated-only-validation.md"
       ],
       "code": [
         "tools/src/evals/scoring.ts",
         "tools/src/evals/run.ts",
-        "fixtures/reference-shop/oracle/index.js"
+        "fixtures/reference-shop/oracle/index.js",
+        "tools/src/evals/freeze.ts",
+        "tools/src/evals/leakage.ts",
+        "tools/src/evals/holdout.ts"
       ],
-      "note": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet.",
-      "blockedReason": "Rounds 5 and 6 (after evidence-handle and typed-generation fixes): primary 0/8 each (Wilson 95% [0,0.3244156195108769]); Round 5 healthy false failures 3/5 and proposal validity 14/14; Round 6 conditional 0/1, healthy false failures 1/1, proposal validity 12/12. Most trials ended on provider HTTP 500 at ~127 s or 180 s deadlines; Round 6 healthy HTTP plans for UI requirements were inconclusive (evaluator forced backend, since replaced by auto type). No detection, so generation quality is not established. Independent-family holdout, human intent/ground-truth review and two-reviewer adjudication remain unmet. Rounds 1-4 remain unchanged."
+      "note": "Approval independence is verified structurally: oracle bytes are frozen, labels are sealed before evaluation and authorship is declared per ADR-012. No generation-quality claim: M2 rounds 3-6 primary 0/8 each (Wilson95 [0,0.3244]; Round 5 healthy false failures 3/5, Round 6 conditional 0/1), claim-only per ROADMAP.md Gate M2. Human intent review and two-reviewer adjudication are superseded by ADR-012; the independent-family holdout count is VAL-016 scope.",
+      "coverage": {
+        "positive": [
+          "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth"
+        ],
+        "negative": [
+          "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests",
+          "tools/src/evals/freeze.test.ts::refuses changed frozen implementation or oracle bytes without repairing their hashes",
+          "tools/src/evals/leakage.test.ts::finds no sealed label, mutant, case or oracle identifier in any authorized executable plan",
+          "tools/src/evals/holdout.test.ts::rejects review records, declared label status and missing presealed healing eligibility"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/evals/scoring.test.ts",
+            "assertion": "expect(scoreTrial(trial()).detected).toBe(true);"
+          },
+          {
+            "path": "tools/src/evals/scoring.test.ts",
+            "assertion": "pair.mutant.requiredAssertionFailed = false;"
+          },
+          {
+            "path": "tools/src/evals/scoring.test.ts",
+            "assertion": "expect(scoreTrial(input).detected).toBe(false);"
+          },
+          {
+            "path": "tools/src/evals/holdout.test.ts",
+            "assertion": "expect(() => validateHoldout(value)).toThrow(\"review is superseded by ADR-012\");"
+          },
+          {
+            "path": "tools/src/evals/leakage.test.ts",
+            "assertion": "expect(findLeaks(JSON.stringify(planted), set)).toEqual(["
+          }
+        ]
+      }
     },
     {
       "id": "VAL-004",
@@ -16340,26 +16540,31 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
-        "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass"
+        "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass",
+        "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible"
       ],
       "oracle": [
-        "Local report metrics separate first/terminal/retry/conditional counts and keep exclusions visible without denominator improvement."
+        "Local report metrics separate first-attempt, terminal, conditional and end-to-end (gate) rates with labelled definitions and keep every exclusion visible without denominator improvement."
       ],
       "evidence": [
         "packages/reporting/src/metrics.test.ts",
         "validation/results/m3-acceptance/001-unit-final/output.log"
       ],
-      "code": ["packages/reporting/src/metrics.ts"],
+      "code": [
+        "packages/reporting/src/metrics.ts"
+      ],
       "coverage": {
         "positive": [
-          "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator"
+          "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
+          "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible"
         ],
         "negative": [
           "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
-          "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass"
+          "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass",
+          "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible"
         ],
         "criticalAssertions": [
           {
@@ -16369,10 +16574,36 @@
           {
             "path": "packages/reporting/src/metrics.test.ts",
             "assertion": "expect(metrics.rates.terminalPassRate).toMatchObject({ numerator: 1, denominator: 2 });"
+          },
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.rates.firstAttemptFailureRate).toMatchObject({ numerator: 1, denominator: 1 });"
+          },
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.rates.gatePassRate).toMatchObject({ numerator: 1, denominator: 2 });"
+          },
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.exclusions).toEqual({"
+          },
+          {
+            "path": "packages/reporting/src/metrics.test.ts",
+            "assertion": "expect(metrics.rates.gatePassRate?.definition).toMatch(/^End-to-end gate: /);"
           }
         ]
       },
-      "blockedReason": "External M4: dashboard rendering of first-attempt/terminal/conditional/end-to-end metrics and visible quarantine exclusions is not implemented/exercised. Internal: local metric fixtures are not a dashboard acceptance proof."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "dashboard rendering of first-attempt/terminal/conditional/end-to-end metrics and visible quarantine exclusions (UI)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility"
+          }
+        }
+      ],
+      "note": "Local metrics separate first-attempt (strictPassRate), terminal (terminalPassRate), conditional (firstAttemptFailureRate) and end-to-end (gatePassRate) bases, each with a labelled definition, and expose exclusions. End-to-end is the existing gate rate: no new metric key. Dashboard rendering is M4."
     },
     {
       "id": "VAL-008",
@@ -18093,7 +18324,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M1",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI",
         "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes"
@@ -18106,9 +18337,59 @@
         "validation/results/journey-manifest-metadata.json",
         "validation/results/ops002-daemon-readiness.json"
       ],
-      "code": ["validation/journeys/harness.ts", "validation/journeys/j14-agent-skills.test.ts"],
-      "note": "M0–M2 manifest provenance producers implemented. All J01–J18/later fixtures not implemented; no full-corpus verified claim. Historical manifests unchanged, not backfilled as new observations.",
-      "blockedReason": "M0–M2 manifest provenance producers implemented. All J01–J18/later fixtures not implemented; no full-corpus verified claim. Historical manifests unchanged, not backfilled as new observations."
+      "code": [
+        "validation/journeys/harness.ts",
+        "validation/journeys/j14-agent-skills.test.ts"
+      ],
+      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. J09/J10/J12-App/J13/J16/J17-server fixtures (M4), J13-tracker/J18 (M5) and the full J01-J18 supported-scope corpus (M6) are deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI"
+        ],
+        "negative": [
+          "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/harness-metadata.test.ts",
+            "assertion": "reviewer: \"testmaster-automated-acceptance\","
+          },
+          {
+            "path": "validation/journeys/harness-metadata.test.ts",
+            "assertion": "\"Automated oracle only; no independent human sign-off implied.\","
+          },
+          {
+            "path": "validation/journeys/harness-metadata.test.ts",
+            "assertion": "expect(result.oracleVerdicts).toEqual([{ check: \"manifest-field-acceptance\", passed: true }]);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "manifests and fixtures for J09, J10, J12 (GitHub App), J13 (schedule), J16 and J17 (server) journeys",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "VAL-026/027/033–037/041/043/045/052 no escopo M4; J09/J10/J12 App/J13 schedule/J16/J17 server"
+          }
+        },
+        {
+          "milestone": "M5",
+          "scope": "J13 tracker and J18 advanced-quality journey manifests",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M5 — remote/distributed/matrix/advanced/memory** | Workers remotos com leases/fencing/partições, tunnels, issue import/link; matriz cross-browser visual/a11y"
+          }
+        },
+        {
+          "milestone": "M6",
+          "scope": "full J01–J18 supported-scope corpus and J14–J17 journey manifests",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M6 — SSO/SCIM/plugins/portability/governance/GA** | SSO OIDC/SAML/SCIM, import/export nativo/TestSprite manual, plugins, schema migration/backup restore, installer governance, compatibility, OSS releases/docs/provenance e todas jornadas supported scope."
+          }
+        }
+      ]
     },
     {
       "id": "VAL-036",
@@ -18378,15 +18659,17 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M1",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
-        "Six local execution publication boundaries",
-        "Multipart abort/hash mismatch",
-        "Restore missing-key and revocation merge",
-        "Real ENOSPC"
+        "packages/evidence/src/publication-recovery.test.ts::OPS-020 interrupted multipart artifacts and mismatched hashes never become available",
+        "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
+        "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
+        "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+        "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
+        "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts"
       ],
       "oracle": [
-        "No false promoted partial bundle or rewritten terminal verdict; original metadata/hash integrity"
+        "No false promoted partial bundle or rewritten terminal verdict; original metadata/hash integrity across kill points at the publication boundaries, multipart abort and hash mismatch, GC concurrent with publication, restore with a missing key and later revocation, and real ENOSPC."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
@@ -18401,8 +18684,51 @@
         "packages/application/src/worker.ts",
         "packages/persistence/src/database.ts"
       ],
-      "note": "Residual: exhaustive every-write-boundary fault matrix for restore/import/migration/installer/retention not covered. Existing boundary coverage must not be generalized to all boundaries.",
-      "blockedReason": "Residual: exhaustive every-write-boundary fault matrix for restore/import/migration/installer/retention not covered. Existing boundary coverage must not be generalized to all boundaries."
+      "note": "Covered: three publication kill points (not six), multipart abort/hash mismatch, GC concurrent with publication, restore with missing key and revocation merge, real tmpfs ENOSPC. Existing boundary coverage must not be generalized to every write boundary: the exhaustive fault matrix for restore/import/migration/installer/retention is M4 (PostgreSQL/S3 profiles) and M6 (import/migration/installer governance).",
+      "coverage": {
+        "positive": [
+          "packages/evidence/src/publication-recovery.test.ts::OPS-020 interrupted multipart artifacts and mismatched hashes never become available",
+          "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
+          "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts"
+        ],
+        "negative": [
+          "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
+          "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+          "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/evidence/src/publication-recovery.test.ts",
+            "assertion": "expect(bundle.manifest.entries.map((entry) => [entry.state, entry.omissionReason])).toEqual(["
+          },
+          {
+            "path": "packages/evidence/src/publication-recovery.test.ts",
+            "assertion": "expect(removed).toEqual([]);"
+          },
+          {
+            "path": "packages/persistence/src/disk-pressure.docker.test.ts",
+            "assertion": "expect(code, stderr).toBe(0);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "every-write-boundary fault matrix for retention and restore on PostgreSQL/S3 profiles",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "VAL-026/027/033–037/041/043/045/052 no escopo M4"
+          }
+        },
+        {
+          "milestone": "M6",
+          "scope": "every-write-boundary fault matrix for import/migration/installer governance and backup restore",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M6 — SSO/SCIM/plugins/portability/governance/GA** | SSO OIDC/SAML/SCIM, import/export nativo/TestSprite manual, plugins, schema migration/backup restore, installer governance"
+          }
+        }
+      ]
     },
     {
       "id": "VAL-046",

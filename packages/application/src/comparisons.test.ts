@@ -1,7 +1,13 @@
 import type { Run } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { describe, expect, it } from "vitest";
-import { comparisonPage, logicalRunKey, runComparability, runMatrixCell } from "./comparisons.js";
+import {
+  comparisonPage,
+  logicalRunKey,
+  metadataDifferences,
+  runComparability,
+  runMatrixCell,
+} from "./comparisons.js";
 
 function run(): Run {
   return {
@@ -73,5 +79,41 @@ describe("history comparison boundaries", () => {
     expect(logicalRunKey(left)).toBe(logicalRunKey(right));
     runMatrixCell(right).repetitionIndex = 1;
     expect(logicalRunKey(left)).not.toBe(logicalRunKey(right));
+  });
+  it("reports changed environment and generation model as discriminated reasons without changing outcome identity", () => {
+    const left = run();
+    const right = run();
+    right.environmentRevisionId = "changed-environment";
+    expect(runComparability(left, right)).toMatchObject({
+      comparability: "partially_comparable",
+      reasons: ["environment-changed"],
+    });
+    const modelLeft = run();
+    const modelRight = run();
+    (runMatrixCell(modelLeft).admissionSnapshot as Record<string, unknown>).generationModel =
+      "model-a";
+    (runMatrixCell(modelRight).admissionSnapshot as Record<string, unknown>).generationModel =
+      "model-b";
+    expect(runComparability(modelLeft, modelRight).comparability).toBe("partially_comparable");
+    expect(runComparability(modelLeft, modelRight).reasons).toEqual(["generationModel-changed"]);
+    (runMatrixCell(modelRight).admissionSnapshot as Record<string, unknown>).generationModel =
+      "model-a";
+    expect(runComparability(modelLeft, modelRight).reasons).toEqual([]);
+  });
+  it("reports a changed step as a difference while outcome changes never alter comparability", () => {
+    expect(
+      metadataDifferences({ steps: [{ status: "passed" }] }, { steps: [{ status: "failed" }] }),
+    ).toEqual([{ field: "steps", left: [{ status: "passed" }], right: [{ status: "failed" }] }]);
+    expect(
+      metadataDifferences({ steps: [{ status: "passed" }] }, { steps: [{ status: "passed" }] }),
+    ).toEqual([]);
+    expect(metadataDifferences({ outcome: "passed" }, { outcome: "failed" })).toHaveLength(1);
+    const left = run();
+    const right = run();
+    right.outcome = "failed";
+    expect(runComparability(left, right)).toMatchObject({
+      comparability: "comparable",
+      reasons: [],
+    });
   });
 });

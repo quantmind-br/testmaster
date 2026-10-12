@@ -111,3 +111,27 @@ it("internal retries and expanded dependencies do not improve strict pass denomi
   expect(metrics.rates.diagnosticRetryPassRate).toMatchObject({ numerator: 1, denominator: 1 });
   expect(metrics.rates.firstAttemptFailureRate).toMatchObject({ numerator: 1, denominator: 1 });
 });
+it("labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible", () => {
+  const recovered = run("infra", "passed", "blocked", true),
+    diagnostic = run("assertion", "failed", "failed", true),
+    dependency = run("producer", "passed");
+  const input = snapshot([recovered, diagnostic, dependency], 2);
+  input.selection.requestedRunIds = ["infra", "assertion"];
+  input.selection.duplicates = 2;
+  input.selection.excluded = [{ memberKey: "excluded", reasonCode: "authorized" }];
+  const metrics = executionMetrics(input);
+  validate("ExecutionMetrics", metrics);
+  expect(metrics.rates.strictPassRate?.definition).toMatch(/^First-attempt: /);
+  expect(metrics.rates.terminalPassRate?.definition).toMatch(/^Terminal: /);
+  expect(metrics.rates.firstAttemptFailureRate?.definition).toMatch(/^Conditional: /);
+  expect(metrics.rates.gatePassRate?.definition).toMatch(/^End-to-end gate: /);
+  // The conditional basis drops the blocked first attempt, the end-to-end basis keeps it in the denominator.
+  expect(metrics.rates.firstAttemptFailureRate).toMatchObject({ numerator: 1, denominator: 1 });
+  expect(metrics.rates.gatePassRate).toMatchObject({ numerator: 1, denominator: 2 });
+  expect(metrics.exclusions).toEqual({
+    firstAttemptNonPassOrFail: 1,
+    expandedDependencies: 1,
+    authorizedExcluded: 1,
+    duplicateSelections: 2,
+  });
+});

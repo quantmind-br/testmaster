@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Proportion } from "@testmaster/domain";
 import { checks, startShop } from "../../../evals/fixture.mjs";
+import { assertLiveProviderEndpoint } from "./evidence.js";
 import { assertFrozenFiles, assertRegistrationUnchanged, committedRegistration } from "./freeze.js";
 import type { Pair, Replay, TrialError, TrialScoreInput } from "./scoring.js";
 import { scoreTrial, summarize } from "./scoring.js";
@@ -124,6 +125,7 @@ export async function runEvaluation(
   const preregistrationBytes = await readFile(resolve(root, registrationPath));
   const registration = JSON.parse(preregistrationBytes.toString()) as Registration;
   const reasoningEffort = registeredReasoningEffort(registration);
+  assertLiveProviderEndpoint(registration.provider.baseUrl);
   assertRegistrationUnchanged(
     preregistrationBytes,
     await committedRegistration(root, preregistrationCommit, registrationPath),
@@ -851,6 +853,7 @@ export async function runEvaluation(
     class: "live-model-evaluation",
     runner: "real-cli-docker",
     provider: registration.provider.id,
+    providerHost: new URL(registration.provider.baseUrl).hostname,
     model: registration.provider.model,
     reasoningEffort: reasoningEffort ?? null,
     chargedTokens,
@@ -940,6 +943,7 @@ export async function checkPreregistration(
     await readFile(resolve(root, registrationPath), "utf8"),
   ) as Registration;
   registeredReasoningEffort(registration);
+  assertLiveProviderEndpoint(registration.provider.baseUrl);
   const manifestBytes = await readFile(join(root, registration.dataset.manifest));
   if (createHash("sha256").update(manifestBytes).digest("hex") !== registration.dataset.sha256)
     throw new Error("Corpus hash differs from preregistration");
