@@ -83,16 +83,17 @@ export class BackupsService {
       throw error;
     }
   }
-  async restore(path: string, out: string) {
+  async restore(path: string, out: string, options: { keepSchema?: boolean } = {}) {
     this.ctx.authorize("A");
     const source = resolve(this.config.cwd, path);
     const destination = resolve(this.config.cwd, out);
     const result = await PersistenceDatabase.restore(source, destination, {
+      keepSchema: options.keepSchema === true,
       revocations: this.ctx.database.all(
         "SELECT workspace_id,id,secret_version,revoked_at FROM secret_references",
       ),
       tombstones: this.ctx.database.all(
-        "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%'",
+        "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%' OR key LIKE 'image:revoked:%'",
       ),
     });
     result.database.withTx(() => {

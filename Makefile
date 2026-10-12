@@ -6,6 +6,7 @@
 #   make install                        # PREFIX=$(HOME)/.local
 #   make install PREFIX=/usr/local      # needs write permission on the prefix
 #   make install SELF_CONTAINED=0       # launcher points at this build tree
+#   make install DATA_DIR=/path/.testmaster  # refuse an incompatible rollback or revoked image
 #   make verify
 #   make uninstall
 
@@ -13,6 +14,7 @@ REPO_ROOT      := $(shell pwd)
 PREFIX         ?= $(HOME)/.local
 INSTALL_TOOL   := $(REPO_ROOT)/tools/dist/distribution/local-install.js
 SELF_CONTAINED ?= 1
+DATA_DIR       ?=
 NODE           ?= node
 PNPM           ?= pnpm
 
@@ -24,7 +26,7 @@ build:
 	cd "$(REPO_ROOT)" && "$(PNPM)" build
 
 install: build
-	"$(NODE)" "$(INSTALL_TOOL)" install "$(PREFIX)" "$(REPO_ROOT)" "$(SELF_CONTAINED)"
+	"$(NODE)" "$(INSTALL_TOOL)" install "$(PREFIX)" "$(REPO_ROOT)" "$(SELF_CONTAINED)" "$(DATA_DIR)"
 
 verify:
 	"$(NODE)" "$(INSTALL_TOOL)" verify "$(PREFIX)"

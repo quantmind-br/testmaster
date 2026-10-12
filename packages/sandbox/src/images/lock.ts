@@ -77,8 +77,12 @@ export async function verifyImageLock(
   path: string,
   inspectImage: (imageId: string) => Promise<string>,
   names: readonly (keyof ImageLock)[] = ["testmaster-runner", "testmaster-runner-python"],
+  revokedImageIds: ReadonlySet<string> = new Set(),
 ): Promise<ImageLock> {
   const lock = await readImageLock(path);
+  // A revoked digest is never usable again, even when an older lock file pins it.
+  for (const name of names)
+    if (revokedImageIds.has(lock[name].imageId)) throw new PolicyDenied("image_revoked");
   const profileHash = createHash("sha256")
     .update(await readFile(join(path, "..", "seccomp_profile.json")))
     .digest("hex");

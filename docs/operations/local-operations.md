@@ -34,6 +34,10 @@ the reconciler.
 ```bash
 testmaster db status    # applied migrations and checksums
 testmaster db migrate   # forward-only; a modified applied migration is refused
+testmaster db upgrade  # read-only preview of pending (irreversible) migrations, blockers and rollback rule
+testmaster db upgrade --apply --backup-out /backups/tm-before-upgrade   # drain, backup, migrate, readiness
+testmaster image revoke sha256:<id> --reason "<why>"   # durable; see Upgrade and rollback
+testmaster image revoked
 ```
 
 PostgreSQL DDL is kept in `packages/persistence/migrations/postgres/` and conformance-tested; using it as
@@ -44,12 +48,15 @@ the runtime database is an M4 capability and is reported unavailable.
 ```bash
 testmaster backup create --out /backups/tm-2026-10-05
 testmaster backup restore /backups/tm-2026-10-05 --out /restore/tm   # isolated destination
+testmaster backup restore /backups/tm-before-upgrade --out /restore/tm --keep-schema   # restore point for an older release
 ```
 
 Backups use the SQLite online backup API and a manifest with hashes of the database and evidence index.
 Restore verifies hashes, writes only to the isolated destination and leaves admission, leases, outbox
 delivery and API tokens suspended: nothing restored is executed automatically. Secrets are not part of
-backups; re-provision them with `testmaster secret set`.
+backups; re-provision them with `testmaster secret set`. By default a restore migrates the restored
+database forward to the running release; `--keep-schema` keeps the backup's schema version, which is
+required when the restored directory will be opened by an older release (see rollback below).
 
 ## Storage pressure and retention
 
@@ -153,35 +160,65 @@ two 10 MiB files/day/component, default retention 14 days. `TESTMASTER_LOG_RETEN
 API/executor. Logs serialize IDs/status only; audit is separate. Correlate API `X-Correlation-ID`/
 requestId with Run matrix correlationId, outbox payload and Artifact `testmaster:correlationId`.
 
-## Upgrade and rollback (maintenance only)
+## Upgrade and rollback (maintenance only, local single-user profile)
+
+Scope: one controller on one host. Independent per-component rolling upgrades, release
+signatures/license approval and distributed (M4+) rollback are not part of this procedure.
+
+Every SQLite migration is forward-only and irreversible (no down migration exists; the list is in
+[CHANGELOG](../../CHANGELOG.md)). Any application command that opens the database (including
+`worker start`, `server start` and `db status`) migrates it forward, so run the upgrade below
+**before** starting the new release.
 
 1. Preserve the release commit, `containers/images.lock.json`, `testmaster db status`, redacted
    `testmaster config show`, existing policy, vault/key metadata and revocation/tombstone history.
    Keep private keys and plaintext tokens outside the backup/evidence archive.
-2. As A, run `testmaster worker drain`, inspect `testmaster worker status`, and wait for accepted
-   attempts to finish. Stop the foreground controller with SIGTERM; do not migrate under a serving
-   old controller. If draining exceeds its bound, preserve attempt logs and reconcile, never mark
-   attempts passed.
-3. `testmaster backup create --out /backups/tm-before-upgrade` using the currently compatible app.
-   Preserve its manifest and old application/image lock. Check free space for a second DB/evidence
-   copy plus migration table-rebuild workspace; SQLite migration may lock the whole local DB.
-4. Install the reviewed candidate, verify `testmaster doctor`, then `testmaster db migrate`.
-   Migration files are forward-only/checksummed. An exclusive in-progress migration rejects a
-   second migrator. Stop on checksum, unsupported DB/controller version, lock or space refusal;
+2. Stop the foreground controller (SIGTERM) after `testmaster worker drain`; do not migrate under a
+   serving old controller. Deploy the candidate with the data directory so the install is checked
+   first: `make install DATA_DIR=/path/to/.testmaster`. It prints a pre-deploy warning naming every
+   irreversible migration the candidate will apply, and refuses (changing nothing) if the database
+   schema is newer than the candidate, an applied migration checksum differs, or the candidate pins a
+   revoked image. Without `DATA_DIR` that check is skipped and a warning says so.
+3. Preview with `testmaster db upgrade` (read-only: pending migrations, irreversibility, blockers
+   such as a revoked image or newer schema). Then apply:
+   `testmaster db upgrade --apply --backup-out /backups/tm-before-upgrade`. In order it runs the
+   read-only preflight (compatibility, checksums, revoked images, free space for a second DB copy),
+   **drain** (marks ready workers `draining` and waits up to `--drain-timeout`, default 60 s, for live
+   workers, leased jobs and unfinished attempts; if work remains it stops with nothing backed up or
+   migrated), **backup** (SQLite online backup of the old schema plus manifest and evidence index; a
+   failed backup stops before migration; an incomplete evidence index is reported, not hidden),
+   **migrate** (one exclusive transaction) and **readiness** (integrity and foreign-key checks, no
+   pending migrations). The receipt names the backup, the irreversibility and the restore command, and
+   `upgrade:last` in operational state records them. A second migrator is rejected while one runs;
    never delete a lock without investigating its owner or change an applied migration.
-5. Start the controller, verify authenticated readiness and worker capability/image digests, and
-   perform an authorized healthy replay before resuming normal admission. Do not infer readiness
-   from process liveness.
-6. Application rollback is allowed only if the old binary understands the current DB migrations,
-   document schemas, current policy and approved images. Otherwise stop service and
-   `testmaster backup restore /backups/tm-before-upgrade --out /restore/tm` to an isolated directory.
-   Reconcile revocations/tombstones and re-provision authorized secrets before choosing the restored
+4. Start the controller (a fresh worker registers each time), verify authenticated readiness and
+   worker capability/image digests, and perform an authorized healthy replay before resuming normal
+   admission. Do not infer readiness from process liveness. Queued Runs stay queued and keep their IDs
+   and results; no upgrade or rollback re-executes an old Run.
+5. Application rollback is allowed only if the old release understands the current database. Check it
+   by running `make install DATA_DIR=/path/to/.testmaster` from the old release's checkout: while the
+   schema is unchanged (upgrade not yet applied) the install succeeds; after a migration it fails with
+   `Database schema version N is newer than this release supports (M)` and changes neither the install
+   nor the data. The only route back is a planned restore in maintenance: with the current release run
+   `testmaster backup restore /backups/tm-before-upgrade --out /restore/tm --keep-schema` (without
+   `--keep-schema` the restore migrates forward again and is not a rollback point), install the old
+   release with `DATA_DIR=/restore/tm`, then run the restore review below. Reconcile
+   revocations/tombstones and re-provision authorized secrets before choosing the restored
    workspace. Restore remains suspended and never executes queued effects automatically. Never
-   overwrite the live directory, resurrect a revoked image/token or loosen current policy to make
-   the old app boot.
+   overwrite the live directory or loosen current policy to make the old app boot.
+6. Rollback never reinstalls a revoked image or reopens an older policy. `testmaster image revoke
+   <sha256:id> --reason …` records a durable revocation: image-lock verification (worker start,
+   readiness, Python discovery), `db upgrade` and `make install DATA_DIR=…` refuse that ID, and a
+   restore merges the live revocations into the restored data directory. Install, upgrade and
+   rollback never write `~/.config/testmaster` (policy, profiles, vault key), secrets or tombstones; a
+   restored workspace keeps admission `suspended_restore` and drops server tokens until the explicit
+   review. Consents, approvals and grants revoked after the backup are not merged automatically; the
+   review's `--revocations-confirmed` assertion is the operator's reconciliation step.
 
-The single-user backup is manual. Independent component rolling upgrades, release signatures/license
-approval and distributed rollback remain later/release gates; this procedure does not certify them.
+The single-user backup is manual. Evidence: `packages/persistence/src/upgrade.test.ts`,
+`tools/src/distribution/release-lifecycle.test.ts`, `packages/application/src/release.test.ts` and
+`validation/results/ops-038-local-upgrade-rollback-smoke.log` (real temp-prefix run between the two
+consecutive commits that differ by migration 0008).
 
 ## Incident containment
 

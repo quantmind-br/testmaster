@@ -32,6 +32,7 @@ import { DockerExecutor, dockerCommand, verifyImageLock } from "@testmaster/sand
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { type RepositoryProvenance, resolveRepositoryProvenance } from "../provenance.js";
+import { revokedImageIds } from "../release.js";
 import { invalidateAiDescendants } from "./invalidation.js";
 import { promptVersions } from "./model.js";
 import { readAiState, replayAiReceipt, type SourcesService, saveAiState } from "./sources.js";
@@ -85,6 +86,7 @@ export class DockerPythonSummaryRunner implements PythonSummaryRunner {
   constructor(
     readonly config: ResolvedConfig,
     readonly executor = new DockerExecutor(),
+    private readonly revokedImages: () => ReadonlySet<string> = () => new Set(),
   ) {}
   async summarize(
     repoRoot: string,
@@ -118,14 +120,19 @@ export class DockerPythonSummaryRunner implements PythonSummaryRunner {
       const lockPath = fileURLToPath(
         new URL("../../../../containers/images.lock.json", import.meta.url),
       );
-      const lock = await verifyImageLock(lockPath, async (imageId) => {
-        const result = await dockerCommand(
-          ["image", "inspect", imageId, "--format", "{{.Id}}"],
-          10000,
-        );
-        if (result.code !== 0) throw new Error("Pinned Python image is unavailable");
-        return result.stdout.toString().trim();
-      });
+      const lock = await verifyImageLock(
+        lockPath,
+        async (imageId) => {
+          const result = await dockerCommand(
+            ["image", "inspect", imageId, "--format", "{{.Id}}"],
+            10000,
+          );
+          if (result.code !== 0) throw new Error("Pinned Python image is unavailable");
+          return result.stdout.toString().trim();
+        },
+        undefined,
+        this.revokedImages(),
+      );
       const runtime = join(this.config.dataDir, "python-summary");
       await mkdir(runtime, { recursive: true, mode: 0o700 });
       temporary = await mkdtemp(join(runtime, "summary-"));
@@ -248,7 +255,11 @@ export class DiscoveryService {
     readonly sources: SourcesService,
     pythonRunner?: PythonSummaryRunner,
   ) {
-    this.pythonRunner = pythonRunner ?? new DockerPythonSummaryRunner(config);
+    this.pythonRunner =
+      pythonRunner ??
+      new DockerPythonSummaryRunner(config, new DockerExecutor(), () =>
+        revokedImageIds(ctx.database),
+      );
   }
   private state(id: string): DiscoveryState {
     const state = readAiState<DiscoveryState>(this.ctx, `discovery:${id}`);

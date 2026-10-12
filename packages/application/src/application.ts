@@ -52,6 +52,7 @@ import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
+import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
@@ -576,17 +577,34 @@ export class Application {
     }
   }
   async images(): Promise<ImageLock> {
-    const lock = await verifyImageLock(this.lockPath, async (imageId) => {
-      const result = await dockerCommand(
-        ["image", "inspect", imageId, "--format", "{{.Id}}"],
-        10000,
-      );
-      if (result.code !== 0)
-        throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable");
-      return result.stdout.toString().trim();
-    });
+    const lock = await verifyImageLock(
+      this.lockPath,
+      async (imageId) => {
+        const result = await dockerCommand(
+          ["image", "inspect", imageId, "--format", "{{.Id}}"],
+          10000,
+        );
+        if (result.code !== 0)
+          throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable");
+        return result.stdout.toString().trim();
+      },
+      undefined,
+      revokedImageIds(this.database),
+    );
     this.verifiedImages = lock;
     return lock;
+  }
+  /** Durably revokes an image ID: no lock, rollback or restore can make it usable again. */
+  revokeImage(imageId: string, reason: string) {
+    this.context.authorize("A");
+    auditSecurity(this.context, "image.revoke", imageId, "requested");
+    const result = revokeImage(this.database, imageId, reason);
+    auditSecurity(this.context, "image.revoke", imageId, "allowed");
+    return result;
+  }
+  revokedImages(): string[] {
+    this.context.authorize("R");
+    return [...revokedImageIds(this.database)].sort();
   }
   async readiness() {
     let persistence = false;
@@ -628,6 +646,7 @@ export class Application {
               return result.stdout.toString().trim();
             },
             [image],
+            revokedImageIds(this.database),
           );
           if (runner === "playwright") {
             const probe = await mkdtemp(join(tmpdir(), "tm-ready-"));

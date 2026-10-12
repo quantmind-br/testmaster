@@ -379,7 +379,12 @@ export class PersistenceDatabase {
   static async restore(
     backupDir: string,
     destinationDir: string,
-    options: { revocations?: SqlRow[]; tombstones?: SqlRow[] } = {},
+    options: {
+      revocations?: SqlRow[];
+      tombstones?: SqlRow[];
+      /** Keep the backup's schema version instead of migrating forward (older-release rollback). */
+      keepSchema?: boolean;
+    } = {},
   ): Promise<RestoreResult> {
     const source = resolve(backupDir);
     const destination = resolve(destinationDir);
@@ -428,7 +433,7 @@ export class PersistenceDatabase {
         throw new Error("Restored database integrity check failed");
       if (restored.status().currentVersion !== manifest.databaseVersion)
         throw new Error("Backup database schema version mismatch");
-      await restored.migrate();
+      if (!options.keepSchema) await restored.migrate();
       restored.withTx(() => {
         for (const current of options.revocations ?? []) {
           const row = restored.get(

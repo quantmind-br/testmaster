@@ -86,12 +86,38 @@ async function verifyRuntime(target: string): Promise<void> {
   if (plan.runner !== "http") throw new Error("Installed runtime cannot generate an HTTP plan");
 }
 
-/** Copies production runtime files; installation never shares writable inodes with the checkout. */
+export interface InstallReport {
+  target: string;
+  /** Pre-deploy notices, e.g. irreversible migrations the candidate will apply on first start. */
+  warnings: string[];
+}
+/**
+ * Refuses a candidate (upgrade or rollback) that cannot safely run against `dataDir`: a schema newer
+ * than its migrations, a checksum mismatch, or a pinned image that was revoked. Read-only.
+ */
+async function assessCandidate(dataDir: string, runtime: string): Promise<string[]> {
+  const { assessRelease } = await import("@testmaster/application");
+  const assessment = await assessRelease({
+    dataDir: resolve(dataDir),
+    migrationsDir: join(runtime, "packages/persistence/migrations/sqlite"),
+    imageLockPath: join(runtime, "containers/images.lock.json"),
+  });
+  if (!assessment.allowed) throw new Error(`Refusing to install: ${assessment.blockers.join(" ")}`);
+  return assessment.warnings;
+}
+
+/**
+ * Copies production runtime files; installation never shares writable inodes with the checkout.
+ * With `dataDir` the candidate is first checked against that local data directory, so an
+ * incompatible rollback or a revoked image is refused before anything is replaced. Install, upgrade
+ * and rollback never touch configuration, policy, secrets or the database.
+ */
 export async function localInstall(
   root: string,
   requestedPrefix: string,
   selfContained = true,
-): Promise<void> {
+  dataDir?: string,
+): Promise<InstallReport> {
   if (Number(process.versions.node.split(".")[0]) !== 24)
     throw new Error("TestMaster requires Node 24");
   root = await realpath(root);
@@ -117,6 +143,7 @@ export async function localInstall(
   const bin = join(prefix, "bin", "testmaster");
   const receiptPath = join(prefix, "lib", "testmaster-install.json");
   let launcherExisted = false;
+  const warnings: string[] = [];
   try {
     old = await ownedReceipt(prefix);
     await checkOwnership(prefix, old);
@@ -139,6 +166,14 @@ export async function localInstall(
         mode: 0o600,
       });
     } else await verifyRuntime(root);
+    if (dataDir)
+      warnings.push(
+        ...(await assessCandidate(dataDir, selfContained ? join(stage, "runtime") : root)),
+      );
+    else
+      warnings.push(
+        "Schema compatibility and image revocations were not checked: no data directory was given.",
+      );
     await mkdir(join(prefix, "bin"), { recursive: true });
     // Launcher staging stays on the bin filesystem so its final rename is atomic.
     const binStage = await mkdtemp(join(prefix, "bin", ".testmaster-stage-"));
@@ -160,6 +195,7 @@ export async function localInstall(
     } finally {
       await rm(binStage, { recursive: true, force: true });
     }
+    return { target, warnings };
   } finally {
     if (!committed) {
       if (runtimeReplaced) await rm(runtime, { recursive: true, force: true });
@@ -199,15 +235,18 @@ export async function localUninstall(requestedPrefix: string): Promise<void> {
   }
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
-  const [operation, prefix, root, mode] = process.argv.slice(2);
+  const [operation, prefix, root, mode, dataDir] = process.argv.slice(2);
   Promise.resolve()
     .then(async () => {
       if (!prefix)
-        throw new Error("Usage: local-install.js install|verify|uninstall PREFIX [ROOT 0|1]");
+        throw new Error(
+          "Usage: local-install.js install|verify|uninstall PREFIX [ROOT 0|1 [DATA_DIR]]",
+        );
       if (operation === "install") {
         if (!root || !["0", "1"].includes(mode ?? ""))
           throw new Error("Installation requires ROOT and SELF_CONTAINED=0|1");
-        await localInstall(root, prefix, mode === "1");
+        const report = await localInstall(root, prefix, mode === "1", dataDir || undefined);
+        for (const warning of report.warnings) console.error(`WARNING: ${warning}`);
       } else if (operation === "verify") await localVerify(prefix);
       else if (operation === "uninstall") await localUninstall(prefix);
       else throw new Error("Unknown installation operation");

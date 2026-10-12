@@ -1,0 +1,54 @@
+# OPS-038 real temp-prefix upgrade/rollback smoke (local single-user profile; no Docker, no model calls)
+# Release A = git archive 792dc74^ (built; schema 7; LICENSE/NOTICE copied from B to satisfy runtime packaging). Release B = this working tree (built; schema 8). Request IDs/timestamps redacted.
+# 1. install A (schema 7), create state with A
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /var/tmp/tma 1 /var/tmp/tms/proj/.testmaster
+Installed /var/tmp/tms/prefix/bin/testmaster -> /var/tmp/tms/prefix/lib/testmaster
+  exit=0
+  db currentVersion=7 pending=[]
+# 2. deploy B: pre-deploy irreversible-migration warning
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /home/diogo/dev/testmaster 1 /var/tmp/tms/proj/.testmaster
+Installed /var/tmp/tms/prefix/bin/testmaster -> /var/tmp/tms/prefix/lib/testmaster
+WARNING: Irreversible migration 8_fixture_inputs: after applying, the previous application cannot open this database; rollback requires restoring the pre-upgrade backup.
+  exit=0
+# 3. compatible rollback (data still schema 7): A reinstalled
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /var/tmp/tma 1 /var/tmp/tms/proj/.testmaster
+Installed /var/tmp/tms/prefix/bin/testmaster -> /var/tmp/tms/prefix/lib/testmaster
+  exit=0
+  db currentVersion=7 pending=[]
+# 4. deploy B again, preview then apply the ordered upgrade
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /home/diogo/dev/testmaster 1 /var/tmp/tms/proj/.testmaster
+Installed /var/tmp/tms/prefix/bin/testmaster -> /var/tmp/tms/prefix/lib/testmaster
+WARNING: Irreversible migration 8_fixture_inputs: after applying, the previous application cannot open this database; rollback requires restoring the pre-upgrade backup.
+  exit=0
+$ testmaster db upgrade (preview)
+  dryRun=true allowed=true pending=[8] irreversible=true
+$ testmaster db upgrade --apply --backup-out /var/tmp/tms/backups/before-b
+  steps=preflight>drain>backup>migrate>readiness>resume
+  upgraded=true from=7 to=8 backupVersion=7 appRollback=restore-required
+  restore: testmaster backup restore /var/tmp/tms/backups/before-b --out <isolated-dir> --keep-schema
+  db currentVersion=8 pending=[]
+  manifest.databaseVersion=7
+# 5. incompatible rollback (schema now 8): refused without mutation
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /var/tmp/tma 1 /var/tmp/tms/proj/.testmaster
+Error: Refusing to install: Database schema version 8 is newer than this release supports (7). Application rollback is not allowed. Stop the service, restore the pre-upgrade backup into an isolated directory (`testmaster backup restore <backup> --out <isolated-dir> --keep-schema`, run by the current release), point the older release at that directory and follow the restore review procedure.
+  exit=1
+  database unchanged: yes; launcher+receipt unchanged: yes
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js verify /var/tmp/tms/prefix
+Verified /var/tmp/tms/prefix/lib/testmaster
+  exit=0
+# 6. revoked image is never reinstalled
+$ /var/tmp/tms/prefix/bin/testmaster --output json image revoke sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3 --reason smoke: withdrawn after incident
+{"schemaVersion":"1.0.0","requestId":"<id>","data":{"imageId":"sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3","reason":"smoke: withdrawn after incident","revokedAt":"<ts>","alreadyRevoked":false},"warnings":[]}
+  exit=0
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /home/diogo/dev/testmaster 1 /var/tmp/tms/proj/.testmaster
+Error: Refusing to install: Image testmaster-runner (sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3) is revoked and is never reinstalled.
+  exit=1
+# 7. policy/config untouched
+  policy.json unchanged: yes
+# 8. planned restore into an isolated directory at the pre-upgrade schema, then older-release rollback onto it
+  restored schema=7 admission=suspended_restore revoked-images=1
+$ node /home/diogo/dev/testmaster/tools/dist/distribution/local-install.js install /var/tmp/tms/prefix /var/tmp/tma 1 /var/tmp/tms/restored
+Installed /var/tmp/tms/prefix/bin/testmaster -> /var/tmp/tms/prefix/lib/testmaster
+  exit=0
+$ TESTMASTER_DATA_DIR=/var/tmp/tms/restored testmaster db status   (release A)
+  db currentVersion=7 pending=[]

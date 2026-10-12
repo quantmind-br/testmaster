@@ -30,11 +30,18 @@ export function backupCommands(program: Command, runtime: Runtime): void {
     }),
   );
   runtime.bind(
-    group.command("restore <path>").requiredOption("--out <path>"),
+    group
+      .command("restore <path>")
+      .requiredOption("--out <path>")
+      .option(
+        "--keep-schema",
+        "Keep the backup's schema version (restore point for an older release) instead of migrating forward",
+      ),
     async (rt, args, options) => ({
       data: await (await rt.app()).backups.restore(
         rt.path(String(args[0])),
         rt.path(required(options, "out")),
+        { keepSchema: options.keepSchema === true },
       ),
     }),
   );

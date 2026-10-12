@@ -31,6 +31,7 @@ export * from "./local-auth.js";
 export * from "./observability.js";
 export * from "./provenance.js";
 export * from "./quarantine.js";
+export * from "./release.js";
 export * from "./resources.js";
 export * from "./retention.js";
 export * from "./runs.js";

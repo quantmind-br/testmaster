@@ -34,6 +34,19 @@ it("refuses image substitution and seccomp tampering", async () => {
     await expect(verifyImageLock(path, async () => `sha256:${"d".repeat(64)}`)).rejects.toThrow(
       "image_lock_mismatch",
     );
+    // A revoked digest is refused even though it matches the lock and the local image store.
+    const revoked = new Set([`sha256:${"a".repeat(64)}`]);
+    await expect(
+      verifyImageLock(path, async (id) => id, ["testmaster-runner"], revoked),
+    ).rejects.toThrow("image_revoked");
+    expect(
+      await verifyImageLock(
+        path,
+        async (id) => id,
+        ["testmaster-runner"],
+        new Set([`sha256:${"b".repeat(64)}`]),
+      ),
+    ).toEqual(lock);
     await writeFile(join(root, "seccomp_profile.json"), "modified");
     await expect(verifyImageLock(path, async (id) => id)).rejects.toThrow("seccomp_hash_mismatch");
   } finally {
