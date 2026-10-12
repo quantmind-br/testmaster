@@ -40,3 +40,4 @@ and rollback means restoring a backup taken before the upgrade.
 | 6 | `m3_diagnostics` | `cc958418043d` | Immutable `analyses`, `healing_proposals`, `deliveries` and their identity indexes |
 | 7 | `m3_contract_constraints` | `b8a0f05372b8` | Generated M3 contract CHECK constraints |
 | 8 | `fixture_inputs` | `aa12ad5eb6f9` | Fixture input objects (`fixture_inputs`) included in backups and retention |
+| 9 | `delivery_requeue` | `041fd69b1c99` | Lets a dead-lettered check delivery reopen to `pending`; the frozen delivery subject and delivered rows stay immutable |

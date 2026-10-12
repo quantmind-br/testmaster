@@ -126,13 +126,18 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   expect(versionOf(join(backupDir, "testmaster.db"))).toBe(all.length - 1);
   const snapshot = new DatabaseSync(join(backupDir, "testmaster.db"), { readOnly: true });
   expect(
-    snapshot.prepare("SELECT name FROM sqlite_master WHERE name='fixture_inputs'").get(),
-  ).toBeUndefined();
+    String(
+      snapshot.prepare("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'").get()
+        ?.sql,
+    ),
+  ).toContain("OLD.state IN ('delivered','dead_letter')");
   snapshot.close();
   const live = await PersistenceDatabase.open(path, { migrate: false });
   try {
     expect(live.status()).toMatchObject({ currentVersion: all.length, pending: [] });
-    expect(live.get("SELECT name FROM sqlite_master WHERE name='fixture_inputs'")).toBeDefined();
+    expect(
+      String(live.get("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'")?.sql),
+    ).toContain("OLD.state='dead_letter' AND NEW.state<>'pending'");
     expect(live.get("SELECT value FROM operational_state WHERE key='user:state'")?.value).toBe(
       "keep-me",
     );

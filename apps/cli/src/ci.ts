@@ -230,4 +230,19 @@ export function ciCommands(program: Command, runtime: Runtime): void {
       }
     },
   );
+  runtime.bind(ci.command("deliveries").option("--state <state>"), async (rt, _args, options) => {
+    const state = string(options, "state");
+    if (state !== undefined && !["pending", "delivered", "dead_letter"].includes(state))
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "State must be pending, delivered or dead_letter",
+      );
+    const deliveries = (await rt.app()).delivery.list(
+      state ? { state: state as "pending" | "delivered" | "dead_letter" } : {},
+    );
+    return { data: { deliveries } };
+  });
+  runtime.bind(ci.command("deliveries-requeue <deliveryId>"), async (rt, args) => ({
+    data: { delivery: (await rt.app()).delivery.requeue(String(args[0])) },
+  }));
 }

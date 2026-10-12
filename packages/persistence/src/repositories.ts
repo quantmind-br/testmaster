@@ -790,6 +790,26 @@ export class AuxiliaryLeaseRepository {
     };
     return this.database.db.isTransaction ? apply() : this.database.withTx(apply);
   }
+  /** Reopens a dead-lettered delivery job for one new cycle; the stored payload is never changed. */
+  requeueDeadLetter(workspaceId: string, jobId: string, availableAt: string): void {
+    const apply = () => {
+      const job = this.get(workspaceId, jobId);
+      if (!job || job.state !== "completed" || job.result?.state !== "dead_letter")
+        throw new ContractError("PRECONDITION_FAILED", "Job is not dead-lettered");
+      const changed = this.database.run(
+        "UPDATE job_leases SET state='queued',lease_owner=NULL,lease_expires_at=NULL,available_at=?,data_json=? WHERE workspace_id=? AND id=? AND state='completed' AND fence=?",
+        availableAt,
+        canonicalJson({ payload: job.payload, progress: {}, result: null }),
+        workspaceId,
+        jobId,
+        job.fence,
+      );
+      if (!changed.changes)
+        throw new ContractError("PRECONDITION_FAILED", "Job is not dead-lettered");
+    };
+    if (this.database.db.isTransaction) apply();
+    else this.database.withTx(apply);
+  }
 }
 export class ExecutionRepository {
   readonly leases: LeaseRepository;

@@ -7,6 +7,7 @@ import {
   type EntityDocument,
   OutboxRepository,
 } from "@testmaster/persistence";
+import { auditSecurity } from "./audit.js";
 import type { CiResult } from "./ci.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 
@@ -73,9 +74,28 @@ export class CheckHttpError extends Error {
     super(`GitHub Checks HTTP ${status}`);
   }
 }
+/** Retry policy of one delivery cycle (OPS-011): exponential equal-jitter backoff, bounded by 10 attempts or 24 h. */
+export const deliveryRetryPolicy = {
+  baseMs: 1000,
+  maxMs: 300_000,
+  maxAttempts: 10,
+  windowMs: 86_400_000,
+} as const;
+/** attempt = failed delivery attempts so far (1-based). Equal jitter: result in [ceiling/2, ceiling]; random() returns [0,1]. */
+export function deliveryBackoffMs(attempt: number, random: () => number = Math.random): number {
+  if (!Number.isInteger(attempt) || attempt < 1)
+    throw new ContractError("INVALID_ARGUMENT", "Delivery attempt must be a positive integer");
+  const ceiling = Math.min(
+    deliveryRetryPolicy.maxMs,
+    deliveryRetryPolicy.baseMs * 2 ** (attempt - 1),
+  );
+  return Math.round(ceiling * (0.5 + random() / 2));
+}
 export interface ChecksClientOptions {
   apiUrl?: string;
   sleep?: (ms: number) => Promise<void>;
+  /** Jitter source for the delivery-level reschedule; defaults to Math.random. */
+  random?: () => number;
 }
 export class ChecksClient {
   private readonly apiUrl: string;
@@ -265,6 +285,11 @@ export class DeliveryService {
           `delivery:payload:${this.ctx.workspaceId}:${value.id}`,
           canonicalJson(body),
         );
+        this.ctx.database.run(
+          "INSERT INTO operational_state(key,value) VALUES(?,?)",
+          this.windowKey(value.id),
+          value.createdAt as string,
+        );
         new AuxiliaryLeaseRepository(this.ctx.database).enqueue(this.ctx.workspaceId, "delivery", {
           targetId: value.id,
           actorId: this.ctx.principalId,
@@ -313,19 +338,81 @@ export class DeliveryService {
         });
         leases.finish(fence, "completed", { deliveryId: row.id, remoteId });
       } catch (error) {
-        const dead = error instanceof CheckHttpError && [401, 403].includes(error.status);
+        const authDenied = error instanceof CheckHttpError && [401, 403].includes(error.status);
+        const attempts = Number(row.attempts) + 1;
+        const exhausted =
+          attempts >= deliveryRetryPolicy.maxAttempts ||
+          Date.now() >= Date.parse(this.windowStart(row)) + deliveryRetryPolicy.windowMs;
+        const dead = authDenied || exhausted;
+        const retryMs = Math.max(
+          deliveryBackoffMs(attempts, options.random ?? Math.random),
+          error instanceof CheckHttpError ? (error.retryAfterMs ?? 0) : 0,
+        );
+        const retryAt = new Date(Date.now() + retryMs).toISOString();
         row = this.update(row, {
-          attempts: Number(row.attempts) + 1,
+          attempts,
           state: dead ? "dead_letter" : "pending",
           lastError: error instanceof CheckHttpError ? error.message : "Check publication failed",
-          nextAttemptAt: dead ? null : new Date(Date.now() + 30000).toISOString(),
+          nextAttemptAt: dead ? null : retryAt,
         });
-        if (dead) leases.finish(fence, "completed", { deliveryId: row.id, state: "dead_letter" });
-        else leases.release(fence, String(row.nextAttemptAt));
+        if (dead)
+          leases.finish(fence, "completed", {
+            deliveryId: row.id,
+            state: "dead_letter",
+            reason: authDenied ? "authorization_refused" : "attempts_exhausted",
+          });
+        else leases.release(fence, retryAt);
       }
       deliveries.push(validate<Delivery>("Delivery", row));
     }
     return deliveries;
+  }
+  /** Read-only inventory of deliveries, optionally filtered by state (dead letters included). */
+  list(filter: { state?: Delivery["state"] } = {}): Delivery[] {
+    this.ctx.authorize("R");
+    return allEntities(this.ctx, "Delivery")
+      .filter((item) => !filter.state || item.state === filter.state)
+      .map((item) => validate<Delivery>("Delivery", item));
+  }
+  /**
+   * Reopens one dead-lettered delivery for a new retry cycle. Needs write authority, is audited
+   * and only re-arms the delivery job: the local Run and its verdict are never touched.
+   */
+  requeue(id: string): Delivery {
+    this.ctx.authorize("W");
+    return this.ctx.database.withTx(() => {
+      const row = requireEntity(this.ctx, "Delivery", id);
+      if (row.state !== "dead_letter")
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Only dead-lettered deliveries can be requeued",
+        );
+      auditSecurity(this.ctx, "delivery.requeue", id, "requested");
+      const leases = new AuxiliaryLeaseRepository(this.ctx.database);
+      const job = leases.forTarget(this.ctx.workspaceId, "delivery", id)[0];
+      if (!job) throw new ContractError("PRECONDITION_FAILED", "Delivery job is missing");
+      const now = new Date().toISOString();
+      leases.requeueDeadLetter(this.ctx.workspaceId, job.jobId, now);
+      this.ctx.database.run(
+        "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        this.windowKey(id),
+        now,
+      );
+      const next = this.update(row, { state: "pending", attempts: 0, nextAttemptAt: null });
+      auditSecurity(this.ctx, "delivery.requeue", id, "allowed");
+      return validate<Delivery>("Delivery", next);
+    });
+  }
+  private windowKey(id: string): string {
+    return `delivery:window:${this.ctx.workspaceId}:${id}`;
+  }
+  /** Start of the 24 h retry window: creation time, or the last requeue. */
+  private windowStart(row: EntityDocument): string {
+    const stored = this.ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      this.windowKey(row.id),
+    );
+    return stored ? String(stored.value) : String(row.createdAt);
   }
   private update(current: EntityDocument, fields: Record<string, unknown>): EntityDocument {
     const next = { ...current, ...fields, version: Number(current.version) + 1 };

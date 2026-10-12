@@ -9585,21 +9585,106 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M1",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/persistence/src/persistence.test.ts::outbox and state mutation roll back together",
-        "validation/journeys/m1-recovery.docker.test.ts::J17 persistent receipt survives a killed waiting client; killed worker reconciles its attempt without a false pass"
+        "validation/journeys/m1-recovery.docker.test.ts::J17 persistent receipt survives a killed waiting client; killed worker reconciles its attempt without a false pass",
+        "packages/application/src/delivery.test.ts::computes exponential jittered delivery backoff capped at 300 s",
+        "packages/application/src/delivery.test.ts::dead-letters after ten failed attempts and honours jittered backoff between them",
+        "packages/application/src/delivery.test.ts::dead-letters a failing delivery whose 24 hour window elapsed and restarts the window on requeue",
+        "packages/application/src/delivery.test.ts::requeues a dead letter only with write authority and never reruns the local result",
+        "packages/application/src/delivery.test.ts::lists dead letters through a read-only query without touching their state",
+        "packages/application/src/delivery.test.ts::keeps delivered rows frozen and lets a dead letter change only by reopening to pending",
+        "packages/application/src/delivery.test.ts::keeps a committed delivery pending after SIGKILL before send and delivers it on the next process",
+        "packages/application/src/delivery.test.ts::reconciles a check created before SIGKILL instead of posting it twice and keeps the event id",
+        "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+        "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event committed before SIGKILL pending for the next process under the same id",
+        "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event pending when SIGKILL lands after dispatch but before delivered",
+        "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs"
       ],
       "oracle": [
-        "State/outbox atomic rollback; local accepted/terminal outbox events are recoverable."
+        "GitHub check deliveries are atomic with the outbox event and keep a stable event ID; the delivery-level reschedule is exponential with equal jitter (1 s base, 300 s cap); a delivery is dead-lettered after 10 attempts or 24 h; dead letters are listed read-only and requeued only with write authority, audited, without rerunning the local test; delivered and dead-letter rows stay frozen except the authorized reopening; a crash after commit and before send delivers later; a crash after send and before ack reconciles by external id and keeps the event ID."
       ],
       "evidence": [
+        "packages/application/src/delivery.test.ts",
+        "packages/persistence/src/outbox-crash.test.ts",
+        "apps/cli/src/ci-deliveries.test.ts",
         "packages/persistence/src/persistence.test.ts",
         "validation/results/j17-worker-recovery.json"
       ],
-      "code": ["packages/persistence/src/repositories.ts", "packages/application/src/worker.ts"],
-      "note": "Local transactional outbox exists; outbound webhooks/GitHub/notifications, backoff/jitter/DLQ authorization and crash send/ack delivery tests are later-scope and not exercised.",
-      "blockedReason": "Local transactional outbox exists; outbound webhooks/GitHub/notifications, backoff/jitter/DLQ authorization and crash send/ack delivery tests are later-scope and not exercised."
+      "code": [
+        "packages/application/src/delivery.ts",
+        "packages/persistence/src/repositories.ts",
+        "packages/persistence/migrations/sqlite/0009_delivery_requeue.sql",
+        "apps/cli/src/ci.ts"
+      ],
+      "note": "GitHub check deliveries only: bounded exponential equal-jitter retries, 10 attempts or 24 h to a queryable dead letter, authorized audited requeue (CLI ci deliveries and ci deliveries-requeue; REST is M4). Migration 0009 lets only dead_letter reopen to pending. In-request HTTP retries and the Retry-After 30 s cap are unchanged. The maintenance outbox sweep marks outbox rows delivered without sending, so outbox delivered means swept, not sent; check delivery state lives in the Delivery entity. Webhooks, notifications and non-GitHub DLQ are M4 scope.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/delivery.test.ts::computes exponential jittered delivery backoff capped at 300 s",
+          "packages/application/src/delivery.test.ts::dead-letters after ten failed attempts and honours jittered backoff between them",
+          "packages/application/src/delivery.test.ts::dead-letters a failing delivery whose 24 hour window elapsed and restarts the window on requeue",
+          "packages/application/src/delivery.test.ts::requeues a dead letter only with write authority and never reruns the local result",
+          "packages/application/src/delivery.test.ts::lists dead letters through a read-only query without touching their state",
+          "packages/application/src/delivery.test.ts::keeps a committed delivery pending after SIGKILL before send and delivers it on the next process",
+          "packages/application/src/delivery.test.ts::reconciles a check created before SIGKILL instead of posting it twice and keeps the event id",
+          "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event committed before SIGKILL pending for the next process under the same id",
+          "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event pending when SIGKILL lands after dispatch but before delivered",
+          "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs"
+        ],
+        "negative": [
+          "packages/application/src/delivery.test.ts::requeues a dead letter only with write authority and never reruns the local result",
+          "packages/application/src/delivery.test.ts::lists dead letters through a read-only query without touching their state",
+          "packages/application/src/delivery.test.ts::keeps delivered rows frozen and lets a dead letter change only by reopening to pending",
+          "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
+          "packages/persistence/src/persistence.test.ts::outbox and state mutation roll back together",
+          "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(deliveryBackoffMs(10, () => 1)).toBe(300000);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(rows.map((row) => row.state)).toEqual([\"dead_letter\", \"dead_letter\"]);"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(() => app?.delivery.requeue(dead.id)).toThrow(\"Read-only principal\");"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(() => app?.database.run(sql, ...params), sql).toThrow(\"delivery_subject_frozen\");"
+          },
+          {
+            "path": "packages/application/src/delivery.test.ts",
+            "assertion": "expect(created.filter((item) => item.external_id === sent)).toHaveLength(1);"
+          },
+          {
+            "path": "packages/persistence/src/outbox-crash.test.ts",
+            "assertion": "expect(new OutboxRepository(db).pending(ws).map((row) => row.id)).toContain(result.stdout);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "webhook outbound deliveries: signing with timestamp/event ID, consumer dedupe, webhook DLQ",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "VAL-033 webhook scopes remain M4/M5 obligations"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "notification/worker outbox backoff and DLQ for non-GitHub destinations",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "M4-08 — Notificações e workers de equipe"
+          }
+        }
+      ]
     },
     {
       "id": "OPS-012",
