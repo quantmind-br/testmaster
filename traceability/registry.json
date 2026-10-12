@@ -14949,7 +14949,9 @@
         "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering",
         "packages/sandbox/src/images/lock.test.ts::hashes build contents independent of input ordering, sensitive to path and bytes"
       ],
-      "oracle": ["Pinned dependencies/images/build inputs and tamper refusal exist."],
+      "oracle": [
+        "Pinned dependencies/images/build inputs and tamper refusal exist."
+      ],
       "evidence": [
         "containers/images.lock.json",
         "packages/sandbox/src/images/lock.test.ts",
@@ -14962,8 +14964,8 @@
         "packages/sandbox/src/images/lock.ts",
         "tools/ci/check.sh"
       ],
-      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, and tampered/wrong-pin/missing-license installer refusals exercised on the anonymously downloaded public prerelease runtime-4df8ba5.",
-      "blockedReason": "Release signatures, security advisory and revocation workflow are not implemented; no GA release claim."
+      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, tampered/wrong-pin/missing-license installer refusals, and detached Ed25519 manifest signatures with committed keyring, key/release revocation and advisories (tools/src/distribution/release-signing.test.ts). The first signed release runtime-f4e3335 was installed anonymously (installer SHA-256 and signing key ID verified, installed CLI healthy pass/semantic-negative fail, 0 model calls) and unsigned/tampered manifests were refused (validation/results/runtime-f4e3335-public-install).",
+      "blockedReason": "Dependency and image vulnerability scanning with a CVE exception register (owner, expiry) is not implemented; the signing key is a single maintainer key without transparency log or hardware enforcement; no GA release claim."
     },
     {
       "id": "SEC-046",

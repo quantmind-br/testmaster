@@ -6,7 +6,8 @@ verifiable evidence under `.testmaster/`. Generation with a model is optional an
 ## Install the public experimental runtime
 
 The Linux x64 relocatable prerelease is available at
-[runtime-89a7205](https://github.com/quantmind-br/testmaster/releases/tag/runtime-89a7205).
+[runtime-f4e3335](https://github.com/quantmind-br/testmaster/releases/tag/runtime-f4e3335)
+(signed manifest; the earlier unsigned `runtime-89a7205` is refused by the current installer).
 Download its `INSTALL.md` for hash-pinned installation without building the monorepo.
 Node 24 and rootful hardened Docker with the containerd image store remain host
 requirements. The release includes a standalone installer, runtime, both locked
