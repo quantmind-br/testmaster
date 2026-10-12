@@ -16353,7 +16353,7 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M0",
       "ownerRole": "Security",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering",
         "packages/sandbox/src/images/lock.test.ts::hashes build contents independent of input ordering, sensitive to path and bytes",
@@ -16390,7 +16390,9 @@
         "packages/sandbox/src/images/lock.test.ts",
         "tools/src/distribution/vulnerabilities.test.ts",
         "tools/src/distribution/release-signing.test.ts",
-        "containers/NOTICE"
+        "containers/NOTICE",
+        "validation/results/sec-045-scan/a3b16d60ee9007802b30d2a713ae3379e4981877/vulnerabilities.json",
+        "validation/results/sec-045-scan/a3b16d60ee9007802b30d2a713ae3379e4981877/summary.json"
       ],
       "code": [
         "pnpm-lock.yaml",
@@ -16404,8 +16406,7 @@
         "tools/src/distribution/package.ts",
         "tools/src/distribution/release-sign.ts"
       ],
-      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, tampered/wrong-pin/missing-license installer refusals, detached Ed25519 manifest signatures with committed keyring, key/release revocation and advisories (tools/src/distribution/release-signing.test.ts), and a fail-closed vulnerability gate: Trivy 0.75.0 pinned by image digest (containers/scanner.lock.json) scans the staged runtime npm graph (CycloneDX inventory) and both locked images inside package.js before the manifest is written; CRITICAL and HIGH block whether or not a fix exists unless an owned exception (docs/security/vulnerability-exceptions.json: id, package, target, owner, expiry at most 90 days, reason) covers them; expired or stale exceptions, a stale advisory database and scans that miss a staged package fail; the manifest pins vulnerabilities.json and signRelease refuses a missing, mismatched, failing, unpinned-scanner or unbound report (tools/src/distribution/vulnerabilities.test.ts). Limits: one scanner and one advisory snapshot; browser binaries, source-built FFmpeg and dev dependencies have no package database and are not covered; the installer does not re-scan; the signing key is a single maintainer key without transparency log or hardware enforcement; no GA release claim.",
-      "blockedReason": "No real passing scan of a release candidate is committed as evidence yet: the fixture tests prove the gate logic, not a clean scan of the shipped images (the integration owner records one after the image refresh and the exception register).",
+      "note": "Implemented: per-release CycloneDX SBOM/license obligations, hash-bound manifest/runtime/image parts, source-commit provenance, pre-publication secret scans of history and decompressed release assets, tampered/wrong-pin/missing-license installer refusals, detached Ed25519 manifest signatures with committed keyring, key/release revocation and advisories (tools/src/distribution/release-signing.test.ts), and a fail-closed vulnerability gate: Trivy 0.75.0 pinned by image digest (containers/scanner.lock.json) scans the staged runtime npm graph (CycloneDX inventory) and both locked images inside package.js before the manifest is written; CRITICAL and HIGH block whether or not a fix exists unless an owned exception (docs/security/vulnerability-exceptions.json: id, package, target, owner, expiry at most 90 days, reason) covers them; expired or stale exceptions, a stale advisory database and scans that miss a staged package fail; the manifest pins vulnerabilities.json and signRelease refuses a missing, mismatched, failing, unpinned-scanner or unbound report (tools/src/distribution/vulnerabilities.test.ts). Limits: one scanner and one advisory snapshot; browser binaries, source-built FFmpeg and dev dependencies have no package database and are not covered; the installer does not re-scan; the signing key is a single maintainer key without transparency log or hardware enforcement; no GA release claim. Real scan evidence: validation/results/sec-045-scan/a3b16d60ee9007802b30d2a713ae3379e4981877/ (packaging dry run from a clean worktree, verdict pass, no CRITICAL, four HIGH CVE-2025-3887 findings excepted with owner and expiry because Ubuntu 24.04 ships no fix); the advisory database changes daily, so every release repeats the scan.",
       "coverage": {
         "positive": [
           "tools/src/distribution/vulnerabilities.test.ts::passes when every blocking finding is covered by a current owned exception and the report binds the manifest inputs",

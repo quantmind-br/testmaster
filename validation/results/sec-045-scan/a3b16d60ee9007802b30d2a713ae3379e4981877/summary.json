@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "sec-045-packaging-dry-run",
+  "sourceCommit": "a3b16d60ee9007802b30d2a713ae3379e4981877",
+  "method": "node tools/dist/distribution/package.js from a clean git worktree of the committed source (licenses.js, sources.js, package.js); scan gate between image export and manifest",
+  "manifestSha256": "15dee6349a6db4152f199c9262e0665992a1b9f9f73346a2138318b611a9196b",
+  "vulnerabilitiesSha256": "aaec8c5b1f63209fbd42b8052bff3bf96bb947576545cdf98b08675cca053b29",
+  "manifestVulnerabilityReport": {
+    "sha256": "aaec8c5b1f63209fbd42b8052bff3bf96bb947576545cdf98b08675cca053b29",
+    "size": 415802
+  },
+  "sbom": {
+    "format": "CycloneDX",
+    "specVersion": "1.6",
+    "components": 1299,
+    "sha256": "c7c0dadbbda06d5540ac7e2b603949a1df5c1418dedf6006c8b048e60b03391a"
+  },
+  "verdict": "pass",
+  "failures": [],
+  "targets": [
+    {
+      "id": "runtime",
+      "packages": 248,
+      "findings": 0
+    },
+    {
+      "id": "image:testmaster-runner",
+      "packages": 533,
+      "findings": 682
+    },
+    {
+      "id": "image:testmaster-runner-python",
+      "packages": 525,
+      "findings": 665
+    }
+  ],
+  "severityCounts": {
+    "LOW": 108,
+    "MEDIUM": 1235,
+    "HIGH": 4
+  },
+  "blockingFindings": [
+    {
+      "id": "CVE-2025-3887",
+      "package": "gstreamer1.0-plugins-bad",
+      "target": "image:testmaster-runner",
+      "decision": "excepted"
+    },
+    {
+      "id": "CVE-2025-3887",
+      "package": "libgstreamer-plugins-bad1.0-0",
+      "target": "image:testmaster-runner",
+      "decision": "excepted"
+    },
+    {
+      "id": "CVE-2025-3887",
+      "package": "gstreamer1.0-plugins-bad",
+      "target": "image:testmaster-runner-python",
+      "decision": "excepted"
+    },
+    {
+      "id": "CVE-2025-3887",
+      "package": "libgstreamer-plugins-bad1.0-0",
+      "target": "image:testmaster-runner-python",
+      "decision": "excepted"
+    }
+  ],
+  "scanner": {
+    "name": "trivy",
+    "version": "0.75.0",
+    "image": "aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa",
+    "provenance": "GitHub release v0.75.0; Docker Hub index digest observed 2026-10-12",
+    "db": {
+      "version": 2,
+      "updatedAt": "2026-10-12T13:18:23.1639207Z",
+      "downloadedAt": "2026-10-12T16:09:39.199871506Z",
+      "nextUpdate": "2026-10-13T13:18:23.16392058Z"
+    }
+  },
+  "limits": "Automated scan of the staged npm graph and both locked images at the scan date; browser binaries, FFmpeg and dev dependencies are not covered; the advisory database changes daily; four HIGH findings are excepted (no Ubuntu fix) in docs/security/vulnerability-exceptions.json."
+}
