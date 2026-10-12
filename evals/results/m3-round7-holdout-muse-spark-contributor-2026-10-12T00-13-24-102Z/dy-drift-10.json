@@ -1,0 +1,646 @@
+{
+  "oracle": "shipmentPersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "submit"
+  ],
+  "patches": [
+    {
+      "file": "dockyard.html",
+      "before": ">Log shipment</button>",
+      "after": ">Book shipment</button>"
+    }
+  ],
+  "candidate": {
+    "roleRenames": {
+      "Log shipment": "Book shipment"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+      "dockyard.html": "e6773beb1bc29132f139704fa800747391f8409360cae1f066724e319a922f2a"
+    },
+    "transformed": {
+      "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+      "dockyard.html": "e3f33a9fd9653b370405daf865043c6e53830034127329f4524351c5dedae677"
+    }
+  },
+  "familyId": "reference-dockyard",
+  "id": "dy-drift-10",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-drift-10",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/signin"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "clerk-email"
+          },
+          "value": {
+            "literal": "clerk@dockyard.test"
+          }
+        }
+      },
+      {
+        "id": "secret",
+        "kind": "action",
+        "operation": "fill",
+        "description": "secret",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "clerk-secret"
+          },
+          "value": {
+            "literal": "dock-secret"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "queue_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "queue_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "queue-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "reference",
+        "kind": "action",
+        "operation": "fill",
+        "description": "reference",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "shipment-reference"
+          },
+          "value": {
+            "literal": "Customs drill"
+          }
+        }
+      },
+      {
+        "id": "submit",
+        "kind": "action",
+        "operation": "click",
+        "description": "submit",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Log shipment",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "created",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "created",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "banner"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Shipment logged"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/shipments"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "queue-count"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "6"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "shipmentPersistence",
+    "semanticNegative": "shipment-not-persisted",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "submit"
+    ],
+    "patches": [
+      {
+        "file": "dockyard.html",
+        "before": ">Log shipment</button>",
+        "after": ">Book shipment</button>"
+      }
+    ],
+    "candidate": {
+      "roleRenames": {
+        "Log shipment": "Book shipment"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+        "dockyard.html": "e6773beb1bc29132f139704fa800747391f8409360cae1f066724e319a922f2a"
+      },
+      "transformed": {
+        "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+        "dockyard.html": "e3f33a9fd9653b370405daf865043c6e53830034127329f4524351c5dedae677"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "inspect_locator_candidates"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence",
+      "review_healing_proposal"
+    ],
+    "healingEligibility": "manual",
+    "expectedHealingAdvice": "manual_review_only",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "log-label-changed"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the log control by its accessible name; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "shipment-not-persisted",
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "assistedCandidate": true
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false,
+    "manualReviewRequired": true,
+    "changeCount": 1,
+    "assistedCandidate": {
+      "positiveDrift": true,
+      "negativeSemantic": true,
+      "isolated": true,
+      "assertionsPreserved": true,
+      "promoted": false,
+      "candidateRevisionId": "rev_01a12d8e-1e69-7065-bbc6-20070856c353",
+      "positiveRunId": "run_01a12d8e-1f10-7657-b95b-c8987b72891d",
+      "negativeRunId": "run_01a12d8e-27f2-7619-937e-f402d409160f"
+    }
+  },
+  "usage": {
+    "inputTokens": 21399,
+    "outputTokens": 7628,
+    "reasoningTokens": 7084,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 29027,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-5RiKbE",
+    "baseRevision": {
+      "id": "rev_01a12d8c-dde9-71da-9d56-1be74c6829d4",
+      "protectedHash": "94a586eaf051ae4c2232e5c496bf6c7d671f87bee5315467837d315e75b204f9"
+    },
+    "healthy": {
+      "runId": "run_01a12d8c-de35-76a1-8811-d7df01e91a7c",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12d8c-e4bc-76f9-b9e0-e197d28731e4",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12d8d-623c-75e4-ab05-3bf35dfa6a34",
+      "hash": "fb15f4702fe972327034d0ac1b511d315824db6be45fc861f8036067dc68fa35",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12d8d-b30b-72b7-abad-c2d58ac07ae4",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "8ec79fb901114ac6541d2f386acf549c26aff3b30db1b8498999a99364dcf777",
+        "responseHash": "efa8400e3afc69329553a726f9f3d1eedf5733503f1b1c0d8a325fd058642431",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10547,
+          "outputTokens": 2918,
+          "reasoningTokens": 2646
+        },
+        "cost": "unknown",
+        "latencyMs": 19942,
+        "createdAt": "2026-10-12T00:40:23.563Z"
+      },
+      {
+        "id": "mdl_01a12d8e-1d89-7770-a87a-30bbab83f39d",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "6f8c8e0afc13d0a2ffa55d4c53365492bdc5ab045f4b681c922b06ad644f4d57",
+        "responseHash": "842c3bcd72a79f04d92d91afac39b77159a94a7bc03c8ef90f00af41927102d3",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10852,
+          "outputTokens": 4710,
+          "reasoningTokens": 4438
+        },
+        "cost": "unknown",
+        "latencyMs": 26525,
+        "createdAt": "2026-10-12T00:40:50.826Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12d8d-b30c-723c-a33d-9e92de28d3ef",
+      "hash": "b5576956e95f3dd7c5abbab91d1b418b3ec7f420e287027021625818dead3761"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12d8c-dde9-71da-9d56-1be74c6829d4",
+      "candidateRevisionId": "rev_01a12d8e-1e69-7065-bbc6-20070856c353",
+      "baseHash": "94a586eaf051ae4c2232e5c496bf6c7d671f87bee5315467837d315e75b204f9",
+      "candidateHash": "94a586eaf051ae4c2232e5c496bf6c7d671f87bee5315467837d315e75b204f9",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12d8e-1e68-70f7-bb03-7d423e087eb2",
+      "hash": "32675c0132365e2afee5a411475d7f7f5092629aa31d190c27e03c4cd2579afd",
+      "status": "proposed",
+      "approvalMode": null
+    },
+    "assistedCandidate": {
+      "proof": {
+        "positiveDrift": true,
+        "negativeSemantic": true,
+        "isolated": true,
+        "assertionsPreserved": true,
+        "promoted": false,
+        "candidateRevisionId": "rev_01a12d8e-1e69-7065-bbc6-20070856c353",
+        "positiveRunId": "run_01a12d8e-1f10-7657-b95b-c8987b72891d",
+        "negativeRunId": "run_01a12d8e-27f2-7619-937e-f402d409160f"
+      },
+      "runs": {
+        "transformed": {
+          "runId": "run_01a12d8e-1f10-7657-b95b-c8987b72891d",
+          "revisionId": "rev_01a12d8e-1e69-7065-bbc6-20070856c353",
+          "outcome": "passed",
+          "gate": "passed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "secret",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "signin",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "queue_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "reference",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "submit",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "created",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            }
+          ],
+          "reasonCodes": [
+            "assertions_satisfied",
+            "assertions_satisfied"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "e15ae989721a83a4970f08546270256a44d17da0c2702a04297850a5f204dcc3",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12d8c-ddd3-7388-af53-33bfe9d5200f",
+          "admissionHash": "abd0ae762536f394e6a7fa95b86cd7512cbbc0565d96a29cd4baf261828d544a"
+        },
+        "semantic": {
+          "runId": "run_01a12d8e-27f2-7619-937e-f402d409160f",
+          "revisionId": "rev_01a12d8e-1e69-7065-bbc6-20070856c353",
+          "outcome": "failed",
+          "gate": "failed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "secret",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "signin",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "queue_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "reference",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "submit",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "created",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "failed",
+              "reasonCode": "assertion_mismatch",
+              "errorCode": "Error"
+            }
+          ],
+          "reasonCodes": [
+            "assertion_mismatch",
+            "assertion_mismatch",
+            "assertion_mismatch"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "e15ae989721a83a4970f08546270256a44d17da0c2702a04297850a5f204dcc3",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12d8c-ddd3-7388-af53-33bfe9d5200f",
+          "admissionHash": "abd0ae762536f394e6a7fa95b86cd7512cbbc0565d96a29cd4baf261828d544a"
+        }
+      },
+      "oracles": {
+        "transformed": {
+          "check": "shipmentPersistence",
+          "healthy": true,
+          "defective": false,
+          "observed": {
+            "createdStatus": 201,
+            "persistedRows": 1,
+            "listedTotal": 6
+          }
+        },
+        "semantic": {
+          "check": "shipmentPersistence",
+          "healthy": false,
+          "defective": true,
+          "observed": {
+            "createdStatus": 201,
+            "persistedRows": 0,
+            "listedTotal": 5
+          }
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

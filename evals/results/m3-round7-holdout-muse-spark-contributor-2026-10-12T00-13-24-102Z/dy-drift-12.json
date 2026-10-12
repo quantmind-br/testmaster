@@ -1,0 +1,760 @@
+{
+  "oracle": "expeditePersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "loading_finished"
+  ],
+  "baselinePatches": [
+    {
+      "file": "dockyard.html",
+      "before": "    console.info('assigned-ready');",
+      "after": "    const spinner=document.createElement('p'); spinner.dataset.testid='assigned-loading'; spinner.textContent='Loading';view.append(spinner);setTimeout(()=>spinner.remove(),250);\n    console.info('assigned-ready');"
+    }
+  ],
+  "patches": [
+    {
+      "file": "dockyard.html",
+      "before": "setTimeout(()=>spinner.remove(),250);",
+      "after": "setTimeout(()=>spinner.hidden=true,250);"
+    }
+  ],
+  "candidate": {
+    "waitForState": {
+      "loading_finished": "hidden"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+      "dockyard.html": "2fdd679570b82548416dd98c4959f299857f9110abef0d12683b308c5c299754"
+    },
+    "transformed": {
+      "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+      "dockyard.html": "98d079c7e0dfd6327010af2c33f5cc0f141ab22f3c8c2a350a0adcd27684837f"
+    }
+  },
+  "familyId": "reference-dockyard",
+  "id": "dy-drift-12",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-drift-12",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/signin"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "clerk-email"
+          },
+          "value": {
+            "literal": "clerk@dockyard.test"
+          }
+        }
+      },
+      {
+        "id": "secret",
+        "kind": "action",
+        "operation": "fill",
+        "description": "secret",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "clerk-secret"
+          },
+          "value": {
+            "literal": "dock-secret"
+          }
+        }
+      },
+      {
+        "id": "signin",
+        "kind": "action",
+        "operation": "click",
+        "description": "signin",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "queue_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "queue_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "queue-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "accept",
+        "kind": "action",
+        "operation": "click",
+        "description": "accept",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "accept-s1"
+          }
+        }
+      },
+      {
+        "id": "accepted",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "accepted",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "banner"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Accepted"
+          }
+        }
+      },
+      {
+        "id": "assigned",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "assigned",
+        "required": true,
+        "input": {
+          "path": "/assigned"
+        }
+      },
+      {
+        "id": "loading_attached",
+        "kind": "action",
+        "operation": "waitFor",
+        "description": "loading_attached",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "assigned-loading"
+          },
+          "state": "attached",
+          "deadlineMs": 3000
+        }
+      },
+      {
+        "id": "loading_finished",
+        "kind": "action",
+        "operation": "waitFor",
+        "description": "loading_finished",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "assigned-loading"
+          },
+          "state": "detached",
+          "deadlineMs": 3000
+        }
+      },
+      {
+        "id": "expedite",
+        "kind": "action",
+        "operation": "click",
+        "description": "expedite",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "expedite-button"
+          }
+        }
+      },
+      {
+        "id": "expedited",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "expedited",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "banner"
+          }
+        },
+        "expectation": {
+          "predicate": "textContains",
+          "value": {
+            "literal": "Expedited to"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/assigned"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "shipment-tier"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "priority"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "expeditePersistence",
+    "semanticNegative": "expedite-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "loading_finished"
+    ],
+    "baselinePatches": [
+      {
+        "file": "dockyard.html",
+        "before": "    console.info('assigned-ready');",
+        "after": "    const spinner=document.createElement('p'); spinner.dataset.testid='assigned-loading'; spinner.textContent='Loading';view.append(spinner);setTimeout(()=>spinner.remove(),250);\n    console.info('assigned-ready');"
+      }
+    ],
+    "patches": [
+      {
+        "file": "dockyard.html",
+        "before": "setTimeout(()=>spinner.remove(),250);",
+        "after": "setTimeout(()=>spinner.hidden=true,250);"
+      }
+    ],
+    "candidate": {
+      "waitForState": {
+        "loading_finished": "hidden"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+        "dockyard.html": "2fdd679570b82548416dd98c4959f299857f9110abef0d12683b308c5c299754"
+      },
+      "transformed": {
+        "index.js": "d3251b4f6504519922a5866a139d5b502f4e5fcde7d6f055bb336ceba53b1ca1",
+        "dockyard.html": "98d079c7e0dfd6327010af2c33f5cc0f141ab22f3c8c2a350a0adcd27684837f"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "inspect_locator_candidates"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence",
+      "review_healing_proposal"
+    ],
+    "healingEligibility": "manual",
+    "expectedHealingAdvice": "manual_review_only",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "loading-hidden-not-detached"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that waits for the loading indicator to detach; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "expedite-without-persist",
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "assistedCandidate": true
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false,
+    "manualReviewRequired": true,
+    "changeCount": 1,
+    "assistedCandidate": {
+      "positiveDrift": true,
+      "negativeSemantic": true,
+      "isolated": true,
+      "assertionsPreserved": true,
+      "promoted": false,
+      "candidateRevisionId": "rev_01a12d91-72e5-74ff-b39f-6c5fa6b9e5d1",
+      "positiveRunId": "run_01a12d91-7474-70ae-a530-57c3156f8cc6",
+      "negativeRunId": "run_01a12d91-830a-7476-b32b-7ee9448f4ef6"
+    }
+  },
+  "usage": {
+    "inputTokens": 25304,
+    "outputTokens": 5629,
+    "reasoningTokens": 5187,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 30933,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-6s0gT6",
+    "baseRevision": {
+      "id": "rev_01a12d90-a2b5-7796-86e2-1e675ceb6fa6",
+      "protectedHash": "f2ae95974cc8dd5d4b31f58e94caf3422f81784a3936c6c362cd45b6b647b9e1"
+    },
+    "healthy": {
+      "runId": "run_01a12d90-a3bc-71e9-93b0-eaadfb4c35e4",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12d90-b4f0-777d-a4b3-2fe7eaa3584c",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12d90-cfad-7580-ac15-93adb6ed428a",
+      "hash": "d8c2f524e2049fd087f47d20c571ec814b8a77ce9f384f54c21d8e1897e2c272",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12d91-1f72-7542-b724-66077da0fafc",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "d2f426af9de5ffb6fe29b6fdba3e7caaf518e56413b223afc5fe6dc7f8f3defc",
+        "responseHash": "8dcbcd0ba0cd29f0d68397033319f91674a7102921f07ac317fdcc96e1ae6d3e",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 12847,
+          "outputTokens": 2812,
+          "reasoningTokens": 2577
+        },
+        "cost": "unknown",
+        "latencyMs": 19062,
+        "createdAt": "2026-10-12T00:44:07.922Z"
+      },
+      {
+        "id": "mdl_01a12d91-710b-724a-a654-d63aeaf4f54d",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "44c5a62d7e55b8b1314df7f9cfe0d8715a8eea3bffb74e1c254530a31ecc7a24",
+        "responseHash": "5f1d227a063029ab4e21ccbdbbbba573cd146c14463fdf080a06781d81c26860",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 12457,
+          "outputTokens": 2817,
+          "reasoningTokens": 2610
+        },
+        "cost": "unknown",
+        "latencyMs": 19589,
+        "createdAt": "2026-10-12T00:44:28.812Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12d91-1f73-724b-9b9a-5b1811823552",
+      "hash": "1eded666d22531349a51d5cdaf917c337509c663efc8ef7775501af7cbf46fdf"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12d90-a2b5-7796-86e2-1e675ceb6fa6",
+      "candidateRevisionId": "rev_01a12d91-72e5-74ff-b39f-6c5fa6b9e5d1",
+      "baseHash": "f2ae95974cc8dd5d4b31f58e94caf3422f81784a3936c6c362cd45b6b647b9e1",
+      "candidateHash": "f2ae95974cc8dd5d4b31f58e94caf3422f81784a3936c6c362cd45b6b647b9e1",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12d91-72e2-73ea-b82d-aad690d8cc26",
+      "hash": "23a152f3baa7ecf2a28f6c7f9ca0afd223a1a32dbc2c79d1b05898288ec27510",
+      "status": "proposed",
+      "approvalMode": null
+    },
+    "assistedCandidate": {
+      "proof": {
+        "positiveDrift": true,
+        "negativeSemantic": true,
+        "isolated": true,
+        "assertionsPreserved": true,
+        "promoted": false,
+        "candidateRevisionId": "rev_01a12d91-72e5-74ff-b39f-6c5fa6b9e5d1",
+        "positiveRunId": "run_01a12d91-7474-70ae-a530-57c3156f8cc6",
+        "negativeRunId": "run_01a12d91-830a-7476-b32b-7ee9448f4ef6"
+      },
+      "runs": {
+        "transformed": {
+          "runId": "run_01a12d91-7474-70ae-a530-57c3156f8cc6",
+          "revisionId": "rev_01a12d91-72e5-74ff-b39f-6c5fa6b9e5d1",
+          "outcome": "passed",
+          "gate": "passed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "secret",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "signin",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "queue_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "accept",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "accepted",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "assigned",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_attached",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_finished",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "expedite",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "expedited",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            }
+          ],
+          "reasonCodes": [
+            "assertions_satisfied",
+            "assertions_satisfied"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "4e57c1a722ed351c3d42aded37507469bc69562171a42840a93cd3b5b84f3afc",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12d90-a28e-769c-ad7e-6bed1a28f1d9",
+          "admissionHash": "c912fd1249275f86494006635638606732d7501e3293a982caab6d485c1a9eea"
+        },
+        "semantic": {
+          "runId": "run_01a12d91-830a-7476-b32b-7ee9448f4ef6",
+          "revisionId": "rev_01a12d91-72e5-74ff-b39f-6c5fa6b9e5d1",
+          "outcome": "failed",
+          "gate": "failed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "secret",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "signin",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "queue_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "accept",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "accepted",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "assigned",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_attached",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_finished",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "expedite",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "expedited",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "failed",
+              "reasonCode": "assertion_mismatch",
+              "errorCode": "Error"
+            }
+          ],
+          "reasonCodes": [
+            "assertion_mismatch",
+            "assertion_mismatch",
+            "assertion_mismatch"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "4e57c1a722ed351c3d42aded37507469bc69562171a42840a93cd3b5b84f3afc",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12d90-a28e-769c-ad7e-6bed1a28f1d9",
+          "admissionHash": "c912fd1249275f86494006635638606732d7501e3293a982caab6d485c1a9eea"
+        }
+      },
+      "oracles": {
+        "transformed": {
+          "check": "expeditePersistence",
+          "healthy": true,
+          "defective": false,
+          "observed": {
+            "responseTier": "priority",
+            "persistedTier": "priority"
+          }
+        },
+        "semantic": {
+          "check": "expeditePersistence",
+          "healthy": false,
+          "defective": true,
+          "observed": {
+            "responseTier": "priority",
+            "persistedTier": "standard"
+          }
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}
