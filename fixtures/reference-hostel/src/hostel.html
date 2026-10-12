@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Marlow Hostel</title><style>body{margin:0;font:1rem/1.45 "Trebuchet MS",sans-serif;color:#1d2b2a}.shell{display:flex;min-height:100vh}aside{width:14rem;flex:none;background:#12403b;color:#eef7f5;padding:1.25rem 1rem}aside h1{font-size:1.3rem;margin:0 0 1rem}nav{display:flex;flex-direction:column;gap:.15rem}nav a{color:#cfe8e3;text-decoration:none;padding:.4rem .6rem;border-left:3px solid transparent}nav a[aria-current=page]{border-left-color:#f2b84b;background:#1b5750;color:#fff}.content{flex:1;padding:1.25rem 1.75rem;max-width:60rem}.flash-strip{min-height:1.6rem;color:#0b5d3b;font-weight:600}label{display:block;margin:.8rem 0}input{display:block;margin-top:.2rem;padding:.35rem .5rem;min-width:16rem}button{padding:.35rem .8rem;margin-right:.35rem;border:1px solid #12403b;background:#fff;border-radius:.3rem;cursor:pointer}[role=alert]{color:#9c1c1c}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.75rem;min-height:3rem;margin-top:1rem}.card{border:1px solid #bcd3cf;border-radius:.5rem;padding:.6rem .8rem;background:#f6fbfa}.card h3{margin:0 0 .3rem;font-size:1.05rem}.card dl{margin:.2rem 0;display:grid;grid-template-columns:auto 1fr;gap:.1rem .6rem}.card dt{color:#4d6662}.card dd{margin:0}.acts{margin-top:.5rem}.acts button[disabled]{opacity:.45;cursor:not-allowed}@media(max-width:44rem){.shell{flex-direction:column}aside{width:auto}}</style></head>
+<body><div class="shell"><aside><h1>Marlow Hostel</h1><nav aria-label="Hostel sections"><a href="/signin">Desk sign-in</a><a href="/arrivals">Arrivals</a><a href="/in-house">In house</a><a href="/wings/kitchen">Kitchen</a><a href="/wings/laundry">Laundry</a><a href="/wings/lounge">Lounge</a><a href="/wings/storage">Storage</a><a href="/wings/rooftop">Rooftop</a></nav></aside>
+<section class="content"><div class="flash-strip"><p role="status" data-testid="flash"></p></div>
+<main id="stage" aria-live="polite"></main></section></div>
+<script type="module">
+const stage = document.querySelector('#stage');
+let key = sessionStorage.getItem('marlow-key');
+const esc = text => String(text).replace(/[&<>"']/g, mark => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[mark]));
+async function call(path, options = {}) {
+  const reply = await fetch(`/api${path}`, {...options, headers:{...(key ? {authorization:`Bearer ${key}`} : {}), ...options.headers}});
+  if (reply.status === 401 && path !== '/session') throw new Error('Sign-in needed');
+  const data = await reply.json();
+  if (!reply.ok) throw new Error(data.error);
+  return data;
+}
+const send = (path, data, headers = {}) => call(path,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(data)});
+function flash(text) { document.querySelector('[data-testid=flash]').textContent = text; }
+async function draw() {
+  flash('');
+  const here = location.pathname;
+  for (const link of document.querySelectorAll('nav a')) { if (link.pathname === here) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); }
+  if (here === '/signin' || here === '/') {
+    stage.innerHTML = '<h2>Desk sign-in</h2><form novalidate><label>Handle<input name="handle" value="front@marlow.test" autocomplete="username" data-testid="desk-login"></label><label>PIN<input name="pin" type="password" autocomplete="current-password" data-testid="desk-pin"></label><p role="alert" data-testid="signin-issue"></p><button type="submit">Open desk</button></form>';
+    stage.querySelector('form').onsubmit = async event => {
+      event.preventDefault();
+      const handle = stage.querySelector('[name=handle]').value;
+      const pin = stage.querySelector('[name=pin]').value;
+      try {
+        const granted = await send('/session',{handle,pin});
+        key = granted.accessToken; sessionStorage.setItem('marlow-key',key); go('/arrivals');
+      } catch { stage.querySelector('[data-testid=signin-issue]').textContent = !pin ? 'Enter your PIN' : 'PIN rejected'; }
+    };
+    return;
+  }
+  if (here === '/arrivals') {
+    stage.innerHTML = '<h2>Arrivals</h2><p data-testid="arrivals-pending">Loading arrivals</p>';
+    await new Promise(done => setTimeout(done,40));
+    const {rows,total} = await call('/stays?perPage=100');
+    stage.innerHTML = `<h2>Arrivals</h2><form id="reserve-form" novalidate><label>Guest name<input name="guest" data-testid="guest-name"></label><button type="submit">Reserve bunk</button></form><p>Open stays: <strong data-testid="arrivals-total">${total}</strong></p><section class="cards" data-testid="arrivals-ready" aria-label="Open stays">${rows.map(item => `<article class="card" data-testid="stay-${esc(item.id)}"><h3>${esc(item.guest)}</h3><p>${esc(item.tier ?? item.grade)}</p><div class="acts"><button data-stay="${esc(item.id)}" data-testid="assign-${esc(item.id)}">Assign ${esc(item.guest)}</button></div></article>`).join('')}</section>`;
+    stage.querySelector('#reserve-form').onsubmit = async event => { event.preventDefault(); try { await send('/stays',{guest:stage.querySelector('[name=guest]').value}); flash('Bunk reserved'); } catch (error) { flash(error.message); } };
+    for (const button of stage.querySelectorAll('[data-stay]')) button.onclick = async () => { try { await send(`/stays/${button.dataset.stay}/assign`,{}); flash('Bed assigned'); } catch (error) { flash(error.message); } };
+  } else if (here === '/in-house') {
+    const {rows,total} = await call('/stays?perPage=100&holder=me');
+    const {bumpHook} = await fetch('/config').then(reply => reply.json());
+    stage.innerHTML = `<h2>In house</h2><p>Held by you: <strong data-testid="inhouse-total">${total}</strong></p><section class="cards" data-testid="inhouse-rows">${rows.map(item => `<article class="card" data-testid="inhouse-row"><h3>${esc(item.guest)}</h3><dl><dt>Tier</dt><dd data-testid="cell-tier">${esc(item.tier ?? item.grade)}</dd><dt>State</dt><dd data-testid="cell-state">${esc(item.state)}</dd></dl><div class="acts"><button class="step" data-testid="${bumpHook}" data-stay="${esc(item.id)}" ${item.state === 'departed' ? 'disabled' : ''}>Move up a tier</button><button class="exit" data-testid="check-out" data-stay="${esc(item.id)}" ${item.state === 'departed' ? 'disabled' : ''}>Check out</button></div></article>`).join('')}</section>`;
+    console.info('inhouse-view-ready');
+    for (const button of stage.querySelectorAll('button.step')) button.onclick = async () => { try { const moved = await send(`/stays/${button.dataset.stay}/bump`,{}); flash(`Moved up to ${moved.tier}`); } catch (error) { flash(error.message); } };
+    for (const button of stage.querySelectorAll('button.exit')) button.onclick = async () => { try { await send(`/stays/${button.dataset.stay}/depart`,{keyTag:'KT-RETURNED'}); flash('Guest departed'); } catch (error) { flash(error.message); } };
+  } else if (here.startsWith('/wings/')) {
+    const wing = here.slice('/wings/'.length);
+    stage.innerHTML = `<h2>${esc(wing.charAt(0).toUpperCase() + wing.slice(1))}</h2><p>No stays are managed in this wing.</p>`;
+  }
+}
+function go(path) { history.pushState({},'',path); draw().catch(error => { stage.textContent=error.message; }); }
+document.querySelector('nav').onclick = event => { const link = event.target.closest('a'); if (!link || link.target) return; event.preventDefault();go(link.pathname); };
+addEventListener('popstate',()=>draw().catch(error=>{stage.textContent=error.message;}));
+draw().catch(error=>{stage.textContent=error.message;});
+</script></body></html>
