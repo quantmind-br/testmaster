@@ -18475,21 +18475,55 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "blocked",
+      "status": "implemented",
       "scenario": [
-        "tools/src/traceability/release.test.ts::critical security defects block release despite every numeric score passing"
+        "tools/src/traceability/release.test.ts::critical security defects block release despite every numeric score passing",
+        "tools/src/traceability/evaluation.test.ts::records one immutable release evaluation per gate and commit and refuses overwrite",
+        "tools/src/traceability/evaluation.test.ts::refuses a dirty worktree before writing evaluation evidence",
+        "tools/src/traceability/evaluation.test.ts::keeps failed gates as evidence with exact blocking reasons instead of replacing them",
+        "tools/src/traceability/evaluation.test.ts::copies per-area targets, observations, intervals and n without a compensatory score"
       ],
       "oracle": [
-        "Null observation/n0/unapproved target cannot pass; each area separately decides."
+        "Null observation/n0/unapproved target cannot pass; each area separately decides.",
+        "A release evaluation record is written once per gate and commit from the checker result of a clean committed tree, copies every area verbatim, keeps failed gates as evidence and is never overwritten."
       ],
-      "evidence": ["tools/src/traceability/release.test.ts"],
+      "evidence": [
+        "tools/src/traceability/release.test.ts",
+        "tools/src/traceability/evaluation.test.ts"
+      ],
       "code": [
         "tools/src/traceability/check.ts",
         "tools/src/traceability/release.ts",
+        "tools/src/traceability/evaluation.ts",
         "tools/src/traceability/cli.ts"
       ],
-      "note": "Per-area gate validation implemented and passing. Final release targets/observation/interval/n and the automated release evaluation record are absent; no release-quality decision invented.",
-      "blockedReason": "Per-area gate validation implemented and passing. Final release targets/observation/interval/n and the automated release evaluation record are absent; no release-quality decision invented."
+      "note": "Per-area gate validation and the write-once release evaluation record writer (node tools/dist/traceability/cli.js evaluate --milestone-gate Mx | --capability-gate ID) are implemented and tested on temporary git repositories. The item stays implemented until the first record produced after the implementation commit, validation/results/release-evaluations/M3/<commit>.json, exists in the repository. Records document gate decisions at a commit; they do not assert that release targets were met (VAL-054).",
+      "blockedReason": "Implemented: per-area gate validation and the write-once release evaluation writer (evaluate command). The first committed record validation/results/release-evaluations/M3/<commit>.json does not exist yet, so the automated release evaluation record is not yet evidenced; no release-quality decision is invented.",
+      "coverage": {
+        "positive": [
+          "tools/src/traceability/evaluation.test.ts::records one immutable release evaluation per gate and commit and refuses overwrite",
+          "tools/src/traceability/evaluation.test.ts::copies per-area targets, observations, intervals and n without a compensatory score"
+        ],
+        "negative": [
+          "tools/src/traceability/release.test.ts::critical security defects block release despite every numeric score passing",
+          "tools/src/traceability/evaluation.test.ts::refuses a dirty worktree before writing evaluation evidence",
+          "tools/src/traceability/evaluation.test.ts::keeps failed gates as evidence with exact blocking reasons instead of replacing them"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/traceability/evaluation.test.ts",
+            "assertion": "await expect(recordReleaseEvaluation({ root, gate: \"M0\" })).rejects.toThrow(\"already recorded\");"
+          },
+          {
+            "path": "tools/src/traceability/evaluation.test.ts",
+            "assertion": "await expect(access(recordDirectory(root))).rejects.toThrow();"
+          },
+          {
+            "path": "tools/src/traceability/evaluation.test.ts",
+            "assertion": "expect(stored.errors).toContain(\"Release area security: failed (sandbox escape reproduced)\");"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-051",
