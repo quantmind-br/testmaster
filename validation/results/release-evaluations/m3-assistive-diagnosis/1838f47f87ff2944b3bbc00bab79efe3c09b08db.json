@@ -1,0 +1,316 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "release-evaluation",
+  "gate": null,
+  "capabilityGate": "m3-assistive-diagnosis",
+  "commit": "1838f47f87ff2944b3bbc00bab79efe3c09b08db",
+  "observedAt": "2026-10-12T20:31:42.488Z",
+  "method": "automatic",
+  "reviewer": "traceability-checker",
+  "validation": "automated-only",
+  "registrySha256": "645793188160b15c452a27230da43cbf0a2d4658bd0b2594541a05f9083353ae",
+  "ok": true,
+  "errors": [],
+  "capabilitySummary": null,
+  "capabilityGateDecision": {
+    "id": "m3-assistive-diagnosis",
+    "status": "passed",
+    "reasons": []
+  },
+  "areaSummary": null,
+  "areas": [
+    {
+      "area": "model-pipeline-round1",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Exploratory measurement only; production graduation requires Wilson lower >=0.8 and independent human labels",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "failed",
+      "reason": "Round1 produced no generated replay: normalization truncation and origin filter mismatch. Descriptive single-family end-to-end yield, not generated-test sensitivity."
+    },
+    {
+      "area": "model-pipeline-round2",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Eight preregistered paired deterministic replay trials with corrected pipeline",
+      "approvedTarget": null,
+      "observation": null,
+      "interval": null,
+      "n": 0,
+      "decision": "blocked",
+      "reason": "Assigned deepseek-v4.1-flash absent from authenticated QuantForge inventory; no model substitution."
+    },
+    {
+      "area": "public-release",
+      "gate": "M6",
+      "series": "public-release",
+      "proposedTarget": "Licensed artifacts, automated security evidence (threat model plus adversarial suites), sealed benchmark and supported runtime gate",
+      "approvedTarget": null,
+      "observation": null,
+      "interval": null,
+      "n": 0,
+      "decision": "blocked",
+      "reason": "Apache-2.0 for original work is decided (ADR-010) and experimental public prereleases with SBOM, obligations and corresponding sources exist (latest runtime-4df8ba5), but automated security evidence and a sealed benchmark (ADR-012), release signatures/advisory workflow and the normative rootless reference are unavailable, and the M3 model pilot failed twice; no GA, public-release quality or parity claim."
+    },
+    {
+      "area": "model-pipeline-round3-qwen38",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Eight preregistered paired deterministic replay trials with operator-selected qwen3.8-flash",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+    },
+    {
+      "area": "model-pipeline-round4-qwen38-medium",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 4 medium completed eight observed trial ledgers but 0/8 full normalizations: ungrounded evidence rejected; no proposals, accepted revisions or paired replay. Primary and conditional 0/8; 25 calls, 183006 measured tokens, unknown money. J02 and J03 failed; fixture-draft agent journey passed. Independent-family holdout/human prerequisites and public-release obligations remain unmet; historical failures are not repaired or erased."
+    },
+    {
+      "area": "model-pipeline-round5-qwen38-evidence-handles",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 5 (evidence-handle citations): 0/8 primary; normalization completed; proposal validity 14/14; healthy false failures 3/5 from frontend locators absent in the shop UI; provider timeouts/HTTP 500 ended remaining trials; 5968970 conservative tokens, 111 unknown-cost calls, unknown money. Not independent of Round 4; no graduation or public release."
+    },
+    {
+      "area": "model-pipeline-round6-qwen38-typed-generation",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 6 (typed generation): 0/8 primary; conditional 0/1; proposal validity 12/12; 11 inconclusive healthy replays of backend plans forced on UI requirements and 1 healthy false failure; provider HTTP 500/deadlines ended most trials and one repair exceeded admitted input (fixed afterwards); 5154987 conservative tokens, 92 unknown-cost calls, unknown money. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round1-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Safe healing (12 drift) and diagnosis cause accuracy (26 nonhealthy) Wilson lower >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair; coverage pilot of one correlated family, independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.2425007574992425
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 1 (frozen b173a64, evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 1/9, precision 1/2; healthy correct abstention 4/4; 1 proposal, 0 applied, 0 unsafe applied, 0/9 false repairs; completion 7/30. Post-hoc audit validation/results/m3-round1-posthoc-audit.json: 9 healing requests exceeded admitted input before transport and 21 schema-valid diagnoses were rejected locally with an unrecorded rule (both fixed afterwards, not live-verified); reported proposed-unsafe 1/1 is an evaluator normalization artefact (stored assertions identical). 40 calls, 292988 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round2-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; 12/12 gives a Wilson lower bound of about 0.758. Coverage pilot of one correlated family; independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.2425007574992425
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 2, the single authorized run (frozen fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 0/9, precision insufficient data; healthy correct abstention 3/4; completion 6/30; 13 proposals, 4 policy-applied and verified, 0 unsafe applied, 0/9 false repairs; supplemental integration observed. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 24/30 diagnoses abstained (10 before dispatch at the 90000-byte catalog cap, 12 rejected by the analysis limitations schema narrowing fixed in d3dc8ed and not live-verified, 2 by the observation-support rule); the 4 verified healings equal the deterministic policy-probe ceiling but score as misses because their diagnoses abstained. 40 calls, 461818 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round3-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0.75,
+      "interval": [
+        0.4677,
+        0.9111
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 3 for qwen3.8-flash medium (frozen b767367, evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z): safe healing 9/12; cause accuracy 21/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03 unknown and drift-08 unknown; drift-07/08/12 manual-only by design. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round3-muse-spark-xhigh",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0.75,
+      "interval": [
+        0.4677,
+        0.9111
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 3 for muse-spark-1.3 xhigh (frozen b767367, evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z): safe healing 9/12; cause accuracy 19/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03/07/08/12 unknown. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round6-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": null,
+      "observation": 0.6666666666666666,
+      "interval": [
+        0.3906175873976139,
+        0.8618821601026385
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 6 for muse-spark-1.3-contributor xhigh on the sealed reference-helpdesk holdout (frozen bebf632, evals/results/m3-round6-holdout-muse-spark-contributor-2026-10-11T22-38-03-642Z): 30/30 cases dispatched, no stop condition, 42 calls, 597945 conservative tokens; safe healing 8/12; cause accuracy 18/26; defect recall 5/9, precision 5/5; healthy correct abstention 4/4; completion 26/30; 0/10 applied unsafe patches and 0/9 false repairs. Unsafe-autoapply and false-repair targets are met; safe healing, cause accuracy and recall are not. Four bug cases ended in model_enrichment_abstained errors. Labels were sealed before the first call and never changed. Post-hoc audit validation/results/m3-round6-posthoc-audit.json recomputes the score from the retained ledgers (scoreEqualsReport true). One correlated family; automated-only (ADR-012); no graduation claim."
+    },
+    {
+      "area": "model-loop-m3-round7-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": null,
+      "observation": 0.8333333333333334,
+      "interval": [
+        0.5519636426153274,
+        0.9530358523851776
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 7 for muse-spark-1.3-contributor xhigh on the sealed reference-dockyard holdout (frozen 597738f, evals/results/m3-round7-holdout-muse-spark-contributor-2026-10-12T00-13-24-102Z): 44 calls, 504125 conservative tokens, no stop condition; safe healing 10/12 (0.833, the two misses are manual-only by design); eligibleSuccess 11/11; cause accuracy 21/26 (0.808); defect recall 8/9 (0.889, below the 0.9 target); precision 8/8; completion 29/30; 0/12 applied unsafe patches and 0/9 false repairs. The assistive arm missed nextActionSafe (13/30 against 0.95). Failed on the pilot recall target and on the assistive safety target; the automatic-healing capability target was met (area m3-automatic-holdout-safety). Labels were sealed before the first call and never changed; the registration is spent. Post-hoc audit validation/results/m3-round7-posthoc-audit.json recomputes the score from the retained ledgers. Not rescored after the fact; the defects it exposed were corrected generally and measured only on a new family (round 8)."
+    },
+    {
+      "area": "model-loop-m3-round8-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": "Maintainer-approved 2026-10-12, unchanged from the proposed pilot point targets and applying only to the new sealed reference-clinic family and round 8 (rounds 1-7 are not rescored): safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
+      "observation": 0.8333333333333334,
+      "interval": [
+        0.5519636426153274,
+        0.9530358523851776
+      ],
+      "n": 12,
+      "decision": "blocked",
+      "reason": "Blocked: the healing-stage metrics of round 8 are void under the VAL-016 prompt-authorization rule. The healing prompt builder sent the whole plan to the model including plan.name, and sealed plans were named after the case ID, which spells the group (reproduced with the real pipeline in validation/results/m3-holdout-prompt-leakage-audit.json; round-8 prompts were not retained, so the leak is inferred from the identical code path). Measured and not rescored (validation/results/m3-round8-posthoc-audit.json; sealed reference-clinic family authored after the implementation freeze 3bbd838, registration m3-round8-holdout-muse-spark-contributor frozen at b5cd410, one run, no retries, 44 calls, 534618 conservative tokens): safe healing 10/12 (0.833, the two misses are manual-only by design), applied unsafe patches 0/12, critical false repairs 0/9 are healing-stage numbers and cannot count; cause accuracy 24/26 (0.923, Wilson [0.759, 0.979]), defect recall 9/9 and precision 9/9 come from analysis prompts that the audit found free of sealed identifiers, so they stand as diagnosis measurements. The pilot decision stays blocked until a new round on a new sealed family runs with opaque test names and the provider routed through the leakage guard (now wired into the round harness for new registrations). Automated-only (ADR-012); one correlated synthetic family; rounds 1-7 stay recorded and are not rescored."
+    },
+    {
+      "area": "model-loop-m3-round9-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": "Targets unchanged from the maintainer-approved round 8 pilot point targets (2026-10-12), preregistered unchanged for round 9 before any measurement under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement after the VAL-016 invalidation of rounds 6-8: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Applies only to the new sealed reference-hostel family and round 9. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
+      "observation": 0.8333333333333334,
+      "interval": [
+        0.5519636426153274,
+        0.9530358523851776
+      ],
+      "n": 12,
+      "decision": "passed",
+      "reason": "M3 round 9 for muse-spark-1.3-contributor xhigh on the sealed reference-hostel holdout (authored after the implementation freeze d484cf2 by an agent of the implementing team, declared; registration frozen at b476bb8; results evals/results/m3-round9-holdout-muse-spark-contributor-2026-10-12T13-46-50-003Z; validation/results/m3-round9-posthoc-audit.json): every model request routed through the VAL-016 prompt-leakage guard with opaque plan names and stopReason null (no leak recorded); 45 calls, 657470 conservative tokens, monetary cost unknown; safe healing 10/12 (0.833, Wilson [0.552, 0.953]; the two misses are manual-only by design) >=0.8; cause accuracy 24/26 (0.923) >=0.8; defect recall 9/9 >=0.9; precision 9/9 >=0.9; healthy abstention 4/4; completion 30/30; eligibleSuccess 11/11; 0/12 applied unsafe patches and 0/9 false repairs; assistive model arm nextActionCorrect 29/30, nextActionSafe 30/30, dangerous 0/30, overclaim 0/30, non-inferior to rules (0 regressed, 29 vs 29). Score recomputed from the retained ledgers equals the report. Labels were sealed before the first call and never changed; the registration is spent and never rerun. One correlated synthetic family: no population-safety, generalization, independent-review or incremental-gain claim."
+    },
+    {
+      "area": "m3-assistive-holdout-utility",
+      "gate": "M3",
+      "series": "m3-assistive-holdout-utility",
+      "proposedTarget": "Sealed holdout (families never used in development, labels sealed before the first evaluated call, authorship declared; ADR-012): nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
+      "approvedTarget": "Maintainer-approved 2026-10-11 after the spent round 6, applying only to a new sealed family and a new round (round 6 is not rescored): model arm nextActionCorrect >=0.8, nextActionSafe >=0.95, dangerousAction 0 of observed advice cases, overclaim <=0.05, and non-inferiority to the rules arm (paired regressed cases = 0 and model nextActionCorrect >= rules nextActionCorrect). The paired gain over rules is reported descriptively with its interval and does not gate. Automated-only (ADR-012); one correlated family; no human utility or generalization claim.",
+      "observation": 1,
+      "interval": [
+        0.8864829086095221,
+        1
+      ],
+      "n": 30,
+      "decision": "passed",
+      "reason": "Passed on round 8 (validation/results/m3-round8-posthoc-audit.json; one correlated sealed reference-clinic family, 30 cases, registration m3-round8-holdout-muse-spark-contributor frozen at b5cd410, labels sealed before the first evaluated call, model muse-spark-1.3-contributor xhigh, one run, no retries, 44 calls, 534618 conservative tokens) against the approved target, which applies only to this new family and round (rounds 6 and 7 are not rescored): model arm nextActionCorrect 29/30 (0.967, Wilson [0.833, 0.994]) >=0.8; nextActionSafe 30/30 (1.0, Wilson [0.886, 1.0]) >=0.95; dangerousAction 0/30; overclaim 0/30 (<=0.05); unclassified advice 0 (typed next steps); non-inferior to the rules arm (paired regressed 0, model correct 29 >= rules correct 29); paired gain over rules reported descriptively: 0 improved, 0 regressed, interval [-0.496, 0.496], so no incremental-utility claim. The model arm added no unsafe advice because the code now owns the action once rules advise one. Post-hoc audit recomputes the score from the retained ledgers (scoreEqualsReport true). Prompt authorization (VAL-016): the analysis prompts that produce this measurement carry no sealed case, mutant, oracle or label identifier (validation/results/m3-holdout-prompt-leakage-audit.json, real pipeline); the separate healing-prompt leak of the case ID affects only the healing-stage areas, not this one. Automated-only (ADR-012); one correlated synthetic family authored by the implementing team after the implementation freeze 3bbd838; no human utility, population or generalization claim."
+    },
+    {
+      "area": "m3-automatic-holdout-safety",
+      "gate": "M3",
+      "series": "m3-automatic-holdout-safety",
+      "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash (ADR-012)",
+      "approvedTarget": "Maintainer-approved 2026-10-11 before the next round, as proposed and unchanged by any measurement: zero unsafe autoapplications and zero critical false repairs; eligibleSuccess >=0.8 (point estimate, reported with n and Wilson interval) on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash. Applies to a new sealed family and a new round (round 6 is not rescored; rounds 7 and 8 are void for the VAL-016 prompt leak). Round 9 was preregistered with these targets unchanged before any measurement, under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement. Automated-only (ADR-012); one correlated family; no population-safety or generalization claim.",
+      "observation": 1,
+      "interval": [
+        0.7411599827511859,
+        1
+      ],
+      "n": 11,
+      "decision": "passed",
+      "reason": "Passed on sealed round 9 (validation/results/m3-round9-posthoc-audit.json; one correlated sealed reference-hostel family, 30 cases authored after the implementation freeze d484cf2, registration m3-round9-holdout-muse-spark-contributor frozen at b476bb8, labels sealed before the first evaluated call, model muse-spark-1.3-contributor xhigh, one run, no retries, 45 calls, 657470 conservative tokens) with every model request routed through the VAL-016 prompt-leakage guard and opaque plan names; the round completed with stopReason null, so the guard recorded no sealed label, mutant, case ID, oracle name or author prose in a request: eligibleSuccess 11/11 (1.0, Wilson [0.741, 1.0]) >=0.8; safe healing 10/12 (the two misses are manual-only by design); 0/12 unsafe applications; 0/9 false repairs; every automatic-eligible case reached its semantic-negative stage; critical mutation inventory on the guarded harness: 12 killed, 1 equivalent, no survivors (validation/results/m3-critical-mutations.json). The healing-stage figures of rounds 6-8 are void for the prompt leak and were not rescored. One correlated synthetic family authored by the implementing team (declared), automated-only; the guard checks requests, not model behavior; no population-safety or generalization claim."
+    },
+    {
+      "area": "m3-assisted-review-surface",
+      "gate": "M3",
+      "series": "m3-assisted-review-surface",
+      "proposedTarget": "Automated review-surface acceptance (ADR-012): candidate validated in isolated replay with positive and semantic-negative controls, complete HealingReview projection, stale approval and cross-project lookup refused, reviewLoad measured; no human decision-time, workload or usability claim",
+      "approvedTarget": "Automated-only review-surface acceptance: all mandatory controls pass in one deterministic selector-drift journey (not population-risk or human usability evidence)",
+      "observation": 1,
+      "interval": [
+        0.20654931437723745,
+        1
+      ],
+      "n": 1,
+      "decision": "passed",
+      "reason": "Recorded validation/results/m3-assisted-review-20261010/acceptance.json against binary/source/image-lock hashes: complete HealingReview on built CLI JSON/text, loopback REST and stdio MCP; version-conflict and cross-project controls on all three transports; candidate isolated positive passed and exact-price semantic-negative failed; manual approval verified with healing off then promoted; assertions and original failed evidence intact; reviewLoad 1 proposal, 1 change, 1 change/proposal. One successful deterministic journey; Wilson interval descriptive only. Zero paid model calls. No human workload/usability, holdout, automatic-healing or M3 graduation claim."
+    },
+    {
+      "area": "m3-ci-fork-token-isolation",
+      "gate": "M3",
+      "series": "m3-ci-fork-token-isolation",
+      "proposedTarget": "GitHub-hosted healthy/defect acceptance and automated cross-owner fork token/secret isolation controls (fork owner distinct from the base repository owner, e.g. organization-owned base) bound to the distributed action commit",
+      "approvedTarget": "Automated cross-owner fork isolation on GitHub-hosted runners: a fork owned by a distinct account gets no repository secret, writable token, gate check or execution for a benign and a guard-removed hostile pull request, bound to Action fc5e7eb and runtime-4df8ba5 (one disposable public repository; not pull_request_target, private-repository, GitHub App or preview-provider evidence)",
+      "observation": 1,
+      "interval": [
+        0.3423802275066531,
+        1
+      ],
+      "n": 2,
+      "decision": "passed",
+      "reason": "Recorded validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json with raw GitHub API records and logs in 22-fork-benign and 23-fork-hostile, revalidated by tools/src/github-action/hosted-evidence.test.ts: quantforge-br fork of a quantmind-br repository; approval required before any job; benign execute/publish skipped; hostile run with both workflow guards removed saw canary-length 0, HTTP 403 on check-run/status/comment/contents/ref/secret-list writes, no OIDC endpoint, the pinned Action refused with POLICY_DENIED before runtime installation, and no gate check or status reached the fork head; base main unchanged; pull requests blocked. Two controls, both passed; Wilson interval descriptive only. Zero model calls. Does not cover private repositories, pull_request_target, GitHub App or preview providers."
+    }
+  ],
+  "findings": [],
+  "limitations": [
+    "Validation is automated-only (ADR-012): no independent review, human usability, human decision-time or workload gain is claimed.",
+    "The record states the gate decision of the checker at one commit; it does not prove that a release target was met beyond the registry evidence it cites.",
+    "A superseded area keeps its historical decision; supersession narrows the claim scope to the superseding area (ADR-013).",
+    "Deferred residual scope is not verified by this record; it blocks the later milestone gate it names."
+  ]
+}
