@@ -20235,7 +20235,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "tools/src/traceability/release.test.ts::critical security defects block release despite every numeric score passing",
         "tools/src/traceability/evaluation.test.ts::records one immutable release evaluation per gate and commit and refuses overwrite",
@@ -20249,7 +20249,8 @@
       ],
       "evidence": [
         "tools/src/traceability/release.test.ts",
-        "tools/src/traceability/evaluation.test.ts"
+        "tools/src/traceability/evaluation.test.ts",
+        "validation/results/release-evaluations/M3/a3ac6e35dc7acae88bcf9c97aa6f92deebbea3c9.json"
       ],
       "code": [
         "tools/src/traceability/check.ts",
@@ -20257,8 +20258,7 @@
         "tools/src/traceability/evaluation.ts",
         "tools/src/traceability/cli.ts"
       ],
-      "note": "Per-area gate validation and the write-once release evaluation record writer (node tools/dist/traceability/cli.js evaluate --milestone-gate Mx | --capability-gate ID) are implemented and tested on temporary git repositories. The item stays implemented until the first record produced after the implementation commit, validation/results/release-evaluations/M3/<commit>.json, exists in the repository. Records document gate decisions at a commit; they do not assert that release targets were met (VAL-054).",
-      "blockedReason": "Implemented: per-area gate validation and the write-once release evaluation writer (evaluate command). The first committed record validation/results/release-evaluations/M3/<commit>.json does not exist yet, so the automated release evaluation record is not yet evidenced; no release-quality decision is invented.",
+      "note": "Per-area gate validation and the write-once release evaluation record writer (node tools/dist/traceability/cli.js evaluate --milestone-gate Mx | --capability-gate ID) are implemented and tested on temporary git repositories. The first record (validation/results/release-evaluations/M3/a3ac6e35dc7acae88bcf9c97aa6f92deebbea3c9.json) failed because retained acceptance evidence cited by the registry was not yet versioned and VAL-050 itself was open; it stays as history and later records are separate files per commit. Records document gate decisions at a commit; they do not assert that release targets were met (VAL-054).",
       "coverage": {
         "positive": [
           "tools/src/traceability/evaluation.test.ts::records one immutable release evaluation per gate and commit and refuses overwrite",
