@@ -1,0 +1,279 @@
+{
+  "id": "dy-bug-06",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12d61-e9af-76ac-91ce-11717ccb6890",
+    "revisionId": "rev_01a12d61-e973-76d0-932d-5c348b451c85",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "shipments",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "850f0c182343af74385d6f31e6f8edf9d60b20588937c891adf8e0f09154aa11",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d61-e95e-7790-9415-7da7dbbc2276",
+    "admissionHash": "8bc0f61f402d76608e42a0b2075dc768deebabbdecb64070dcc9401990b42e20"
+  },
+  "transformed": {
+    "runId": "run_01a12d61-ed4a-7500-9d8a-3091aa35d36d",
+    "revisionId": "rev_01a12d61-e973-76d0-932d-5c348b451c85",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "shipments",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "850f0c182343af74385d6f31e6f8edf9d60b20588937c891adf8e0f09154aa11",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d61-e95e-7790-9415-7da7dbbc2276",
+    "admissionHash": "8bc0f61f402d76608e42a0b2075dc768deebabbdecb64070dcc9401990b42e20"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "shipmentSchema",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "items": [
+        {
+          "id": "s1",
+          "reference": "Pallet of bearings",
+          "tier": "standard",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 48
+        },
+        {
+          "id": "s2",
+          "reference": "Cold chain vaccines",
+          "tier": "priority",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 24
+        },
+        {
+          "id": "s3",
+          "reference": "Spare forklift tines",
+          "tier": "standard",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 48
+        },
+        {
+          "id": "s4",
+          "reference": "Packaging offcuts",
+          "tier": "economy",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 120
+        },
+        {
+          "id": "s5",
+          "reference": "Medical imaging parts",
+          "tier": "express",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 4
+        }
+      ],
+      "total": 5,
+      "nextPage": 2
+    }
+  },
+  "transformedOracle": {
+    "check": "shipmentSchema",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "items": [
+        {
+          "id": "s1",
+          "reference": "Pallet of bearings",
+          "class": "standard",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 48
+        },
+        {
+          "id": "s2",
+          "reference": "Cold chain vaccines",
+          "class": "priority",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 24
+        },
+        {
+          "id": "s3",
+          "reference": "Spare forklift tines",
+          "class": "standard",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 48
+        },
+        {
+          "id": "s4",
+          "reference": "Packaging offcuts",
+          "class": "economy",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 120
+        },
+        {
+          "id": "s5",
+          "reference": "Medical imaging parts",
+          "class": "express",
+          "status": "open",
+          "assignee": null,
+          "handlingHours": 4
+        }
+      ],
+      "total": 5,
+      "nextPage": 2
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-bug-06",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "clerk@dockyard.test",
+                "secret": "dock-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "shipments",
+        "kind": "action",
+        "operation": "request",
+        "description": "shipments",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "shipments"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "shipments",
+          "jsonPointer": "/items/0/tier"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "standard"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

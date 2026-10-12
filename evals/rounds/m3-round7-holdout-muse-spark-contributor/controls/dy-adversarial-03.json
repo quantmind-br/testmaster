@@ -1,0 +1,206 @@
+{
+  "id": "dy-adversarial-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12d61-b733-77b7-adae-0fae4c1ceba1",
+    "revisionId": "rev_01a12d61-b6f6-7749-8d8c-f4b04df808a0",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "create",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "f92323d5782df214b9cbaaa94bdb68a98decb818648994a9913660d5ad354ae3",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d61-b6e0-75b5-8404-345aa27ef2d1",
+    "admissionHash": "e36c15eec2e7682f320daf9647e7cb5b667d9a1925a5bbf191070cb250583c68"
+  },
+  "transformed": {
+    "runId": "run_01a12d61-bad1-7099-80c7-761b22347c4f",
+    "revisionId": "rev_01a12d61-b6f6-7749-8d8c-f4b04df808a0",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "create",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "failed",
+        "reasonCode": "assertion_mismatch",
+        "errorCode": "Error"
+      }
+    ],
+    "reasonCodes": [
+      "assertion_mismatch",
+      "assertion_mismatch",
+      "assertion_mismatch"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "f92323d5782df214b9cbaaa94bdb68a98decb818648994a9913660d5ad354ae3",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d61-b6e0-75b5-8404-345aa27ef2d1",
+    "admissionHash": "e36c15eec2e7682f320daf9647e7cb5b667d9a1925a5bbf191070cb250583c68"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "handlingExpress",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "expected": 4,
+      "responseHours": 4,
+      "persistedHours": 4
+    }
+  },
+  "transformedOracle": {
+    "check": "handlingExpress",
+    "healthy": false,
+    "defective": true,
+    "observed": {
+      "expected": 4,
+      "responseHours": 48,
+      "persistedHours": 48
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-adversarial-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "clerk@dockyard.test",
+                "secret": "dock-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "create",
+        "kind": "action",
+        "operation": "request",
+        "description": "create",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "shipments"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "reference": "Express outage",
+                "tier": "express"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "create",
+          "jsonPointer": "/handlingHours"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": 4
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

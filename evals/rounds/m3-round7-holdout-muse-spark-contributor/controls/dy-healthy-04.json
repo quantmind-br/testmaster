@@ -1,0 +1,298 @@
+{
+  "id": "dy-healthy-04",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12d6e-1d29-76d0-b47e-1d762f19aa33",
+    "revisionId": "rev_01a12d6e-1cd5-76fc-add5-217dfff2121b",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "accept",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "expedite",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "assigned",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "be6ae3698fc2b6b488f58293f1403d201cbd0ff74223dd2d60b1a9bea4ae0157",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d6e-1cbe-772f-9881-7fea9c5eea29",
+    "admissionHash": "94aac8a93491f3ce50deae8289f84e9cd76018dc6cecaa7df2583956efde73eb"
+  },
+  "transformed": {
+    "runId": "run_01a12d6e-20ff-7313-b1d8-82c826f12bf5",
+    "revisionId": "rev_01a12d6e-1cd5-76fc-add5-217dfff2121b",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "accept",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "expedite",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "assigned",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "be6ae3698fc2b6b488f58293f1403d201cbd0ff74223dd2d60b1a9bea4ae0157",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d6e-1cbe-772f-9881-7fea9c5eea29",
+    "admissionHash": "94aac8a93491f3ce50deae8289f84e9cd76018dc6cecaa7df2583956efde73eb"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "expeditePersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "responseTier": "priority",
+      "persistedTier": "priority"
+    }
+  },
+  "transformedOracle": {
+    "check": "expeditePersistence",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "responseTier": "priority",
+      "persistedTier": "priority"
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-healthy-04",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "clerk@dockyard.test",
+                "secret": "dock-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "accept",
+        "kind": "action",
+        "operation": "request",
+        "description": "accept",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "shipments"
+            },
+            {
+              "literal": "s1"
+            },
+            {
+              "literal": "accept"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "expedite",
+        "kind": "action",
+        "operation": "request",
+        "description": "expedite",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "shipments"
+            },
+            {
+              "literal": "s1"
+            },
+            {
+              "literal": "expedite"
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          },
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {}
+            }
+          }
+        }
+      },
+      {
+        "id": "assigned",
+        "kind": "action",
+        "operation": "request",
+        "description": "assigned",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "shipments"
+            }
+          ],
+          "query": [
+            {
+              "name": {
+                "literal": "assignee"
+              },
+              "value": {
+                "literal": "me"
+              }
+            }
+          ],
+          "headers": {
+            "Authorization": {
+              "variableRef": "authenticate.token"
+            }
+          }
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "assigned",
+          "jsonPointer": "/items/0/tier"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "priority"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

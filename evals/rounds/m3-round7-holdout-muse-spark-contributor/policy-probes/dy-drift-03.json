@@ -1,0 +1,234 @@
+{
+  "id": "dy-drift-03",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a12d6f-9974-71e7-a97b-fe9a7c5fde41",
+    "revisionId": "rev_01a12d6f-993f-74d8-900a-bc9609507f7b",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "invalid_open",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_secret",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_signin_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "secret",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "queue_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "06fe93700f0d8259e935bfaf70d4a87ab8d54dd30e7fad91b1c355737316c5e6",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12d6f-9920-75f9-b8af-9da21dc8f36f",
+    "admissionHash": "3aa3b3e067ab19f5352e6f22666cf5a6694a63db88df0f5f9b074b754eb50ba7"
+  },
+  "transformed": {
+    "runId": "run_01a12d6f-9f68-7580-85dc-8c1f9c55bbe5",
+    "revisionId": "rev_01a12d6f-993f-74d8-900a-bc9609507f7b",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "invalid_open",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "invalid_secret",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "invalid_submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "invalid_signin_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "open_login",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "secret",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "queue_ready",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "06fe93700f0d8259e935bfaf70d4a87ab8d54dd30e7fad91b1c355737316c5e6",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12d6f-9920-75f9-b8af-9da21dc8f36f",
+    "admissionHash": "3aa3b3e067ab19f5352e6f22666cf5a6694a63db88df0f5f9b074b754eb50ba7"
+  },
+  "proposal": {
+    "analysisId": "ana_01a12d70-1a2a-718b-b65a-cadb198ee344",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a12d6f-993f-74d8-900a-bc9609507f7b",
+    "candidateRevisionId": "rev_01a12d70-1aea-7172-9733-f75022a089d8",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "invalid_secret",
+        "value": {
+          "by": "testId",
+          "value": "login-passphrase"
+        }
+      },
+      {
+        "path": "/input/locator",
+        "stepId": "secret",
+        "value": {
+          "by": "testId",
+          "value": "login-passphrase"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T00:08:04.075Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "68fcba32c42dccf9eba82fb0925beda72293292a2fdabd51df3630ea3f1eeb4b",
+        "runId": "run_01a12d6f-9f68-7580-85dc-8c1f9c55bbe5"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a12d6f-9911-77cb-9131-3f2e009e027f",
+      "testmaster:deferredLocatorProofs": [
+        {
+          "baselineEvidenceHash": "2d0de6f025409189b0b4517b4d55401573d4558249db22a5d10d1013a1c9e179",
+          "baselineRunId": "run_01a12d6f-9974-71e7-a97b-fe9a7c5fde41",
+          "path": "/input/locator",
+          "stepId": "secret"
+        }
+      ]
+    },
+    "failedRunId": "run_01a12d6f-9f68-7580-85dc-8c1f9c55bbe5",
+    "id": "hea_01a12d70-1ae8-75b6-a6e6-11f244db9d62",
+    "limitations": [],
+    "modelCallId": "mdl_01a12d70-1a8a-72a8-be1c-2a3a618acfe8",
+    "policyHash": "5f65fcf989ad70a9579e3dfe1297cd946451fd1fedad389124801bf78fe34ad5",
+    "preservedAssertionsHash": "62f8b2b38166234949cb26620c56dbd46b379fca69fd7cee7d514f5816d6be42",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a12d6f-993c-7677-a154-20a02505c77b",
+    "verificationRunId": "run_01a12d70-1b2c-70f4-954f-b10786f62e76",
+    "version": 3,
+    "workspaceId": "ws_01a12d6f-9911-77cb-9131-39758917bda9"
+  }
+}

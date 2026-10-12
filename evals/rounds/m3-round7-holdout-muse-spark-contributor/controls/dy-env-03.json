@@ -1,0 +1,180 @@
+{
+  "id": "dy-env-03",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12d6d-f950-7506-9109-46b49f9e58b5",
+    "revisionId": "rev_01a12d6d-f8f6-72ab-ba32-840776d6b805",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0fc4de036032facd305ef4382fd0acb727c87a298a0a417217957d4760cfc317",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d6d-f8e2-727e-b7d4-a1f9f167da03",
+    "admissionHash": "b7c362a802b3b755810ec4e3113009bef9a5e553f94c140aea6cb5e6b16b6644"
+  },
+  "transformed": {
+    "runId": "run_01a12d6d-fd24-7778-b47a-4788083266e1",
+    "revisionId": "rev_01a12d6d-f8f6-72ab-ba32-840776d6b805",
+    "outcome": "inconclusive",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "authenticate",
+        "status": "inconclusive",
+        "reasonCode": "insufficient_evidence",
+        "errorCode": "ECONNREFUSED"
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "insufficient_evidence",
+      "stopped_after_failure",
+      "insufficient_evidence",
+      "insufficient_evidence"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0fc4de036032facd305ef4382fd0acb727c87a298a0a417217957d4760cfc317",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d6d-f8e2-727e-b7d4-a1f9f167da03",
+    "admissionHash": "b7c362a802b3b755810ec4e3113009bef9a5e553f94c140aea6cb5e6b16b6644"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Mon, 12 Oct 2026 00:05:45 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Mon, 12 Oct 2026 00:05:45 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-env-03",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "authenticate",
+        "kind": "action",
+        "operation": "request",
+        "description": "authenticate",
+        "required": true,
+        "input": {
+          "method": "POST",
+          "pathSegments": [
+            {
+              "literal": "api"
+            },
+            {
+              "literal": "session"
+            }
+          ],
+          "body": {
+            "kind": "json",
+            "value": {
+              "literal": {
+                "email": "clerk@dockyard.test",
+                "secret": "dock-secret"
+              }
+            }
+          },
+          "capture": [
+            {
+              "name": "token",
+              "from": "jsonPointer",
+              "pointer": "/sessionToken",
+              "valueType": "string",
+              "sensitive": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "authenticate"
+        },
+        "expectation": {
+          "predicate": "statusIn",
+          "values": [
+            200
+          ]
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

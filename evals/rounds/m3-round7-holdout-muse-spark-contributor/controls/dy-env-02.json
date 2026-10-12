@@ -1,0 +1,160 @@
+{
+  "id": "dy-env-02",
+  "status": "passed",
+  "healthy": {
+    "runId": "run_01a12d6d-f05e-7774-89c8-88406701adee",
+    "revisionId": "rev_01a12d6d-f005-7436-94e1-328a1d1e4824",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "health",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "df625f07ac1a6e0db9c769f3ab88a3d2ecbaadec5e547cd7830ee502f8e1232a",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d6d-efee-73e9-83a8-eeb1f4e04197",
+    "admissionHash": "7b761dd910a581c7d3296725dd211c4bb300c3d694c524df0738a01622d2e1f7"
+  },
+  "transformed": {
+    "runId": "run_01a12d6d-f437-7342-8329-5f42c4213c47",
+    "revisionId": "rev_01a12d6d-f005-7436-94e1-328a1d1e4824",
+    "outcome": "inconclusive",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "health",
+        "status": "inconclusive",
+        "reasonCode": "insufficient_evidence",
+        "errorCode": "ECONNREFUSED"
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "insufficient_evidence",
+      "stopped_after_failure",
+      "insufficient_evidence",
+      "insufficient_evidence"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "df625f07ac1a6e0db9c769f3ab88a3d2ecbaadec5e547cd7830ee502f8e1232a",
+    "seed": 17,
+    "healingPolicy": "off",
+    "environmentRevisionId": "evr_01a12d6d-efee-73e9-83a8-eeb1f4e04197",
+    "admissionHash": "7b761dd910a581c7d3296725dd211c4bb300c3d694c524df0738a01622d2e1f7"
+  },
+  "semantic": null,
+  "healthyOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Mon, 12 Oct 2026 00:05:43 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "transformedOracle": {
+    "check": "serviceHealth",
+    "healthy": true,
+    "defective": false,
+    "observed": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "date": "Mon, 12 Oct 2026 00:05:43 GMT",
+        "connection": "keep-alive",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked"
+      },
+      "body": {
+        "status": "ok"
+      }
+    }
+  },
+  "semanticOracle": null,
+  "boundPlan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "dy-env-02",
+    "type": "backend",
+    "runner": "http",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "health",
+        "kind": "action",
+        "operation": "request",
+        "description": "health",
+        "required": true,
+        "input": {
+          "method": "GET",
+          "pathSegments": [
+            {
+              "literal": "health"
+            }
+          ]
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "responseStepId": "health",
+          "jsonPointer": "/status"
+        },
+        "expectation": {
+          "predicate": "jsonEquals",
+          "value": {
+            "literal": "ok"
+          }
+        }
+      }
+    ]
+  },
+  "semanticPlan": null,
+  "uploadArtifactId": null,
+  "modelCalls": 0,
+  "errors": []
+}

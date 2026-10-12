@@ -1,0 +1,219 @@
+{
+  "id": "dy-drift-08",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a12d72-3c0d-76d2-861d-cfbbff13a038",
+    "revisionId": "rev_01a12d72-3bc9-7635-b713-896e6e8484af",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "secret",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "queue_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "reference",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "9d4f3fb88817a1a18d23e4e794ed0b354301128595a48685163dcf88a3c0cf07",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12d72-3bb0-7320-8a43-ff7188e5f275",
+    "admissionHash": "3db3af65614e46d978fc1fb9fcdd24f28a9b6fcb41b2f6d7b9bb775a0e6dc792"
+  },
+  "transformed": {
+    "runId": "run_01a12d72-4288-72bd-bd45-28cee32944ea",
+    "revisionId": "rev_01a12d72-3bc9-7635-b713-896e6e8484af",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "secret",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "queue_ready",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "reference",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "9d4f3fb88817a1a18d23e4e794ed0b354301128595a48685163dcf88a3c0cf07",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12d72-3bb0-7320-8a43-ff7188e5f275",
+    "admissionHash": "3db3af65614e46d978fc1fb9fcdd24f28a9b6fcb41b2f6d7b9bb775a0e6dc792"
+  },
+  "proposal": {
+    "analysisId": "ana_01a12d72-bcf6-7363-a9cf-8527b547f2f2",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a12d72-3bc9-7635-b713-896e6e8484af",
+    "candidateRevisionId": "rev_01a12d72-bd81-74c7-bab9-b429625f1f59",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "email",
+        "value": {
+          "by": "testId",
+          "value": "login-email"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T00:10:56.771Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "cd8ae39f0155fff20d5822f059167e88c74806161f53f2a1b6f20fb18a091734",
+        "runId": "run_01a12d72-4288-72bd-bd45-28cee32944ea"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a12d72-3ba2-75f8-8409-588864727018"
+    },
+    "failedRunId": "run_01a12d72-4288-72bd-bd45-28cee32944ea",
+    "id": "hea_01a12d72-bd81-74c7-bab9-b1506f45e54e",
+    "limitations": [],
+    "modelCallId": "mdl_01a12d72-bd31-71d3-a40b-dd91c7a3963a",
+    "policyHash": "733fe9b13459d3aac54b38aeec430b884fed2241f3a006dfb74ad4d3bfec7917",
+    "preservedAssertionsHash": "94a586eaf051ae4c2232e5c496bf6c7d671f87bee5315467837d315e75b204f9",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a12d72-3bc7-740b-8b60-0e5126a3760e",
+    "verificationRunId": "run_01a12d72-bdcc-70cb-889d-500e5286ee81",
+    "version": 3,
+    "workspaceId": "ws_01a12d72-3ba2-75f8-8409-577d12474f0e"
+  }
+}

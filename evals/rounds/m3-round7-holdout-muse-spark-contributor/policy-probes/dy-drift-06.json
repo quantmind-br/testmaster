@@ -1,0 +1,215 @@
+{
+  "id": "dy-drift-06",
+  "status": "passed",
+  "modelCalls": 1,
+  "errors": [],
+  "healthy": {
+    "runId": "run_01a12d71-2ffa-7634-86bb-7bd1e8a1cbba",
+    "revisionId": "rev_01a12d71-2fb5-71d9-bd80-44fb221e82ab",
+    "outcome": "passed",
+    "gate": "passed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "secret",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "queue_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "reference",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "submit",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertions_satisfied",
+      "assertions_satisfied"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0b0a6671ffd7a18dd9352c1d7119d0a24e100b43a2e4292264b78b798c12f843",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12d71-2f9b-74f9-b95a-2348ee7486a2",
+    "admissionHash": "fc5bdd03a2742ff8393dd45c4b80ea8e04f41f4296f6c1e5403fb25e04f3a413"
+  },
+  "transformed": {
+    "runId": "run_01a12d71-36de-7398-898a-9b310a4d6fb4",
+    "revisionId": "rev_01a12d71-2fb5-71d9-bd80-44fb221e82ab",
+    "outcome": "failed",
+    "gate": "failed",
+    "steps": [
+      {
+        "id": "open_login",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "email",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "secret",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "signin",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "queue_ready",
+        "status": "passed",
+        "reasonCode": null,
+        "errorCode": null
+      },
+      {
+        "id": "reference",
+        "status": "failed",
+        "reasonCode": "assertion_timeout",
+        "errorCode": "Error"
+      },
+      {
+        "id": "submit",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "created",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "recheck",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      },
+      {
+        "id": "business_assertion",
+        "status": "skipped",
+        "reasonCode": "stopped_after_failure",
+        "errorCode": null
+      }
+    ],
+    "reasonCodes": [
+      "assertion_timeout",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "stopped_after_failure",
+      "assertion_timeout",
+      "assertion_timeout"
+    ],
+    "snapshotCount": 1,
+    "imageIds": [
+      "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+      "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+    ],
+    "planHash": "0b0a6671ffd7a18dd9352c1d7119d0a24e100b43a2e4292264b78b798c12f843",
+    "seed": 17,
+    "healingPolicy": "apply",
+    "environmentRevisionId": "evr_01a12d71-2f9b-74f9-b95a-2348ee7486a2",
+    "admissionHash": "fc5bdd03a2742ff8393dd45c4b80ea8e04f41f4296f6c1e5403fb25e04f3a413"
+  },
+  "proposal": {
+    "analysisId": "ana_01a12d71-b362-77f1-b356-3d34cc7c5876",
+    "approvalMode": "policy",
+    "baseRevisionId": "rev_01a12d71-2fb5-71d9-bd80-44fb221e82ab",
+    "candidateRevisionId": "rev_01a12d71-b4d1-7320-b988-05c8f5f3f650",
+    "changes": [
+      {
+        "path": "/input/locator",
+        "stepId": "reference",
+        "value": {
+          "by": "testId",
+          "value": "manifest-ref"
+        }
+      }
+    ],
+    "createdAt": "2026-10-12T00:09:49.012Z",
+    "diff": "Controlled authored candidate for deterministic policy admission; not model quality.",
+    "evidenceRefs": [
+      {
+        "contentHash": "6db69ee0adde7146287f5f9f34a6fd7701219284b902736d6d7508fe8b3bfb56",
+        "runId": "run_01a12d71-36de-7398-898a-9b310a4d6fb4"
+      }
+    ],
+    "extensions": {
+      "testmaster:approvalActorId": "usr_01a12d71-2f8d-7508-b556-6f26afd129ab"
+    },
+    "failedRunId": "run_01a12d71-36de-7398-898a-9b310a4d6fb4",
+    "id": "hea_01a12d71-b4d0-77bf-805e-d8c732cec6c5",
+    "limitations": [],
+    "modelCallId": "mdl_01a12d71-b459-74f2-8abb-c91b7b2b4e64",
+    "policyHash": "b22446a420b135b1cf1fdab27ed8ebdc0c701888a20888c4d4548a9264ddcb80",
+    "preservedAssertionsHash": "94a586eaf051ae4c2232e5c496bf6c7d671f87bee5315467837d315e75b204f9",
+    "reviewerId": null,
+    "risk": "write",
+    "status": "approved",
+    "testId": "tst_01a12d71-2fb4-727b-8a27-9fc2904732b2",
+    "verificationRunId": "run_01a12d71-b530-7189-8571-5d2e0413c3a3",
+    "version": 3,
+    "workspaceId": "ws_01a12d71-2f8d-7508-b556-6ba04b94f762"
+  }
+}
