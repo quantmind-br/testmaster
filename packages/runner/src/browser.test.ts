@@ -714,7 +714,10 @@ it("refuses storage-state input as unsupported before launching Chromium", async
     const attempt = runtime([assertion]);
     const state = { cookies: [], origins: [] };
     if (carrier === "input") Object.assign(attempt.input, { storageState: state });
-    else Object.assign((attempt.input[carrier] ??= {}), { storageState: state });
+    else {
+      attempt.input[carrier] ??= {};
+      Object.assign(attempt.input[carrier], { storageState: state });
+    }
     expect(await runBrowser(attempt)).toMatchObject({
       outcome: "blocked",
       reasonCode: "unsupported_capability",
