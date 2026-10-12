@@ -1,0 +1,470 @@
+{
+  "oracle": "upgradePersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "upgrade"
+  ],
+  "patches": [
+    {
+      "file": "clinic.html",
+      "before": "<button class=\"raise\" data-testid=\"${upgradeHook}\" data-booking=\"${esc(item.id)}\" ${item.status === 'closed' ? 'disabled' : ''}>Upgrade</button>",
+      "after": "<span class=\"grp\"><button class=\"raise\" data-testid=\"${upgradeHook}\" data-booking=\"${esc(item.id)}\" ${item.status === 'closed' ? 'disabled' : ''}>Upgrade</button></span>"
+    }
+  ],
+  "candidate": {
+    "cssDescendant": true
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+      "clinic.html": "a1f2b87c3d1a4afcc8b422b9d50a8fa4fd0863d83b94f2d086a372edc983b85d"
+    },
+    "transformed": {
+      "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+      "clinic.html": "62b9a78dc63e9a4d584ed048a3239b22178fd9651f868880881c6d8b90df7bf6"
+    }
+  },
+  "familyId": "reference-clinic",
+  "id": "cl-drift-11",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-drift-11",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "staff-email"
+          },
+          "value": {
+            "literal": "desk@larkspur.test"
+          }
+        }
+      },
+      {
+        "id": "passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "staff-passcode"
+          },
+          "value": {
+            "literal": "lark-passcode"
+          }
+        }
+      },
+      {
+        "id": "start_shift",
+        "kind": "action",
+        "operation": "click",
+        "description": "start_shift",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Start shift",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "board_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "board_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "board-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "confirm",
+        "kind": "action",
+        "operation": "click",
+        "description": "confirm",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "confirm-b1"
+          }
+        }
+      },
+      {
+        "id": "confirmed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "confirmed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Confirmed"
+          }
+        }
+      },
+      {
+        "id": "open_mine",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_mine",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "upgrade",
+        "kind": "action",
+        "operation": "click",
+        "description": "upgrade",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "css",
+            "value": "#stage > table.sheet > tbody > tr > td.ops > button.raise"
+          }
+        }
+      },
+      {
+        "id": "upgraded",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "upgraded",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textContains",
+          "value": {
+            "literal": "Slot raised to"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "cell-slot"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "urgent"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "upgradePersistence",
+    "semanticNegative": "upgrade-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "upgrade"
+    ],
+    "patches": [
+      {
+        "file": "clinic.html",
+        "before": "<button class=\"raise\" data-testid=\"${upgradeHook}\" data-booking=\"${esc(item.id)}\" ${item.status === 'closed' ? 'disabled' : ''}>Upgrade</button>",
+        "after": "<span class=\"grp\"><button class=\"raise\" data-testid=\"${upgradeHook}\" data-booking=\"${esc(item.id)}\" ${item.status === 'closed' ? 'disabled' : ''}>Upgrade</button></span>"
+      }
+    ],
+    "candidate": {
+      "cssDescendant": true
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+        "clinic.html": "a1f2b87c3d1a4afcc8b422b9d50a8fa4fd0863d83b94f2d086a372edc983b85d"
+      },
+      "transformed": {
+        "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+        "clinic.html": "62b9a78dc63e9a4d584ed048a3239b22178fd9651f868880881c6d8b90df7bf6"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "inspect_locator_candidates"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence",
+      "review_healing_proposal"
+    ],
+    "healingEligibility": "manual",
+    "expectedHealingAdvice": "manual_review_only",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "upgrade-button-wrapped"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that clicks the upgrade control through a child-combinator CSS path; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "upgrade-without-persist",
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true,
+    "manualReviewRequired": false,
+    "changeCount": 1
+  },
+  "usage": {
+    "inputTokens": 21755,
+    "outputTokens": 8523,
+    "reasoningTokens": 7885,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 30278,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-LCF06L",
+    "baseRevision": {
+      "id": "rev_01a12de4-51e6-75c2-8e53-36a9c750973a",
+      "protectedHash": "7e978bdcda7061f5c24c3d817f6af0dec169a20ed34d7aa40f73d3f825dd0157"
+    },
+    "healthy": {
+      "runId": "run_01a12de4-5231-7048-93e6-a6b4efb1de15",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12de4-5977-77e2-876b-02222df0ecc6",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12de4-d682-766e-a0e5-902ad3929d68",
+      "hash": "b8aca461aa84c94d5d30214a986034d22b7392fb25125fcdaa4243d38d46c1bd",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12de5-8084-7584-9d0a-106b9dee83f7",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "146ec077e06ddcfa2c3af4eeeb28b9901657a3dc1f02cc95fbdbc45ab292235c",
+        "responseHash": "5c2e1de3a9a469f5434789465fbde02174b6eb52862d375d2ce693c297616d30",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10765,
+          "outputTokens": 4605,
+          "reasoningTokens": 4207
+        },
+        "cost": "unknown",
+        "latencyMs": 42756,
+        "createdAt": "2026-10-12T02:16:17.796Z"
+      },
+      {
+        "id": "mdl_01a12de5-e3a5-7080-99f0-3b5e1fcae9d3",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "9c192dc6fc22368c2c7083135d8e675fb640225f5f92b14dba70d3b408ed49ef",
+        "responseHash": "e83b775d875eb1c62120f8e88aedd35790f648ba20be814b9143eeb7ccaabd69",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 10990,
+          "outputTokens": 3918,
+          "reasoningTokens": 3678
+        },
+        "cost": "unknown",
+        "latencyMs": 24812,
+        "createdAt": "2026-10-12T02:16:43.174Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12de5-8085-701b-ad49-969869937c84",
+      "hash": "7840ff3f727908b2db8c2a14de280184d08630cd85381ae4e555d124884e2009"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12de4-51e6-75c2-8e53-36a9c750973a",
+      "candidateRevisionId": "rev_01a12de5-e464-7665-9178-82b0950521d0",
+      "baseHash": "7e978bdcda7061f5c24c3d817f6af0dec169a20ed34d7aa40f73d3f825dd0157",
+      "candidateHash": "7e978bdcda7061f5c24c3d817f6af0dec169a20ed34d7aa40f73d3f825dd0157",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12de5-e463-74b5-a28f-b8aad382567a",
+      "hash": "b8a8d007f58de63b190cd4d0ab40b4f3506fc498d199c568683b64d4ddf1366c",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a12de4-51e6-75c2-8e53-36a9c750973a",
+      "candidateRevisionId": "rev_01a12de5-e464-7665-9178-82b0950521d0",
+      "baseHash": "7e978bdcda7061f5c24c3d817f6af0dec169a20ed34d7aa40f73d3f825dd0157",
+      "candidateHash": "7e978bdcda7061f5c24c3d817f6af0dec169a20ed34d7aa40f73d3f825dd0157",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a12de5-f0e0-70f2-9734-722ed62fb15c",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

@@ -1,0 +1,473 @@
+{
+  "oracle": "closePersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "email"
+  ],
+  "patches": [
+    {
+      "file": "clinic.html",
+      "before": "data-testid=\"staff-email\"",
+      "after": "data-testid=\"login-email\""
+    }
+  ],
+  "candidate": {
+    "testIdRenames": {
+      "staff-email": "login-email"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+      "clinic.html": "a1f2b87c3d1a4afcc8b422b9d50a8fa4fd0863d83b94f2d086a372edc983b85d"
+    },
+    "transformed": {
+      "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+      "clinic.html": "a47816fee3060de34276fb68b7b602435fe75111e2b7b6d8c6e8f98dcbf0a49a"
+    }
+  },
+  "familyId": "reference-clinic",
+  "id": "cl-drift-06",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-drift-06",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "staff-email"
+          },
+          "value": {
+            "literal": "desk@larkspur.test"
+          }
+        }
+      },
+      {
+        "id": "passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "staff-passcode"
+          },
+          "value": {
+            "literal": "lark-passcode"
+          }
+        }
+      },
+      {
+        "id": "start_shift",
+        "kind": "action",
+        "operation": "click",
+        "description": "start_shift",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Start shift",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "board_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "board_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "board-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "confirm",
+        "kind": "action",
+        "operation": "click",
+        "description": "confirm",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "confirm-b1"
+          }
+        }
+      },
+      {
+        "id": "confirmed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "confirmed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Confirmed"
+          }
+        }
+      },
+      {
+        "id": "open_mine",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_mine",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "close",
+        "kind": "action",
+        "operation": "click",
+        "description": "close",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "close-booking"
+          }
+        }
+      },
+      {
+        "id": "closed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "closed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Booking closed"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "cell-status"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "closed"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "closePersistence",
+    "semanticNegative": "close-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "email"
+    ],
+    "patches": [
+      {
+        "file": "clinic.html",
+        "before": "data-testid=\"staff-email\"",
+        "after": "data-testid=\"login-email\""
+      }
+    ],
+    "candidate": {
+      "testIdRenames": {
+        "staff-email": "login-email"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+        "clinic.html": "a1f2b87c3d1a4afcc8b422b9d50a8fa4fd0863d83b94f2d086a372edc983b85d"
+      },
+      "transformed": {
+        "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+        "clinic.html": "a47816fee3060de34276fb68b7b602435fe75111e2b7b6d8c6e8f98dcbf0a49a"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "review_healing_proposal"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence"
+    ],
+    "healingEligibility": "automatic",
+    "expectedHealingAdvice": "proposal_possible",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "email-testid-renamed-in-close-flow"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that fills the email field by its test id; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "close-without-persist",
+  "status": "observed",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "policyAdmission": true,
+    "promotion": true,
+    "verification": true,
+    "semanticNegative": true
+  },
+  "diagnosis": {
+    "failureKind": "test_fragility",
+    "grounded": true,
+    "abstained": false
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": true,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": true,
+    "semanticAssertionReached": true,
+    "semanticAssertionFailed": true,
+    "healthyOracle": true,
+    "driftOracle": true,
+    "semanticOracle": true,
+    "manualReviewRequired": false,
+    "changeCount": 1
+  },
+  "usage": {
+    "inputTokens": 16706,
+    "outputTokens": 5960,
+    "reasoningTokens": 5430,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 22666,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-JhyvNK",
+    "baseRevision": {
+      "id": "rev_01a12dd9-7fc7-727d-b990-e7cfd69089fa",
+      "protectedHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87"
+    },
+    "healthy": {
+      "runId": "run_01a12dd9-8040-7200-b2e4-02964e433b07",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12dd9-87fb-76c8-a2d4-89dea554ee99",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12dda-04eb-746b-8443-26f002c164f9",
+      "hash": "8499acc3cef989c809600d6e5be7f3a45a6776c2c4cf17873c1edcf362ac3084",
+      "failureKind": "test_fragility"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12dda-cebe-726c-82f8-5d373f930953",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "4e0cebce245ce1c2bbcb7e9ce547aca562cf91208830a86a1c927a611f364a47",
+        "responseHash": "099ee0e943f9013fc8b13465273377c42669e5cefa562de8f38798bb143b6d7f",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 7452,
+          "outputTokens": 3989,
+          "reasoningTokens": 3652
+        },
+        "cost": "unknown",
+        "latencyMs": 51210,
+        "createdAt": "2026-10-12T02:04:36.926Z"
+      },
+      {
+        "id": "mdl_01a12ddb-2c5c-7203-b6ac-8cdcdd400d6b",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "ecad99d46da61bda9100ac04feba6b1ec99a562dd787a56a7dad3cc0ba40b37b",
+        "responseHash": "42a30b95962ba912de450771e3d8ae544d633c285418a534028d22ebcc6da3f0",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 9254,
+          "outputTokens": 1971,
+          "reasoningTokens": 1778
+        },
+        "cost": "unknown",
+        "latencyMs": 23767,
+        "createdAt": "2026-10-12T02:05:00.893Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12dda-cebf-7291-a6b9-3506051b1ba5",
+      "hash": "0a529dfec62f8040d32bc9b3d13ba1d640da8c9ef172b8dc40492413053e12e1"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12dd9-7fc7-727d-b990-e7cfd69089fa",
+      "candidateRevisionId": "rev_01a12ddb-2d00-73ed-b7fd-261d25a5fb0b",
+      "baseHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87",
+      "candidateHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12ddb-2cff-73fc-894c-00c8015246d3",
+      "hash": "5b5179c2831a653c6742a3ed8af54f200d89833f3302ff0ae5e9b7127011b59f",
+      "status": "approved",
+      "approvalMode": "policy"
+    },
+    "verificationAssertions": {
+      "baseRevisionId": "rev_01a12dd9-7fc7-727d-b990-e7cfd69089fa",
+      "candidateRevisionId": "rev_01a12ddb-2d00-73ed-b7fd-261d25a5fb0b",
+      "baseHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87",
+      "candidateHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87",
+      "preserved": true
+    },
+    "semantic": {
+      "runId": "run_01a12ddb-3521-721c-8720-a81c0ea8e629",
+      "outcome": "failed",
+      "gate": "failed"
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "review_healing_proposal",
+      "recommendedActions": [
+        {
+          "action": "review_healing_proposal",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_partially_supported",
+        "failureKind": "test_fragility"
+      },
+      "healing": {
+        "advice": "proposal_possible"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

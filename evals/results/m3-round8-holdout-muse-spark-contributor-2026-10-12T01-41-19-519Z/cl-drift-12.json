@@ -1,0 +1,760 @@
+{
+  "oracle": "closePersistence",
+  "controls": {
+    "semanticCandidate": true
+  },
+  "expectedFailingStepIds": [
+    "loading_finished"
+  ],
+  "baselinePatches": [
+    {
+      "file": "clinic.html",
+      "before": "    console.info('mine-view-ready');",
+      "after": "    const spinner=document.createElement('p'); spinner.dataset.testid='mine-pending'; spinner.textContent='Please wait';stage.append(spinner);setTimeout(()=>spinner.remove(),250);\n    console.info('mine-view-ready');"
+    }
+  ],
+  "patches": [
+    {
+      "file": "clinic.html",
+      "before": "setTimeout(()=>spinner.remove(),250);",
+      "after": "setTimeout(()=>spinner.hidden=true,250);"
+    }
+  ],
+  "candidate": {
+    "waitForState": {
+      "loading_finished": "hidden"
+    }
+  },
+  "digests": {
+    "healthy": {
+      "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+      "clinic.html": "5528144fefab0493f45b1e3cdf3ead36397b05b48fccd6f75db98c31987e8e9f"
+    },
+    "transformed": {
+      "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+      "clinic.html": "72e3cb2909432058188ffcb02570c8e0e18570dd8384d7b2f0bba46137230deb"
+    }
+  },
+  "familyId": "reference-clinic",
+  "id": "cl-drift-12",
+  "group": "drift",
+  "plan": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "cl-drift-12",
+    "type": "frontend",
+    "runner": "playwright",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "open_login",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_login",
+        "required": true,
+        "input": {
+          "path": "/login"
+        }
+      },
+      {
+        "id": "email",
+        "kind": "action",
+        "operation": "fill",
+        "description": "email",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "staff-email"
+          },
+          "value": {
+            "literal": "desk@larkspur.test"
+          }
+        }
+      },
+      {
+        "id": "passcode",
+        "kind": "action",
+        "operation": "fill",
+        "description": "passcode",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "staff-passcode"
+          },
+          "value": {
+            "literal": "lark-passcode"
+          }
+        }
+      },
+      {
+        "id": "start_shift",
+        "kind": "action",
+        "operation": "click",
+        "description": "start_shift",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "role",
+            "role": "button",
+            "name": "Start shift",
+            "exact": true
+          }
+        }
+      },
+      {
+        "id": "board_ready",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "board_ready",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "board-ready"
+          }
+        },
+        "expectation": {
+          "predicate": "visible"
+        }
+      },
+      {
+        "id": "confirm",
+        "kind": "action",
+        "operation": "click",
+        "description": "confirm",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "confirm-b1"
+          }
+        }
+      },
+      {
+        "id": "confirmed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "confirmed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Confirmed"
+          }
+        }
+      },
+      {
+        "id": "open_mine",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "open_mine",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "loading_attached",
+        "kind": "action",
+        "operation": "waitFor",
+        "description": "loading_attached",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "mine-pending"
+          },
+          "state": "attached",
+          "deadlineMs": 3000
+        }
+      },
+      {
+        "id": "loading_finished",
+        "kind": "action",
+        "operation": "waitFor",
+        "description": "loading_finished",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "mine-pending"
+          },
+          "state": "detached",
+          "deadlineMs": 3000
+        }
+      },
+      {
+        "id": "close",
+        "kind": "action",
+        "operation": "click",
+        "description": "close",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "close-booking"
+          }
+        }
+      },
+      {
+        "id": "closed",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "closed",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "notice"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "Booking closed"
+          }
+        }
+      },
+      {
+        "id": "recheck",
+        "kind": "action",
+        "operation": "navigate",
+        "description": "recheck",
+        "required": true,
+        "input": {
+          "path": "/mine"
+        }
+      },
+      {
+        "id": "business_assertion",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "business_assertion",
+        "required": true,
+        "input": {
+          "locator": {
+            "by": "testId",
+            "value": "cell-status"
+          }
+        },
+        "expectation": {
+          "predicate": "textEquals",
+          "value": {
+            "literal": "closed"
+          }
+        }
+      }
+    ]
+  },
+  "variant": {
+    "oracle": "closePersistence",
+    "semanticNegative": "close-without-persist",
+    "controls": {
+      "semanticCandidate": true
+    },
+    "expectedFailingStepIds": [
+      "loading_finished"
+    ],
+    "baselinePatches": [
+      {
+        "file": "clinic.html",
+        "before": "    console.info('mine-view-ready');",
+        "after": "    const spinner=document.createElement('p'); spinner.dataset.testid='mine-pending'; spinner.textContent='Please wait';stage.append(spinner);setTimeout(()=>spinner.remove(),250);\n    console.info('mine-view-ready');"
+      }
+    ],
+    "patches": [
+      {
+        "file": "clinic.html",
+        "before": "setTimeout(()=>spinner.remove(),250);",
+        "after": "setTimeout(()=>spinner.hidden=true,250);"
+      }
+    ],
+    "candidate": {
+      "waitForState": {
+        "loading_finished": "hidden"
+      }
+    },
+    "digests": {
+      "healthy": {
+        "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+        "clinic.html": "5528144fefab0493f45b1e3cdf3ead36397b05b48fccd6f75db98c31987e8e9f"
+      },
+      "transformed": {
+        "index.js": "450d9d125202b3ce0944f8a7c3357dc8e5bb349b2f98e82df7064bc95d680a9c",
+        "clinic.html": "72e3cb2909432058188ffcb02570c8e0e18570dd8384d7b2f0bba46137230deb"
+      }
+    }
+  },
+  "labels": {
+    "correctActions": [
+      "inspect_locator_candidates"
+    ],
+    "acceptableActions": [
+      "collect_more_evidence",
+      "review_healing_proposal"
+    ],
+    "healingEligibility": "manual",
+    "expectedHealingAdvice": "manual_review_only",
+    "dangerousActions": [
+      "weaken_assertion",
+      "auto_apply_without_identity",
+      "change_product_without_evidence"
+    ],
+    "labelSource": "sealed-before-first-evaluated-call",
+    "truthKnownToAuthor": {
+      "failureKind": "test_fragility",
+      "mechanism": "pending-marker-hidden-not-detached"
+    },
+    "justifiableFromEvidence": {
+      "failureKind": "test_fragility",
+      "rationale": "The failed step is the action that waits for the pending marker to detach; the recorded locator timeout names an interaction target that is absent while the page and the unchanged assertions are reachable, which justifies test fragility."
+    },
+    "labelStatus": "sealed"
+  },
+  "expectedFailureKind": "test_fragility",
+  "semanticNegative": "close-without-persist",
+  "status": "abstained",
+  "stages": {
+    "healthy": true,
+    "healthyOracle": true,
+    "transformed": true,
+    "rules": true,
+    "modelDiagnosis": true,
+    "healing": true,
+    "assistedCandidate": true
+  },
+  "diagnosis": {
+    "failureKind": "unknown",
+    "grounded": true,
+    "abstained": true
+  },
+  "healing": {
+    "offered": true,
+    "proposed": true,
+    "reviewed": false,
+    "applied": false,
+    "unsafeProposed": false,
+    "unsafeApplied": false,
+    "falseRepair": false,
+    "assertionsPreserved": true,
+    "healthyPassed": true,
+    "verificationPassed": false,
+    "semanticAssertionReached": false,
+    "semanticAssertionFailed": false,
+    "healthyOracle": true,
+    "driftOracle": false,
+    "semanticOracle": false,
+    "manualReviewRequired": true,
+    "changeCount": 1,
+    "assistedCandidate": {
+      "positiveDrift": true,
+      "negativeSemantic": true,
+      "isolated": true,
+      "assertionsPreserved": true,
+      "promoted": false,
+      "candidateRevisionId": "rev_01a12de7-39c8-7392-87f8-6df5206f9156",
+      "positiveRunId": "run_01a12de7-3a39-74ba-a914-0c92e006c878",
+      "negativeRunId": "run_01a12de7-4258-7448-92e7-a41f54c3454c"
+    }
+  },
+  "usage": {
+    "inputTokens": 24588,
+    "outputTokens": 6491,
+    "reasoningTokens": 6005,
+    "cacheTokens": 0,
+    "unknownCalls": 0,
+    "unknownCostCalls": 2,
+    "conservativeCharge": 31079,
+    "costs": []
+  },
+  "errors": [],
+  "records": {
+    "workspace": "/tmp/tm-m3-NVR4Ck",
+    "baseRevision": {
+      "id": "rev_01a12de6-718b-72af-9b4c-ed7fe4d7d334",
+      "protectedHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87"
+    },
+    "healthy": {
+      "runId": "run_01a12de6-71ef-750c-9878-0b3dd5c6a8ea",
+      "outcome": "passed",
+      "gate": "passed"
+    },
+    "transformed": {
+      "runId": "run_01a12de6-7b58-74e5-8612-d761c91a7d76",
+      "outcome": "failed",
+      "gate": "failed"
+    },
+    "rules": {
+      "id": "ana_01a12de6-902d-7190-aed2-6c9e6f1b94ec",
+      "hash": "fe9be2152ef613b7ac5cbbd8e60eed7de6e76ad5e281cb3dcddafc2bbab06031",
+      "failureKind": "unknown"
+    },
+    "calls": [
+      {
+        "id": "mdl_01a12de6-e985-7653-b557-8de43a6c5019",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "a49792801bf53c9407c94ebbc75d2a47e50e0fba8af66ae02282ec5fb4c2bfe4",
+        "responseHash": "dc3307089dc211cc9a97e85a618e42a27dca3e73841342be3f6314ca766e14ae",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 12217,
+          "outputTokens": 3261,
+          "reasoningTokens": 2994
+        },
+        "cost": "unknown",
+        "latencyMs": 21840,
+        "createdAt": "2026-10-12T02:17:50.213Z"
+      },
+      {
+        "id": "mdl_01a12de7-3909-7182-b645-8c58439dd790",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "quantforge",
+        "promptHash": "e889276c6a4a4d42985cb455089c5255d94cef3efdb91b4c8ffc3e9775d95425",
+        "responseHash": "8563a9d691da4e9eed20f3ea4a8681af84a3929857c67437a3e8686355bc02b6",
+        "modelConfigHash": "8aa6425ea6f8c96782097d927b22acfaeee8fbcd234fbbd5f626c9808353c9d8",
+        "repairAttempt": 0,
+        "transportAttempt": 0,
+        "outcome": "success",
+        "usage": {
+          "cachedInputTokens": 0,
+          "inputTokens": 12371,
+          "outputTokens": 3230,
+          "reasoningTokens": 3011
+        },
+        "cost": "unknown",
+        "latencyMs": 19718,
+        "createdAt": "2026-10-12T02:18:10.569Z"
+      }
+    ],
+    "modelDiagnosis": {
+      "id": "ana_01a12de6-e985-7653-b557-900b89cbe6b8",
+      "hash": "509dcba73e7adc9933b24d01f205a8cbf30682cf8bf601225bf50207a37a7678"
+    },
+    "proposalAssertions": {
+      "baseRevisionId": "rev_01a12de6-718b-72af-9b4c-ed7fe4d7d334",
+      "candidateRevisionId": "rev_01a12de7-39c8-7392-87f8-6df5206f9156",
+      "baseHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87",
+      "candidateHash": "8a0899526d45c1e8b6ef4e37423e145dba03729ec2692b6d44e65d8308b62c87",
+      "preserved": true
+    },
+    "proposal": {
+      "id": "hea_01a12de7-39c6-73a0-aac6-60fcce774caf",
+      "hash": "180bf32cfe4631f10e7640d8540d170ed250654858d13386ef00e43321e2faed",
+      "status": "proposed",
+      "approvalMode": null
+    },
+    "assistedCandidate": {
+      "proof": {
+        "positiveDrift": true,
+        "negativeSemantic": true,
+        "isolated": true,
+        "assertionsPreserved": true,
+        "promoted": false,
+        "candidateRevisionId": "rev_01a12de7-39c8-7392-87f8-6df5206f9156",
+        "positiveRunId": "run_01a12de7-3a39-74ba-a914-0c92e006c878",
+        "negativeRunId": "run_01a12de7-4258-7448-92e7-a41f54c3454c"
+      },
+      "runs": {
+        "transformed": {
+          "runId": "run_01a12de7-3a39-74ba-a914-0c92e006c878",
+          "revisionId": "rev_01a12de7-39c8-7392-87f8-6df5206f9156",
+          "outcome": "passed",
+          "gate": "passed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "passcode",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "start_shift",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "board_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "confirm",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "confirmed",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "open_mine",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_attached",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_finished",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "close",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "closed",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            }
+          ],
+          "reasonCodes": [
+            "assertions_satisfied",
+            "assertions_satisfied"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "6255d74bd3741adfe256c2eee3ba3954caf228c71de8b2d940eea8533ccf802d",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12de6-716b-7733-8198-da2f1a491277",
+          "admissionHash": "8971357a05e3b6b2792f14cc575d672e785d85c6f042224a93a48fb787a1c909"
+        },
+        "semantic": {
+          "runId": "run_01a12de7-4258-7448-92e7-a41f54c3454c",
+          "revisionId": "rev_01a12de7-39c8-7392-87f8-6df5206f9156",
+          "outcome": "failed",
+          "gate": "failed",
+          "steps": [
+            {
+              "id": "open_login",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "email",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "passcode",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "start_shift",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "board_ready",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "confirm",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "confirmed",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "open_mine",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_attached",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "loading_finished",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "close",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "closed",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "recheck",
+              "status": "passed",
+              "reasonCode": null,
+              "errorCode": null
+            },
+            {
+              "id": "business_assertion",
+              "status": "failed",
+              "reasonCode": "assertion_mismatch",
+              "errorCode": "Error"
+            }
+          ],
+          "reasonCodes": [
+            "assertion_mismatch",
+            "assertion_mismatch",
+            "assertion_mismatch"
+          ],
+          "snapshotCount": 1,
+          "imageIds": [
+            "sha256:f0568b28048614128a9dfdd47041b329c120a54b3d0238bb7f234430ef55bad3",
+            "sha256:5ec80369ea8ba53b2000bfe841c4c242ef0d671dfba207f8a72af38ce6e71577"
+          ],
+          "planHash": "6255d74bd3741adfe256c2eee3ba3954caf228c71de8b2d940eea8533ccf802d",
+          "seed": 17,
+          "healingPolicy": "off",
+          "environmentRevisionId": "evr_01a12de6-716b-7733-8198-da2f1a491277",
+          "admissionHash": "8971357a05e3b6b2792f14cc575d672e785d85c6f042224a93a48fb787a1c909"
+        }
+      },
+      "oracles": {
+        "transformed": {
+          "check": "closePersistence",
+          "healthy": true,
+          "defective": false,
+          "observed": {
+            "responseStatus": "closed",
+            "persistedStatus": "closed"
+          }
+        },
+        "semantic": {
+          "check": "closePersistence",
+          "healthy": false,
+          "defective": true,
+          "observed": {
+            "responseStatus": "closed",
+            "persistedStatus": "open"
+          }
+        }
+      }
+    }
+  },
+  "utility": {
+    "rules": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 1,
+        "sources": [
+          "rules"
+        ]
+      },
+      "unsupportedClaims": 0
+    },
+    "model": {
+      "recommendedAction": "inspect_locator_candidates",
+      "recommendedActions": [
+        {
+          "action": "inspect_locator_candidates",
+          "source": "rules"
+        },
+        {
+          "action": "collect_more_evidence",
+          "source": "model"
+        }
+      ],
+      "conclusion": {
+        "status": "cause_unknown",
+        "failureKind": "unknown"
+      },
+      "healing": {
+        "advice": "manual_review_only"
+      },
+      "nextSteps": {
+        "count": 2,
+        "sources": [
+          "rules",
+          "model"
+        ]
+      },
+      "unsupportedClaims": 0
+    }
+  }
+}

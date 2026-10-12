@@ -119,10 +119,13 @@ preview-provider evidence. `m3-automatic-healing` passed automated-only on the s
 (2026-10-12, reference-dockyard, 30 cases, one correlated family, frozen at `597738f`):
 eligibleSuccess 11/11 against the approved >=0.8 target, 0/12 unsafe applications and 0/9 false
 repairs (`validation/results/m3-round7-posthoc-audit.json`); the earlier sealed round 6 on
-reference-helpdesk had missed it (7/11). `m3-assistive-diagnosis` stays blocked: round 7 met
-correctness (25/30), dangerous action (0), overclaim (0) and non-inferiority to the rules arm
-(0 regressions), but nextActionSafe was 13/30 (target >=0.95) because model-added advice fell outside
-the sealed acceptable actions. Both gates are checked individually with `check --capability-gate ID`,
+reference-helpdesk had missed it (7/11). `m3-assistive-diagnosis` passed automated-only on the sealed
+round 8 (2026-10-12, reference-clinic, a fourth family authored after the post-round-7 implementation
+freeze `3bbd838`, frozen at `b5cd410`): model nextActionCorrect 29/30, nextActionSafe 30/30 (target
+>=0.95), dangerous action 0/30, overclaim 0/30 and non-inferior to the rules arm (0 regressions, 29
+vs 29 correct); the paired gain over rules is 0 and is not an incremental-utility claim
+(`validation/results/m3-round8-posthoc-audit.json`). Round 7 had missed the safety target (13/30)
+before the general defects it exposed were corrected. Both gates are checked individually with `check --capability-gate ID`,
 do not compensate critical failures and do not replace the red `--milestone-gate M3`. Automatic
 identity/policy guards and original failed evidence are unchanged.
 

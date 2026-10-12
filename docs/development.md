@@ -727,7 +727,7 @@ and CI integration (2026-10-11) passed automated-only acceptance:
 
 | Command suffix | Evidence / remaining prerequisite |
 |---|---|
-| `--capability-gate m3-assistive-diagnosis` | **Blocked: measured, safety target missed.** Sealed round 7 (`validation/results/m3-round7-posthoc-audit.json`, reference-dockyard): model nextActionCorrect 25/30, dangerous 0/30, overclaim 0/30, no unclassified advice (typed next steps) and non-inferior to rules (0 regressed, 25 vs 25 correct), but nextActionSafe 13/30 against the approved >=0.95 (11 model-added locator-inspection steps beside an automatic healing proposal, 4 model-added evidence steps on healthy Runs, 2 rules actions that differ from the sealed label). Round 6 (reference-helpdesk) had 3/30. Needs the corrections below, a new sealed family and round. |
+| `--capability-gate m3-assistive-diagnosis` | **Passed (automated-only).** Sealed round 8 (`validation/results/m3-round8-posthoc-audit.json`, reference-clinic, frozen `b5cd410`, one run, no retries): model nextActionCorrect 29/30, nextActionSafe 30/30 against the approved >=0.95, dangerous 0/30, overclaim 0/30, no unclassified advice (typed next steps) and non-inferior to rules (0 regressed, 29 vs 29 correct); paired gain 0, no incremental-utility claim. Round 7 (reference-dockyard) had missed nextActionSafe (13/30) and round 6 (reference-helpdesk) 3/30; the general defects found there were corrected before round 8. One correlated synthetic family, no human utility evidence. |
 | `--capability-gate m3-automatic-healing` | **Passed (automated-only).** Sealed round 7 on the reference-dockyard family (one correlated family, 30 cases, frozen `597738f`, one run, no retries): eligibleSuccess 11/11 against the approved >=0.8, 0/12 unsafe applications, 0/9 false repairs, safe healing 10/12 (two manual-only by design); every eligible case reached its semantic-negative stage with protected assertions preserved; three adversarial cases without unsafe application; mutation inventory without survivors. Round 6 on reference-helpdesk had missed (7/11). No population-safety or generalization claim. |
 | `--capability-gate m3-assisted-healing` | **Passed (automated-only).** `validation/results/m3-assisted-review-20261010/acceptance.json`: built CLI JSON/text, REST loopback and MCP stdio; complete review, version-conflict and cross-project denial; candidate positive/semantic-negative Docker controls; manual approval and verification with intact assertions and historical evidence. `reviewLoad`: 1 proposal, 1 change, 1 change/proposal. |
 | `--capability-gate m3-ci-integration` | **Passed (automated-only).** `validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json` with raw API records and logs in `22-fork-benign/` and `23-fork-hostile/`: a fork owned by a second GitHub account gets no secret, writable token, gate check or execution; commit binding verified on merge-ref runs. Revalidated by `tools/src/github-action/hosted-evidence.test.ts`. |
@@ -760,7 +760,7 @@ safe healing 10/12, eligibleSuccess 11/11, cause accuracy 21/26, recall 8/9, pre
 29/30, 0/12 unsafe applications, 0/9 false repairs, 44 calls, 504125 conservative tokens
 (`validation/results/m3-round7-posthoc-audit.json`). That closes `m3-automatic-healing`. The
 assistive arm was non-inferior to rules (0 regressed, 25 vs 25 correct) but its nextActionSafe was
-13/30, so `m3-assistive-diagnosis` stays blocked. The analysis of the retained ledgers found four
+13/30, so `m3-assistive-diagnosis` stayed blocked after round 7. The analysis of the retained ledgers found four
 general defects, corrected after the round (prompt `analyze-7-code-owned-advice`; the dockyard family
 is now development evidence and is not reused as holdout): a model could add an
 actionable step beside a code-owned recommendation, and an evidence step to a passed Run; a
@@ -775,6 +775,16 @@ explaining write is a `contract_violation`, a value mismatch on a read after a w
 write and the read, and a named password input is proven equivalent through its recorded test id.
 Paid development probes on the burned dockyard cases (`evals/results/dev-dev-rules2-*`) gave a safe
 rules and model arm on all six probed cases; that is development evidence only.
+
+Round 8 (`b5cd410`, one run, sealed reference-clinic family authored after the freeze `3bbd838`,
+never used in development, `muse-spark-1.3-contributor` xhigh): model nextActionCorrect 29/30,
+nextActionSafe 30/30 (Wilson [0.886, 1.0]), dangerous 0/30, overclaim 0/30, no unclassified advice,
+paired improved 0 / regressed 0 (rules correct 29, model correct 29: non-inferior); safe healing
+10/12 (the two misses are manual-only by design), eligibleSuccess 11/11, cause accuracy 24/26,
+recall 9/9, precision 9/9, completion 30/30, 0/12 unsafe applications, 0/9 false repairs, 44 calls,
+534618 conservative tokens (`validation/results/m3-round8-posthoc-audit.json`, score recomputed from
+the retained ledgers). That closes `m3-assistive-diagnosis` automated-only: one correlated synthetic
+family, no human utility, population or generalization claim, and no incremental gain over rules.
 
 Run each as `node tools/dist/traceability/cli.js check COMMAND_SUFFIX`. The scoped checker returns
 the selected decision and concrete reasons, validates its referenced evidence and refuses missing
