@@ -5045,7 +5045,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
@@ -5078,7 +5078,11 @@
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
         "validation/results/m3-round7-posthoc-audit.json",
-        "validation/results/m3-round8-posthoc-audit.json"
+        "validation/results/m3-round8-posthoc-audit.json",
+        "validation/results/m3-round9-posthoc-audit.json",
+        "evals/results/m3-round9-holdout-muse-spark-contributor-2026-10-12T13-46-50-003Z/report.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/controls/manifest.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/policy-probes/manifest.json"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
@@ -5164,7 +5168,7 @@
           }
         ]
       },
-      "blockedReason": "Healing-stage evidence on sealed holdouts is void under the VAL-016 prompt-authorization rule: the healing prompt builder sent plan.name, which was the sealed case ID spelling the group, to the model in rounds 6-8 (reproduced with the real pipeline: validation/results/m3-holdout-prompt-leakage-audit.json; the round prompts were not retained, so the leak is inferred from the identical code path). Round 7 (eligibleSuccess 11/11, 0/12 unsafe applications, 0/9 false repairs) and round 8 safe healing 10/12 are therefore not accepted as evidence for the approved healing targets and are not rescored. The leakage guard and opaque plan names are now wired into the round harness for new registrations; closing this requires a new round on a new sealed family. Deterministic healing acceptance (HEAL-001/HEAL-003, policy selector/readiness repair, price/permission negatives) remains verified."
+      "note": " Healing-stage evidence: rounds 6-8 are void for the VAL-016 prompt leak (plan.name carried the sealed case ID to the healing model; validation/results/m3-holdout-prompt-leakage-audit.json) and are not rescored. Sealed round 9 re-measured on a new family (reference-hostel, authored after the implementation freeze d484cf2, registration frozen at b476bb8) with every model request routed through the prompt-leakage guard and opaque plan names; the round completed with stopReason null (no leak recorded): eligibleSuccess 11/11 against the approved >=0.8, safe healing 10/12 (the two misses are manual-only by design), 0/12 unsafe applications, 0/9 false repairs, 45 calls, 657470 conservative tokens (validation/results/m3-round9-posthoc-audit.json). Automated-only, one correlated synthetic family; no population-safety or generalization claim."
     },
     {
       "id": "J08",
@@ -5806,7 +5810,7 @@
         "fixtures/reference-shop/src/shop.test.ts::passwordValidation accepts baseline and detects no-password-validation",
         "fixtures/reference-shop/src/shop.test.ts::orderPersistence accepts baseline and detects toast-without-persist",
         "fixtures/reference-shop/src/shop.docker.test.ts::independent browser oracle detects UI regressions and preserves popup/frame/file flows",
-        "tools/src/evals/holdout-corpus.test.ts::sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all four families",
+        "tools/src/evals/holdout-corpus.test.ts::sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all five families",
         "tools/src/evals/holdout-corpus.test.ts::retained model-free controls bind to each sealed corpus and reproduce healthy pass and defective failure",
         "tools/src/evals/holdout-corpus.test.ts::negative controls: tampered evidence fails the reproduction precondition"
       ],
@@ -5820,7 +5824,9 @@
         "evals/corpus/manifest.json",
         "tools/src/evals/holdout-corpus.test.ts",
         "evals/holdout/m3-clinic/sealed.json",
-        "evals/rounds/m3-round8-holdout-muse-spark-contributor/controls/manifest.json"
+        "evals/rounds/m3-round8-holdout-muse-spark-contributor/controls/manifest.json",
+        "evals/holdout/m3-hostel/sealed.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/controls/manifest.json"
       ],
       "code": [
         "fixtures/reference-shop/src/index.js",
@@ -7111,8 +7117,8 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "AI",
-      "status": "implemented",
-      "note": "Exact present-field step-relative replacement contract and evidence-backed abstention are implemented. Insufficient semantic-equivalence proof remains manual-only; no human approvals or stochastic success are inferred from controlled-provider acceptance. Sealed-holdout healing measurements of rounds 6-8 are void for prompt leakage (see blockedReason).",
+      "status": "verified",
+      "note": "Exact present-field step-relative replacement contract and evidence-backed abstention are implemented. Insufficient semantic-equivalence proof remains manual-only; no human approvals or stochastic success are inferred from controlled-provider acceptance. Healing-stage evidence: rounds 6-8 are void for the VAL-016 prompt leak (plan.name carried the sealed case ID to the healing model; validation/results/m3-holdout-prompt-leakage-audit.json) and are not rescored. Sealed round 9 re-measured on a new family (reference-hostel, authored after the implementation freeze d484cf2, registration frozen at b476bb8) with every model request routed through the prompt-leakage guard and opaque plan names; the round completed with stopReason null (no leak recorded): eligibleSuccess 11/11 against the approved >=0.8, safe healing 10/12 (the two misses are manual-only by design), 0/12 unsafe applications, 0/9 false repairs, 45 calls, 657470 conservative tokens (validation/results/m3-round9-posthoc-audit.json). Automated-only, one correlated synthetic family; no population-safety or generalization claim.",
       "scenario": [
         "validation/journeys/m3-healing-acceptance.docker.test.ts::HEAL-001 policy selector repair passes while changed price and permission stay failed and immutable",
         "validation/journeys/m3-healing-acceptance.docker.test.ts::J07 M3-02 policy autoapply promotes only the unique equivalent selector and leaves the wrong button manual",
@@ -7145,7 +7151,11 @@
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-healing-unit-03/output.log",
         "validation/results/m3-completion/m3-completion-20261007T150348Z-68225127-aed8-46ed-89af-43fd3a1b7450/001-diagnosis-docker-final/output.log",
         "validation/results/m3-round7-posthoc-audit.json",
-        "validation/results/m3-round8-posthoc-audit.json"
+        "validation/results/m3-round8-posthoc-audit.json",
+        "validation/results/m3-round9-posthoc-audit.json",
+        "evals/results/m3-round9-holdout-muse-spark-contributor-2026-10-12T13-46-50-003Z/report.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/controls/manifest.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/policy-probes/manifest.json"
       ],
       "code": [
         "packages/application/src/ai/healing.ts",
@@ -7228,8 +7238,7 @@
             "assertion": "expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.test.activeRevisionId);"
           }
         ]
-      },
-      "blockedReason": "Healing-stage evidence on sealed holdouts is void under the VAL-016 prompt-authorization rule: the healing prompt builder sent plan.name, which was the sealed case ID spelling the group, to the model in rounds 6-8 (reproduced with the real pipeline: validation/results/m3-holdout-prompt-leakage-audit.json; the round prompts were not retained, so the leak is inferred from the identical code path). Round 7 (eligibleSuccess 11/11, 0/12 unsafe applications, 0/9 false repairs) and round 8 safe healing 10/12 are therefore not accepted as evidence for the approved healing targets and are not rescored. The leakage guard and opaque plan names are now wired into the round harness for new registrations; closing this requires a new round on a new sealed family. Deterministic healing acceptance (HEAL-001/HEAL-003, policy selector/readiness repair, price/permission negatives) remains verified."
+      }
     },
     {
       "id": "M3-03",
@@ -7560,8 +7569,8 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
-      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; implementation-bound round-2 controls (31 passed, zero model calls) and policy probes (12 recorded decisions, 24 local-provider and 0 remote requests) were frozen at fbafad3 before the single paid round, whose results and post-hoc audit are retained. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Round 8 on the never-developed reference-clinic family met the maintainer-approved, unchanged pilot targets, but its healing stage is void for prompt leakage, so the pilot decision stays open (see blockedReason).",
+      "status": "verified",
+      "note": "Historical round-1 controls, critical mutation inventory and failed paid observations exist; their release.areas entries are preserved, not regraded. Corrected evaluator mechanics have deterministic unit acceptance; implementation-bound round-2 controls (31 passed, zero model calls) and policy probes (12 recorded decisions, 24 local-provider and 0 remote requests) were frozen at fbafad3 before the single paid round, whose results and post-hoc audit are retained. Historical Wilson-lower >=0.8 wording for n=12 is unreachable: even 12/12 gives a 95% Wilson lower bound about 0.758. Round 8 on the never-developed reference-clinic family met the maintainer-approved, unchanged pilot targets, but its healing stage is void for prompt leakage, so the pilot decision stays open (see blockedReason). Round 8 (reference-clinic) met the unchanged pilot point targets, but its healing stage is void for prompt leakage (rounds 6-8, VAL-016). Round 9 on the new sealed reference-hostel family, with the leakage guard and opaque plan names, met every unchanged pilot point target: safe healing 10/12, cause accuracy 24/26, recall 9/9, precision 9/9, completion 30/30, 0/12 unsafe applications and 0/9 false repairs (validation/results/m3-round9-posthoc-audit.json); one correlated synthetic family, automated-only, no generalization claim.",
       "scenario": [
         "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
         "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
@@ -7604,7 +7613,11 @@
         "validation/results/m3-round7-posthoc-audit.json",
         "evals/results/m3-round8-holdout-muse-spark-contributor-2026-10-12T01-41-19-519Z/report.json",
         "validation/results/m3-round8-posthoc-audit.json",
-        "evals/rounds/m3-round8-holdout-muse-spark-contributor/preregistration.json"
+        "evals/rounds/m3-round8-holdout-muse-spark-contributor/preregistration.json",
+        "validation/results/m3-round9-posthoc-audit.json",
+        "evals/results/m3-round9-holdout-muse-spark-contributor-2026-10-12T13-46-50-003Z/report.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/controls/manifest.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/policy-probes/manifest.json"
       ],
       "code": [
         "tools/src/evals/m3.ts",
@@ -7815,8 +7828,7 @@
             "assertion": "expect(\n        [\"killed\", \"equivalent\"],\n        `${row.id}: ${row.outcome}\\n${row.failureExcerpt ?? \"\"}`,\n      ).toContain(row.outcome);"
           }
         ]
-      },
-      "blockedReason": "The pilot decision is blocked: round 8 (reference-clinic, frozen b5cd410, validation/results/m3-round8-posthoc-audit.json) met the unchanged pilot targets, but its healing-stage metrics (safe healing 10/12, 0/12 unsafe applications, 0/9 false repairs) are void under VAL-016 because the healing prompt carried the sealed case ID (validation/results/m3-holdout-prompt-leakage-audit.json); its diagnosis metrics (cause accuracy 24/26, recall 9/9, precision 9/9) stand. Rounds 1-7 stay recorded as failed or blocked and are not rescored. The leakage guard and opaque plan names are now wired into the round harness for new registrations; closing requires a new sealed family and a new authorized round."
+      }
     },
     {
       "id": "M4-01",
@@ -16600,13 +16612,13 @@
       "scenario": [
         "fixtures/reference-shop/src/shop.test.ts::passwordValidation accepts baseline and detects no-password-validation",
         "fixtures/reference-shop/src/shop.test.ts::orderPersistence accepts baseline and detects toast-without-persist",
-        "tools/src/evals/holdout-corpus.test.ts::sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all four families",
+        "tools/src/evals/holdout-corpus.test.ts::sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all five families",
         "tools/src/evals/holdout-corpus.test.ts::retained model-free controls bind to each sealed corpus and reproduce healthy pass and defective failure",
         "tools/src/evals/holdout-corpus.test.ts::negative controls: tampered evidence fails the reproduction precondition"
       ],
       "oracle": [
         "Versioned fixed corpus links baseline hash, mutant, violated requirement, expected step and deterministic oracle.",
-        "Four sealed holdout families pass holdout-check --homologation (SHA-256 seals over manifest and inputs, 30 cases each, declared authorship and implementationKnowledge, developmentUse none, authored after the implementation freeze). Retained model-free controls bind to the corpus hash and reproduce healthy pass and defective failure with the independent oracle; tampered evidence fails the reproduction precondition."
+        "Five sealed holdout families pass holdout-check --homologation (SHA-256 seals over manifest and inputs, 30 cases each, declared authorship and implementationKnowledge, developmentUse none, authored after the implementation freeze). Retained model-free controls bind to the corpus hash and reproduce healthy pass and defective failure with the independent oracle; tampered evidence fails the reproduction precondition."
       ],
       "evidence": [
         "evals/corpus/manifest.json",
@@ -16619,7 +16631,9 @@
         "evals/rounds/m3-round5-holdout-muse-spark-contributor/controls/manifest.json",
         "evals/rounds/m3-round6-holdout-muse-spark-contributor/controls/manifest.json",
         "evals/rounds/m3-round7-holdout-muse-spark-contributor/controls/manifest.json",
-        "evals/rounds/m3-round8-holdout-muse-spark-contributor/controls/manifest.json"
+        "evals/rounds/m3-round8-holdout-muse-spark-contributor/controls/manifest.json",
+        "evals/holdout/m3-hostel/sealed.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/controls/manifest.json"
       ],
       "code": [
         "evals/corpus/manifest.json",
@@ -16629,7 +16643,7 @@
       "note": "validation: automated-only (ADR-012). Labels are sealed, not independently reviewed; authorship by an agent or the implementing team is declared, not machine-verified (provenanceVerified:false). No claim of independent review, GA or generalization beyond the sealed families. The development corpus evals/corpus/manifest.json stays split=development.",
       "coverage": {
         "positive": [
-          "tools/src/evals/holdout-corpus.test.ts::sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all four families",
+          "tools/src/evals/holdout-corpus.test.ts::sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all five families",
           "tools/src/evals/holdout-corpus.test.ts::retained model-free controls bind to each sealed corpus and reproduce healthy pass and defective failure"
         ],
         "negative": [
@@ -16708,14 +16722,14 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M0",
       "ownerRole": "Quality",
-      "status": "blocked",
+      "status": "verified",
       "scenario": [
         "tools/src/evals/leakage.test.ts::forwards clean prompts and aborts label-bearing prompts before any upstream dispatch",
         "tools/src/evals/leakage.test.ts::finds no sealed label, mutant, case or oracle identifier in any authorized executable plan",
         "tools/src/evals/holdout-leakage.docker.test.ts::detects the sealed case identifier the healing prompt builder really sends, keeps analysis prompts clean, and passes a healing prompt once the plan name is opaque"
       ],
       "oracle": [
-        "Four sealed independent families authored after the implementation freeze with developmentUse none. Every model request is scanned against a forbidden set derived from the sealed manifest by tools/src/evals/leakage.ts; a hit is blocked before dispatch and voids the round. A real Docker run audits the Application analysis and healing prompt builders."
+        "Five sealed independent families authored after the implementation freeze with developmentUse none (library, helpdesk, dockyard, clinic, hostel). Every model request is scanned against a forbidden set derived from the sealed manifest by tools/src/evals/leakage.ts; a hit is blocked before dispatch and voids the round. A real Docker run audits the Application analysis and healing prompt builders and reproduces the case-ID leak of the old harness. The round harness now routes the provider through the guard and gives every test an opaque name; sealed round 9 completed with the guard never recording a leak."
       ],
       "evidence": [
         "tools/src/evals/leakage.ts",
@@ -16724,7 +16738,9 @@
         "validation/results/m3-holdout-prompt-leakage-audit.json",
         "evals/holdout/m3-clinic/sealed.json",
         "evals/holdout/case-format.md",
-        "evals/rounds/m3-round8-holdout-muse-spark-contributor/preregistration.json"
+        "evals/holdout/m3-hostel/sealed.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/preregistration.json",
+        "validation/results/m3-round9-posthoc-audit.json"
       ],
       "code": [
         "tools/src/evals/leakage.ts",
@@ -16732,8 +16748,39 @@
         "packages/application/src/ai/analysis.ts",
         "tools/src/evals/m3.ts"
       ],
-      "note": "Family isolation (a) is met. Prompt authorization (b): analysis prompts carry no sealed identifier. The healing prompt sends the whole plan including plan.name, and sealed plans are named after the case ID, which spells the group. The guard reproduced this on a real Run. Rounds 4-8 predate the guard (ledgers retain only promptHash), so their healing stage, with 12-14 model-backed proposals per round in rounds 6-8, cannot be shown leak-free and would be void under the VAL-016 rule. They are not rescored.",
-      "blockedReason": "Prompt-authorization criterion not met for sealed rounds 4-8: the healing prompt builder sent the sealed case ID (plan.name, which spells the group) to the model; reproduced with the real pipeline in validation/results/m3-holdout-prompt-leakage-audit.json. The leakage guard exists and is tested but is not wired into the round harness (tools/src/evals/m3.ts is hash-frozen). Closing requires a new round on a new sealed family with opaque test names and the provider routed through the guard."
+      "note": "Family isolation: five sealed families, each authored after the implementation freeze, developmentUse none, declared authorship. Prompt authorization: analysis prompts carry no sealed identifier; the healing prompt builder sends the whole plan, so the harness gives each test an opaque name (tools/src/evals/m3.ts opaquePlanName) and routes every request through the leakage guard, which blocks and invalidates a round on any sealed label, mutant, case ID, oracle name or author prose. Rounds 4-8 predate the guard (ledgers retain only promptHash); their healing stage is void and not rescored. Round 9 (reference-hostel) ran guarded and completed with stopReason null. Limits: the guard inspects requests, not model behavior; round prompts are not retained; the wiring in executeRound is evidenced by the live round, not by a unit test.",
+      "coverage": {
+        "positive": [
+          "tools/src/evals/leakage.test.ts::finds no sealed label, mutant, case or oracle identifier in any authorized executable plan",
+          "tools/src/evals/holdout-leakage.docker.test.ts::detects the sealed case identifier the healing prompt builder really sends, keeps analysis prompts clean, and passes a healing prompt once the plan name is opaque"
+        ],
+        "negative": [
+          "tools/src/evals/leakage.test.ts::forwards clean prompts and aborts label-bearing prompts before any upstream dispatch",
+          "tools/src/evals/holdout-leakage.docker.test.ts::detects the sealed case identifier the healing prompt builder really sends, keeps analysis prompts clean, and passes a healing prompt once the plan name is opaque"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/evals/leakage.test.ts",
+            "assertion": "expect(findLeaks(JSON.stringify(authorized), set)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/evals/leakage.test.ts",
+            "assertion": "expect(blocked.status, name).toBe(451);"
+          },
+          {
+            "path": "tools/src/evals/leakage.test.ts",
+            "assertion": "expect(() => assertRoundNotInvalidated(guard.state)).toThrow(\"round invalid\");"
+          },
+          {
+            "path": "tools/src/evals/holdout-leakage.docker.test.ts",
+            "assertion": "expect(armA[caseId]!.blockedKinds, caseId).toEqual([\"case-id\"]);"
+          },
+          {
+            "path": "tools/src/evals/holdout-leakage.docker.test.ts",
+            "assertion": "for (const row of sent) expect(findLeaks(row.body, set)).toEqual([]);"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-017",
@@ -16921,7 +16968,9 @@
         "tools/src/evals/holdout-corpus.test.ts",
         "tools/src/evals/holdout.test.ts",
         "tools/src/evals/m3-scoring.test.ts",
-        "evals/holdout/case-format.md"
+        "evals/holdout/case-format.md",
+        "evals/holdout/m3-hostel/sealed.json",
+        "evals/rounds/m3-round9-holdout-muse-spark-contributor/controls/manifest.json"
       ],
       "code": [
         "packages/application/src/ai/requirements.ts",
@@ -19311,6 +19360,16 @@
         "reason": "Blocked: the healing-stage metrics of round 8 are void under the VAL-016 prompt-authorization rule. The healing prompt builder sent the whole plan to the model including plan.name, and sealed plans were named after the case ID, which spells the group (reproduced with the real pipeline in validation/results/m3-holdout-prompt-leakage-audit.json; round-8 prompts were not retained, so the leak is inferred from the identical code path). Measured and not rescored (validation/results/m3-round8-posthoc-audit.json; sealed reference-clinic family authored after the implementation freeze 3bbd838, registration m3-round8-holdout-muse-spark-contributor frozen at b5cd410, one run, no retries, 44 calls, 534618 conservative tokens): safe healing 10/12 (0.833, the two misses are manual-only by design), applied unsafe patches 0/12, critical false repairs 0/9 are healing-stage numbers and cannot count; cause accuracy 24/26 (0.923, Wilson [0.759, 0.979]), defect recall 9/9 and precision 9/9 come from analysis prompts that the audit found free of sealed identifiers, so they stand as diagnosis measurements. The pilot decision stays blocked until a new round on a new sealed family runs with opaque test names and the provider routed through the leakage guard (now wired into the round harness for new registrations). Automated-only (ADR-012); one correlated synthetic family; rounds 1-7 stay recorded and are not rescored."
       },
       {
+        "area": "model-loop-m3-round9-muse-spark-holdout",
+        "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+        "approvedTarget": "Targets unchanged from the maintainer-approved round 8 pilot point targets (2026-10-12), preregistered unchanged for round 9 before any measurement under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement after the VAL-016 invalidation of rounds 6-8: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Applies only to the new sealed reference-hostel family and round 9. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
+        "observation": 0.8333333333333334,
+        "interval": [0.5519636426153274, 0.9530358523851776],
+        "n": 12,
+        "decision": "passed",
+        "reason": "M3 round 9 for muse-spark-1.3-contributor xhigh on the sealed reference-hostel holdout (authored after the implementation freeze d484cf2 by an agent of the implementing team, declared; registration frozen at b476bb8; results evals/results/m3-round9-holdout-muse-spark-contributor-2026-10-12T13-46-50-003Z; validation/results/m3-round9-posthoc-audit.json): every model request routed through the VAL-016 prompt-leakage guard with opaque plan names and stopReason null (no leak recorded); 45 calls, 657470 conservative tokens, monetary cost unknown; safe healing 10/12 (0.833, Wilson [0.552, 0.953]; the two misses are manual-only by design) >=0.8; cause accuracy 24/26 (0.923) >=0.8; defect recall 9/9 >=0.9; precision 9/9 >=0.9; healthy abstention 4/4; completion 30/30; eligibleSuccess 11/11; 0/12 applied unsafe patches and 0/9 false repairs; assistive model arm nextActionCorrect 29/30, nextActionSafe 30/30, dangerous 0/30, overclaim 0/30, non-inferior to rules (0 regressed, 29 vs 29). Score recomputed from the retained ledgers equals the report. Labels were sealed before the first call and never changed; the registration is spent and never rerun. One correlated synthetic family: no population-safety, generalization, independent-review or incremental-gain claim."
+      },
+      {
         "area": "m3-assistive-holdout-utility",
         "proposedTarget": "Sealed holdout (families never used in development, labels sealed before the first evaluated call, authorship declared; ADR-012): nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
         "approvedTarget": "Maintainer-approved 2026-10-11 after the spent round 6, applying only to a new sealed family and a new round (round 6 is not rescored): model arm nextActionCorrect >=0.8, nextActionSafe >=0.95, dangerousAction 0 of observed advice cases, overclaim <=0.05, and non-inferiority to the rules arm (paired regressed cases = 0 and model nextActionCorrect >= rules nextActionCorrect). The paired gain over rules is reported descriptively with its interval and does not gate. Automated-only (ADR-012); one correlated family; no human utility or generalization claim.",
@@ -19326,15 +19385,15 @@
       {
         "area": "m3-automatic-holdout-safety",
         "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash (ADR-012)",
-        "approvedTarget": "Maintainer-approved 2026-10-11 before the next round, as proposed and unchanged by any measurement: zero unsafe autoapplications and zero critical false repairs; eligibleSuccess >=0.8 (point estimate, reported with n and Wilson interval) on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash. Applies to a new sealed family and a new round (round 6 is not rescored). Automated-only (ADR-012); one correlated family; no population-safety or generalization claim.",
+        "approvedTarget": "Maintainer-approved 2026-10-11 before the next round, as proposed and unchanged by any measurement: zero unsafe autoapplications and zero critical false repairs; eligibleSuccess >=0.8 (point estimate, reported with n and Wilson interval) on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash. Applies to a new sealed family and a new round (round 6 is not rescored; rounds 7 and 8 are void for the VAL-016 prompt leak). Round 9 was preregistered with these targets unchanged before any measurement, under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement. Automated-only (ADR-012); one correlated family; no population-safety or generalization claim.",
         "observation": 1,
         "interval": [
           0.7411599827511859,
           1
         ],
         "n": 11,
-        "decision": "blocked",
-        "reason": "Blocked: the round 7 healing-stage measurement is void under the VAL-016 prompt-authorization rule. The healing prompt builder sent the whole plan to the model including plan.name, and sealed plans were named after the case ID, which spells the group (reproduced with the real pipeline in validation/results/m3-holdout-prompt-leakage-audit.json; the round-7 prompts were not retained, so the leak is inferred from the identical code path, not observed). Measured and not rescored (validation/results/m3-round7-posthoc-audit.json; one correlated sealed reference-dockyard family, 30 cases, registration m3-round7-holdout-muse-spark-contributor frozen at 597738f, model muse-spark-1.3-contributor xhigh, one run, no retries, 44 calls, 504125 conservative tokens): eligibleSuccess 11/11 (Wilson [0.741, 1.0]), applied unsafe patches 0/12, critical false repairs 0/9, safe healing 10/12 (the two misses are manual-only by design), all three adversarial cases without unsafe application or false repair. The numbers cannot be used as evidence for the approved target until a new round on a new sealed family runs with opaque test names and the provider routed through the leakage guard (now wired into the round harness for new registrations). Automated-only (ADR-012); one correlated family; no population-safety or generalization claim."
+        "decision": "passed",
+        "reason": "Passed on sealed round 9 (validation/results/m3-round9-posthoc-audit.json; one correlated sealed reference-hostel family, 30 cases authored after the implementation freeze d484cf2, registration m3-round9-holdout-muse-spark-contributor frozen at b476bb8, labels sealed before the first evaluated call, model muse-spark-1.3-contributor xhigh, one run, no retries, 45 calls, 657470 conservative tokens) with every model request routed through the VAL-016 prompt-leakage guard and opaque plan names; the round completed with stopReason null, so the guard recorded no sealed label, mutant, case ID, oracle name or author prose in a request: eligibleSuccess 11/11 (1.0, Wilson [0.741, 1.0]) >=0.8; safe healing 10/12 (the two misses are manual-only by design); 0/12 unsafe applications; 0/9 false repairs; every automatic-eligible case reached its semantic-negative stage; critical mutation inventory on the guarded harness: 12 killed, 1 equivalent, no survivors (validation/results/m3-critical-mutations.json). The healing-stage figures of rounds 6-8 are void for the prompt leak and were not rescored. One correlated synthetic family authored by the implementing team (declared), automated-only; the guard checks requests, not model behavior; no population-safety or generalization claim."
       },
       {
         "area": "m3-assisted-review-surface",

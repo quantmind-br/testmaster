@@ -31,6 +31,7 @@ const families = [
     family: "reference-dockyard",
   },
   { name: "clinic", round: "m3-round8-holdout-muse-spark-contributor", family: "reference-clinic" },
+  { name: "hostel", round: "m3-round9-holdout-muse-spark-contributor", family: "reference-hostel" },
 ] as const;
 const groups = { healthy: 4, bug: 8, drift: 12, env: 3, adversarial: 3 };
 
@@ -199,7 +200,7 @@ async function verifyRetainedControls(entry: Family) {
   expect(defectiveOk).toBe(23);
 }
 
-it("sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all four families", async () => {
+it("sealed holdout corpora verify, declare provenance and link baseline, defect, oracle and expected step in all five families", async () => {
   for (const entry of families) await verifySealedCorpus(entry);
 });
 

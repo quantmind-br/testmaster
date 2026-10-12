@@ -14,7 +14,7 @@ import {
 } from "./leakage.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const families = ["library", "helpdesk", "dockyard", "clinic"] as const;
+const families = ["library", "helpdesk", "dockyard", "clinic", "hostel"] as const;
 interface SealedFile {
   cases: (SealedCaseLike & {
     plan: unknown;
@@ -102,7 +102,7 @@ it("derives a specific forbidden set from every sealed family without generic wo
       expect(entry.value.trim().length).toBeGreaterThanOrEqual(6);
     }
   }
-  expect(cases).toBe(120);
+  expect(cases).toBe(150);
   expect([...kinds].sort()).toEqual([
     "case-id",
     "evidence-rationale",
