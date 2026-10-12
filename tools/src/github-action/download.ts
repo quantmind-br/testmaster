@@ -38,6 +38,23 @@ async function unzip(path: string, args: string[], maxBytes: number): Promise<Bu
   );
   return done.promise;
 }
+export const FIXED_ARTIFACT_ENTRIES = [
+  "report.json",
+  "junit.xml",
+  "summary.md",
+  "bundle-index.json",
+  "completion.json",
+] as const;
+
+/** The publisher artifact is exactly these five regular entries: no extras, duplicates or paths. */
+export function assertFixedArtifactEntries(listing: readonly string[]): void {
+  if (
+    listing.length !== FIXED_ARTIFACT_ENTRIES.length ||
+    FIXED_ARTIFACT_ENTRIES.some((name) => listing.filter((entry) => entry === name).length !== 1)
+  )
+    throw new ActionInputError("POLICY_DENIED", "Artifact contains unexpected paths");
+}
+
 export async function downloadEnvelope(input: DownloadEnvelopeInput): Promise<string> {
   if (
     !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(input.repository) ||
@@ -154,14 +171,9 @@ export async function downloadEnvelope(input: DownloadEnvelopeInput): Promise<st
   const path = join(directory, "artifact.zip");
   await writeFile(path, buffer, { flag: "wx", mode: 0o600 });
   const listing = (await unzip(path, ["-Z1"], 65536)).toString("utf8").trim().split("\n");
-  const names = ["report.json", "junit.xml", "summary.md", "bundle-index.json", "completion.json"];
-  if (
-    listing.length !== names.length ||
-    names.some((name) => listing.filter((entry) => entry === name).length !== 1)
-  )
-    throw new ActionInputError("POLICY_DENIED", "Artifact contains unexpected paths");
+  assertFixedArtifactEntries(listing);
   // Never extract links/permissions or execute payload. Read each fixed regular byte stream.
-  for (const name of names) {
+  for (const name of FIXED_ARTIFACT_ENTRIES) {
     const done = Promise.withResolvers<Buffer>();
     const output: Buffer[] = [];
     let size = 0;

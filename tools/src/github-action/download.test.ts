@@ -1,5 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { type DownloadEnvelopeInput, downloadEnvelope } from "./download.js";
+import {
+  assertFixedArtifactEntries,
+  type DownloadEnvelopeInput,
+  downloadEnvelope,
+  FIXED_ARTIFACT_ENTRIES,
+} from "./download.js";
 
 const input: DownloadEnvelopeInput = {
   repository: "owner/repo",
@@ -118,4 +123,23 @@ it("refuses fork or foreign-head pull request runs before job lookup", async () 
     expect(fetch).toHaveBeenCalledTimes(1);
     fetch.mockRestore();
   }
+});
+
+it("accepts only the five fixed artifact entries and refuses extra, missing, duplicate or nested names", () => {
+  expect(() => assertFixedArtifactEntries([...FIXED_ARTIFACT_ENTRIES].reverse())).not.toThrow();
+  const refused = [
+    FIXED_ARTIFACT_ENTRIES.filter((name) => name !== "completion.json"),
+    [...FIXED_ARTIFACT_ENTRIES, "evil.sh"],
+    ["report.json", "report.json", "junit.xml", "summary.md", "bundle-index.json"],
+    ["../report.json", "junit.xml", "summary.md", "bundle-index.json", "completion.json"],
+    ["nested/report.json", "junit.xml", "summary.md", "bundle-index.json", "completion.json"],
+    [""],
+  ];
+  for (const listing of refused)
+    expect(() => assertFixedArtifactEntries(listing)).toThrow(
+      expect.objectContaining({ code: "POLICY_DENIED" }),
+    );
+  expect(() => assertFixedArtifactEntries([...FIXED_ARTIFACT_ENTRIES, "../escape.json"])).toThrow(
+    expect.objectContaining({ code: "POLICY_DENIED" }),
+  );
 });

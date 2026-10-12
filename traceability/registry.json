@@ -2356,26 +2356,48 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M3",
       "ownerRole": "Integrations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-        "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment"
+        "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment",
+        "tools/src/github-action/download.test.ts::accepts only the five fixed artifact entries and refuses extra, missing, duplicate or nested names",
+        "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
+        "tools/src/github-action/main.test.ts::refuses CI output paths that escape the invocation output directory",
+        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
+        "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download"
       ],
       "oracle": [
-        "Typed Action inputs reject shell IDs/credential URLs/SHA mismatch/free commands/unpinned manifest; CLI child environment strips write and provider tokens."
+        "Typed Action inputs reject shell IDs, credential URLs, SHA mismatch and floating manifests; child env strips provider/GitHub/loader secrets; artifact entries must be exactly the five fixed names; CI output paths stay under the invocation output directory; fork pull requests are refused before runtime install; the hosted cross-owner fork run had no secret, no write token and no execution."
       ],
       "evidence": [
         "tools/src/github-action/inputs.test.ts",
-        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+        "tools/src/github-action/download.test.ts",
+        "tools/src/github-action/main.test.ts",
+        "tools/src/github-action/hosted-evidence.test.ts",
+        "apps/cli/src/ci-workflow.test.ts",
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/workflow-permissions.json"
       ],
-      "code": ["tools/src/github-action/inputs.ts", "tools/src/github-action/main.ts"],
+      "code": [
+        "tools/src/github-action/inputs.ts",
+        "tools/src/github-action/download.ts",
+        "tools/src/github-action/main.ts",
+        "apps/cli/src/ci-workflow.ts"
+      ],
       "coverage": {
         "positive": [
-          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "tools/src/github-action/download.test.ts::accepts only the five fixed artifact entries and refuses extra, missing, duplicate or nested names",
+          "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download"
         ],
         "negative": [
-          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-          "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment"
+          "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment",
+          "tools/src/github-action/download.test.ts::accepts only the five fixed artifact entries and refuses extra, missing, duplicate or nested names",
+          "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
+          "tools/src/github-action/main.test.ts::refuses CI output paths that escape the invocation output directory",
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
         ],
         "criticalAssertions": [
           {
@@ -2387,12 +2409,24 @@
             "assertion": "expect(Object.values(env)).not.toContain(\"github-secret\");"
           },
           {
-            "path": "tools/src/github-action/inputs.test.ts",
-            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
+            "path": "apps/cli/src/ci-workflow.test.ts",
+            "assertion": "expect(workflow.jobs.execute.permissions.checks).toBeUndefined();"
+          },
+          {
+            "path": "tools/src/github-action/download.test.ts",
+            "assertion": "  expect(() => assertFixedArtifactEntries([...FIXED_ARTIFACT_ENTRIES, \"../escape.json\"])).toThrow(\n    expect.objectContaining({ code: \"POLICY_DENIED\" }),\n  );"
+          },
+          {
+            "path": "tools/src/github-action/main.test.ts",
+            "assertion": "expect(() => assertOutputsConfined({ junit: null, report: escaped }, output)).toThrow(\n      expect.objectContaining({ code: \"POLICY_DENIED\" }),\n    );"
+          },
+          {
+            "path": "tools/src/github-action/main.test.ts",
+            "assertion": "message: \"Fork execution is denied before runtime installation\","
           }
         ]
       },
-      "blockedReason": "Public runtime-4df8ba5 with Action fc5e7eb ran on GitHub-hosted runners with the minimum-permission workflow: input injection and SHA mismatch were refused before execution, and a publisher job without checks: write failed closed with no check run carrying its report hash (validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json). Cross-owner fork isolation was exercised on 2026-10-11 with a second GitHub account (validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json): the fork PR saw an empty secret, HTTP 403 on every write API and no execution."
+      "note": "Hosted proof covers GitHub-hosted fork pull_request on a disposable public repository (2026-10-11, distinct owners quantmind-br and quantforge-br). Not pull_request_target, private repository, GitHub App or preview claims. Output-directory confinement is lexical: a symlink created inside the output directory is not detected."
     },
     {
       "id": "INT-008",
@@ -4384,7 +4418,7 @@
       "sourceFile": "SPEC.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
@@ -4396,7 +4430,10 @@
         "packages/application/src/delivery.test.ts",
         "validation/results/m3-acceptance/hosted/public/acceptance.json"
       ],
-      "code": ["packages/application/src/delivery.ts", "packages/application/src/provenance.ts"],
+      "code": [
+        "packages/application/src/delivery.ts",
+        "packages/application/src/provenance.ts"
+      ],
       "coverage": {
         "positive": [
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green"
@@ -4420,7 +4457,17 @@
           }
         ]
       },
-      "blockedReason": "External: GitHub-hosted old-A/new-B check publication observed on a public disposable repository (validation/results/m3-acceptance/hosted/public/acceptance.json, run 37614541268); deployment binding and installed App/preview deployment handling are M4, not proven by Checks transport."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "deployment binding of PR results and installed App/preview deployment handling",
+          "specQuote": {
+            "path": "specs/09-web-and-integrations.md",
+            "text": "| M4 | Web self-hosted/team, settings/sources/auth dinâmica, listas cross-project, schedules/notificações e GitHub App/previews multi-provider"
+          }
+        }
+      ],
+      "note": "M3 binds results to the commit: the frozen-SHA publisher refuses a newer SHA, unbound/empty/nonpass snapshots cannot approve, and the hosted old-A/new-B check publication ran on a public disposable repository (acceptance.json). Deployment binding and installed App/preview deployment handling are M4 scope, not proven by Checks transport."
     },
     {
       "id": "INV-015",
@@ -4754,7 +4801,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
         "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events",
@@ -4773,7 +4820,7 @@
       "code": [
         "apps/server/src/server.ts",
         "packages/application/src/runs.ts",
-        "packages/domain/src/execution.ts"
+        "packages/domain/src/run.ts"
       ],
       "coverage": {
         "positive": [
@@ -4807,7 +4854,17 @@
           }
         ]
       },
-      "blockedReason": "External M4: UI snapshot/reconnect rendering and duplicate/out-of-order event consumer handling remain unexercised; no core/UI reorder consumer exists. M3 real server SSE durable-cursor ordering/resume, disconnect without cancellation and step/collection cancel CAS with retained Attempt evidence are covered."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "UI rendering of live progress, reconnect and cancel (UX-026–031/052)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "M3 core/M4 UI"
+          }
+        }
+      ],
+      "note": "M3 core is proven: real server SSE durable-cursor ordering and resume, disconnect without cancellation, and step/collection cancel CAS with retained Attempt evidence. UI snapshot/reconnect rendering and duplicate/out-of-order event consumer handling are M4 scope."
     },
     {
       "id": "J06",
@@ -5176,7 +5233,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
         "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
@@ -5276,7 +5333,17 @@
           }
         ]
       },
-      "blockedReason": "External M5: Chromium/Firefox/WebKit advanced matrix cohort is not exercised; local verified-source-bound M3 cohorts, cause separation, changed SHA/revision/environment windows and historical quarantine controls are retained."
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "advanced browser matrix (Chromium/Firefox/WebKit) and visual cohorts (J08 matriz)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "VAL-010–013/040; M3/M5"
+          }
+        }
+      ],
+      "note": "Local verified-source-bound M3 cohorts, cause separation, changed SHA/revision/environment windows and historical quarantine controls are proven. The Chromium/Firefox/WebKit advanced matrix cohort is M5 scope and not exercised."
     },
     {
       "id": "J09",
@@ -5413,7 +5480,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
         "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
@@ -5421,21 +5488,27 @@
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
         "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
         "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
+        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
       ],
       "oracle": [
-        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict."
+        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict; a fork pull request is refused by policy before runtime installation and the hosted cross-owner fork run had no secret, no write token (HTTP 403 on every write API) and no execution."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
         "validation/journeys/m3-ci.docker.test.ts",
         "tools/src/github-action/inputs.test.ts",
+        "tools/src/github-action/main.test.ts",
+        "tools/src/github-action/hosted-evidence.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
-        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "tools/src/github-action/inputs.ts",
+        "tools/src/github-action/main.ts",
         "packages/application/src/ci.ts"
       ],
       "coverage": {
@@ -5449,7 +5522,9 @@
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+          "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
         ],
         "criticalAssertions": [
           {
@@ -5465,12 +5540,30 @@
             "assertion": "expect(checkConclusion(result, \"TestMaster / required-gate\")).toBe(\"failure\");"
           },
           {
-            "path": "tools/src/github-action/inputs.test.ts",
-            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
+            "path": "tools/src/github-action/main.test.ts",
+            "assertion": "message: \"Fork execution is denied before runtime installation\","
           }
         ]
       },
-      "blockedReason": "External: hosted Action/checks, old-A/new-B and required-gate branch protection ran only on a public disposable repository (validation/results/m3-acceptance/hosted/public/acceptance.json); fork pull_request permissions on GitHub, installed GitHub App/preview deployment, signed/tampered/duplicate webhook handling and tunnel scope remain unexercised M4/M5 prerequisites."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "installed GitHub App, preview deployments, rapid push A/B and deployment ordering",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "M3 checks básicos/M4 App e previews"
+          }
+        },
+        {
+          "milestone": "M5",
+          "scope": "tunnel variant of INT-024 (not an App prerequisite)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "Túnel de INT-024 é variante M5"
+          }
+        }
+      ],
+      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5."
     },
     {
       "id": "J13",
@@ -10111,31 +10204,49 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M3",
       "ownerRole": "Operations",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
         "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
         "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
-        "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors"
+        "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
+        "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
+        "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
+        "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
       ],
       "oracle": [
-        "Local export works without GitHub; HTTP 401 delivery dead-letters and retries do not rerun/change local result; missing bundle becomes partial without fake evidence."
+        "Local JUnit/JSON/HTML exports never call GitHub; GitHub 401 dead-letters without changing the local result; a newer SHA is refused; the execute job has no checks permission and no token in the download step; absent committed bytes produce partial without fake evidence."
       ],
       "evidence": [
         "validation/journeys/m3-ci.docker.test.ts",
         "packages/application/src/delivery.test.ts",
         "packages/application/src/retention.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json"
+        "packages/reporting/src/reporting.test.ts",
+        "apps/cli/src/ci-workflow.test.ts",
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
+        "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json",
+        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json"
       ],
-      "code": ["packages/application/src/delivery.ts", "packages/application/src/artifacts.ts"],
+      "code": [
+        "packages/application/src/delivery.ts",
+        "packages/application/src/artifacts.ts",
+        "apps/cli/src/ci-workflow.ts"
+      ],
       "coverage": {
         "positive": [
-          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call"
+          "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+          "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
-          "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors"
+          "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
+          "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
         ],
         "criticalAssertions": [
           {
@@ -10147,12 +10258,66 @@
             "assertion": "expect(app.database.all(\"SELECT id FROM runs\")).toHaveLength(0);"
           },
           {
+            "path": "packages/reporting/src/reporting.test.ts",
+            "assertion": "expect(html).toContain(\"Content-Security-Policy\");"
+          },
+          {
+            "path": "apps/cli/src/ci-workflow.test.ts",
+            "assertion": "expect(download.run).not.toContain(\"TOKEN\");"
+          },
+          {
+            "path": "apps/cli/src/ci-workflow.test.ts",
+            "assertion": "expect(workflow.jobs.execute.permissions.checks).toBeUndefined();"
+          },
+          {
             "path": "validation/journeys/m3-ci.docker.test.ts",
             "assertion": "expect(command.exitCode).toBe(mutant === \"healthy\" ? 0 : 1);"
           }
         ]
       },
-      "blockedReason": "Local unavailable/401 delivery controls preserve the canonical result without rerunning; on GitHub-hosted runners with runtime-4df8ba5 a publisher without checks: write failed closed and left the frozen envelope unchanged (validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json). Revoked-integration refusal (an installed App whose grant is withdrawn) is unexercised; webhook notification, S3-only degraded/no-fallback and revoked-config restore are unexercised M4/M5 scopes."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "S3-only server profile must be degraded or blocked, not silently switched to filesystem (no S3 implementation)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "`server` | API/web/controller/scheduler e pool local segregado de workers | PostgreSQL + filesystem ou S3 compatível | TLS/reverse proxy, RBAC e organização | M4"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "notification deduplication and notification-owned verdict isolation",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "M4-08 — Notificações e workers de equipe"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "webhook failure preserves the Run and creates a DLQ (webhook surface)",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "VAL-033 webhook scopes remain M4/M5 obligations"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "revoked GitHub App integration is not reactivated by restoring an old config",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "M4-07 — GitHub App e previews"
+          }
+        },
+        {
+          "milestone": "M4",
+          "scope": "authorized link in check output (UI surface)",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility; PostgreSQL/S3 profiles"
+          }
+        }
+      ],
+      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope."
     },
     {
       "id": "OPS-038",
@@ -12309,13 +12474,17 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M3",
       "ownerRole": "Core",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
         "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
         "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
         "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+        "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format",
+        "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
         "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
+        "apps/cli/src/ci-workflow.test.ts::refuses mutable Action coordinates and incomplete public asset sets",
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
       ],
       "oracle": [
@@ -12343,12 +12512,15 @@
       "coverage": {
         "positive": [
           "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
-          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "apps/cli/src/ci-workflow.test.ts::refuses mutable Action coordinates and incomplete public asset sets"
         ],
         "negative": [
           "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
           "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
           "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+          "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format",
+          "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
         ],
@@ -12366,16 +12538,20 @@
             "assertion": "expect(envelope.result.counts?.inconclusive).toBe(1);"
           },
           {
-            "path": "tools/src/github-action/inputs.test.ts",
-            "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
+            "path": "packages/reporting/src/reporting.test.ts",
+            "assertion": "expect(exportJunit(input)).toContain(\"<skipped\");"
+          },
+          {
+            "path": "packages/reporting/src/reporting.test.ts",
+            "assertion": "expect(reportGate(input)).toBe(\"not_applicable\");"
           },
           {
             "path": "tools/src/github-action/inputs.test.ts",
-            "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
+            "assertion": "expect(() => parseActionInputs({ ...base, ...changes })).toThrow();"
           }
         ]
       },
-      "blockedReason": "Public Apache-2.0 runtime-4df8ba5 and Action fc5e7eb were installed anonymously and exercised on GitHub-hosted runners: the workflow generated by ci init github passed a healthy same-repository PR (merged) and failed and blocked a semantic defect PR, and the dispatch control matrix reproduced selected/empty/authorized-empty/cancel/injection/SHA-mismatch outcomes, with a publisher lacking checks: write failing closed (validation/results/m3-acceptance/hosted/public/20-generated-workflow-4df8ba5 and 21-controls-4df8ba5). Cross-owner fork token isolation was exercised on 2026-10-11 (validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json). Private-repository acceptance is superseded by the public-only operator decision."
+      "note": "Skipped and cancelled never approve; an empty selection is never green; the installer is pinned and floating manifests are refused. Skipped is proven at reporting-unit level and, through the aggregate exit code 143 for cancellation, at CLI level (Docker project only)."
     },
     {
       "id": "REQ-033",
@@ -17830,7 +18006,7 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M3",
       "ownerRole": "Quality",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
         "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
@@ -17887,7 +18063,17 @@
           }
         ]
       },
-      "blockedReason": "External: hosted Action/checks, old-A/new-B and required-gate branch protection ran only on a public disposable repository (validation/results/m3-acceptance/hosted/public/acceptance.json); fork pull_request permissions on GitHub, installed GitHub App/preview deployment, signed/tampered/duplicate webhook handling and tunnel scope remain unexercised M4/M5 prerequisites."
+      "deferred": [
+        {
+          "milestone": "M4",
+          "scope": "webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation, notification failure isolation",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "VAL-026/027/033–037/041/043/045/052 no escopo M4"
+          }
+        }
+      ],
+      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5)."
     },
     {
       "id": "VAL-034",

@@ -10,6 +10,16 @@ import {
   parseActionInputs,
 } from "./inputs.js";
 import { publishEnvelope } from "./publisher.js";
+/** Lexical confinement only: a symlink created inside the output directory is not detected here. */
+export function assertOutputsConfined(
+  outputs: Record<string, string | null | undefined>,
+  outputDirectory: string,
+): void {
+  for (const path of Object.values(outputs)) {
+    if (path && !resolve(path).startsWith(`${resolve(outputDirectory)}${sep}`))
+      throw new ContractError("POLICY_DENIED", "CI output path escaped invocation");
+  }
+}
 export async function runAction(env: NodeJS.ProcessEnv = process.env): Promise<number> {
   const inputs = parseActionInputs(env);
   if (!env.RUNNER_TEMP || !env.GITHUB_WORKSPACE)
@@ -112,10 +122,7 @@ export async function runAction(env: NodeJS.ProcessEnv = process.env): Promise<n
     throw new ContractError("POLICY_DENIED", "Assessed SHA changed during execution");
   if (result.provenance.checkoutSha && result.provenance.checkoutSha !== inputs.checkoutSha)
     throw new ContractError("POLICY_DENIED", "Checkout SHA changed during execution");
-  for (const path of Object.values(result.outputs)) {
-    if (path && !resolve(path).startsWith(`${resolve(output)}${sep}`))
-      throw new ContractError("POLICY_DENIED", "CI output path escaped invocation");
-  }
+  assertOutputsConfined(result.outputs, output);
   if (env.GITHUB_OUTPUT) {
     const outputs = {
       gate: result.gate,
