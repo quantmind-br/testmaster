@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "1.0.0",
+  "method": "automatic",
+  "reviewer": "orchestrator-clean-checkout",
+  "observedAt": "2026-10-12T20:25:51.027Z",
+  "passed": true,
+  "commit": "9b60f6cd5a36f42b4cf3f26e4fcdb68a679027a2",
+  "noModelKey": true,
+  "install": "frozen offline",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "clone",
+        "--no-local",
+        "/home/diogo/dev/testmaster",
+        "/tmp/tm-clean-checkout-iJBuvY/checkout"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 1340.427916,
+      "stdout": "",
+      "stderr": "Clonando em '/tmp/tm-clean-checkout-iJBuvY/checkout'...\n"
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 1.6065059999998539,
+      "stdout": "9b60f6cd5a36f42b4cf3f26e4fcdb68a679027a2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile",
+        "--offline",
+        "--store-dir",
+        "/home/diogo/dev/.pnpm-store/v11",
+        "--config.cache-dir=/home/diogo/.cache/pnpm"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 395.1920480000001,
+      "stdout": "Scope: all 22 workspace projects\n✓ Lockfile passes supply-chain policies (verified 17h ago)\nLockfile is up to date, resolution step is skipped\nPackages are copied from the content-addressable store to the virtual store.\n  Content-addressable store is at: /home/diogo/dev/.pnpm-store/v11\n  Virtual store is at:             node_modules/.pnpm\nPackages: +303\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nProgress: resolved 303, reused 303, downloaded 0, added 303, done\n\ndevDependencies:\n+ @biomejs/biome 2.5.15\n+ @types/node 24.10.1\n+ fast-check 4.10.2\n+ typescript 7.0.2\n+ vitest 5.0.3\n\nDone in 360ms using pnpm v12.9.1\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 1050.0693320000003,
+      "stdout": "",
+      "stderr": "$ tsc -b && chmod +x apps/cli/dist/main.js\n"
+    },
+    {
+      "argv": [
+        "pnpm",
+        "test"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 29501.636028,
+      "stdout": "\n RUN  v5.0.3 /tmp/tm-clean-checkout-iJBuvY/checkout\n\n\n Test Files  133 passed (133)\n      Tests  1020 passed (1020)\n   Start at  17:25:20\n   Duration  29.28s (tests 70%, transform 17%, import 13%)\n\n",
+      "stderr": "$ vitest run --project unit\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/client.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js\" points to missing source files\nSourcemap for \"/tmp/tm-clean-checkout-iJBuvY/checkout/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js\" points to missing source files\n"
+    },
+    {
+      "argv": [
+        "/usr/bin/node",
+        "/tmp/tm-clean-checkout-iJBuvY/checkout/apps/cli/dist/main.js",
+        "--output",
+        "json",
+        "capabilities"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 336.3754740000004,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_8951c4d4-b6c9-4aaf-afa6-21026beafab0\",\"data\":{\"schemaVersion\":\"1.0.0\",\"features\":[{\"id\":\"contracts\",\"enabled\":true,\"milestone\":\"M0\",\"disabledReason\":null},{\"id\":\"state-reducer\",\"enabled\":true,\"milestone\":\"M0\",\"disabledReason\":null},{\"id\":\"traceability\",\"enabled\":true,\"milestone\":\"M0\",\"disabledReason\":null},{\"id\":\"local-execution\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"playwright\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"http\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"python\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"docker\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"unsafe-local\",\"enabled\":false,\"milestone\":\"M1\",\"disabledReason\":\"Policy or sandbox unavailable\"},{\"id\":\"worker\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"evidence\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-json\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-markdown\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-html\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-junit\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"report-allure\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"backup-sqlite\",\"enabled\":true,\"milestone\":\"M1\",\"disabledReason\":null},{\"id\":\"source-markdown\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"source-text\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"source-pdf\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"source-openapi\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"source-postman\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"source-graphql\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"code-summary\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"code-diff\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"normalize\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"plan\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null,\"experimental\":true},{\"id\":\"resolve_action\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"generate_code\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null,\"experimental\":true},{\"id\":\"agent-mode\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null,\"experimental\":true},{\"id\":\"code-import\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"code-export\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"mcp\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"agent-skills\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"resources-cleanup\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"model-accounting\",\"enabled\":true,\"milestone\":\"M2\",\"disabledReason\":null},{\"id\":\"analysis\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"healing\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"run-comparison\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"batch-comparison\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"flake-study\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"quarantine\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"selective-run\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"integration-planning\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"artifact-deletion\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"ci\",\"enabled\":true,\"milestone\":\"M3\",\"disabledReason\":null},{\"id\":\"server\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"postgres\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"multi-user\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"suites\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"schedules\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"auth-dynamic\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"identity\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"workers-registration\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"integrations\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"deliveries\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"secrets-rotation\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"audit-api\",\"enabled\":false,\"milestone\":\"M4\",\"disabledReason\":\"Available in M4\"},{\"id\":\"distributed\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"tunnels\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"matrix-advanced\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"visualMatches\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"accessibilityViolations\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"memory\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"visual-baselines\",\"enabled\":false,\"milestone\":\"M5\",\"disabledReason\":\"Available in M5\"},{\"id\":\"sso\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"},{\"id\":\"scim\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"},{\"id\":\"portability\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"},{\"id\":\"break-glass\",\"enabled\":false,\"milestone\":\"M6\",\"disabledReason\":\"Available in M6\"}],\"runners\":[\"playwright\",\"http\",\"python\"],\"sandbox\":{\"available\":true,\"mode\":\"rootful\",\"seccomp\":true,\"cgroupVersion\":\"2\",\"diagnostics\":[]},\"limits\":{\"executor\":\"docker\",\"mode\":\"replay\",\"concurrency\":2,\"executionTimeoutMs\":1800000,\"attemptTimeoutMs\":300000,\"stepTimeoutMs\":30000,\"networkRequestTimeoutMs\":30000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":2,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/node",
+        "/tmp/tm-clean-checkout-iJBuvY/checkout/apps/cli/dist/main.js",
+        "--output",
+        "json",
+        "test",
+        "scaffold",
+        "--type",
+        "backend"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 494.29453099999955,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_d2ea2b4a-6f9f-4b44-b46c-c226afdaf554\",\"data\":{\"schemaVersion\":\"1.0.0\",\"kind\":\"executable\",\"name\":\"Read service health\",\"type\":\"backend\",\"runner\":\"http\",\"requirementRefs\":[],\"steps\":[{\"id\":\"get-health\",\"kind\":\"action\",\"operation\":\"request\",\"description\":\"Read the controlled health endpoint\",\"required\":true,\"input\":{\"method\":\"GET\",\"pathSegments\":[{\"literal\":\"health\"}],\"query\":[],\"headers\":{}},\"timeoutMs\":30000},{\"id\":\"check-status\",\"kind\":\"assertion\",\"operation\":\"assert\",\"description\":\"Require HTTP 200\",\"required\":true,\"input\":{\"responseStepId\":\"get-health\"},\"expectation\":{\"predicate\":\"statusIn\",\"values\":[200]},\"timeoutMs\":30000},{\"id\":\"check-health\",\"kind\":\"assertion\",\"operation\":\"assert\",\"description\":\"Require a healthy service state\",\"required\":true,\"input\":{\"responseStepId\":\"get-health\",\"jsonPointer\":\"/status\"},\"expectation\":{\"predicate\":\"jsonEquals\",\"value\":{\"literal\":\"ok\"}},\"timeoutMs\":30000}],\"dependsOn\":[],\"cleanup\":[],\"tags\":[],\"priority\":\"normal\"},\"warnings\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/node",
+        "/tmp/tm-clean-checkout-iJBuvY/checkout/apps/cli/dist/main.js",
+        "--output",
+        "json",
+        "init",
+        "--name",
+        "reproduction",
+        "--base-url",
+        "http://127.0.0.1:7339"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 300.1922560000021,
+      "stdout": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_b4d669d8-fc6b-4d3d-86f2-eb592f318564\",\"data\":{\"workspaceId\":\"ws_01a131cb-0495-7516-8e23-6544e94884a9\",\"principalId\":\"usr_01a131cb-0495-7516-8e23-6959cfceff15\",\"projectId\":\"prj_01a131cb-04a0-75e5-80e5-cd20984da704\",\"environmentId\":\"env_01a131cb-04a3-7017-b167-90980399d430\",\"sessionOnly\":false},\"warnings\":[]}\n",
+      "stderr": ""
+    }
+  ],
+  "images": {
+    "testmaster-runner": {
+      "imageId": "sha256:3ff94c1cb6657c87801a8548213e000964bcc1fff8526f771293108436a7c255",
+      "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+      "buildInputsHash": "ff0df7002c72eee4f36af375c6002fe78793880e9ffef19c59456ed7988c76ff",
+      "seccomp": {
+        "engineVersion": "29.8.1",
+        "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+        "profileModuleVersion": "v0.2.3",
+        "inputs": {
+          "engineDefault": {
+            "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+            "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+          },
+          "originalDefault": {
+            "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+            "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+          },
+          "playwright": {
+            "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+            "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+          }
+        },
+        "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+      }
+    },
+    "testmaster-runner-python": {
+      "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+      "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+      "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+      "seccomp": {
+        "engineVersion": "29.8.1",
+        "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+        "profileModuleVersion": "v0.2.3",
+        "inputs": {
+          "engineDefault": {
+            "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+            "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+          },
+          "originalDefault": {
+            "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+            "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+          },
+          "playwright": {
+            "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+            "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+          }
+        },
+        "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+      }
+    }
+  },
+  "limitations": [
+    "Local populated pnpm cache required. Does not certify license/publication, other operating systems or Docker acceptance."
+  ]
+}

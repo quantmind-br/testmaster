@@ -20,7 +20,7 @@
 
 ## Consequences
 
-The M3 gate can pass only through measured, verified evidence for M3 scope plus explicit, quoted deferrals; nothing historical is rewritten and no target is relaxed. Heading-range deferrals (a quote such as `**OPS-024 — Backup consistente (M1–M4).**` for an item whose heading spans milestones) are a judgment by the maintainer and are listed below so a reviewer can reject any one: every `deferred` entry in the registry, split by the kind of quote it relies on (generated from `traceability/registry.json`; 28 items, 45 entries). Claims after M3 remain limited: failed qwen3.8 rounds, generation quality claim-only, no GA, rootful Docker only ([ADR-014](014-rootless-deferral.md)).
+The M3 gate can pass only through measured, verified evidence for M3 scope plus explicit, quoted deferrals; nothing historical is rewritten and no target is relaxed. Heading-range deferrals (a quote such as `**OPS-024 — Backup consistente (M1–M4).**` for an item whose heading spans milestones) are a judgment by the maintainer and are listed below so a reviewer can reject any one: every `deferred` entry in the registry, split by the kind of quote it relies on (generated from `traceability/registry.json`; 29 items, 46 entries). Claims after M3 remain limited: failed qwen3.8 rounds, generation quality claim-only, no GA, rootful Docker only ([ADR-014](014-rootless-deferral.md)).
 
 ## Deferred scope relying on a heading range or milestone section header
 
@@ -56,6 +56,7 @@ The M3 gate can pass only through measured, verified evidence for M3 scope plus 
 | J08 | M5 | `specs/10-validation.md` | `VAL-010–013/040; M3/M5` |
 | J12 | M4 | `specs/10-validation.md` | `M3 checks básicos/M4 App e previews` |
 | J12 | M5 | `specs/10-validation.md` | `Túnel de INT-024 é variante M5` |
+| M0-05 | M6 | `ROADMAP.md` | `M6-05 — Release OSS e documentação operacional` |
 | OPS-001 | M4 | `docs/adr/014-rootless-deferral.md` | `Rootless Docker validation is deferred to M4` |
 | OPS-001 | M4 | `specs/08-operations.md` | `M4; multiusuário exige controles SEC` |
 | OPS-001 | M5 | `specs/08-operations.md` | `Perfis e preflight (M0–M1/M4/M5)` |

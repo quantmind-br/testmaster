@@ -6006,7 +6006,7 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M0",
       "ownerRole": "Maintainer",
-      "status": "implemented",
+      "status": "verified",
       "scenario": [
         "validation/journeys/reproduce-clean-checkout.test.ts::records a clean-checkout reproduction without model credentials for the audited commit",
         "validation/journeys/reproduce-clean-checkout.test.ts::refuses a dirty tree and keeps every failed reproduction as its own immutable record"
@@ -6021,7 +6021,8 @@
         "validation/results/clean-checkout-no-key.json",
         "docs/adr/010-license.md",
         "LICENSE",
-        "NOTICE"
+        "NOTICE",
+        "validation/results/clean-checkout/9b60f6cd5a36f42b4cf3f26e4fcdb68a679027a2.json"
       ],
       "code": [
         "validation/journeys/reproduce-clean-checkout.mjs"
@@ -6048,7 +6049,17 @@
             "assertion": "stderr: expect.stringContaining(\"requires a committed tree\"),"
           }
         ]
-      }
+      },
+      "deferred": [
+        {
+          "milestone": "M6",
+          "scope": "binary publication: final license sign-off, SBOM, notices, provenance and signatures for the public release",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "M6-05 — Release OSS e documentação operacional"
+          }
+        }
+      ]
     },
     {
       "id": "M0-06",
