@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Larkspur Clinic</title><style>body{font:1rem/1.4 Georgia,serif;max-width:64rem;margin:1.5rem auto;padding:0 1rem}h1{margin:0 0 .75rem}[role=tablist]{display:flex;flex-wrap:wrap;gap:.25rem;border-bottom:2px solid #6b4f9e;margin-bottom:.75rem}[role=tab]{padding:.5rem .9rem;text-decoration:none;color:#33264f;border:1px solid transparent}[role=tab][aria-selected=true]{border-color:#6b4f9e;background:#f1ecfa}.notice-bar{min-height:1.5rem;color:#064}label{display:block;margin:.75rem 0}[role=alert]{color:#a00}table.sheet{width:100%;border-collapse:collapse}.sheet th,.sheet td{padding:.5rem .75rem;border-bottom:1px solid #ddd;text-align:left}.ops{white-space:nowrap}.ops button{margin-right:.5rem}</style></head>
+<body><header><h1>Larkspur Clinic</h1></header>
+<div role="tablist" aria-label="Clinic areas"><a role="tab" href="/login">Staff login</a><a role="tab" href="/board">Booking board</a><a role="tab" href="/mine">My bookings</a><a role="tab" href="/areas/reception">Reception</a><a role="tab" href="/areas/laboratory">Laboratory</a><a role="tab" href="/areas/pharmacy">Pharmacy</a><a role="tab" href="/areas/imaging">Imaging</a><a role="tab" href="/areas/billing">Billing</a></div>
+<div class="notice-bar"><p role="status" data-testid="notice"></p></div>
+<main id="stage" aria-live="polite"></main>
+<script type="module">
+const stage = document.querySelector('#stage');
+let token = sessionStorage.getItem('desk-token');
+const esc = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+async function api(path, options = {}) {
+  const response = await fetch(`/api${path}`, {...options, headers:{...(token ? {authorization:`Bearer ${token}`} : {}), ...options.headers}});
+  if (response.status === 401 && path !== '/session') throw new Error('Sign-in needed');
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error);
+  return value;
+}
+const post = (path, value, headers = {}) => api(path,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
+function notice(value) { document.querySelector('[data-testid=notice]').textContent = value; }
+async function render() {
+  notice('');
+  const path = location.pathname;
+  for (const tab of document.querySelectorAll('[role=tab]')) tab.setAttribute('aria-selected', String(tab.pathname === path));
+  if (path === '/login' || path === '/') {
+    stage.innerHTML = '<h2>Staff login</h2><form novalidate><label>Staff email<input name="email" type="email" value="desk@larkspur.test" autocomplete="username" data-testid="staff-email"></label><label>Passcode<input name="passcode" type="password" autocomplete="current-password" data-testid="staff-passcode"></label><p role="alert" data-testid="login-problem"></p><button type="submit">Start shift</button></form>';
+    stage.querySelector('form').onsubmit = async event => {
+      event.preventDefault();
+      const email = stage.querySelector('[name=email]').value;
+      const passcode = stage.querySelector('[name=passcode]').value;
+      try {
+        const result = await post('/session',{email,passcode});
+        token = result.accessToken; sessionStorage.setItem('desk-token',token); navigate('/board');
+      } catch { stage.querySelector('[data-testid=login-problem]').textContent = !passcode ? 'Enter your passcode' : 'Credentials rejected'; }
+    };
+    return;
+  }
+  if (path === '/board') {
+    stage.innerHTML = '<h2>Booking board</h2><p data-testid="board-pending">Fetching bookings</p>';
+    await new Promise(resolve => setTimeout(resolve,40));
+    const {results,count} = await api('/bookings?size=100');
+    stage.innerHTML = `<h2>Booking board</h2><form id="register-form" novalidate><label>Visit label<input name="label" data-testid="booking-label"></label><button type="submit">Register booking</button></form><p data-testid="board-total">${count}</p><table class="sheet" data-testid="board-ready" aria-label="Open bookings"><thead><tr><th>Visit</th><th>Slot</th><th>Actions</th></tr></thead><tbody>${results.map(item => `<tr data-testid="booking-${esc(item.id)}"><td>${esc(item.label)}</td><td>${esc(item.slot ?? item.kind)}</td><td><button data-booking="${esc(item.id)}" data-testid="confirm-${esc(item.id)}">Confirm ${esc(item.label)}</button></td></tr>`).join('')}</tbody></table>`;
+    stage.querySelector('#register-form').onsubmit = async event => { event.preventDefault(); try { await post('/bookings',{label:stage.querySelector('[name=label]').value}); notice('Booking registered'); } catch (error) { notice(error.message); } };
+    for (const button of stage.querySelectorAll('[data-booking]')) button.onclick = async () => { try { await post(`/bookings/${button.dataset.booking}/confirm`,{}); notice('Confirmed'); } catch (error) { notice(error.message); } };
+  } else if (path === '/mine') {
+    const {results,count} = await api('/bookings?owner=me&size=100');
+    const {upgradeHook} = await fetch('/config').then(response => response.json());
+    stage.innerHTML = `<h2>My bookings</h2><p data-testid="mine-total">${count}</p><table class="sheet"><thead><tr><th>Visit</th><th>Slot</th><th>Status</th><th>Actions</th></tr></thead><tbody data-testid="mine-rows">${results.map(item => `<tr data-testid="mine-row"><td>${esc(item.label)}</td><td data-testid="cell-slot">${esc(item.slot ?? item.kind)}</td><td data-testid="cell-status">${esc(item.status)}</td><td class="ops"><button class="raise" data-testid="${upgradeHook}" data-booking="${esc(item.id)}" ${item.status === 'closed' ? 'disabled' : ''}>Upgrade</button><button class="finish" data-testid="close-booking" data-booking="${esc(item.id)}" ${item.status === 'closed' ? 'disabled' : ''}>Close</button></td></tr>`).join('')}</tbody></table>`;
+    console.info('mine-view-ready');
+    for (const button of stage.querySelectorAll('button.raise')) button.onclick = async () => { try { const result = await post(`/bookings/${button.dataset.booking}/upgrade`,{}); notice(`Slot raised to ${result.slot}`); } catch (error) { notice(error.message); } };
+    for (const button of stage.querySelectorAll('button.finish')) button.onclick = async () => { try { await post(`/bookings/${button.dataset.booking}/close`,{note:'Visit completed'}); notice('Booking closed'); } catch (error) { notice(error.message); } };
+  } else if (path.startsWith('/areas/')) {
+    const area = path.slice('/areas/'.length);
+    stage.innerHTML = `<h2>${esc(area.charAt(0).toUpperCase() + area.slice(1))}</h2><p>No appointments are managed in this area.</p>`;
+  }
+}
+function navigate(path) { history.pushState({},'',path); render().catch(error => { stage.textContent=error.message; }); }
+document.querySelector('[role=tablist]').onclick = event => { const link = event.target.closest('a'); if (!link || link.target) return; event.preventDefault();navigate(link.pathname); };
+addEventListener('popstate',()=>render().catch(error=>{stage.textContent=error.message;}));
+render().catch(error=>{stage.textContent=error.message;});
+</script></body></html>
