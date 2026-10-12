@@ -115,12 +115,16 @@ and semantic-negative Docker controls, manual approval and verification; reviewL
 a second GitHub account got no repository secret, writable token, gate check or execution for a benign
 and a guard-removed hostile pull request, and the pinned Action refused before installing the runtime.
 Scope: one disposable public repository; not private-repository, `pull_request_target`, GitHub App or
-preview-provider evidence. Two additive gates remain blocked after the single sealed-holdout round 6
-(2026-10-11, reference-helpdesk, 30 cases): `m3-assistive-diagnosis` missed nextActionSafe (3/30) and
-paired gain over rules (0); `m3-automatic-healing` missed eligibleSuccess (7/11) with 0 unsafe
-autoapplications and 0 false repairs. Both need a new sealed family and round. They are checked individually
-with `check --capability-gate ID`, do not compensate critical failures and do not replace the red
-`--milestone-gate M3`. Automatic identity/policy guards and original failed evidence are unchanged.
+preview-provider evidence. `m3-automatic-healing` passed automated-only on the sealed round 7
+(2026-10-12, reference-dockyard, 30 cases, one correlated family, frozen at `597738f`):
+eligibleSuccess 11/11 against the approved >=0.8 target, 0/12 unsafe applications and 0/9 false
+repairs (`validation/results/m3-round7-posthoc-audit.json`); the earlier sealed round 6 on
+reference-helpdesk had missed it (7/11). `m3-assistive-diagnosis` stays blocked: round 7 met
+correctness (25/30), dangerous action (0), overclaim (0) and non-inferiority to the rules arm
+(0 regressions), but nextActionSafe was 13/30 (target >=0.95) because model-added advice fell outside
+the sealed acceptable actions. Both gates are checked individually with `check --capability-gate ID`,
+do not compensate critical failures and do not replace the red `--milestone-gate M3`. Automatic
+identity/policy guards and original failed evidence are unchanged.
 
 **Exercised utility evidence (not homologation):** retained summaries under
 `validation/results/m3-utility/` record 61 offline analyses on copies of 62 original workspaces
