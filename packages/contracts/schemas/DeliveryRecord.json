@@ -1,0 +1,448 @@
+{
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "eventId",
+        "destinationRef",
+        "payloadHash",
+        "attempts",
+        "nextAttemptAt",
+        "state",
+        "checkName",
+        "subjectSha",
+        "reportHash",
+        "batchId",
+        "checkStatus",
+        "conclusion",
+        "externalId",
+        "lastError"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^dlv_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "eventId": {
+          "pattern": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "destinationRef": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "payloadHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "attempts": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nextAttemptAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "anyOf": [
+            {
+              "const": "pending",
+              "type": "string"
+            },
+            {
+              "const": "delivered",
+              "type": "string"
+            },
+            {
+              "const": "dead_letter",
+              "type": "string"
+            }
+          ]
+        },
+        "checkName": {
+          "anyOf": [
+            {
+              "const": "TestMaster / result",
+              "type": "string"
+            },
+            {
+              "const": "TestMaster / required-gate",
+              "type": "string"
+            }
+          ]
+        },
+        "subjectSha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "reportHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "batchId": {
+          "anyOf": [
+            {
+              "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkStatus": {
+          "anyOf": [
+            {
+              "const": "in_progress",
+              "type": "string"
+            },
+            {
+              "const": "completed",
+              "type": "string"
+            }
+          ]
+        },
+        "conclusion": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "const": "success",
+                  "type": "string"
+                },
+                {
+                  "const": "failure",
+                  "type": "string"
+                },
+                {
+                  "const": "neutral",
+                  "type": "string"
+                },
+                {
+                  "const": "cancelled",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "externalId": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastError": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "workspaceId",
+        "integrationId",
+        "provider",
+        "eventRef",
+        "type",
+        "deliveryId",
+        "state",
+        "attempts",
+        "nextAttemptAt",
+        "outcomeUncertain",
+        "lastReasonCode",
+        "lastError",
+        "payloadHash",
+        "createdAt",
+        "updatedAt",
+        "deliveredAt",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^ntd_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "kind": {
+          "const": "notification",
+          "type": "string"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "integrationId": {
+          "pattern": "^int_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "const": "slack",
+              "type": "string"
+            },
+            {
+              "const": "email",
+              "type": "string"
+            },
+            {
+              "const": "webhook",
+              "type": "string"
+            }
+          ]
+        },
+        "eventRef": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "const": "run.completed",
+              "type": "string"
+            },
+            {
+              "const": "run.failed",
+              "type": "string"
+            },
+            {
+              "const": "batch.completed",
+              "type": "string"
+            },
+            {
+              "const": "schedule.misfire",
+              "type": "string"
+            },
+            {
+              "const": "schedule.paused",
+              "type": "string"
+            },
+            {
+              "const": "delivery.dead_letter",
+              "type": "string"
+            },
+            {
+              "const": "worker.offline",
+              "type": "string"
+            },
+            {
+              "const": "alert.fired",
+              "type": "string"
+            },
+            {
+              "const": "integration.test",
+              "type": "string"
+            }
+          ]
+        },
+        "deliveryId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "const": "pending",
+              "type": "string"
+            },
+            {
+              "const": "delivered",
+              "type": "string"
+            },
+            {
+              "const": "dead_letter",
+              "type": "string"
+            }
+          ]
+        },
+        "attempts": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nextAttemptAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcomeUncertain": {
+          "type": "boolean"
+        },
+        "lastReasonCode": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastError": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "payloadHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "deliveredAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:DeliveryRecord",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -2,6 +2,8 @@ import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
+import { deliveryContracts, notificationContracts } from "./m4/notifications.js";
+import { workerContracts } from "./m4/workers.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -587,6 +589,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   NetworkPolicy: Ops.NetworkPolicy,
   RunRequest: Ops.RunRequest,
   RunReceipt: Ops.RunReceipt,
+  QueueAdmission: Ops.QueueAdmission,
   RunResult: Ops.RunResult,
   BatchRequest: Ops.BatchRequest,
   BatchReceipt: Ops.BatchReceipt,
@@ -619,6 +622,9 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...supplemental,
   ...httpInputs,
   ...integrationContracts,
+  ...notificationContracts,
+  ...deliveryContracts,
+  ...workerContracts,
   ...identityContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),

@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "labels": {
+      "maxProperties": 16,
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9._-]{0,62}$": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    "expiresInSeconds": {
+      "minimum": 60,
+      "maximum": 86400,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:WorkerEnrollmentInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

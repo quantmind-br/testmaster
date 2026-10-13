@@ -1,0 +1,24 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "level"
+  ],
+  "properties": {
+    "level": {
+      "anyOf": [
+        {
+          "const": "summary",
+          "type": "string"
+        },
+        {
+          "const": "minimal",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:NotificationRedaction",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

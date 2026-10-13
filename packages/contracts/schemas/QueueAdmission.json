@@ -1,0 +1,48 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "reason",
+    "position",
+    "queued",
+    "limit",
+    "oldestQueuedAgeMs"
+  ],
+  "properties": {
+    "reason": {
+      "anyOf": [
+        {
+          "const": "waiting_for_worker",
+          "type": "string"
+        },
+        {
+          "const": "no_ready_worker",
+          "type": "string"
+        },
+        {
+          "const": "admission_paused",
+          "type": "string"
+        }
+      ]
+    },
+    "position": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "queued": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "limit": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "oldestQueuedAgeMs": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:QueueAdmission",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

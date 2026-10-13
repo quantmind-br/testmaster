@@ -1,0 +1,102 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "number",
+    "startedAt",
+    "finishedAt",
+    "outcome",
+    "httpStatus",
+    "uncertain",
+    "reasonCode",
+    "detail"
+  ],
+  "properties": {
+    "number": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "startedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "finishedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "const": "in_flight",
+          "type": "string"
+        },
+        {
+          "const": "delivered",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "rejected",
+          "type": "string"
+        },
+        {
+          "const": "abandoned",
+          "type": "string"
+        }
+      ]
+    },
+    "httpStatus": {
+      "anyOf": [
+        {
+          "minimum": 100,
+          "maximum": 599,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "uncertain": {
+      "type": "boolean"
+    },
+    "reasonCode": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "detail": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:NotificationAttempt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
