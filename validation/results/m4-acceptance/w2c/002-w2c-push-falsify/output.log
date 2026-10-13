@@ -1,0 +1,33 @@
+$ vitest run --project unit packages/application/src/integrations/github/github-webhooks.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2c
+
+ ❯ |unit| packages/application/src/integrations/github/github-webhooks.test.ts (10 tests | 1 failed) 4292ms
+   ❯ INT-014 REQ-033 webhook intake (10)
+     × INT-014 REQ-033 a real push delivery has no action field and is ignored as not handled instead of failing the webhook 453ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-webhooks.test.ts > INT-014 REQ-033 webhook intake > INT-014 REQ-033 a real push delivery has no action field and is ignored as not handled instead of failing the webhook
+ContractError: Integration adapter returned an invalid delivery
+ ❯ boundedString packages/application/src/integrations/service.ts:146:11
+    144|     /[\u0000-\u001f\u007f]/.test(value)
+    145|   )
+    146|     throw new ContractError("INTERNAL", "Integration adapter returned …
+       |           ^
+    147|       reasonCode: "adapter_contract_violation",
+    148|       field,
+ ❯ optionalString packages/application/src/integrations/service.ts:153:57
+ ❯ checkEnvelope packages/application/src/integrations/service.ts:167:3
+ ❯ IntegrationsService.receiveWebhook packages/application/src/integrations/service.ts:524:52
+ ❯ packages/application/src/integrations/github/github-webhooks.test.ts:50:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  17:01:17
+   Duration  5.42s (tests 80%, transform 11%, import 9%)
+
+[ELIFECYCLE] Test failed. See above for more details.

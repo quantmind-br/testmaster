@@ -1,0 +1,37 @@
+$ vitest run --project unit tools/src/github-app/hosted-evidence.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2c
+
+ ❯ |unit| tools/src/github-app/hosted-evidence.test.ts (2 tests | 1 failed) 363ms
+   × M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit 36ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| tools/src/github-app/hosted-evidence.test.ts > M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "A: TestMaster / required-gate is neutral, expected success",
++ ]
+
+ ❯ tools/src/github-app/hosted-evidence.test.ts:220:45
+    218| it("M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestM…
+    219|   const evidence = await loadHostedAppEvidence(hosted);
+    220|   expect(findHostedAppViolations(evidence)).toEqual([]);
+       |                                             ^
+    221|   expect(evidence.files.length).toBeGreaterThan(60);
+    222| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  17:12:34
+   Duration  450ms (tests 92%, transform 5%, import 2%)
+
+[ELIFECYCLE] Test failed. See above for more details.

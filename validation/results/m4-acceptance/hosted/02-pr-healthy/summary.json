@@ -1,0 +1,82 @@
+{
+  "repo": "quantmind-br/testmaster-m4-app-20261013",
+  "appSlug": "testmaster-m4-20261013-8579",
+  "installationId": "171116906",
+  "serverOrigin": "https://descending-acrylic-gonna-compliant.trycloudflare.com",
+  "previewOrigin": "https://marcus-fwd-nato-turbo.trycloudflare.com",
+  "steps": [
+    {
+      "step": "healthy-preview",
+      "sha": "9e1ee99328bc2775c4de5250a9cf8c94019e7a25",
+      "verdict": {
+        "TestMaster / required-gate": "success",
+        "TestMaster / result": "success"
+      },
+      "runs": 1
+    },
+    {
+      "step": "redelivery",
+      "attempts": 2,
+      "outcomesBefore": {
+        "4ae60920-c740-11f1-8bd4-49033bea7d75": 200,
+        "44c68010-c740-11f1-93bf-d570392e6f0b": 200
+      },
+      "redeliveredOutcomes": [
+        {
+          "guid": "44c68010-c740-11f1-93bf-d570392e6f0b",
+          "event": "pull_request",
+          "statusCode": 200
+        },
+        {
+          "guid": "4ae60920-c740-11f1-8bd4-49033bea7d75",
+          "event": "deployment_status",
+          "statusCode": 200
+        }
+      ]
+    },
+    {
+      "step": "push-waits-for-own-preview",
+      "sha": "7880584d08b80663396b8bf0b4359fe55058b17d",
+      "verdict": {
+        "TestMaster / required-gate": "queued",
+        "TestMaster / result": "queued"
+      },
+      "previousVerdict": {
+        "TestMaster / required-gate": "success",
+        "TestMaster / result": "success"
+      }
+    },
+    {
+      "step": "superseded",
+      "sha": "7880584d08b80663396b8bf0b4359fe55058b17d",
+      "supersededBy": "aeef7c1a1aa33cf0258214eddd2ec82a4c609a4f",
+      "verdict": {
+        "TestMaster / required-gate": "cancelled",
+        "TestMaster / result": "cancelled"
+      }
+    },
+    {
+      "step": "failing-preview",
+      "sha": "aeef7c1a1aa33cf0258214eddd2ec82a4c609a4f",
+      "verdict": {
+        "TestMaster / required-gate": "failure",
+        "TestMaster / result": "failure"
+      }
+    },
+    {
+      "step": "late-deployment",
+      "sha": "7880584d08b80663396b8bf0b4359fe55058b17d",
+      "runsBefore": 2,
+      "runsAfter": 2,
+      "verdict": {
+        "TestMaster / required-gate": "cancelled",
+        "TestMaster / result": "cancelled"
+      }
+    }
+  ],
+  "prNumber": 1,
+  "shaA": "9e1ee99328bc2775c4de5250a9cf8c94019e7a25",
+  "shaB": "7880584d08b80663396b8bf0b4359fe55058b17d",
+  "shaC": "aeef7c1a1aa33cf0258214eddd2ec82a4c609a4f",
+  "deliveryCount": 30
+}
