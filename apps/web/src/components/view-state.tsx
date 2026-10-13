@@ -124,3 +124,20 @@ export function StatusView({
   if (status === "forbidden") return <ViewState kind="forbidden" />;
   return <ViewState kind="error" error={error} {...(onRetry ? { onRetry } : {})} />;
 }
+
+/**
+ * One status for a page that reads several lookups before it can render. A failure wins over
+ * loading, so the reader sees why the page cannot be built instead of an endless spinner; `empty`
+ * counts as ready because an empty lookup is an answer the page explains itself.
+ */
+export function combineStatus(
+  lookups: readonly { readonly status: ViewStatus; readonly error: ApiError | null }[],
+): { status: ViewStatus; error: ApiError | null } {
+  for (const failure of ["error", "forbidden", "not-found"] as const) {
+    const found = lookups.find((lookup) => lookup.status === failure);
+    if (found) return { status: failure, error: found.error };
+  }
+  return lookups.some((lookup) => lookup.status === "loading")
+    ? { status: "loading", error: null }
+    : { status: "ready", error: null };
+}

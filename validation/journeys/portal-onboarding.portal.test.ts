@@ -151,8 +151,13 @@ beforeEach(() => {
 
 const stateUrl = (id = projectId) => `/v1/projects/${id}/onboarding`;
 
+/**
+ * Waits for the step title inside the page body. Scoping to `main` matters: the shell navigation
+ * has its own level-2 headings ("Project", "Settings"), and a page-wide match for "Project"
+ * resolves before the wizard has left the previous step.
+ */
 async function stepHeading(page: Page, name: string) {
-  await page.getByRole("heading", { level: 2, name }).waitFor();
+  await page.getByRole("main").getByRole("heading", { level: 2, name, exact: true }).waitFor();
 }
 
 async function putState(id: string, body: Record<string, unknown>, client = actor.client) {
