@@ -2,6 +2,9 @@ import { randomBytes } from "node:crypto";
 import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExecutablePlan } from "@testmaster/contracts";
+import { uuidV7IdGenerator } from "@testmaster/domain";
+import type { EntityDocument } from "@testmaster/persistence";
 import {
   createTestDatabase,
   postgresTestImage,
@@ -161,7 +164,10 @@ export interface SeededRun {
 let seeded = 0;
 
 /** Inserts one Run subtree with plain SQL so retention, alert and SLO tests control every timestamp. */
-export function seedRun(stack: OpsStack, options: SeedRunOptions): SeededRun {
+export function seedRun(
+  stack: Pick<OpsStack, "application" | "workspaceId">,
+  options: SeedRunOptions,
+): SeededRun {
   const database = stack.application.controllerScope().database;
   const ws = options.workspaceId ?? stack.workspaceId;
   const tag = `${Date.now().toString(36)}${(seeded++).toString(36)}`;
@@ -424,4 +430,87 @@ export async function memberSession(
     projectRestrictions: [],
   });
   return signIn(stack, login, String(added.recovery?.recoveryToken));
+}
+
+const listingPlan = (name: string): ExecutablePlan => ({
+  schemaVersion: "1.0.0",
+  kind: "executable",
+  name,
+  type: "backend",
+  runner: "http",
+  requirementRefs: [],
+  steps: [
+    {
+      id: "health_request",
+      description: "health_request",
+      kind: "action",
+      operation: "request",
+      input: { method: "GET", pathSegments: [{ literal: "health" }] },
+    },
+    {
+      id: "health_status",
+      description: "health_status",
+      kind: "assertion",
+      operation: "assert",
+      input: { responseStepId: "health_request" },
+      expectation: { predicate: "statusIn", values: [200] },
+    },
+  ],
+});
+
+export interface ListingTest {
+  projectId: string;
+  testId: string;
+  template: EntityDocument;
+}
+/** A project, environment and test created by the services, plus the Run document admission would build. */
+export function createListingTest(app: Application, name: string): ListingTest {
+  const project = app.projects.create({ name });
+  const environment = app.environments.create({
+    projectId: project.id,
+    name: "listing",
+    baseUrl: "http://127.0.0.1:9",
+    networkProfile: "local-loopback",
+    locale: "en-US",
+    timezone: "UTC",
+  });
+  const test = app.tests.create({ projectId: project.id, plan: listingPlan(name) });
+  const template = app.runs.prepare({
+    testId: test.id,
+    environmentId: environment.id,
+    mode: "replay",
+    healingPolicy: "off",
+    origin: "api",
+  });
+  return { projectId: project.id, testId: test.id, template };
+}
+/** Completed Run documents one second apart from `options.from` (seconds after 2026-10-01), oldest first. */
+export function insertListedRuns(
+  app: Application,
+  listed: ListingTest,
+  count: number,
+  options: { from?: number; outcome?: "passed" | "failed" } = {},
+): string[] {
+  const outcome = options.outcome ?? "passed";
+  const ids: string[] = [];
+  app.context.database.withTx(() => {
+    for (let index = 0; index < count; index++) {
+      const document = {
+        ...structuredClone(listed.template),
+        id: uuidV7IdGenerator.next("run"),
+        createdAt: new Date(
+          Date.UTC(2026, 9, 1) + ((options.from ?? 0) + index) * 1000,
+        ).toISOString(),
+        phase: "completed",
+        status: outcome,
+        outcome,
+        gate: outcome === "passed" ? "passed" : "failed",
+        cleanupOutcome: "not_required",
+        analysisStatus: "not_requested",
+      } as EntityDocument;
+      app.context.entities.insert("Run", document);
+      ids.push(document.id);
+    }
+  });
+  return ids;
 }

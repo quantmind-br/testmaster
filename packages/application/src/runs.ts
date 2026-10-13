@@ -110,15 +110,54 @@ export class RunsService {
     } as Run & EntityDocument;
   }
   list(): (Run & EntityDocument)[] {
+    return [...this.stream({}, { cutoff: "9999-12-31T23:59:59.999Z", after: null })];
+  }
+  /**
+   * Newest-first Runs the caller may read, produced lazily in pages of 100 so a consumer that stops
+   * after one page reads one page. `testId`, `status` and `since` filter in SQL; `projectId` is
+   * resolved through the Run's test. Authorization and test lookups are memoised per test.
+   */
+  *stream(
+    filter: { testId?: string; status?: string; since?: string; projectId?: string },
+    position: { cutoff: string; after: { createdAt: string; id: string } | null },
+  ): Generator<Run & EntityDocument> {
     this.ctx.authorize("R");
-    return allEntities(this.ctx, "Run").filter((run) => {
+    const readable = new Map<string, boolean>();
+    const canRead = (testId: string): boolean => {
+      const known = readable.get(testId);
+      if (known !== undefined) return known;
+      let allowed = false;
       try {
-        this.get(run.id);
-        return true;
+        const test = requireEntity(this.ctx, "TestCase", testId);
+        this.ctx.authorize("R", String(test.projectId));
+        allowed = filter.projectId === undefined || test.projectId === filter.projectId;
       } catch {
-        return false;
+        allowed = false;
       }
-    }) as (Run & EntityDocument)[];
+      readable.set(testId, allowed);
+      return allowed;
+    };
+    const where: Record<string, string> = {};
+    if (filter.testId !== undefined) where.testId = filter.testId;
+    if (filter.status !== undefined) where.status = filter.status;
+    let cursor = position.after ? { ...position.after, cutoff: position.cutoff } : undefined;
+    do {
+      const page = this.ctx.entities.page<Run & EntityDocument>("Run", this.ctx.workspaceId, {
+        limit: 100,
+        cutoff: position.cutoff,
+        where,
+        ...(cursor ? { cursor } : {}),
+        ...(filter.since === undefined ? {} : { notBefore: filter.since }),
+      });
+      for (const run of page.items) {
+        if (!canRead(String(run.testId))) continue;
+        yield {
+          ...run,
+          ...(this.host.analysisStatus ? { analysisStatus: this.host.analysisStatus(run.id) } : {}),
+        } as Run & EntityDocument;
+      }
+      cursor = page.next ?? undefined;
+    } while (cursor);
   }
   events(id: string, afterSeq = -1): Record<string, unknown>[] {
     this.get(id);
