@@ -445,11 +445,10 @@ describe("portal authoring on the server profile", () => {
     await expect
       .poll(async () => reader.page.getByTestId("policy").textContent())
       .toContain("Your role can read this batch but not accept it");
-    // Nothing can be selected for acceptance, so the accept action stays disabled with the reason above.
-    await reader.page.getByRole("button", { name: /^Accept \d+ selected$/ }).waitFor();
-    expect(
-      await reader.page.getByRole("button", { name: /^Accept \d+ selected$/ }).isDisabled(),
-    ).toBe(true);
+    // Even with the proposal selected, the accept action stays disabled and says why.
+    await reader.page.getByRole("checkbox", { name: "Needs a person" }).check();
+    const accept = reader.page.getByRole("button", { name: "Accept 1 selected" });
+    expect(await accept.isDisabled()).toBe(true);
     expect((await system()).tests.list(projectId)).toHaveLength(0);
   });
 
