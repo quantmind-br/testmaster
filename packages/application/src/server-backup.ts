@@ -938,3 +938,31 @@ export async function probeAccess(path: string, mode: "read" | "write"): Promise
     return false;
   }
 }
+
+/**
+ * The server process must not hold the backup key or write the backup destination: a server
+ * compromise then cannot read or tamper with backups. `backup.allowSharedAccess` waives the
+ * check for single-user deployments and says so in the configuration.
+ */
+export async function assertBackupSeparation(server: ServerConfig): Promise<void> {
+  const settings = server.backup;
+  if (!settings || settings.allowSharedAccess) return;
+  if (await probeAccess(server.security.backupKeyFile, "read"))
+    throw new ContractError("PRECONDITION_FAILED", "The server process can read the backup key", {
+      reasonCode: "backup_access_not_separated",
+      path: "security.backupKeyFile",
+      nextActions: [
+        "Make the backup key readable only by the backup agent user",
+        "Set backup.allowSharedAccess only for single-user deployments",
+      ],
+    });
+  if (await probeAccess(settings.destination, "write"))
+    throw new ContractError("PRECONDITION_FAILED", "The server process can write the backup destination", {
+      reasonCode: "backup_access_not_separated",
+      path: "backup.destination",
+      nextActions: [
+        "Make the backup destination writable only by the backup agent user",
+        "Set backup.allowSharedAccess only for single-user deployments",
+      ],
+    });
+}

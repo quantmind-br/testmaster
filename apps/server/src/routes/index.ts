@@ -10,6 +10,7 @@ import { githubRoutes } from "./github.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
 import { onboardingRoutes } from "./onboarding.js";
+import { operationsRoutes } from "./operations.js";
 import { runViewRoutes } from "./run-views.js";
 import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
@@ -35,6 +36,7 @@ export const routeModules: RouteModule[] = [
   deliveryRoutes,
   workerRoutes,
   authRoutes,
+  operationsRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

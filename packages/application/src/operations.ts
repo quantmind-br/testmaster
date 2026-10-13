@@ -145,6 +145,8 @@ export class OperationsService {
 
   private requireOwner(): void {
     this.ctx.authorize("A");
+    // The host operator acts as the workspace's system principal; the host already controls the deployment.
+    if (this.ctx.actor.credentialKind === "system") return;
     const role = this.ctx.database.get(
       "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
       this.ctx.workspaceId,

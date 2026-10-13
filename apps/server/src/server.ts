@@ -212,6 +212,15 @@ export function createServer(options: ServerOptions): FastifyInstance {
       correlationId: request.id,
       statusCode: reply.statusCode,
     });
+    const identity = identities.get(request);
+    if (identity)
+      options.application.apiMetrics.record({
+        workspaceId: identity.workspaceId,
+        method: request.method,
+        route: request.routeOptions.url ?? "unmatched",
+        status: reply.statusCode,
+        seconds: reply.elapsedTime / 1000,
+      });
   });
   app.addHook("onRequest", async (request, reply) => {
     request.id = correlationId();

@@ -273,6 +273,7 @@ export const operationsContracts = {
 export type AdminOperation = Static<typeof operationsContracts.AdminOperation>;
 export type OperationsStatus = Static<typeof operationsContracts.OperationsStatus>;
 export type DlqEntry = Static<typeof operationsContracts.DlqEntry>;
+export type DlqRequeueInput = Static<typeof operationsContracts.DlqRequeueInput>;
 export type AlertView = Static<typeof operationsContracts.Alert>;
 export type AlertRuleView = Static<typeof operationsContracts.AlertRuleView>;
 export type SloIndicator = Static<typeof operationsContracts.SloIndicator>;
