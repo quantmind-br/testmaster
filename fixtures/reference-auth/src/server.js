@@ -109,6 +109,8 @@ function parseCookies(header) {
  * @property {() => Promise<void>} close
  */
 const newControl = () => ({
+  /** Replaces the account password, as if the target's owner rotated it. */
+  password: null,
   captcha: false,
   requireOtp: false,
   otpWindow: 1,
@@ -276,7 +278,7 @@ export async function startReferenceAuth({
     if (control.captcha) return "captcha";
     if (
       fields.username !== referenceAuthDefaults.username ||
-      !safeEqual(fields.password ?? "", referenceAuthDefaults.password)
+      !safeEqual(fields.password ?? "", control.password ?? referenceAuthDefaults.password)
     )
       return "credentials";
     if (control.requireOtp && !checkTotp(fields.otp)) return "otp";
