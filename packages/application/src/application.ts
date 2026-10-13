@@ -562,10 +562,11 @@ export class Application {
     projectId: string | undefined,
     resourceTypes: readonly string[],
     environmentId?: string | null,
+    grantAction?: PermissionGrant["actions"][number],
   ): { allowed: boolean; granted: boolean; grants: number } {
     const grants = this.identity?.grants ?? [];
     for (const grant of grants) validate("PermissionGrant", grant);
-    const action = columnGrantAction[column] as PermissionGrant["actions"][number];
+    const action = grantAction ?? (columnGrantAction[column] as PermissionGrant["actions"][number]);
     const matching = grants.filter(
       (grant) =>
         resourceTypes.includes(grant.resourceType) &&
@@ -716,10 +717,22 @@ export class Application {
         Artifact: ["Artifact", "artifacts", "*"],
       };
       const column: RbacColumn = action === "approve" ? "write" : "admin";
-      const decision = this.decide(column, role, projectId, aliases[resourceType], environmentId);
-      const allowed = this.identity
-        ? decision.allowed && decision.granted
-        : rbacMatrix[role][column] === "allow";
+      const decision = this.decide(
+        column,
+        role,
+        projectId,
+        aliases[resourceType],
+        environmentId,
+        action,
+      );
+      // Cookie sessions belong to a signed-in human and carry no grants; they use the role
+      // default like the in-process CLI. Bearer tokens still need an explicit named grant.
+      const roleDecides =
+        !this.identity ||
+        ("credential" in this.identity && this.identity.credential.kind === "session");
+      const allowed = roleDecides
+        ? rbacMatrix[role][column] === "allow"
+        : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
           scope: `${resourceType === "HealingProposal" ? "healing" : "artifacts"}:${action}`,
