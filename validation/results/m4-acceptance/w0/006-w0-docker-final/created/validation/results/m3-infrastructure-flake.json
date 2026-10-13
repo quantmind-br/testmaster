@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-infrastructure-flake",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:37:02.675Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-infrastructure-flake",
+        "--base-url",
+        "http://127.0.0.1:33557",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8418533c-9df5-41f0-bb35-0d656fb6c835",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b1-f65e-7733-8701-7987d7d2d034",
+    "run_01a135b1-f66a-764c-8b15-511bb7ba876b",
+    "run_01a135b1-fd6b-75c2-9578-aa4fa0a0d640",
+    "run_01a135b1-fd79-71a3-90be-165dd1a0db75",
+    "run_01a135b1-fd84-74da-81fe-4db27c40c7cb",
+    "run_01a135b1-fd90-755d-ba6c-9e2e6d9ec87a"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "independentInfrastructureConfirmation",
+      "confirmation": {
+        "mechanism": "target socket destroyed before headers",
+        "observations": [
+          "complete-200",
+          "socket-destroyed-before-response",
+          "complete-200",
+          "socket-destroyed-before-response"
+        ]
+      },
+      "report": {
+        "batchId": "bat_01a135b1-fd5d-7139-84b3-77c672424f8c",
+        "studyIds": [
+          "bat_01a135b1-fd5d-7139-84b3-77c672424f8c"
+        ],
+        "testId": "tst_01a135b1-f5e9-76d8-944d-407820c1c052",
+        "revisionId": "rev_01a135b1-f5ea-74c2-a55e-8e398a7265ca",
+        "environmentRevisionId": "evr_01a135b1-f5c5-77fb-800b-3e15c0569756",
+        "identityHash": "f848996c35b75535794fdb4e21aa67234c80c4a36042d7a24e378c244544f370",
+        "window": {
+          "from": "2026-10-13T14:36:59.627Z",
+          "to": "2026-10-13T14:36:59.664Z"
+        },
+        "counts": {
+          "nPlanned": 4,
+          "nPass": 2,
+          "nFail": 0,
+          "nBlocked": 0,
+          "nCancelled": 0,
+          "nInconclusive": 2,
+          "nValid": 2,
+          "nInFlight": 0
+        },
+        "failureRate": 0,
+        "wilson95": {
+          "low": 0,
+          "high": 0.6576280471103807
+        },
+        "zeroFailureUpper95": 0.7763932022500211,
+        "classification": "unstable_infrastructure",
+        "limitations": [
+          "Failure estimate is conditional on valid pass/fail observations",
+          "Sample independence requires separate evidence; repeated observations can be correlated",
+          "Target fixture reset and independent intermittent-cause evidence are not inferred from repeat count"
+        ],
+        "failureCauses": [
+          {
+            "runId": "run_01a135b1-fd79-71a3-90be-165dd1a0db75",
+            "attemptId": "att_01a135b2-0091-7699-96a9-b1ba73562d47",
+            "stepId": "health_request",
+            "category": "environment",
+            "reasonCode": "insufficient_evidence",
+            "contentHash": "d6661f72b3999c6d8a3edc459d6e7f1274b512d925789704a6b61e1d78a2dae4"
+          },
+          {
+            "runId": "run_01a135b1-fd90-755d-ba6c-9e2e6d9ec87a",
+            "attemptId": "att_01a135b2-0620-71cc-ac50-41a1b6fe4d29",
+            "stepId": "health_request",
+            "category": "environment",
+            "reasonCode": "insufficient_evidence",
+            "contentHash": "1eeccf65a23ccc74b25e1978058e7fef5f61da4cc83b7b7bca0997bfa4edd138"
+          }
+        ],
+        "runIds": [
+          "run_01a135b1-fd6b-75c2-9578-aa4fa0a0d640",
+          "run_01a135b1-fd79-71a3-90be-165dd1a0db75",
+          "run_01a135b1-fd84-74da-81fe-4db27c40c7cb",
+          "run_01a135b1-fd90-755d-ba6c-9e2e6d9ec87a"
+        ],
+        "incompatible": []
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
