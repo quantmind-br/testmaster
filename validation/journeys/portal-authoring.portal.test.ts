@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type FakeModel, fakeModelEnv, startFakeModel } from "./fake-model.js";
 import {
   atViewport,
+  axeReport,
   expectAccessible,
   expectNoPageOverflow,
   keyboardOnly,
@@ -792,6 +793,25 @@ describe("portal authoring on the server profile", () => {
       "POST /v1/projects/{id}/proposal-batches",
     ])
       expect(used, expected).toContain(expected);
+    // The oracle of M4-04: the routes the real UI called, and what axe found on every page it checked.
+    await writeFile(
+      join(import.meta.dirname, "..", "results", "m4-portal-authoring.json"),
+      `${JSON.stringify(
+        {
+          journey: "portal-authoring",
+          routesCalled: [...used].sort(),
+          routesOutsideCatalog: unknown,
+          axe: axeReport.map((entry) => ({
+            label: entry.label,
+            viewport: entry.viewport,
+            violations: entry.violations,
+            passes: entry.passes,
+          })),
+        },
+        null,
+        2,
+      )}\n`,
+    );
   });
 
   it("UX-015 UX-016 a keyboard-only reviewer selects a proposal and accepts it without the pointer", async () => {
