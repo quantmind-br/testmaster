@@ -63,7 +63,6 @@ export const operationsRoutes: RouteModule = {
     "POST /operations/dlq/requeue",
     "POST /operations/isolation/release",
     "POST /operations/admission",
-    "POST /operations/reconcile",
     "POST /operations/backups",
     "POST /operations/restores",
     "POST /alerts/{id}/acknowledge",

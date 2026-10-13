@@ -1,21 +1,31 @@
 import type { Command } from "commander";
-import { serverBackupCommands, serverBackupCreate, serverBackupRestore } from "./operations.js";
+import {
+  serverBackupCommands,
+  serverBackupCreate,
+  serverBackupRestore,
+  target,
+  workspaceOption,
+} from "./operations.js";
 import { modeOption, type Runtime, required } from "./runtime.js";
 
 export function backupCommands(program: Command, runtime: Runtime): void {
   const group = program.command("backup");
   runtime.bind(
-    group
-      .command("review")
-      .option("--apply")
-      .option("--revocations-confirmed")
-      .option("--accept-incomplete-evidence")
-      .option(
-        "--ledger-loss-accepted",
-        "Accept that revocations and tombstones made after the snapshot could not be replayed",
-      ),
+    workspaceOption(
+      group
+        .command("review")
+        .option("--apply")
+        .option("--revocations-confirmed")
+        .option("--accept-incomplete-evidence")
+        .option(
+          "--ledger-loss-accepted",
+          "Accept that revocations and tombstones made after the snapshot could not be replayed",
+        ),
+    ).description(
+      "Review a restored profile; --mode server --config reviews the restored PostgreSQL server as the host operator",
+    ),
     async (rt, _args, options) => ({
-      data: (await rt.app()).backups.review({
+      data: (await target(rt, options)).backups.review({
         apply: options.apply === true,
         revocationsConfirmed: options.revocationsConfirmed === true,
         incompleteEvidenceAccepted: options.acceptIncompleteEvidence === true,
@@ -24,9 +34,9 @@ export function backupCommands(program: Command, runtime: Runtime): void {
     }),
   );
   runtime.bind(
-    group.command("resume-run <run-id>").option("--apply"),
+    workspaceOption(group.command("resume-run <run-id>").option("--apply")),
     async (rt, args, options) => ({
-      data: (await rt.app()).backups.resumeRun(String(args[0]), options.apply === true),
+      data: (await target(rt, options)).backups.resumeRun(String(args[0]), options.apply === true),
     }),
   );
   runtime.bind(

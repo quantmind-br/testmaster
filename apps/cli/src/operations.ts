@@ -28,7 +28,7 @@ import {
 } from "./runtime.js";
 
 /** Operations run in-process: as the local user, or as the workspace system principal on the host. */
-async function target(rt: Runtime, options: Options): Promise<Application> {
+export async function target(rt: Runtime, options: Options): Promise<Application> {
   if (options.mode !== "server") return rt.app();
   const { application } = await rt.serverApp();
   const ids = application.operator.workspaceIds();
@@ -44,7 +44,7 @@ async function target(rt: Runtime, options: Options): Promise<Application> {
   return application.forWorkspaceSystem(id, rt.requestId);
 }
 
-const workspaceOption = (command: Command): Command =>
+export const workspaceOption = (command: Command): Command =>
   command
     .addOption(modeOption())
     .option("--workspace <id>", "Workspace on a multi-workspace server (--mode server)");
