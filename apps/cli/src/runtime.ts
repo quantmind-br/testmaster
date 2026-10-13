@@ -17,6 +17,14 @@ import {
 } from "@testmaster/contracts";
 import { exitCodeForError } from "@testmaster/domain";
 import { Command, Option } from "commander";
+import {
+  commandPath,
+  RemoteClient,
+  remoteExempt,
+  remoteHandlers,
+  remoteTarget,
+  unavailableRemote,
+} from "./remote.js";
 
 export type Options = Record<string, unknown>;
 export class CliFailure extends ContractError {
@@ -248,6 +256,19 @@ export class Runtime {
         if (!prepare && string(this.options, "dir"))
           await this.lintDirectory(required(this.options, "dir"));
         this.pending = { data: dryReceipt };
+        return;
+      }
+      const path = commandPath(parsed);
+      const target = remoteExempt.has(path) ? null : await remoteTarget(this.options);
+      if (target) {
+        const remote = remoteHandlers[path];
+        if (!remote) throw unavailableRemote(path);
+        const timeout =
+          typeof this.options.requestTimeout === "number" ? this.options.requestTimeout : undefined;
+        const client = new RemoteClient(target, this.requestId, this.controller.signal, timeout);
+        const outcome = await remote(client, args, this.options);
+        if (this.signal) throw this.interrupted();
+        this.pending = outcome;
         return;
       }
       const result = await handler(this, args, this.options);

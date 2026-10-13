@@ -17,6 +17,7 @@ import { imageCommands } from "./images.js";
 import { mcpCommands } from "./mcp.js";
 import { planCommands } from "./plans.js";
 import { projectCommands } from "./projects.js";
+import { remoteCommands } from "./remote.js";
 import { reportCommands } from "./reports.js";
 import { requirementCommands } from "./requirements.js";
 import { resourceCommands } from "./resources.js";
@@ -78,6 +79,7 @@ export function createCli(runtime: Runtime): Command {
   identityCommands(program, runtime);
   resourceCommands(program, runtime);
   ciCommands(program, runtime);
+  remoteCommands(program, runtime);
   unavailableCommands(program, runtime);
   return program;
 }
