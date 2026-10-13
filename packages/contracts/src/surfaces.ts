@@ -180,8 +180,8 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/workers", "workers:A", "M4", "Empty", "Worker"],
   ["POST", "/workers", "workers:A", "M4", "WorkerEnrollmentInput", "WorkerEnrollment"],
   ["GET", "/workers/{id}", "workers:A", "M4", "Empty", "Worker"],
-  // M4 workers heartbeat in-process against the database; HTTP heartbeats come with remote workers.
-  ["POST", "/workers/{id}/heartbeat", "worker:X", "M5", "HeartbeatInput", "Worker"],
+  // Authenticated by the route itself with the worker credential (tm_wrk_), never by a user session.
+  ["POST", "/workers/{id}/heartbeat", "signature", "M4", "HeartbeatInput", "Worker"],
   ["GET", "/usage", "usage:R", "M2", "Empty", "UsageEntry"],
   ["POST", "/projects/{id}/budget", "usage:A", "M2", "TokenBudgetInput", "UsageEntry"],
   ["GET", "/audit-events", "audit:R", "M4", "Empty", "AuditEvent"],

@@ -5,6 +5,8 @@ import * as P from "../primitives.js";
 /** Largest number of Runs a tenant may hold in the queue before admission answers 429 (OPS-033). */
 export const TENANT_QUEUED_JOB_LIMIT = 1000;
 export const WORKER_ENROLLMENT_DEFAULT_TTL_SECONDS = 3600;
+/** After enrollment the one-use token stays valid as the worker credential (heartbeat only) for this long. */
+export const WORKER_CREDENTIAL_TTL_SECONDS = 30 * 86_400;
 /** A ready worker whose heartbeat is older than this is marked offline. */
 export const WORKER_HEARTBEAT_TIMEOUT_MS = 30_000;
 const Labels = Type.Record(Type.String({ pattern: "^[a-z][a-z0-9._-]{0,62}$" }), P.Name, {

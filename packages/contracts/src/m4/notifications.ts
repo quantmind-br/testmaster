@@ -8,11 +8,13 @@ const nullable = <T extends TSchema>(schema: T) => Type.Union([schema, Type.Null
 export const notificationTypes = [
   "run.completed",
   "run.failed",
+  "run.recovered",
   "batch.completed",
   "schedule.misfire",
   "schedule.paused",
   "delivery.dead_letter",
   "worker.offline",
+  "resource.orphaned",
   "alert.fired",
   "integration.test",
 ] as const;
