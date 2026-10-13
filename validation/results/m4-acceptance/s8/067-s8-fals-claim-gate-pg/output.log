@@ -1,0 +1,35 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |postgres| packages/application/src/worker-pool.pg.test.ts (4 tests | 1 failed) 2910ms
+   × M4-08 REQ-038 PostgreSQL: a worker revoked under another OS process receives no further claim and its lease is fenced 1082ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/worker-pool.pg.test.ts > M4-08 REQ-038 PostgreSQL: a worker revoked under another OS process receives no further claim and its lease is fenced
+AssertionError: expected 'claimed-first\nafter=5\n' to contain 'after=0'
+
+- Expected
++ Received
+
+- after=0
++ claimed-first
++ after=5
++
+
+ ❯ packages/application/src/worker-pool.pg.test.ts:250:28
+    248|   expect(healthyResult.code).toBe(0);
+    249|   // The revoked worker is refused from its very next claim; the healt…
+    250|   expect(doomedResult.out).toContain("after=0");
+       |                            ^
+    251|   expect(healthyResult.out).toContain("total=5");
+    252|   const states = tenant.scoped.database.all(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  13:19:40
+   Duration  4.98s (tests 81%, transform 12%, import 7%)
+

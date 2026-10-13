@@ -1,0 +1,74 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "url",
+    "signingSecretRef"
+  ],
+  "properties": {
+    "url": {
+      "pattern": "^https://",
+      "maxLength": 2000,
+      "type": "string"
+    },
+    "signingSecretRef": {
+      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "previousSigningSecretRef": {
+      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "previousSecretUntil": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "rules": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "suiteIds": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "pattern": "^sui_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "environmentIds": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "redaction": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "level"
+      ],
+      "properties": {
+        "level": {
+          "anyOf": [
+            {
+              "const": "summary",
+              "type": "string"
+            },
+            {
+              "const": "minimal",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:WebhookSettings",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

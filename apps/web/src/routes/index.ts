@@ -8,6 +8,7 @@ import { routes as flaky } from "./flaky";
 import { routes as healing } from "./healing";
 import { routes as home } from "./home";
 import { routes as lists } from "./lists";
+import { routes as notifications } from "./notifications";
 import { routes as onboarding } from "./onboarding";
 import { routes as project } from "./project";
 import { routes as quarantine } from "./quarantine";
@@ -20,6 +21,7 @@ import { routes as settings } from "./settings";
 import { routes as sources } from "./sources";
 import { routes as team } from "./team";
 import type { PortalRoute } from "./types";
+import { routes as workers } from "./workers";
 
 /** One line per area; slices append their `routes/<area>.tsx` here. */
 export const portalRoutes: readonly PortalRoute[] = [
@@ -44,4 +46,6 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...flaky,
   ...quarantine,
   ...runs,
+  ...notifications,
+  ...workers,
 ];

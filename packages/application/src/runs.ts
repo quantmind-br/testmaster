@@ -10,6 +10,7 @@ import {
   type Run,
   type RunReceipt,
   type RunRequest,
+  TENANT_QUEUED_JOB_LIMIT,
   validate,
 } from "@testmaster/contracts";
 import {
@@ -536,6 +537,47 @@ export class RunsService {
     ids.forEach(visit);
     return [...expanded];
   }
+  /** OPS-033: a tenant may hold at most TENANT_QUEUED_JOB_LIMIT queued Runs; beyond it admission answers 429. */
+  private assertQueueCapacity(): void {
+    const queued = this.queuedLocalJobs();
+    if (queued >= TENANT_QUEUED_JOB_LIMIT)
+      throw new ContractError("RATE_LIMITED", "The workspace queue is full", {
+        reason: "queue_overflow",
+        limit: TENANT_QUEUED_JOB_LIMIT,
+        queued,
+        retryAfterSeconds: 30,
+      });
+  }
+  private queuedLocalJobs(): number {
+    return Number(
+      this.ctx.database.get(
+        "SELECT COUNT(*) AS n FROM job_leases WHERE workspace_id=? AND queue='local' AND state='queued'",
+        this.ctx.workspaceId,
+      )?.n,
+    );
+  }
+  /** Why a freshly queued Run waits and roughly where; counts only this workspace's own queue. */
+  private queueAdmission(): NonNullable<RunReceipt["queue"]> {
+    const own = this.ctx.database.get(
+      "SELECT COUNT(*) AS n, MIN(available_at) AS oldest FROM job_leases WHERE workspace_id=? AND queue='local' AND state='queued'",
+      this.ctx.workspaceId,
+    );
+    const queued = Math.max(1, Number(own?.n));
+    const paused =
+      this.ctx.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value !==
+      "enabled";
+    return {
+      reason: paused
+        ? "admission_paused"
+        : this.host.liveWorker()
+          ? "waiting_for_worker"
+          : "no_ready_worker",
+      position: queued,
+      queued,
+      limit: TENANT_QUEUED_JOB_LIMIT,
+      oldestQueuedAgeMs: own?.oldest ? Math.max(0, Date.now() - Date.parse(String(own.oldest))) : 0,
+    };
+  }
   insert(run: EntityDocument, key: string, securityFailure?: ContractError): OwnedReceipt {
     if (securityFailure) {
       run = {
@@ -558,8 +600,10 @@ export class RunsService {
       "run.timing_queued",
       { clockDomain, boundary: timingBoundary("queued") },
     );
-    if (!securityFailure)
+    if (!securityFailure) {
+      this.assertQueueCapacity();
       new LeaseRepository(this.ctx.database).enqueue(this.ctx.workspaceId, run.id, "local");
+    }
     new OutboxRepository(this.ctx.database).append(
       this.ctx.workspaceId,
       run.id,
@@ -590,6 +634,7 @@ export class RunsService {
           bundle: `/v1/runs/${run.id}/bundle`,
         },
         idempotencyKey: key,
+        ...(securityFailure ? {} : { queue: this.queueAdmission() }),
       }),
       ownership: (run.gatePolicy as { ownership: "worker" | "ephemeral" }).ownership,
     };

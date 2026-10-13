@@ -191,6 +191,17 @@ export const RunRequest = Obj({
   repetitionIndex: Type.Optional(Type.Integer({ minimum: 0, maximum: 99 })),
   extensions: Type.Optional(Extensions),
 });
+/**
+ * Why a Run is waiting and roughly where. Position and age cover only the caller's own tenant;
+ * nothing here reveals another tenant's queue (OPS-033).
+ */
+export const QueueAdmission = Obj({
+  reason: Enum(["waiting_for_worker", "no_ready_worker", "admission_paused"]),
+  position: Positive,
+  queued: Positive,
+  limit: Positive,
+  oldestQueuedAgeMs: Nonnegative,
+});
 export const RunReceipt = Obj({
   runId: id("run"),
   status: Type.Union([Phase, Outcome]),
@@ -199,6 +210,8 @@ export const RunReceipt = Obj({
   acceptedAt: Timestamp,
   links: Obj({ self: Type.String(), events: Type.String(), bundle: Type.String() }),
   idempotencyKey: Type.String({ minLength: 16, maxLength: 128 }),
+  /** Present while the Run waits for a worker. */
+  queue: Type.Optional(QueueAdmission),
 });
 export const BatchRequest = Obj({
   selection: Type.Array(RunRequest, { maxItems: 500 }),
@@ -373,6 +386,7 @@ export type NetworkPolicy = Static<typeof NetworkPolicy>;
 export type ProjectConfig = Static<typeof ProjectConfig>;
 export type EffectiveConfig = Static<typeof EffectiveConfig>;
 export type RunRequest = Static<typeof RunRequest>;
+export type QueueAdmission = Static<typeof QueueAdmission>;
 export type RunReceipt = Static<typeof RunReceipt>;
 export type RunResult = Static<typeof RunResult>;
 export type BatchRequest = Static<typeof BatchRequest>;

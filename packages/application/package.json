@@ -9,6 +9,21 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing/notifications": {
+      "source": "./src/testing/notifications.ts",
+      "types": "./dist/testing/notifications.d.ts",
+      "default": "./dist/testing/notifications.js"
+    },
+    "./testing/j13-notify": {
+      "source": "./src/testing/j13-notify.ts",
+      "types": "./dist/testing/j13-notify.d.ts",
+      "default": "./dist/testing/j13-notify.js"
+    },
+    "./testing/notification-harness": {
+      "source": "./src/testing/notification-harness.ts",
+      "types": "./dist/testing/notification-harness.d.ts",
+      "default": "./dist/testing/notification-harness.js"
     }
   },
   "files": [
@@ -18,11 +33,15 @@
   "dependencies": {
     "@testmaster/contracts": "workspace:*",
     "@testmaster/domain": "workspace:*",
-    "@testmaster/persistence": "workspace:*",
     "@testmaster/evidence": "workspace:*",
+    "@testmaster/model-gateway": "workspace:*",
+    "@testmaster/persistence": "workspace:*",
+    "@testmaster/planner": "workspace:*",
     "@testmaster/reporting": "workspace:*",
     "@testmaster/sandbox": "workspace:*",
-    "@testmaster/model-gateway": "workspace:*",
-    "@testmaster/planner": "workspace:*"
+    "nodemailer": "10.1.0"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "8.0.2"
   }
 }

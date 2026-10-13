@@ -1,0 +1,101 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "smtpSecretRef",
+    "security",
+    "from",
+    "recipients",
+    "allowedRecipientDomains"
+  ],
+  "properties": {
+    "smtpSecretRef": {
+      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "security": {
+      "anyOf": [
+        {
+          "const": "tls",
+          "type": "string"
+        },
+        {
+          "const": "starttls",
+          "type": "string"
+        }
+      ]
+    },
+    "from": {
+      "pattern": "^[^\\s@<>\"]{1,64}@[^\\s@<>\"]{1,190}$",
+      "type": "string"
+    },
+    "recipients": {
+      "minItems": 1,
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "pattern": "^[^\\s@<>\"]{1,64}@[^\\s@<>\"]{1,190}$",
+        "type": "string"
+      }
+    },
+    "subjectPrefix": {
+      "maxLength": 120,
+      "type": "string"
+    },
+    "allowedRecipientDomains": {
+      "minItems": 1,
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+        "type": "string"
+      }
+    },
+    "rules": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "suiteIds": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "pattern": "^sui_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "environmentIds": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "redaction": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "level"
+      ],
+      "properties": {
+        "level": {
+          "anyOf": [
+            {
+              "const": "summary",
+              "type": "string"
+            },
+            {
+              "const": "minimal",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:EmailSettings",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

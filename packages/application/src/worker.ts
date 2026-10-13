@@ -70,6 +70,7 @@ import {
   validateHandshake,
   type WorkerHandshake,
 } from "./worker-handshake.js";
+import { fairShareCap } from "./worker-pool.js";
 
 /** How often a running worker compares its migrations with the database's (OPS-038). */
 const schemaCheckIntervalMs = 2000;
@@ -1433,6 +1434,17 @@ export class WorkerService {
         JSON.parse(String(row.data_json)),
       );
       const state = resource.state === "planned" ? "uncertain" : "orphaned";
+      const attempt = this.ctx.database.get(
+        "SELECT run_id FROM attempts WHERE workspace_id=? AND id=?",
+        this.ctx.workspaceId,
+        attemptId,
+      );
+      new OutboxRepository(this.ctx.database).append(
+        this.ctx.workspaceId,
+        String(resource.id),
+        "resource.orphaned",
+        { resourceId: resource.id, runId: attempt ? String(attempt.run_id) : null, state },
+      );
       const next = { ...resource, state, version: Number(resource.version ?? 1) + 1 };
       this.ctx.database.run(
         "UPDATE resources SET state=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=? AND version=?",
@@ -1607,6 +1619,34 @@ export class WorkerService {
       availableBytes: Number(storage.bavail) * Number(storage.bsize),
     };
   }
+  /**
+   * Turns the enrolled placeholder into this process's worker: declared capabilities and image
+   * digests replace the empty ones and the worker becomes ready. A revoked worker never starts,
+   * and an identity whose process is still alive cannot be taken over.
+   */
+  private adoptEnrolled(workerId: string, declared: Record<string, unknown>): void {
+    this.ctx.database.withTx(() => {
+      const current = requireEntity(this.ctx, "Worker", workerId);
+      if (current.state === "revoked")
+        throw new ContractError("FORBIDDEN", "Worker is revoked", { workerId });
+      const heartbeat = current.lastHeartbeatAt ? Date.parse(String(current.lastHeartbeatAt)) : 0;
+      if (current.state === "ready" && Date.now() - heartbeat < 30000)
+        throw new ContractError("PRECONDITION_FAILED", "Worker identity is already in use", {
+          workerId,
+        });
+      const labels = {
+        ...(current.labels as Record<string, string>),
+        ...(declared.labels as Record<string, string>),
+      };
+      this.ctx.entities.update("Worker", this.ctx.workspaceId, workerId, Number(current.version), {
+        ...current,
+        ...declared,
+        labels,
+        version: Number(current.version) + 1,
+      });
+    });
+    this.workerId = workerId;
+  }
   async run(
     options: {
       signal?: AbortSignal;
@@ -1614,6 +1654,8 @@ export class WorkerService {
       runIds?: string[];
       capacity?: WorkerCapacity;
       handshake?: WorkerHandshake;
+      /** An enrolled worker (REQ-038) this process becomes instead of registering a new row. */
+      workerId?: string;
     } = {},
   ) {
     if (options.ephemeral && options.runIds?.length) {
@@ -1684,7 +1726,7 @@ export class WorkerService {
       return runner === "python" ? "python" : runner === "http" ? "http" : "browser";
     };
     if (!options.ephemeral && handshake) {
-      const worker = entity(this.ctx, "wrk", {
+      const declared = {
         identityRef: this.owner,
         capabilities: handshake.runners.map((runner) =>
           runner === "playwright" ? "browser" : runner,
@@ -1698,12 +1740,17 @@ export class WorkerService {
           schemaVersions: JSON.stringify(handshake.schemaVersions),
           runnerVersion: handshake.runnerVersion,
           actions: JSON.stringify(handshake.actions),
+          slots: String(this.host.config.effectiveConfig.config.execution?.concurrency ?? 2),
         },
         state: "ready",
         lastHeartbeatAt: new Date().toISOString(),
-      });
-      this.ctx.entities.insert("Worker", worker);
-      this.workerId = worker.id;
+      };
+      if (options.workerId) this.adoptEnrolled(options.workerId, declared);
+      else {
+        const worker = entity(this.ctx, "wrk", declared);
+        this.ctx.entities.insert("Worker", worker);
+        this.workerId = worker.id;
+      }
     }
     await this.maintenance();
     let lastMaintenance = Date.now();
@@ -1730,6 +1777,9 @@ export class WorkerService {
             this.workerId,
           );
           if (row?.state !== "ready") this.drainRequested = true;
+          // Revocation is not a drain: work in flight stops now and its fenced writes are refused.
+          if (row?.state === "revoked")
+            for (const controller of this.active.values()) controller.abort();
         }
         if (!schemaRefusal && Date.now() - lastSchemaCheck >= schemaCheckIntervalMs) {
           lastSchemaCheck = Date.now();
@@ -1821,6 +1871,14 @@ export class WorkerService {
             this.host.runs.blockActorRevoked(id);
             candidates.splice(candidates.indexOf(id), 1);
           }
+          // Cross-tenant demand is read before the transaction: a workspace-bound claim cannot see other tenants.
+          const maxLeased = candidates.length
+            ? fairShareCap({
+                database: database.forWorkspace("*"),
+                workspaceId: this.ctx.workspaceId,
+                now: new Date(),
+              })
+            : undefined;
           // The transaction makes resource reservation and lease claim indivisible across local owners.
           const fence = database.withTx(() => {
             if (this.isQuarantined()) return null;
@@ -1835,6 +1893,7 @@ export class WorkerService {
               owner: this.owner,
               queue: "local",
               runIds: eligible,
+              ...(maxLeased !== undefined ? { maxLeased } : {}),
               ...(this.workerId ? { workerId: this.workerId } : {}),
             });
           });
@@ -1859,7 +1918,7 @@ export class WorkerService {
       if (this.workerId)
         database.withTx(() =>
           database.run(
-            "UPDATE workers SET state='offline',last_heartbeat_at=? WHERE workspace_id=? AND id=?",
+            "UPDATE workers SET state='offline',last_heartbeat_at=? WHERE workspace_id=? AND id=? AND state<>'revoked'",
             new Date().toISOString(),
             this.ctx.workspaceId,
             this.workerId,

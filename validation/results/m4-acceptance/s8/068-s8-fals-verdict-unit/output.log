@@ -1,0 +1,39 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 1 failed) 1671ms
+   ❯ INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record (3)
+     × INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched 669ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record > INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched
+AssertionError: expected { outcome: 'failed', …(3) } to deeply equal { outcome: 'failed', …(3) }
+
+- Expected
++ Received
+
+  {
+-   "gate": "failed",
++   "gate": "passed",
+    "outcome": "failed",
+    "phase": "completed",
+    "status": "failed",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:53:30
+     51|     expect(h.service.deadLetters().map((entry) => entry.id)).toEqual([…
+     52|     // The verdict, the gate and the number of Runs are exactly what t…
+     53|     expect(runRow(h, runId)).toEqual(before);
+       |                              ^
+     54|     expect(runCount(h)).toBe(runs);
+     55|     // The dead letter is announced on the outbox for operators, never…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:19:46
+   Duration  2.34s (tests 73%, transform 17%, import 10%)
+

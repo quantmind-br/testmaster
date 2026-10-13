@@ -563,12 +563,13 @@ export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHea
 }
 
 export class SecretsService {
-  private readonly ephemeral = new Map<string, string>();
   private readonly layout: VaultLayout;
   constructor(
     private readonly ctx: ServiceContext,
     config: ResolvedConfig,
     server?: ServerConfig,
+    /** Process memory shared by every scope of one runtime, so controller loops can release request-scoped ephemeral secrets. */
+    private readonly ephemeral: Map<string, string> = new Map(),
   ) {
     this.layout = vaultLayout(config, server);
   }

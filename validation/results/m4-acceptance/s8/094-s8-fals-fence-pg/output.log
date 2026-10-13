@@ -1,0 +1,42 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |postgres| packages/application/src/worker-pool.pg.test.ts (4 tests | 1 failed) 3444ms
+   × M4-08 REQ-038 PostgreSQL: a worker revoked under another OS process receives no further claim and its lease is fenced 1171ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/worker-pool.pg.test.ts > M4-08 REQ-038 PostgreSQL: a worker revoked under another OS process receives no further claim and its lease is fenced
+AssertionError: expected [ [ 'leased', 6 ] ] to deeply equal [ [ 'leased', 5 ], …(1) ]
+
+- Expected
++ Received
+
+  [
+    [
+      "leased",
+-     5,
+-   ],
+-   [
+-     "reconciliation_required",
+-     1,
++     6,
+    ],
+  ]
+
+ ❯ packages/application/src/worker-pool.pg.test.ts:256:59
+    254|     tenant.workspaceId,
+    255|   );
+    256|   expect(states.map((row) => [row.state, Number(row.n)])).toEqual([
+       |                                                           ^
+    257|     ["leased", 5],
+    258|     ["reconciliation_required", 1],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  13:21:48
+   Duration  5.54s (tests 82%, transform 11%, import 6%)
+

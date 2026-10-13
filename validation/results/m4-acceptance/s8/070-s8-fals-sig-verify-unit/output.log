@@ -1,0 +1,102 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/delivery.test.ts (4 tests | 4 failed) 739ms
+   ❯ INT-027 outbound webhooks are signed over the original bytes (4)
+     × INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body 641ms
+     × INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery 54ms
+     × INT-027 a rotation signs with both secrets only inside the controlled window 43ms
+     × INT-027 signNotification and verifyNotification agree on the documented HMAC construction 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/delivery.test.ts:49:31
+     47|     expect(request.headers["testmaster-event-id"]).toBeTruthy();
+     48|     expect(request.headers["testmaster-delivery-id"]).toMatch(/^ntd_/u…
+     49|     expect(consumer.accepted).toHaveLength(1);
+       |                               ^
+     50|     const payload = JSON.parse(request.body.toString("utf8"));
+     51|     validate("NotificationPayload", payload);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery
+AssertionError: expected { status: 401, …(2) } to match object { status: 200, outcome: 'accepted' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "outcome": "accepted",
+-   "status": 200,
++   "outcome": "rejected",
++   "status": 401,
+  }
+
+ ❯ packages/application/src/notifications/delivery.test.ts:91:35
+     89|
+     90|     const fresh = createReferenceConsumer(["whsec_current"], () => h.c…
+     91|     expect(fresh.handle(request)).toMatchObject({ status: 200, outcome…
+       |                                   ^
+     92|   });
+     93|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a rotation signs with both secrets only inside the controlled window
+AssertionError: expected 401 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 401
+
+ ❯ packages/application/src/notifications/delivery.test.ts:122:7
+    120|     expect(
+    121|       createReferenceConsumer(["whsec_previous"], () => h.clock.now).h…
+    122|     ).toBe(200);
+       |       ^
+    123|     expect(
+    124|       createReferenceConsumer(["whsec_current"], () => h.clock.now).ha…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 signNotification and verifyNotification agree on the documented HMAC construction
+AssertionError: expected { valid: false, …(1) } to match object { valid: true }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "valid": true,
++   "valid": false,
+  }
+
+ ❯ packages/application/src/notifications/delivery.test.ts:198:7
+    196|     expect(
+    197|       verifyNotification({ header, deliveryId: "ntd_x", body, secrets:…
+    198|     ).toMatchObject({ valid: true });
+       |       ^
+    199|     expect(
+    200|       verifyNotification({ header, deliveryId: "ntd_y", body, secrets:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  13:19:52
+   Duration  1.53s (tests 50%, transform 32%, import 18%)
+

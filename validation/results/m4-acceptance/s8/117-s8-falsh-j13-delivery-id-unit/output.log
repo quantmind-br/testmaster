@@ -1,0 +1,41 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/testing/j13-notify.test.ts (1 test | 1 failed) 2165ms
+   × INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run 2164ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/testing/j13-notify.test.ts > INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run
+AssertionError: expected { …(7) } to match object { state: 'delivered', …(5) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "attempts": 2,
+-   "distinctDeliveryIds": 1,
++   "distinctDeliveryIds": 2,
+    "distinctEventIds": 1,
+    "requests": 2,
+    "sawUncertainAttempt": true,
+    "state": "delivered",
+  }
+
+ ❯ packages/application/src/testing/j13-notify.test.ts:25:26
+     23|   });
+     24|   // The webhook timed out after the request was sent: uncertain, retr…
+     25|   expect(report.webhook).toMatchObject({
+       |                          ^
+     26|     state: "delivered",
+     27|     attempts: 2,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  13:27:18
+   Duration  2.90s (tests 76%, transform 15%, import 9%)
+

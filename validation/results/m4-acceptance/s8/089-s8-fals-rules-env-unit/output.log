@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/rules.test.ts (11 tests | 1 failed) 988ms
+   ❯ INT-025 default messages carry identifiers, a summary and a link and nothing else (3)
+     × INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite 72ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite
+AssertionError: expected [ { method: 'POST', …(3) }, …(3) ] to have a length of +0 but got 4
+
+- Expected
++ Received
+
+- 0
++ 4
+
+ ❯ packages/application/src/notifications/rules.test.ts:131:31
+    129|     ]);
+    130|     expect(types(onlyFailures)).toEqual(["run.failed"]);
+    131|     expect(otherEnv.requests).toHaveLength(0);
+       |                               ^
+    132|     expect(types(suite)).toEqual(["batch.completed"]);
+    133|     expect(otherProject.requests).toHaveLength(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  13:20:57
+   Duration  1.64s (tests 62%, transform 24%, import 14%)
+

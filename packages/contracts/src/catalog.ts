@@ -5,11 +5,13 @@ import { authoringContracts } from "./m4/authoring.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
 import { listContracts } from "./m4/lists.js";
+import { deliveryContracts, notificationContracts } from "./m4/notifications.js";
 import { onboardingContracts } from "./m4/onboarding.js";
 import { runViewContracts } from "./m4/runs.js";
 import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
 import { sourceInsightContracts } from "./m4/sources.js";
+import { workerContracts } from "./m4/workers.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -605,6 +607,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   NetworkPolicy: Ops.NetworkPolicy,
   RunRequest: Ops.RunRequest,
   RunReceipt: Ops.RunReceipt,
+  QueueAdmission: Ops.QueueAdmission,
   RunResult: Ops.RunResult,
   BatchRequest: Ops.BatchRequest,
   BatchReceipt: Ops.BatchReceipt,
@@ -639,6 +642,9 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...integrationContracts,
   ...authoringContracts,
   ...auditContracts,
+  ...notificationContracts,
+  ...deliveryContracts,
+  ...workerContracts,
   ...identityContracts,
   ...settingsContracts,
   ...onboardingContracts,

@@ -1,0 +1,578 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "workspaceId",
+    "integrationId",
+    "provider",
+    "eventRef",
+    "type",
+    "deliveryId",
+    "state",
+    "attempts",
+    "nextAttemptAt",
+    "outcomeUncertain",
+    "lastReasonCode",
+    "lastError",
+    "payloadHash",
+    "createdAt",
+    "updatedAt",
+    "deliveredAt",
+    "version",
+    "attemptLog",
+    "payload"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^ntd_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "kind": {
+      "const": "notification",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "integrationId": {
+      "pattern": "^int_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "const": "slack",
+          "type": "string"
+        },
+        {
+          "const": "email",
+          "type": "string"
+        },
+        {
+          "const": "webhook",
+          "type": "string"
+        }
+      ]
+    },
+    "eventRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "const": "run.completed",
+          "type": "string"
+        },
+        {
+          "const": "run.failed",
+          "type": "string"
+        },
+        {
+          "const": "run.recovered",
+          "type": "string"
+        },
+        {
+          "const": "batch.completed",
+          "type": "string"
+        },
+        {
+          "const": "schedule.misfire",
+          "type": "string"
+        },
+        {
+          "const": "schedule.paused",
+          "type": "string"
+        },
+        {
+          "const": "delivery.dead_letter",
+          "type": "string"
+        },
+        {
+          "const": "worker.offline",
+          "type": "string"
+        },
+        {
+          "const": "resource.orphaned",
+          "type": "string"
+        },
+        {
+          "const": "alert.fired",
+          "type": "string"
+        },
+        {
+          "const": "integration.test",
+          "type": "string"
+        }
+      ]
+    },
+    "deliveryId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "delivered",
+          "type": "string"
+        },
+        {
+          "const": "dead_letter",
+          "type": "string"
+        }
+      ]
+    },
+    "attempts": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nextAttemptAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcomeUncertain": {
+      "type": "boolean"
+    },
+    "lastReasonCode": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lastError": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payloadHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "deliveredAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "attemptLog": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "number",
+          "startedAt",
+          "finishedAt",
+          "outcome",
+          "httpStatus",
+          "uncertain",
+          "reasonCode",
+          "detail"
+        ],
+        "properties": {
+          "number": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "const": "in_flight",
+                "type": "string"
+              },
+              {
+                "const": "delivered",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              },
+              {
+                "const": "abandoned",
+                "type": "string"
+              }
+            ]
+          },
+          "httpStatus": {
+            "anyOf": [
+              {
+                "minimum": 100,
+                "maximum": 599,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "uncertain": {
+            "type": "boolean"
+          },
+          "reasonCode": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "payload": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "eventId",
+        "deliveryId",
+        "type",
+        "occurredAt",
+        "test",
+        "workspaceId",
+        "projectId",
+        "runId",
+        "batchId",
+        "scheduleId",
+        "summary",
+        "link"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "eventId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "deliveryId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "const": "run.completed",
+              "type": "string"
+            },
+            {
+              "const": "run.failed",
+              "type": "string"
+            },
+            {
+              "const": "run.recovered",
+              "type": "string"
+            },
+            {
+              "const": "batch.completed",
+              "type": "string"
+            },
+            {
+              "const": "schedule.misfire",
+              "type": "string"
+            },
+            {
+              "const": "schedule.paused",
+              "type": "string"
+            },
+            {
+              "const": "delivery.dead_letter",
+              "type": "string"
+            },
+            {
+              "const": "worker.offline",
+              "type": "string"
+            },
+            {
+              "const": "resource.orphaned",
+              "type": "string"
+            },
+            {
+              "const": "alert.fired",
+              "type": "string"
+            },
+            {
+              "const": "integration.test",
+              "type": "string"
+            }
+          ]
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "test": {
+          "type": "boolean"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "projectId": {
+          "anyOf": [
+            {
+              "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runId": {
+          "anyOf": [
+            {
+              "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "batchId": {
+          "anyOf": [
+            {
+              "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scheduleId": {
+          "anyOf": [
+            {
+              "pattern": "^sch_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "outcome",
+            "gate",
+            "counts",
+            "reasonCode"
+          ],
+          "properties": {
+            "outcome": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "const": "passed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "blocked",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cancelled",
+                      "type": "string"
+                    },
+                    {
+                      "const": "inconclusive",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "gate": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "const": "pending",
+                      "type": "string"
+                    },
+                    {
+                      "const": "passed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "not_applicable",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "counts": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "passed",
+                    "failed",
+                    "blocked",
+                    "cancelled",
+                    "inconclusive"
+                  ],
+                  "properties": {
+                    "passed": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "failed": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "blocked": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "cancelled": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "inconclusive": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reasonCode": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "link": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:NotificationDeliveryDetail",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

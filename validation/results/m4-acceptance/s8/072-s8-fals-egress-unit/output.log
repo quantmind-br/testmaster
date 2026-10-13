@@ -1,0 +1,54 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 2 failed) 1464ms
+   ❯ INT-028 a private or forged destination never receives a notification and a retry honours the new policy (4)
+     × INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing 41ms
+     × INT-028 a retry re-evaluates egress policy: a destination blocked between attempts is not contacted again 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing
+AssertionError: expected [ { method: 'POST', …(3) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/application/src/notifications/resilience.test.ts:193:31
+    191|     h.completedRun();
+    192|     await h.settle();
+    193|     expect(receiver.requests).toHaveLength(0);
+       |                               ^
+    194|     expect(h.service.list()[0]).toMatchObject({
+    195|       state: "dead_letter",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 a retry re-evaluates egress policy: a destination blocked between attempts is not contacted again
+AssertionError: expected [ { method: 'POST', …(3) }, …(1) ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/application/src/notifications/resilience.test.ts:212:31
+    210|     h.clock.advance(5_000);
+    211|     await h.tick();
+    212|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    213|     expect(h.service.list()[0]).toMatchObject({
+    214|       state: "dead_letter",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 8 passed (10)
+   Start at  13:19:57
+   Duration  2.16s (tests 69%, transform 19%, import 11%)
+

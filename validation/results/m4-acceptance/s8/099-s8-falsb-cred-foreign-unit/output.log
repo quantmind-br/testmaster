@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/worker-pool.test.ts (7 tests | 1 failed) 927ms
+   ❯ REQ-038 an enrolled worker heartbeats its lease with its own credential (2)
+     × REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/worker-pool.test.ts > REQ-038 an enrolled worker heartbeats its lease with its own credential > REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential
+AssertionError: expected undefined to be 'UNAUTHENTICATED' // Object.is equality
+
+- Expected:
+"UNAUTHENTICATED"
+
++ Received:
+undefined
+
+ ❯ packages/application/src/worker-pool.test.ts:276:7
+    274|         }),
+    275|       ),
+    276|     ).toBe("UNAUTHENTICATED");
+       |       ^
+    277|     expect(
+    278|       codeOf(() =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  13:23:51
+   Duration  1.65s (tests 58%, transform 27%, import 15%)
+

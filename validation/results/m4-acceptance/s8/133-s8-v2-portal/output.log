@@ -1,0 +1,30 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |postgres| validation/journeys/notifications-workers.portal.test.ts (11 tests | 1 failed) 41709ms
+   ❯ keyboard and accessibility (2)
+     × UX-051 UX-052 the workers page and the notifications page are fully operable with the keyboard alone 30558ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/notifications-workers.portal.test.ts > keyboard and accessibility > UX-051 UX-052 the workers page and the notifications page are fully operable with the keyboard alone
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('table', { name: 'Notification integrations' }).getByRole('row').filter({ hasText: 'Keyboard created hook' }) to be visible
+
+ ❯ validation/journeys/notifications-workers.portal.test.ts:351:57
+    349|     await keyboard.tabTo((element) => element.name === "Create integra…
+    350|     await keyboard.press("Enter");
+    351|     await integrationRow(page, "Keyboard created hook").waitFor();
+       |                                                         ^
+    352|     expect(await integrationRow(page, "Keyboard created hook").innerTe…
+    353|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  13:34:11
+   Duration  44.18s (tests 98%, import 1%, transform 1%)
+

@@ -3,6 +3,7 @@ import { artifactGatewayRoutes } from "./artifact-gateway.js";
 import { auditRoutes } from "./audit.js";
 import { authoringRoutes } from "./authoring.js";
 import { coreRoutes } from "./core.js";
+import { deliveryRoutes } from "./deliveries.js";
 import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
@@ -12,6 +13,7 @@ import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { suiteRoutes } from "./suites.js";
 import type { RouteHandler, RouteModule } from "./types.js";
+import { workerRoutes } from "./workers.js";
 
 export type { RouteContext, RouteHandler, RouteModule } from "./types.js";
 export const routeModules: RouteModule[] = [
@@ -27,6 +29,8 @@ export const routeModules: RouteModule[] = [
   auditRoutes,
   artifactGatewayRoutes,
   runViewRoutes,
+  deliveryRoutes,
+  workerRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

@@ -1,0 +1,487 @@
+/**
+ * Test-only harness that wires a real `Application` to local notification receivers: a throw-away
+ * TLS CA, programmable HTTPS and SMTP servers, ephemeral secrets and a controllable clock. It is
+ * also the reusable "notify" half of journey J13.
+ */
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type {
+  IntegrationMetadata,
+  NotificationRedaction,
+  NotificationRules,
+  NotificationType,
+} from "@testmaster/contracts";
+import { uuidV7IdGenerator } from "@testmaster/domain";
+import { LeaseRepository, OutboxRepository, type PostgresConfig } from "@testmaster/persistence";
+import { Application } from "../application.js";
+import { scaffoldPlan } from "../authoring.js";
+import { requireEntity } from "../context.js";
+import { authenticateSession } from "../identity.js";
+import { integrationProviders } from "../integrations/registry.js";
+import type { EgressOptions } from "../notifications/https.js";
+import {
+  createEmailProvider,
+  createSlackProvider,
+  createWebhookProvider,
+  type SlackProviderOptions,
+} from "../notifications/providers.js";
+import { NotificationsService } from "../notifications/service.js";
+import type { ServerConfig } from "../server-config.js";
+import {
+  allowLoopbackPort,
+  createTestTls,
+  type HttpsReceiver,
+  type SmtpServer,
+  type SmtpServerOptions,
+  startHttpsReceiver,
+  startSmtpServer,
+  type TestTls,
+} from "./notifications.js";
+
+/** Shared by the providers registered below; tests mutate it to prove that a retry re-evaluates egress policy. */
+const egress: SlackProviderOptions = {
+  timeoutMs: 1500,
+  allowedHosts: ["127.0.0.1", "hooks.slack.com"],
+};
+let installed = false;
+/** Registers providers wired to the shared `egress` object before any `Application.open`, so the built-ins skip registration. */
+function installProviders(): void {
+  if (installed) return;
+  installed = true;
+  integrationProviders.register(createSlackProvider(egress));
+  integrationProviders.register(createWebhookProvider(egress));
+  integrationProviders.register(createEmailProvider(egress));
+}
+
+export interface RunFixtureOptions {
+  outcome?: "passed" | "failed" | "blocked" | "inconclusive" | "cancelled";
+  gate?: "passed" | "failed" | "pending" | "not_applicable";
+  reasonCode?: string;
+  environmentId?: string;
+  batchId?: string | null;
+  /** Free text that must never leave the platform (a title, a log line or a token). */
+  canary?: string;
+}
+export interface IntegrationOptions {
+  name?: string;
+  events?: NotificationType[];
+  projectIds?: string[];
+  rules?: NotificationRules;
+  redaction?: NotificationRedaction;
+}
+export interface Clock {
+  now: Date;
+  advance(ms: number): void;
+}
+
+export interface NotificationHarness {
+  readonly app: Application;
+  readonly workspaceId: string;
+  readonly projectId: string;
+  readonly environmentId: string;
+  readonly tls: TestTls;
+  readonly egress: EgressOptions;
+  readonly clock: Clock;
+  readonly service: NotificationsService;
+  receiver(path?: string): Promise<HttpsReceiver>;
+  smtp(
+    options: Omit<SmtpServerOptions, "user" | "password"> & { user?: string; password?: string },
+  ): Promise<SmtpServer>;
+  /** Stores an ephemeral secret bound to the given origins and returns its id. */
+  secret(name: string, value: string, allowedOrigins: readonly string[]): Promise<string>;
+  webhook(
+    receiver: HttpsReceiver,
+    options?: IntegrationOptions & { secret?: string },
+  ): Promise<IntegrationMetadata>;
+  slack(receiver: HttpsReceiver, options?: IntegrationOptions): Promise<IntegrationMetadata>;
+  email(
+    smtp: SmtpServer,
+    options?: IntegrationOptions & {
+      security?: "tls" | "starttls";
+      recipients?: string[];
+      allowedRecipientDomains?: string[];
+      from?: string;
+      subjectPrefix?: string;
+    },
+  ): Promise<IntegrationMetadata>;
+  /** A terminal Run plus its `run.completed` outbox event, exactly as the worker leaves them. */
+  completedRun(options?: RunFixtureOptions): { runId: string; eventId: string };
+  /** Queued Runs with their lease jobs on the local queue, as admission leaves them. */
+  queueRuns(count: number): void;
+  /** One claim as the given pool worker; `null` when the worker is not ready or nothing is queued. */
+  claimAs(workerId: string, owner: string): { jobId: string; runId: string } | null;
+  /** An orphaned-resource outbox event against a Run, as the worker records it when cleanup fails. */
+  orphanedResource(runId: string): { eventId: string };
+  /** A Batch whose member Runs have all finished with the given outcomes; returns the Batch and Run ids. */
+  completedBatch(
+    members: RunFixtureOptions[],
+    data?: { suiteId?: string },
+  ): { batchId: string; runIds: string[] };
+  /**
+   * A second dispatcher on its own database connection (PostgreSQL only), sharing the fake clock:
+   * the way a second server process would race the first for the same deliveries.
+   */
+  dispatcher(): Promise<NotificationsService>;
+  /** One service pass at the current fake time. */
+  tick(): Promise<{ created: number; attempted: number }>;
+  /** Passes until nothing is due, advancing the fake clock past each backoff. */
+  settle(maxPasses?: number): Promise<number>;
+  close(): Promise<void>;
+}
+
+export interface HarnessOptions {
+  publicOrigin?: string;
+  /** Runs the whole stack on a PostgreSQL server-profile database instead of the local SQLite one. */
+  postgres?: PostgresConfig;
+}
+
+const ownerPassword = "correct horse battery staple";
+interface PostgresTenant {
+  base: Application;
+  scoped: Application;
+  workspaceId: string;
+  projectId: string;
+  environmentId: string;
+  sessionToken: string;
+  serverConfig: ServerConfig;
+  root: string;
+}
+
+/** Bootstraps one workspace with an owner session on PostgreSQL and returns its workspace-bound Application. */
+async function openPostgresTenant(root: string, database: PostgresConfig): Promise<PostgresTenant> {
+  const serverConfig: ServerConfig = {
+    mode: "server",
+    database: { engine: "postgres", ...database },
+    storage: { kind: "filesystem", root: join(root, "evidence") },
+    server: {
+      listen: { host: "127.0.0.1", port: 0 },
+      publicOrigin: "https://tm.example.test",
+      trustedProxies: [],
+      origins: ["https://tm.example.test"],
+    },
+    security: {
+      masterKeyFile: join(root, "master.key"),
+      backupKeyFile: join(root, "backup.key"),
+      atRestEncryption: { database: "operator-volume", evidence: "operator-volume" },
+    },
+  };
+  const base = await Application.open({ cwd: root, home: root, env: {}, server: serverConfig });
+  const first = base.operator.bootstrap({ workspaceName: "Notify", ownerLogin: "notify-owner" });
+  await base.identityService.recover({
+    principal: "notify-owner",
+    recoveryToken: first.ownerRecovery.recoveryToken,
+    newPassword: ownerPassword,
+  });
+  const { sessionToken } = await base.identityService.login({
+    principal: "notify-owner",
+    password: ownerPassword,
+  });
+  const scoped = base.forIdentity(authenticateSession(base, sessionToken));
+  const project = scoped.projects.create({ name: "Notify project" });
+  const environment = scoped.environments.create({
+    projectId: project.id,
+    name: "local",
+    baseUrl: "http://127.0.0.1:3000",
+  });
+  return {
+    base,
+    scoped,
+    workspaceId: String(first.workspace.id),
+    projectId: project.id,
+    environmentId: environment.id,
+    sessionToken,
+    serverConfig,
+    root,
+  };
+}
+
+export async function createNotificationHarness(
+  options: HarnessOptions = {},
+): Promise<NotificationHarness> {
+  installProviders();
+  const root = await mkdtemp(join(tmpdir(), "tm-notify-"));
+  const tls = await createTestTls(join(root, "tls"));
+  egress.ca = tls.caPem;
+  egress.privateTargets = [];
+  delete egress.resolver;
+  egress.timeoutMs = 1500;
+  const tenant = options.postgres ? await openPostgresTenant(root, options.postgres) : null;
+  const extraApplications: Application[] = [];
+  const app = tenant?.scoped ?? (await Application.open({ cwd: root, home: root }));
+  const init = tenant ?? (await app.init());
+  const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+  const environmentRevision = app.environments.get(init.environmentId).activeRevisionId;
+  const clock: Clock = {
+    now: new Date(),
+    advance(ms) {
+      this.now = new Date(this.now.getTime() + ms);
+    },
+  };
+  const publicOrigin = options.publicOrigin ?? "https://tm.example.test";
+  const service = new NotificationsService(app.context, app.integrations, app.batches, {
+    publicOrigin,
+    now: () => clock.now,
+    random: () => 0.5,
+  });
+  const receivers: HttpsReceiver[] = [];
+  const smtps: SmtpServer[] = [];
+  let counter = 0;
+  const nextId = (): number => {
+    counter += 1;
+    return counter;
+  };
+  const outbox = new OutboxRepository(app.database);
+
+  const base = (opts: IntegrationOptions) => ({
+    name: opts.name ?? `notify-${nextId()}`,
+    projectIds: opts.projectIds ?? [init.projectId],
+    events: opts.events ?? ["run.completed", "run.failed"],
+  });
+  const withRules = (opts: IntegrationOptions) => ({
+    ...(opts.rules ? { rules: opts.rules } : {}),
+    ...(opts.redaction ? { redaction: opts.redaction } : {}),
+  });
+  const secret = async (name: string, value: string, allowedOrigins: readonly string[]) =>
+    (await app.secrets.set(name, value, { ephemeral: true, allowedOrigins: [...allowedOrigins] }))
+      .id;
+
+  const harness: NotificationHarness = {
+    app,
+    workspaceId: init.workspaceId,
+    projectId: init.projectId,
+    environmentId: init.environmentId,
+    tls,
+    egress,
+    clock,
+    service,
+    async receiver(path) {
+      const started = await startHttpsReceiver(tls, path);
+      receivers.push(started);
+      allowLoopbackPort(egress, started.port);
+      return started;
+    },
+    async smtp(smtpOptions) {
+      const started = await startSmtpServer(tls, {
+        user: "mailer",
+        password: "smtp-password-canary",
+        ...smtpOptions,
+      });
+      smtps.push(started);
+      allowLoopbackPort(egress, started.port);
+      return started;
+    },
+    secret,
+    async webhook(receiver, opts = {}) {
+      const signing = await secret(`hook-${nextId()}`, opts.secret ?? "whsec_current", [
+        receiver.origin,
+      ]);
+      return app.integrations.create({
+        provider: "webhook",
+        ...base(opts),
+        consent: { scopes: ["notify:webhook"] },
+        secretRefs: [signing],
+        settings: { url: receiver.url, signingSecretRef: signing, ...withRules(opts) },
+      });
+    },
+    async slack(receiver, opts = {}) {
+      const hook = await secret(`slack-${nextId()}`, receiver.url, [receiver.origin]);
+      return app.integrations.create({
+        provider: "slack",
+        ...base(opts),
+        consent: { scopes: ["notify:slack"] },
+        secretRefs: [hook],
+        settings: { secretRef: hook, ...withRules(opts) },
+      });
+    },
+    async email(smtp, opts = {}) {
+      const credentials = await secret(
+        `smtp-${nextId()}`,
+        JSON.stringify({
+          host: "127.0.0.1",
+          port: smtp.port,
+          user: "mailer",
+          password: "smtp-password-canary",
+        }),
+        [`https://127.0.0.1:${smtp.port}`],
+      );
+      return app.integrations.create({
+        provider: "email",
+        ...base(opts),
+        consent: { scopes: ["notify:email"] },
+        secretRefs: [credentials],
+        settings: {
+          smtpSecretRef: credentials,
+          security: opts.security ?? "tls",
+          from: opts.from ?? "testmaster@example.test",
+          recipients: opts.recipients ?? ["ops@example.test"],
+          allowedRecipientDomains: opts.allowedRecipientDomains ?? ["example.test"],
+          ...(opts.subjectPrefix ? { subjectPrefix: opts.subjectPrefix } : {}),
+          ...withRules(opts),
+        },
+      });
+    },
+    completedRun(run = {}) {
+      const outcome = run.outcome ?? "failed";
+      const runId = uuidV7IdGenerator.next("run");
+      app.context.entities.insert("Run", {
+        id: runId,
+        workspaceId: init.workspaceId,
+        testId: test.id,
+        revisionId: test.activeRevisionId,
+        environmentRevisionId: environmentRevision,
+        batchId: run.batchId ?? null,
+        matrixCell: { environmentId: run.environmentId ?? init.environmentId },
+        mode: "replay",
+        phase: "completed",
+        status: outcome,
+        outcome,
+        origin: "notification-test",
+        gatePolicy: {},
+        gate: run.gate ?? (outcome === "passed" ? "passed" : "failed"),
+        cleanupOutcome: "not_required",
+        analysisStatus: "not_requested",
+      });
+      const event = app.database.withTx(() =>
+        outbox.append(init.workspaceId, runId, "run.completed", {
+          outcome,
+          ...(run.reasonCode ? { reasonCode: run.reasonCode } : {}),
+          ...(run.canary ? { message: run.canary, title: run.canary, log: run.canary } : {}),
+        }),
+      );
+      return { runId, eventId: event.id };
+    },
+    queueRuns(count) {
+      const leases = new LeaseRepository(app.database);
+      app.database.withTx(() => {
+        for (let index = 0; index < count; index++) {
+          const runId = uuidV7IdGenerator.next("run");
+          app.context.entities.insert("Run", {
+            id: runId,
+            workspaceId: init.workspaceId,
+            testId: test.id,
+            revisionId: test.activeRevisionId,
+            environmentRevisionId: environmentRevision,
+            batchId: null,
+            matrixCell: { environmentId: init.environmentId },
+            mode: "replay",
+            phase: "queued",
+            status: "queued",
+            outcome: null,
+            origin: "notification-test",
+            gatePolicy: {},
+            gate: "pending",
+            cleanupOutcome: "not_required",
+            analysisStatus: "not_requested",
+          });
+          leases.enqueue(init.workspaceId, runId, "local");
+        }
+      });
+    },
+    claimAs(workerId, owner) {
+      const claim = new LeaseRepository(app.database).claim({
+        workspaceId: init.workspaceId,
+        owner,
+        queue: "local",
+        workerId,
+      });
+      return claim ? { jobId: claim.jobId, runId: claim.runId } : null;
+    },
+    orphanedResource(runId) {
+      const event = app.database.withTx(() =>
+        outbox.append(init.workspaceId, `res_${nextId()}`, "resource.orphaned", {
+          runId,
+          state: "orphaned",
+        }),
+      );
+      return { eventId: event.id };
+    },
+    completedBatch(members, data = {}) {
+      const batchId = uuidV7IdGenerator.next("bat");
+      app.context.entities.insert("BatchRun", {
+        id: batchId,
+        workspaceId: init.workspaceId,
+        createdAt: new Date().toISOString(),
+        version: 1,
+        selectionSnapshot: {
+          hash: "0".repeat(64),
+          rejections: [],
+          duplicates: 0,
+          requestedRunIds: [],
+        },
+        requestedCount: members.length,
+        memberRuns: [],
+        rejectedMembers: [],
+        commit: null,
+        aggregate: {
+          counts: { passed: 0, failed: 0, blocked: 0, cancelled: 0, inconclusive: 0, inFlight: 0 },
+          gate: "pending",
+        },
+      });
+      const runIds = members.map((member) => harness.completedRun({ ...member, batchId }).runId);
+      const stored = requireEntity(app.context, "BatchRun", batchId);
+      app.context.entities.update("BatchRun", init.workspaceId, batchId, Number(stored.version), {
+        ...stored,
+        memberRuns: runIds,
+        selectionSnapshot: { ...(stored.selectionSnapshot as object), requestedRunIds: runIds },
+      });
+      if (data.suiteId) {
+        const row = app.database.get(
+          "SELECT data_json FROM batches WHERE workspace_id=? AND id=?",
+          init.workspaceId,
+          batchId,
+        );
+        app.database.run(
+          "UPDATE batches SET data_json=? WHERE workspace_id=? AND id=?",
+          JSON.stringify({ ...JSON.parse(String(row?.data_json)), suiteId: data.suiteId }),
+          init.workspaceId,
+          batchId,
+        );
+      }
+      return { batchId, runIds };
+    },
+    async dispatcher() {
+      if (!tenant) throw new Error("A second dispatcher needs the PostgreSQL harness");
+      const other = await Application.open({
+        cwd: tenant.root,
+        home: tenant.root,
+        env: {},
+        server: tenant.serverConfig,
+      });
+      extraApplications.push(other);
+      const scoped = other.forIdentity(authenticateSession(other, tenant.sessionToken));
+      return new NotificationsService(scoped.context, scoped.integrations, scoped.batches, {
+        publicOrigin,
+        now: () => clock.now,
+        random: () => 0.5,
+      });
+    },
+    tick: () => service.tick(),
+    async settle(maxPasses = 40) {
+      let passes = 0;
+      while (passes < maxPasses) {
+        passes += 1;
+        const { created, attempted } = await service.tick();
+        if (created === 0 && attempted === 0) {
+          const next = app.database.get(
+            "SELECT MIN(next_attempt_at) AS at FROM notification_deliveries WHERE workspace_id=? AND state='pending'",
+            init.workspaceId,
+          );
+          const at = typeof next?.at === "string" ? Date.parse(next.at) : null;
+          if (at === null) break;
+          clock.advance(Math.max(1, at - clock.now.getTime()) + 1);
+        }
+      }
+      return passes;
+    },
+    async close() {
+      for (const started of receivers) await started.close();
+      for (const started of smtps) await started.close();
+      for (const other of extraApplications) other.close();
+      if (tenant) tenant.base.close();
+      else app.close();
+      await rm(root, { recursive: true, force: true });
+    },
+  };
+  return harness;
+}

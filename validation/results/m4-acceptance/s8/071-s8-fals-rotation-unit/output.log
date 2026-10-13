@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/delivery.test.ts (4 tests | 1 failed) 735ms
+   ❯ INT-027 outbound webhooks are signed over the original bytes (4)
+     × INT-027 a rotation signs with both secrets only inside the controlled window 59ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a rotation signs with both secrets only inside the controlled window
+AssertionError: expected [ 'v1=', 'v1=' ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/application/src/notifications/delivery.test.ts:145:69
+    143|     const outside = receiver.requests.at(-1);
+    144|     if (!outside || outside === inside) throw new Error("Missing secon…
+    145|     expect(outside.headers["testmaster-signature"]?.match(/v1=/gu)).to…
+       |                                                                     ^
+    146|     expect(
+    147|       createReferenceConsumer(["whsec_previous"], () => h.clock.now).h…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  13:19:55
+   Duration  1.45s (tests 53%, transform 30%, import 17%)
+

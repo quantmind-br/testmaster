@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/rules.test.ts (11 tests | 1 failed) 1014ms
+   ❯ INT-027 INT-026 the stored bytes are what is signed and re-sent (1)
+     × INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending 38ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-027 INT-026 the stored bytes are what is signed and re-sent > INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending
+AssertionError: expected [ { method: 'POST', …(3) }, …(1) ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/application/src/notifications/rules.test.ts:220:31
+    218|     h.clock.advance(10_000);
+    219|     await h.tick();
+    220|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    221|     expect(h.service.list()[0]).toMatchObject({
+    222|       state: "dead_letter",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  13:20:22
+   Duration  1.68s (tests 62%, transform 24%, import 14%)
+
