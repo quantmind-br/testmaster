@@ -8,12 +8,14 @@ import {
   assertPasswordAcceptable,
   hashPassword,
   loginPattern,
+  deriveCsrfToken,
   randomToken,
   sha256Hex,
   verifyAgainstDummy,
   verifyPassword,
 } from "./passwords.js";
 
+export { deriveCsrfToken };
 export const sessionPolicy = Object.freeze({
   absoluteMs: 12 * 3600_000,
   idleMs: 30 * 60_000,
@@ -228,14 +230,6 @@ export function sessionCsrfMatches(
   const actual = Buffer.from(sha256Hex(csrfToken), "hex");
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
-/** Replaces the CSRF token of a session; earlier tokens stop working immediately. */
-export function rotateSessionCsrf(app: Application, sessionId: string): string {
-  const csrfToken = randomToken();
-  app
-    .controllerScope()
-    .database.run("UPDATE sessions SET csrf_hash=? WHERE id=?", sha256Hex(csrfToken), sessionId);
-  return csrfToken;
-}
 /** Password login, sessions, recovery and password change (ADR-017). */
 export class IdentityService {
   constructor(
@@ -327,7 +321,7 @@ export class IdentityService {
     }
     const now = Date.now();
     const sessionToken = randomToken();
-    const csrfToken = randomToken();
+    const csrfToken = deriveCsrfToken(sessionToken);
     const sessionId = `ses_${randomUUID()}`;
     const expiresAt = new Date(now + sessionPolicy.absoluteMs).toISOString();
     this.system.withTx(() => {

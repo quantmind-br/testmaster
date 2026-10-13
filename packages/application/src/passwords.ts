@@ -1,4 +1,4 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { ContractError } from "@testmaster/contracts";
 
@@ -57,3 +57,9 @@ export async function verifyAgainstDummy(password: string): Promise<void> {
 export const sha256Hex = (value: string): string =>
   createHash("sha256").update(value).digest("hex");
 export const randomToken = (): string => randomBytes(32).toString("base64url");
+/**
+ * The CSRF token of a session is a keyed digest of its cookie secret: a page that reloads can
+ * recompute it from the cookie, every tab sees the same value, and it reveals nothing about the cookie.
+ */
+export const deriveCsrfToken = (sessionToken: string): string =>
+  createHmac("sha256", sessionToken).update("testmaster-csrf-v1").digest("base64url");

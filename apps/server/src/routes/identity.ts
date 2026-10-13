@@ -1,10 +1,15 @@
 import {
   type AuthenticatedIdentity,
-  rotateSessionCsrf,
+  deriveCsrfToken,
   sessionPolicy,
 } from "@testmaster/application";
 import { ContractError, rbacColumns, rbacMatrix, rbacRules, roles } from "@testmaster/contracts";
-import { clearedSessionCookie, sessionCookie } from "../transport.js";
+import {
+  clearedSessionCookie,
+  cookieValue,
+  sessionCookie,
+  sessionCookieName,
+} from "../transport.js";
 import type { RouteContext, RouteModule } from "./types.js";
 
 const object = (value: unknown): Record<string, unknown> => value as Record<string, unknown>;
@@ -68,12 +73,11 @@ export const identityRoutes: RouteModule = {
       noStore(context);
       const identity = session(context);
       const me = context.service.me();
-      // A refreshed page cannot read the CSRF token it was given at login, so each cookie
-      // session re-reads it here; the previous token stops working.
+      // A refreshed page cannot read the CSRF token it was given at login, so a cookie session
+      // re-reads it here; it is derived from the cookie and stays the same across tabs.
+      const cookie = cookieValue(context.request.headers.cookie, sessionCookieName);
       const csrfToken =
-        identity.credential.kind === "session"
-          ? rotateSessionCsrf(context.service, identity.credential.id)
-          : null;
+        identity.credential.kind === "session" && cookie ? deriveCsrfToken(cookie) : null;
       return { ...me, csrfToken };
     },
     "GET /rbac/matrix": () => ({
