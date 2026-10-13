@@ -525,6 +525,11 @@ describe("pages", () => {
     const calls = open.flatMap((opened) => opened.diagnostics.requests);
     expect(calls.length).toBeGreaterThan(30);
     expect(privateEndpointCalls(calls)).toEqual([]);
+    // Negative control: the checker really rejects an endpoint that is not in the catalog.
+    expect(privateEndpointCalls(["POST /v1/private/sources", "GET /api/state"])).toEqual([
+      "POST /v1/private/sources",
+      "GET /api/state",
+    ]);
     expect(calls.some((entry) => entry.startsWith("PUT /v1/uploads/"))).toBe(true);
     expect(open.every((opened) => opened.diagnostics.pageErrors.length === 0)).toBe(true);
   });
