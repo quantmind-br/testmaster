@@ -33,10 +33,20 @@ The integrations core (milestone M4) is the shared layer under every outbound an
   `context.test`). A test never creates a delivery of record, a Run or an outbox event; its outcome is kept
   as `lastTest` on the integration.
 
+## HTTP routes
+
+- `GET /v1/integrations` (cursor-paged), `POST /v1/integrations` (201, `ETag`), `PATCH /v1/integrations/{id}`
+  (`If-Match`; pause, resume and revoke are `state` changes) and `POST /v1/integrations/{id}/test` need the
+  administrator scope.
+- `POST /v1/integrations/{provider}/webhooks` is described below.
+
 ## Inbound webhooks
 
-`POST /v1/integrations/{provider}/webhooks` is authenticated by the provider's signature, not by a
-token. The receiver checks, in order:
+`POST /v1/integrations/{provider}/webhooks` is a `signature` route: it is authenticated by the provider's
+signature, not by a bearer token or session cookie (neither is read), it needs no `Idempotency-Key` (the
+delivery ID is the dedupe key), and it still spends the caller's rate-limit budget. The HTTP layer hands
+the exact request bytes to the receiver (`RouteContext.rawBody`), caps the transport body at 5 MiB and
+runs the receiver in the controller scope. The receiver checks, in order:
 
 1. `Content-Type: application/json` (`INVALID_ARGUMENT`, `reason: unsupported_content_type`);
 2. body at most 5 MiB (`PAYLOAD_TOO_LARGE`);
@@ -57,7 +67,7 @@ outcome or a `tampered` row.
 
 ## PostgreSQL
 
-Both tables carry `workspace_id` and enable and force the `tenant_isolation` row-level-security policy
-in their migration. `inbound_webhook_deliveries.workspace_id` is null only for an unattributed delivery,
+Both tables carry `workspace_id`; migration `0012_integrations` enables and forces the `tenant_isolation`
+row-level-security policy on them through `tm_enable_tenant_rls`. `inbound_webhook_deliveries.workspace_id` is null only for an unattributed delivery,
 which no tenant-scoped connection can see; the webhook receiver and the adapter's installation lookup
 (`IntegrationContext.findIntegrations`) therefore run in the `"*"` controller scope.
