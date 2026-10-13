@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+import { createListingTest, insertListedRuns } from "../../packages/application/src/ops.testkit.js";
 import { type ServerStack, startServerStack } from "./server-stack.js";
 
 const stacks: ServerStack[] = [];
@@ -147,4 +148,59 @@ it("OPS-027 exports redacted JSON log lines on stdout only under the log export 
   const silent = await launch({ config: { telemetry: { metrics: false, logExport: "none" } } });
   await silent.ownerClient().request("GET", "/v1/operations/status");
   expect(jsonLines(silent.logs()).filter((line) => line.event === "request.completed")).toEqual([]);
+});
+
+it("NFR-006 pages GET /v1/runs through a signed cursor over the lazily ordered listing, newest first and filtered", async () => {
+  const stack = await launch();
+  const scope = (await stack.scope()).forWorkspaceSystem(stack.workspaceId);
+  const first = createListingTest(scope, "HTTP listing first");
+  const second = createListingTest(scope, "HTTP listing second");
+  const passed = insertListedRuns(scope, first, 230);
+  const failed = insertListedRuns(scope, second, 20, { from: 300, outcome: "failed" });
+  const owner = stack.ownerClient();
+  type Page = { data: { items: { id: string }[]; hasMore: boolean; nextCursor: string | null } };
+
+  const collected: string[] = [];
+  let cursor: string | null = null;
+  let pages = 0;
+  do {
+    const query: string = `limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+    const response = await owner.request("GET", `/v1/runs?${query}`);
+    expect(response.status).toBe(200);
+    const body = response.json<Page>().data;
+    collected.push(...body.items.map((run) => run.id));
+    cursor = body.nextCursor;
+    pages++;
+  } while (cursor);
+  expect(pages).toBe(3);
+  expect(collected).toEqual([...passed, ...failed].reverse());
+
+  const filtered = await owner.request("GET", `/v1/runs?status=failed&testId=${second.testId}`);
+  expect(
+    filtered
+      .json<Page>()
+      .data.items.map((run) => run.id)
+      .sort(),
+  ).toEqual([...failed].sort());
+  const byProject = await owner.request("GET", `/v1/runs?projectId=${first.projectId}&limit=100`);
+  expect(byProject.json<Page>().data.items).toHaveLength(100);
+  const none = await owner.request("GET", "/v1/runs?projectId=prj_missing");
+  expect(none.json<Page>().data).toEqual({ items: [], hasMore: false, nextCursor: null });
+
+  const firstPage = await owner.request("GET", "/v1/runs?limit=5&status=passed");
+  const issued = firstPage.json<Page>().data.nextCursor as string;
+  const otherFilter = await owner.request(
+    "GET",
+    `/v1/runs?limit=5&status=failed&cursor=${encodeURIComponent(issued)}`,
+  );
+  expect(otherFilter.status).toBe(400);
+  const viewer = await stack.addMember("viewer");
+  const viewerToken = await stack.issueToken(viewer.principalId, ["R"]);
+  const viewerPage = await stack
+    .anonymous()
+    .request("GET", "/v1/runs?limit=5", bearer(viewerToken));
+  expect(viewerPage.status).toBe(200);
+  expect(viewerPage.json<Page>().data.items).toHaveLength(5);
+  const anonymous = await stack.anonymous().request("GET", "/v1/runs");
+  expect(anonymous.status).toBe(401);
 });

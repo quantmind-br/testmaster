@@ -21,6 +21,16 @@ export interface RouteContext {
   page<T extends { id: string; createdAt?: string }>(
     items: readonly T[],
   ): { items: T[]; hasMore: boolean; nextCursor: string | null };
+  /**
+   * Cursor page over a lazily produced newest-first stream (`createdAt DESC, id DESC`) that starts
+   * strictly after `after` and holds nothing newer than `cutoff`. Only `limit + 1` rows are consumed.
+   */
+  pageFrom<T extends { id: string; createdAt?: string }>(
+    source: (position: {
+      cutoff: string;
+      after: { createdAt: string; id: string } | null;
+    }) => Iterable<T>,
+  ): { items: T[]; hasMore: boolean; nextCursor: string | null };
   /** Signed cursor codec shared by pagination and event streams. */
   readonly cursors: SignedCursorCodec;
   /** Re-validates the request credential; throws when it was revoked or expired meanwhile. */
