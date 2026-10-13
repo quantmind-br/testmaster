@@ -1,0 +1,179 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/rules.test.ts (11 tests | 9 failed) 946ms
+   ❯ INT-025 default messages carry identifiers, a summary and a link and nothing else (3)
+     × INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field 521ms
+     × INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary 44ms
+     × INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite 61ms
+   ❯ REQ-042 failure, recovery and orphan events are delivered once (4)
+     × REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not 43ms
+     × REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it 38ms
+     × REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one 39ms
+     × REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event 34ms
+   ❯ INT-027 INT-026 the stored bytes are what is signed and re-sent (1)
+     × INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending 34ms
+   ❯ INT-001 INT-004 states: paused keeps deliveries, revoked dead-letters, STARTTLS and plaintext are explicit (3)
+     × INT-028 email over STARTTLS authenticates after the upgrade and delivers while a server without STARTTLS is refused 55ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:33:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:71:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:120:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:147:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:158:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:177:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.tick packages/application/src/testing/notification-harness.ts:459:25
+ ❯ packages/application/src/notifications/rules.test.ts:189:61
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-027 INT-026 the stored bytes are what is signed and re-sent > INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.tick packages/application/src/testing/notification-harness.ts:459:25
+ ❯ packages/application/src/notifications/rules.test.ts:219:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-001 INT-004 states: paused keeps deliveries, revoked dead-letters, STARTTLS and plaintext are explicit > INT-028 email over STARTTLS authenticates after the upgrade and delivers while a server without STARTTLS is refused
+Error: UNIQUE constraint failed: notification_deliveries.workspace_id, notification_deliveries.event_ref, notification_deliveries.integration_id
+ ❯ PersistenceDatabase.run packages/persistence/src/database.ts:379:47
+    377|   run(sql: string, ...params: unknown[]): { changes: number } {
+    378|     if (this.core.engine === "postgres") return { changes: this.pgQuer…
+    379|     const outcome = this.core.db.prepare(sql).run(...(params as SQLInp…
+       |                                               ^
+    380|     return { changes: Number(outcome.changes) };
+    381|   }
+ ❯ NotificationsService.insertDelivery packages/application/src/notifications/service.ts:621:40
+ ❯ NotificationsService.fanOut packages/application/src/notifications/service.ts:344:29
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:294:26
+ ❯ Object.settle packages/application/src/testing/notification-harness.ts:464:54
+ ❯ packages/application/src/notifications/rules.test.ts:250:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 2 passed (11)
+   Start at  13:20:20
+   Duration  1.59s (tests 62%, transform 24%, import 14%)
+

@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/worker-pool.test.ts (6 tests | 1 failed) 868ms
+   ❯ OPS-033 a tenant with thousands of queued jobs cannot starve another tenant (1)
+     × OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes 319ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/worker-pool.test.ts > OPS-033 a tenant with thousands of queued jobs cannot starve another tenant > OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes
+AssertionError: expected undefined to be 1 // Object.is equality
+
+- Expected:
+1
+
++ Received:
+undefined
+
+ ❯ packages/application/src/worker-pool.test.ts:298:21
+    296|     const flooder = fairShareCap({ database: view, workspaceId, now });
+    297|     const newcomer = fairShareCap({ database: view, workspaceId: other…
+    298|     expect(flooder).toBe(1);
+       |                     ^
+    299|     expect(newcomer).toBe(1);
+    300|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  13:20:30
+   Duration  1.59s (tests 57%, transform 26%, import 17%)
+

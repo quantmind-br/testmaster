@@ -1,0 +1,31 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/worker-pool.test.ts (6 tests | 1 failed) 1032ms
+   ❯ REQ-038 M4-08 enrollment, drain and revoke of pool workers (3)
+     × M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job 546ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/worker-pool.test.ts > REQ-038 M4-08 enrollment, drain and revoke of pool workers > M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job
+AssertionError: expected 'leased' to be 'reconciliation_required' // Object.is equality
+
+Expected: "reconciliation_required"
+Received: "leased"
+
+ ❯ packages/application/src/worker-pool.test.ts:131:27
+    129|       held?.runId,
+    130|     );
+    131|     expect(fenced?.state).toBe("reconciliation_required");
+       |                           ^
+    132|
+    133|     // Draining stops new claims too; the ready worker keeps receiving…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  13:21:46
+   Duration  1.74s (tests 61%, transform 24%, import 14%)
+

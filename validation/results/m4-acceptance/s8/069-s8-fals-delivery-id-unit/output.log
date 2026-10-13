@@ -1,0 +1,136 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/delivery.test.ts (4 tests | 3 failed) 666ms
+   ❯ INT-027 outbound webhooks are signed over the original bytes (4)
+     × INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body 588ms
+     × INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery 39ms
+     × INT-027 a rotation signs with both secrets only inside the controlled window 38ms
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 3 failed) 1478ms
+   ❯ INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record (3)
+     × INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched 617ms
+     × OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run 69ms
+   ❯ INT-026 an ambiguous delivery is reported as uncertain and keeps one event and delivery ID (1)
+     × INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent 345ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/delivery.test.ts:49:31
+     47|     expect(request.headers["testmaster-event-id"]).toBeTruthy();
+     48|     expect(request.headers["testmaster-delivery-id"]).toMatch(/^ntd_/u…
+     49|     expect(consumer.accepted).toHaveLength(1);
+       |                               ^
+     50|     const payload = JSON.parse(request.body.toString("utf8"));
+     51|     validate("NotificationPayload", payload);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery
+AssertionError: expected { status: 401, …(2) } to match object { status: 200, outcome: 'accepted' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "outcome": "accepted",
+-   "status": 200,
++   "outcome": "rejected",
++   "status": 401,
+  }
+
+ ❯ packages/application/src/notifications/delivery.test.ts:91:35
+     89|
+     90|     const fresh = createReferenceConsumer(["whsec_current"], () => h.c…
+     91|     expect(fresh.handle(request)).toMatchObject({ status: 200, outcome…
+       |                                   ^
+     92|   });
+     93|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a rotation signs with both secrets only inside the controlled window
+AssertionError: expected 401 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 401
+
+ ❯ packages/application/src/notifications/delivery.test.ts:122:7
+    120|     expect(
+    121|       createReferenceConsumer(["whsec_previous"], () => h.clock.now).h…
+    122|     ).toBe(200);
+       |       ^
+    123|     expect(
+    124|       createReferenceConsumer(["whsec_current"], () => h.clock.now).ha…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record > INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched
+AssertionError: expected 10 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 10
+
+ ❯ packages/application/src/notifications/resilience.test.ts:50:93
+     48|     });
+     49|     expect(receiver.requests).toHaveLength(10);
+     50|     expect(new Set(receiver.requests.map((r) => r.headers["testmaster-…
+       |                                                                                             ^
+     51|     expect(h.service.deadLetters().map((entry) => entry.id)).toEqual([…
+     52|     // The verdict, the gate and the number of Runs are exactly what t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record > OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run
+AssertionError: expected 'ntd_ca7ab6df-3382-44c0-9e6a-1c346d0af…' to be 'ntd_ca7ab6df-3382-44c0-9e6a-1c346d0af…' // Object.is equality
+
+Expected: "ntd_ca7ab6df-3382-44c0-9e6a-1c346d0af105"
+Received: "ntd_ca7ab6df-3382-44c0-9e6a-1c346d0af105-0.811119690745128"
+
+ ❯ packages/application/src/notifications/resilience.test.ts:92:73
+     90|     expect(after.deliveryId).toBe(dead.deliveryId);
+     91|     expect(receiver.requests.at(-1)?.body.toString("utf8")).toBe(first…
+     92|     expect(receiver.requests.at(-1)?.headers["testmaster-delivery-id"]…
+       |                                                                         ^
+     93|     expect(runCount(h)).toBe(runs);
+     94|     expect(runRow(h, runId)).toMatchObject({ phase: "completed" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-026 an ambiguous delivery is reported as uncertain and keeps one event and delivery ID > INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent
+AssertionError: expected 'ntd_2bd3fd09-d1b4-4f28-87e5-29bbeda6a…' to be 'ntd_2bd3fd09-d1b4-4f28-87e5-29bbeda6a…' // Object.is equality
+
+Expected: "ntd_2bd3fd09-d1b4-4f28-87e5-29bbeda6a38c-0.44037468787766165"
+Received: "ntd_2bd3fd09-d1b4-4f28-87e5-29bbeda6a38c-0.5953734703866222"
+
+ ❯ packages/application/src/notifications/resilience.test.ts:158:55
+    156|     expect(receiver.requests).toHaveLength(2);
+    157|     const [first, second] = receiver.requests;
+    158|     expect(second?.headers["testmaster-delivery-id"]).toBe(
+       |                                                       ^
+    159|       first?.headers["testmaster-delivery-id"],
+    160|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed | 8 passed (14)
+   Start at  13:19:49
+   Duration  2.19s (tests 62%, transform 24%, import 14%)
+

@@ -1,0 +1,44 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |postgres| packages/application/src/worker-pool.pg.test.ts (4 tests | 1 failed) 3298ms
+   × OPS-033 M4-08 INT-026 PostgreSQL: the worker, notification and delivery tables enforce tenant row-level security 229ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/worker-pool.pg.test.ts > OPS-033 M4-08 INT-026 PostgreSQL: the worker, notification and delivery tables enforce tenant row-level security
+AssertionError: expected [ …(3) ] to deeply equal [ …(3) ]
+
+- Expected
++ Received
+
+@@ -1,10 +1,10 @@
+  [
+    [
+      "notification_attempts",
+-     true,
+-     true,
++     false,
++     false,
+    ],
+    [
+      "notification_deliveries",
+      true,
+      true,
+
+ ❯ packages/application/src/worker-pool.pg.test.ts:350:89
+    348|     "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class…
+    349|   );
+    350|   expect(rows.map((row) => [row.relname, row.relrowsecurity, row.relfo…
+       |                                                                                         ^
+    351|     ["notification_attempts", true, true],
+    352|     ["notification_deliveries", true, true],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  13:26:29
+   Duration  5.37s (tests 82%, transform 11%, import 6%)
+

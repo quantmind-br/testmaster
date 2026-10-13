@@ -1,0 +1,41 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/rules.test.ts (11 tests | 1 failed) 1106ms
+   ❯ REQ-042 failure, recovery and orphan events are delivered once (4)
+     × REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it 37ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it
+AssertionError: expected { batchId: null, …(12) } to match object { type: 'resource.orphaned', …(2) }
+(13 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "runId": "run_01a13610-8b41-70d6-addb-8ba1d240aced",
+    "summary": {
+-     "reasonCode": "cleanup_inconclusive",
++     "reasonCode": null,
+    },
+    "type": "resource.orphaned",
+  }
+
+ ❯ packages/application/src/notifications/rules.test.ts:162:33
+    160|     await h.tick();
+    161|     expect(bodies(receiver)).toHaveLength(1);
+    162|     expect(bodies(receiver)[0]).toMatchObject({
+       |                                 ^
+    163|       type: "resource.orphaned",
+    164|       runId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  13:20:14
+   Duration  1.82s (tests 63%, transform 24%, import 13%)
+

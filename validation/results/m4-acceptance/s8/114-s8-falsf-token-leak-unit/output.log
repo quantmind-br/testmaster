@@ -1,0 +1,46 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+ ❯ |unit| apps/server/src/workers-deliveries.test.ts (5 tests | 1 failed) 2062ms
+   × REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only 686ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| apps/server/src/workers-deliveries.test.ts > REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only
+AssertionError: expected '{"schemaVersion":"1.0.0","requestId":…' not to contain 'tm_wrk_KJ1CRYq98fbZrlCmtklm1pRe3xAxAF…'
+
+Expected: "tm_wrk_KJ1CRYq98fbZrlCmtklm1pRe3xAxAFtOeWoz4EkbqqU"
+Received: "{"schemaVersion":"1.0.0","requestId":"63f071e8-8a5d-41d3-88e1-c3bfeabb4f3f","data":{"items":[{"capabilities":[],"createdAt":"2026-10-13T16:26:27.189Z","id":"wrk_01a13616-33f5-7314-96e3-38fa1d53234f","identityRef":"pending:tok_3fdd0eaa-07d7-4a76-a95c-2a887c3903ea","imageDigests":[],"labels":{"enrollmentTokenId":"tok_3fdd0eaa-07d7-4a76-a95c-2a887c3903ea","leaked":"tm_wrk_KJ1CRYq98fbZrlCmtklm1pRe3xAxAFtOeWoz4EkbqqU","name":"pool-1"},"lastHeartbeatAt":null,"state":"enrolling","version":1,"workspaceId":"ws_01a13616-3199-70cb-ac66-3230e2b26ec8"}],"hasMore":false,"nextCursor":null},"warnings":[]}"
+
+ ❯ apps/server/src/workers-deliveries.test.ts:72:27
+     70|   const listed = await f.call("GET", "/v1/workers");
+     71|   expect(listed.statusCode).toBe(200);
+     72|   expect(listed.body).not.toContain(enrollmentToken);
+       |                           ^
+     73|   const detail = await f.call("GET", `/v1/workers/${worker.id}`);
+     74|   expect(detail.body).not.toContain(enrollmentToken);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  13:26:25
+   Duration  3.00s (tests 70%, transform 18%, import 11%)
+

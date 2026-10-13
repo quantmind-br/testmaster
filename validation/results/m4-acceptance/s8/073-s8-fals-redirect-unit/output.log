@@ -1,0 +1,39 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 1 failed) 1538ms
+   ❯ INT-028 a private or forged destination never receives a notification and a retry honours the new policy (4)
+     × INT-028 an HTTP redirect is never followed 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 an HTTP redirect is never followed
+AssertionError: expected { …(19) } to match object { state: 'dead_letter', …(1) }
+(17 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "lastReasonCode": "redirect_refused",
+-   "state": "dead_letter",
++   "lastReasonCode": null,
++   "state": "delivered",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:229:33
+    227|     await h.settle();
+    228|     expect(target.requests).toHaveLength(0);
+    229|     expect(h.service.list()[0]).toMatchObject({
+       |                                 ^
+    230|       state: "dead_letter",
+    231|       lastReasonCode: "redirect_refused",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:20:00
+   Duration  2.31s (tests 68%, transform 20%, import 12%)
+

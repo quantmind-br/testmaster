@@ -1,0 +1,44 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/rules.test.ts (11 tests | 1 failed) 1001ms
+   ❯ INT-025 default messages carry identifiers, a summary and a link and nothing else (3)
+     × INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary 62ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary
+AssertionError: expected { counts: { blocked: +0, …(4) }, …(3) } to match object { counts: null, reasonCode: null }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "counts": null,
++   "counts": {
++     "blocked": 0,
++     "cancelled": 0,
++     "failed": 1,
++     "inconclusive": 0,
++     "passed": 1,
++   },
+    "reasonCode": null,
+  }
+
+ ❯ packages/application/src/notifications/rules.test.ts:75:35
+     73|     const minimalBatch = bodies(minimal).find((payload) => payload.typ…
+     74|     expect(batch?.summary).toMatchObject({ counts: { passed: 1, failed…
+     75|     expect(minimalBatch?.summary).toMatchObject({ counts: null, reason…
+       |                                   ^
+     76|     // Control: the verdict itself is never redacted.
+     77|     expect(minimalBatch?.summary).toMatchObject({ gate: "failed" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  13:20:06
+   Duration  1.64s (tests 63%, transform 23%, import 13%)
+

@@ -1,0 +1,31 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 1 failed) 1505ms
+   ❯ J10 OPS-025 a secret in a failing Run never reaches a notification body and a restored copy sends nothing (2)
+     × J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies 56ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > J10 OPS-025 a secret in a failing Run never reaches a notification body and a restored copy sends nothing > J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies
+AssertionError: expected '{"batchId":null,"deliveryId":"ntd_4d6…' not to contain 'ghp_CANARYtoken0123456789abcdefghijkl…'
+
+Expected: "ghp_CANARYtoken0123456789abcdefghijklmnopqr"
+Received: "{"batchId":null,"deliveryId":"ntd_4d634f8c-4a87-4230-9833-e919d5063356","eventId":"evt_01a13610-7741-714e-ba85-17f5607dfe95","link":"https://tm.example.test/runs/run_01a13610-7741-714e-ba85-109195c0b5e6?t=ghp_CANARYtoken0123456789abcdefghijklmnopqr","occurredAt":"2026-10-13T16:20:11.201Z","projectId":"prj_01a13610-7739-7585-845e-156ef87a246c","runId":"run_01a13610-7741-714e-ba85-109195c0b5e6","scheduleId":null,"schemaVersion":"1.0.0","summary":{"counts":null,"gate":"failed","outcome":"failed","reasonCode":null},"test":false,"type":"run.failed","workspaceId":"ws_01a13610-7738-742f-9696-e973cdeb2628"}"
+
+ ❯ packages/application/src/notifications/resilience.test.ts:292:24
+    290|     for (const body of bodies) {
+    291|       expect(body).toBeTruthy();
+    292|       expect(body).not.toContain(canary);
+       |                        ^
+    293|       expect(body).not.toContain("CANARY");
+    294|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:20:09
+   Duration  2.19s (tests 71%, transform 18%, import 11%)
+

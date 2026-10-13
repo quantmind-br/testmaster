@@ -1,0 +1,35 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |postgres| packages/application/src/worker-pool.pg.test.ts (4 tests | 1 failed) 3597ms
+   × OPS-033 PostgreSQL: admission answers each tenant with its own queue only and a full tenant never blocks another 976ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/worker-pool.pg.test.ts > OPS-033 PostgreSQL: admission answers each tenant with its own queue only and a full tenant never blocks another
+ContractError: Workspace scope switch inside a transaction
+ ❯ PersistenceDatabase.pgQuery packages/persistence/src/database.ts:285:15
+    283|     if (core.inTransaction) {
+    284|       if (core.transactionScope !== this.scope)
+    285|         throw new ContractError("INTERNAL", "Workspace scope switch in…
+       |               ^
+    286|       // SQLite aborts only the failing statement; a savepoint gives P…
+    287|       request = read
+ ❯ PersistenceDatabase.get packages/persistence/src/database.ts:370:54
+ ❯ RunsService.queueAdmission packages/application/src/runs.ts:549:53
+ ❯ RunsService.insert packages/application/src/runs.ts:624:50
+ ❯ packages/application/src/runs.ts:858:23
+ ❯ packages/persistence/src/repositories.ts:280:23
+ ❯ PersistenceDatabase.withTx packages/persistence/src/database.ts:335:23
+ ❯ IdempotencyRepository.execute packages/persistence/src/repositories.ts:255:26
+ ❯ RunsService.admit packages/application/src/runs.ts:839:57
+ ❯ packages/application/src/worker-pool.pg.test.ts:331:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  13:27:01
+   Duration  5.88s (tests 80%, transform 12%, import 7%)
+

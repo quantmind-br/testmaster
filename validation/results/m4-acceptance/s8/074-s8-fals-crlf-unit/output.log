@@ -1,0 +1,38 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 1 failed) 1367ms
+   ❯ INT-028 a private or forged destination never receives a notification and a retry honours the new policy (4)
+     × INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing 45ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing
+AssertionError: expected { …(19) } to match object { state: 'dead_letter', …(1) }
+(17 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "lastReasonCode": "header_injection",
++   "lastReasonCode": "redaction_failed",
+    "state": "dead_letter",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:242:33
+    240|     await h.settle();
+    241|     expect(smtp.messages).toHaveLength(0);
+    242|     expect(h.service.list()[0]).toMatchObject({
+       |                                 ^
+    243|       state: "dead_letter",
+    244|       lastReasonCode: "header_injection",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:20:03
+   Duration  2.04s (tests 69%, transform 19%, import 12%)
+

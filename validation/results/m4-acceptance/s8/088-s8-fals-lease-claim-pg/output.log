@@ -1,0 +1,60 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |postgres| packages/application/src/notifications/notifications.pg.test.ts (3 tests | 1 failed) 1695ms
+   × INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID 960ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/notifications/notifications.pg.test.ts > INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/application/src/notifications/notifications.pg.test.ts:40:27
+     38|   await inFlight.promise;
+     39|   const raced = await second.tick();
+     40|   expect(raced.attempted).toBe(0);
+       |                           ^
+     41|   expect(receiver.requests).toHaveLength(1);
+     42|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+ContractError: PostgreSQL database is closed
+ ❯ PostgresBridge.execute packages/persistence/src/postgres/bridge.ts:229:13
+ ❯ PersistenceDatabase.bridge packages/persistence/src/database.ts:264:26
+ ❯ PersistenceDatabase.begin packages/persistence/src/database.ts:314:10
+ ❯ PersistenceDatabase.withTx packages/persistence/src/database.ts:333:12
+ ❯ inTx packages/application/src/notifications/service.ts:91:63
+ ❯ NotificationsService.settle packages/application/src/notifications/service.ts:797:5
+ ❯ NotificationsService.attempt packages/application/src/notifications/service.ts:719:10
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ NotificationsService.dispatch packages/application/src/notifications/service.ts:653:32
+ ❯ NotificationsService.tick packages/application/src/notifications/service.ts:295:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'INTERNAL', details: {}, issues: [] }
+This error originated in "packages/application/src/notifications/notifications.pg.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+     Errors  1 error
+   Start at  13:20:45
+   Duration  3.73s (tests 72%, transform 18%, import 10%)
+

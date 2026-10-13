@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/worker-pool.test.ts (7 tests | 1 failed) 920ms
+   ❯ REQ-038 M4-08 enrollment, drain and revoke of pool workers (3)
+     × REQ-038 an enrollment token enrolls one worker, resumes it on re-presentation and is refused when wrong or revoked 87ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/worker-pool.test.ts > REQ-038 M4-08 enrollment, drain and revoke of pool workers > REQ-038 an enrollment token enrolls one worker, resumes it on re-presentation and is refused when wrong or revoked
+AssertionError: expected undefined to be 'UNAUTHENTICATED' // Object.is equality
+
+- Expected:
+"UNAUTHENTICATED"
+
++ Received:
+undefined
+
+ ❯ packages/application/src/worker-pool.test.ts:111:70
+    109|     expect(codeOf(() => controller.enroll(late.enrollmentToken))).toBe…
+    110|     app.workerPool.revoke(created.worker.id);
+    111|     expect(codeOf(() => controller.enroll(created.enrollmentToken))).t…
+       |                                                                      ^
+    112|   });
+    113|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  13:24:14
+   Duration  1.60s (tests 60%, transform 25%, import 15%)
+

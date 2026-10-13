@@ -1,0 +1,37 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/worker-pool.test.ts (6 tests | 1 failed) 895ms
+   ❯ REQ-038 an enrolled worker heartbeats its lease with its own credential (2)
+     × REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential 21ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/worker-pool.test.ts > REQ-038 an enrolled worker heartbeats its lease with its own credential > REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential
+AssertionError: expected { capabilities: [], …(9) } to match object { state: 'draining' }
+(12 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "state": "draining",
++   "state": "ready",
+  }
+
+ ❯ packages/application/src/worker-pool.test.ts:243:27
+    241|     // A worker reporting ready never undoes an administrator's drain.
+    242|     app.workerPool.drain(created.worker.id);
+    243|     expect(beat("ready")).toMatchObject({ state: "draining" });
+       |                           ^
+    244|
+    245|     // Another worker's credential, an unenrolled token and a revoked …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  13:20:27
+   Duration  1.56s (tests 59%, transform 25%, import 15%)
+

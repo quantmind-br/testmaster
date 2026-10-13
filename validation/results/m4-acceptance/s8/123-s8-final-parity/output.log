@@ -1,0 +1,586 @@
+$ vitest run --project postgres-parity
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s8/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+ ❯ |postgres-parity| packages/application/src/worker-pool.test.ts (7 tests | 1 failed) 3757ms
+   ❯ OPS-033 a tenant with thousands of queued jobs cannot starve another tenant (1)
+     × OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes 2132ms
+ ❯ |postgres-parity| packages/application/src/notifications/resilience.test.ts (11 tests | 10 failed) 3244ms
+   ❯ INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record (4)
+     × INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched 956ms
+     × OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run 213ms
+     × INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once 190ms
+   ❯ INT-026 an ambiguous delivery is reported as uncertain and keeps one event and delivery ID (1)
+     × INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent 188ms
+   ❯ INT-028 a private or forged destination never receives a notification and a retry honours the new policy (4)
+     × INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing 188ms
+     × INT-028 a retry re-evaluates egress policy: a destination blocked between attempts is not contacted again 176ms
+     × INT-028 an HTTP redirect is never followed 188ms
+     × INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing 528ms
+   ❯ J10 OPS-025 a secret in a failing Run never reaches a notification body and a restored copy sends nothing (2)
+     × J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies 220ms
+     × OPS-025 an isolated restore sends nothing until the flag is cleared 185ms
+ ❯ |postgres-parity| packages/application/src/notifications/delivery.test.ts (4 tests | 3 failed) 1270ms
+   ❯ INT-027 outbound webhooks are signed over the original bytes (4)
+     × INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body 902ms
+     × INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery 174ms
+     × INT-027 a rotation signs with both secrets only inside the controlled window 191ms
+ ❯ |postgres-parity| packages/application/src/notifications/rules.test.ts (11 tests | 10 failed) 3041ms
+   ❯ INT-025 default messages carry identifiers, a summary and a link and nothing else (3)
+     × INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field 960ms
+     × INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary 269ms
+     × INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite 309ms
+   ❯ REQ-042 failure, recovery and orphan events are delivered once (4)
+     × REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not 194ms
+     × REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it 197ms
+     × REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one 227ms
+     × REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event 186ms
+   ❯ INT-027 INT-026 the stored bytes are what is signed and re-sent (1)
+     × INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending 203ms
+   ❯ INT-001 INT-004 states: paused keeps deliveries, revoked dead-letters, STARTTLS and plaintext are explicit (3)
+     × INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters 156ms
+     × INT-028 email over STARTTLS authenticates after the upgrade and delivers while a server without STARTTLS is refused 181ms
+ ❯ |postgres-parity| apps/server/src/workers-deliveries.test.ts (5 tests | 1 failed) 3979ms
+   × INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter 244ms
+ ❯ |postgres-parity| packages/application/src/testing/j13-notify.test.ts (1 test | 1 failed) 804ms
+   × INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run 803ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 26 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres-parity| apps/server/src/workers-deliveries.test.ts > INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter
+AssertionError: expected { …(19) } to match object { state: 'dead_letter', …(2) }
+(16 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "attempts": 10,
++   "attempts": 1,
+    "integrationId": "int_7f64093a-99f5-4fe6-890c-d8d8eb9c5f4a",
+    "state": "dead_letter",
+  }
+
+ ❯ apps/server/src/workers-deliveries.test.ts:220:20
+    218|   expect(listed.statusCode).toBe(200);
+    219|   const [delivery] = listed.json().data.items;
+    220|   expect(delivery).toMatchObject({
+       |                    ^
+    221|     state: "dead_letter",
+    222|     attempts: 10,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/worker-pool.test.ts > OPS-033 a tenant with thousands of queued jobs cannot starve another tenant > OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes
+AssertionError: expected undefined to be 1 // Object.is equality
+
+- Expected:
+1
+
++ Received:
+undefined
+
+ ❯ packages/application/src/worker-pool.test.ts:338:21
+    336|     const flooder = fairShareCap({ database: view, workspaceId, now });
+    337|     const newcomer = fairShareCap({ database: view, workspaceId: other…
+    338|     expect(flooder).toBe(1);
+       |                     ^
+    339|     expect(newcomer).toBe(1);
+    340|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/delivery.test.ts:43:31
+     41|     await h.settle();
+     42|
+     43|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+     44|     const [request] = receiver.requests;
+     45|     if (!request) throw new Error("Missing request");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery
+Error: Missing request
+ ❯ packages/application/src/notifications/delivery.test.ts:78:25
+     76|     await h.settle();
+     77|     const [request] = receiver.requests;
+     78|     if (!request) throw new Error("Missing request");
+       |                         ^
+     79|
+     80|     const wrongSecret = createReferenceConsumer(["whsec_other"], () =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a rotation signs with both secrets only inside the controlled window
+Error: Missing request
+ ❯ packages/application/src/notifications/delivery.test.ts:117:24
+    115|     await h.settle();
+    116|     const [inside] = receiver.requests;
+    117|     if (!inside) throw new Error("Missing request");
+       |                        ^
+    118|     expect(inside.headers["testmaster-signature"]?.match(/v1=/gu)).toH…
+    119|     // A consumer still holding only the previous secret keeps verifyi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record > INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched
+AssertionError: expected { …(19) } to match object { state: 'dead_letter', …(2) }
+(16 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "attempts": 10,
+-   "lastReasonCode": "attempts_exhausted",
++   "attempts": 1,
++   "lastReasonCode": "secret_unavailable",
+    "state": "dead_letter",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:44:22
+     42|     const [delivery] = h.service.list({ integrationId: integration.id …
+     43|     if (!delivery) throw new Error("Missing delivery");
+     44|     expect(delivery).toMatchObject({
+       |                      ^
+     45|       state: "dead_letter",
+     46|       attempts: 10,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record > OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run
+AssertionError: expected 'dead_letter' to be 'delivered' // Object.is equality
+
+Expected: "delivered"
+Received: "dead_letter"
+
+ ❯ packages/application/src/notifications/resilience.test.ts:89:25
+     87|
+     88|     const after = h.service.get(dead.id);
+     89|     expect(after.state).toBe("delivered");
+       |                         ^
+     90|     expect(after.deliveryId).toBe(dead.deliveryId);
+     91|     expect(receiver.requests.at(-1)?.body.toString("utf8")).toBe(first…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes a verdict and keeps a redeliverable record > INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once
+Error: Missing retry time
+ ❯ packages/application/src/notifications/resilience.test.ts:132:41
+    130|     await h.tick();
+    131|     const [delivery] = h.service.list();
+    132|     if (!delivery?.nextAttemptAt) throw new Error("Missing retry time"…
+       |                                         ^
+    133|     expect(delivery.lastReasonCode).toBe("rate_limited");
+    134|     expect(Date.parse(delivery.nextAttemptAt) - h.clock.now.getTime())…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-026 an ambiguous delivery is reported as uncertain and keeps one event and delivery ID > INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent
+AssertionError: expected { …(19) } to match object { state: 'pending', …(2) }
+(16 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "lastReasonCode": "timeout",
+-   "outcomeUncertain": true,
+-   "state": "pending",
++   "lastReasonCode": "secret_unavailable",
++   "outcomeUncertain": false,
++   "state": "dead_letter",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:168:21
+    166|     const [pending] = h.service.list();
+    167|     if (!pending) throw new Error("Missing delivery");
+    168|     expect(pending).toMatchObject({
+       |                     ^
+    169|       state: "pending",
+    170|       outcomeUncertain: true,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing
+AssertionError: expected { …(19) } to match object { state: 'dead_letter', …(1) }
+(17 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "lastReasonCode": "egress_denied",
++   "lastReasonCode": "secret_unavailable",
+    "state": "dead_letter",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:217:33
+    215|     await h.settle();
+    216|     expect(receiver.requests).toHaveLength(0);
+    217|     expect(h.service.list()[0]).toMatchObject({
+       |                                 ^
+    218|       state: "dead_letter",
+    219|       lastReasonCode: "egress_denied",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 a retry re-evaluates egress policy: a destination blocked between attempts is not contacted again
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/resilience.test.ts:230:31
+    228|     h.completedRun();
+    229|     await h.tick();
+    230|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    231|     const allowed = h.egress.privateTargets;
+    232|     h.egress.privateTargets = [];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 an HTTP redirect is never followed
+AssertionError: expected { …(19) } to match object { state: 'dead_letter', …(1) }
+(17 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "lastReasonCode": "redirect_refused",
++   "lastReasonCode": "secret_unavailable",
+    "state": "dead_letter",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:252:33
+    250|     await h.settle();
+    251|     expect(target.requests).toHaveLength(0);
+    252|     expect(h.service.list()[0]).toMatchObject({
+       |                                 ^
+    253|       state: "dead_letter",
+    254|       lastReasonCode: "redirect_refused",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > INT-028 a private or forged destination never receives a notification and a retry honours the new policy > INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/resilience.test.ts:287:25
+    285|     clean.completedRun({ outcome: "failed" });
+    286|     await clean.settle();
+    287|     expect(ok.messages).toHaveLength(1);
+       |                         ^
+    288|     expect(ok.messages[0]?.recipients).toEqual(["ops@example.test"]);
+    289|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > J10 OPS-025 a secret in a failing Run never reaches a notification body and a restored copy sends nothing > J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/resilience.test.ts:305:27
+    303|     await h.settle();
+    304|
+    305|     expect(hook.requests).toHaveLength(1);
+       |                           ^
+    306|     expect(slack.requests).toHaveLength(1);
+    307|     expect(smtp.messages).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/resilience.test.ts > J10 OPS-025 a secret in a failing Run never reaches a notification body and a restored copy sends nothing > OPS-025 an isolated restore sends nothing until the flag is cleared
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/resilience.test.ts:335:31
+    333|     h.app.database.run("UPDATE operational_state SET value='0' WHERE k…
+    334|     await h.settle();
+    335|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    336|   });
+    337| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field
+ContractError: Invalid NotificationPayload
+ ❯ validate packages/contracts/src/validation.ts:115:11
+    113|       message: error.message ?? "Invalid value",
+    114|     }));
+    115|     throw new ContractError("INVALID_ARGUMENT", `Invalid ${name}`, { i…
+       |           ^
+    116|   }
+    117|   const validateNestedPlans = (candidate: unknown): void => {
+ ❯ packages/application/src/notifications/rules.test.ts:35:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary
+AssertionError: expected undefined to match object { counts: { passed: 1, failed: 1 } }
+
+- Expected:
+{
+  "counts": {
+    "failed": 1,
+    "passed": 1,
+  },
+}
+
++ Received:
+undefined
+
+ ❯ packages/application/src/notifications/rules.test.ts:74:28
+     72|     const batch = bodies(full).find((payload) => payload.type === "bat…
+     73|     const minimalBatch = bodies(minimal).find((payload) => payload.typ…
+     74|     expect(batch?.summary).toMatchObject({ counts: { passed: 1, failed…
+       |                            ^
+     75|     expect(minimalBatch?.summary).toMatchObject({ counts: null, reason…
+     76|     // Control: the verdict itself is never redacted.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > INT-025 default messages carry identifiers, a summary and a link and nothing else > INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite
+AssertionError: expected [] to deeply equal [ 'run.completed', …(3) ]
+
+- Expected
++ Received
+
+- [
+-   "run.completed",
+-   "run.completed",
+-   "run.completed",
+-   "run.failed",
+- ]
++ []
+
+ ❯ packages/application/src/notifications/rules.test.ts:124:38
+    122|     const types = (receiver: { requests: Array<{ body: Buffer }> }) =>
+    123|       bodies(receiver).map((payload) => payload.type);
+    124|     expect(types(everything).sort()).toEqual([
+       |                                      ^
+    125|       "run.completed",
+    126|       "run.completed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/rules.test.ts:148:30
+    146|     const { runId } = h.completedRun({ outcome: "passed" });
+    147|     await h.settle();
+    148|     expect(bodies(receiver)).toHaveLength(1);
+       |                              ^
+    149|     expect(bodies(receiver)[0]).toMatchObject({ type: "run.recovered",…
+    150|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/rules.test.ts:161:30
+    159|     await h.tick();
+    160|     await h.tick();
+    161|     expect(bodies(receiver)).toHaveLength(1);
+       |                              ^
+    162|     expect(bodies(receiver)[0]).toMatchObject({
+    163|       type: "resource.orphaned",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one
+AssertionError: expected [] to deeply equal [ 'delivery.dead_letter' ]
+
+- Expected
++ Received
+
+- [
+-   "delivery.dead_letter",
+- ]
++ []
+
+ ❯ packages/application/src/notifications/rules.test.ts:178:60
+    176|     h.completedRun({ outcome: "failed" });
+    177|     await h.settle();
+    178|     expect(bodies(watcher).map((payload) => payload.type)).toEqual(["d…
+       |                                                            ^
+    179|     expect(broken.requests).toHaveLength(1);
+    180|     expect(h.service.list({ integrationId: failing.id })[0]?.state).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > REQ-042 failure, recovery and orphan events are delivered once > REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/rules.test.ts:190:31
+    188|     expect((await h.tick()).created).toBe(1);
+    189|     for (let pass = 0; pass < 3; pass += 1) expect((await h.tick()).cr…
+    190|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    191|     expect(h.service.list()).toHaveLength(1);
+    192|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > INT-027 INT-026 the stored bytes are what is signed and re-sent > INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/rules.test.ts:220:31
+    218|     h.clock.advance(10_000);
+    219|     await h.tick();
+    220|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    221|     expect(h.service.list()[0]).toMatchObject({
+    222|       state: "dead_letter",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > INT-001 INT-004 states: paused keeps deliveries, revoked dead-letters, STARTTLS and plaintext are explicit > INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/rules.test.ts:235:31
+    233|     h.completedRun({ outcome: "failed" });
+    234|     await h.tick();
+    235|     expect(receiver.requests).toHaveLength(1);
+       |                               ^
+    236|     const paused = h.app.integrations.pause(integration.id, integratio…
+    237|     h.completedRun({ outcome: "failed" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/notifications/rules.test.ts > INT-001 INT-004 states: paused keeps deliveries, revoked dead-letters, STARTTLS and plaintext are explicit > INT-028 email over STARTTLS authenticates after the upgrade and delivers while a server without STARTTLS is refused
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ packages/application/src/notifications/rules.test.ts:251:30
+    249|     h.completedRun({ outcome: "failed" });
+    250|     await h.settle();
+    251|     expect(secured.messages).toHaveLength(1);
+       |                              ^
+    252|     expect(secured.messages[0]?.authUser).toBe("mailer");
+    253|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/26]⎯
+
+ FAIL  |postgres-parity| packages/application/src/testing/j13-notify.test.ts > INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run
+AssertionError: expected { …(7) } to match object { state: 'delivered', …(5) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "attempts": 3,
+-   "distinctDeliveryIds": 1,
+-   "distinctEventIds": 1,
+-   "requests": 3,
++   "attempts": 1,
++   "distinctDeliveryIds": 0,
++   "distinctEventIds": 0,
++   "requests": 0,
+    "sawUncertainAttempt": false,
+-   "state": "delivered",
++   "state": "dead_letter",
+  }
+
+ ❯ packages/application/src/testing/j13-notify.test.ts:16:24
+     14|
+     15|   // Slack answered 503 twice, then recovered: three requests, one del…
+     16|   expect(report.slack).toMatchObject({
+       |                        ^
+     17|     state: "delivered",
+     18|     attempts: 3,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/26]⎯
+
+
+ Test Files  6 failed | 63 passed (69)
+      Tests  26 failed | 574 passed | 20 skipped (620)
+   Start at  13:30:39
+   Duration  17.27s (tests 80%, import 11%, setup 5%, transform 4%)
+
+[ELIFECYCLE] Command failed with exit code 1.

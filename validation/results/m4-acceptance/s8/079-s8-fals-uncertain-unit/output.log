@@ -1,0 +1,39 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/notifications/resilience.test.ts (10 tests | 1 failed) 1414ms
+   ❯ INT-026 an ambiguous delivery is reported as uncertain and keeps one event and delivery ID (1)
+     × INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent 340ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/resilience.test.ts > INT-026 an ambiguous delivery is reported as uncertain and keeps one event and delivery ID > INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent
+AssertionError: expected { …(19) } to match object { state: 'pending', …(2) }
+(16 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "lastReasonCode": "timeout",
+-   "outcomeUncertain": true,
++   "outcomeUncertain": false,
+    "state": "pending",
+  }
+
+ ❯ packages/application/src/notifications/resilience.test.ts:145:21
+    143|     const [pending] = h.service.list();
+    144|     if (!pending) throw new Error("Missing delivery");
+    145|     expect(pending).toMatchObject({
+       |                     ^
+    146|       state: "pending",
+    147|       outcomeUncertain: true,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:20:17
+   Duration  2.06s (tests 71%, transform 18%, import 11%)
+

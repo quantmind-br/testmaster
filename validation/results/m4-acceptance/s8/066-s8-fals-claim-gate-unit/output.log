@@ -1,0 +1,43 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s8
+
+ ❯ |unit| packages/application/src/worker-pool.test.ts (6 tests | 1 failed) 896ms
+   ❯ REQ-038 M4-08 enrollment, drain and revoke of pool workers (3)
+     × M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job 444ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/worker-pool.test.ts > REQ-038 M4-08 enrollment, drain and revoke of pool workers > M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job
+AssertionError: expected { …(8) } to be null
+
+- Expected:
+null
+
++ Received:
+{
+  "attemptId": "att_01a1360f-fbac-7798-aec1-b3628cdb0d23",
+  "expiresAt": "2026-10-13T16:20:09.564Z",
+  "fence": 1,
+  "jobId": "job_01a1360f-fba8-744f-999d-a223ffa93364",
+  "number": 1,
+  "owner": "doomed",
+  "runId": "run_01a1360f-fba8-744f-999d-9c412c3fa105",
+  "workspaceId": "ws_01a1360f-fa05-73be-9fd6-c09af1f3ec04",
+}
+
+ ❯ packages/application/src/worker-pool.test.ts:125:7
+    123|     expect(
+    124|       leases.claim({ workspaceId, owner: "doomed", queue: "local", wor…
+    125|     ).toBeNull();
+       |       ^
+    126|     const fenced = app.database.get(
+    127|       "SELECT state FROM job_leases WHERE workspace_id=? AND resource_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  13:19:38
+   Duration  1.59s (tests 58%, transform 26%, import 15%)
+
