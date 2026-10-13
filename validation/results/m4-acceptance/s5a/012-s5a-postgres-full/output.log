@@ -1,0 +1,50 @@
+$ vitest run --project postgres
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5a
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed) 45313ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 reconnects after the server drops an idle connection and never commits a transaction that lost its connection 133ms
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 reconnects after the server drops an idle connection and never commits a transaction that lost its connection
+ContractError: PostgreSQL is unavailable: terminating connection due to administrator command
+ ❯ PostgresBridge.failure packages/persistence/src/postgres/bridge.ts:262:14
+    260|       );
+    261|     if (unavailable)
+    262|       return new ContractError("UNAVAILABLE", `PostgreSQL is unavailab…
+       |              ^
+    263|         reasonCode: "database_unavailable",
+    264|         retryable: true,
+ ❯ PostgresBridge.execute packages/persistence/src/postgres/bridge.ts:242:31
+ ❯ PersistenceDatabase.bridge packages/persistence/src/database.ts:264:26
+ ❯ PersistenceDatabase.pgQuery packages/persistence/src/database.ts:308:27
+ ❯ PersistenceDatabase.get packages/persistence/src/database.ts:370:54
+ ❯ packages/persistence/src/database.pg.test.ts:754:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 10 passed (11)
+      Tests  1 failed | 107 passed (108)
+   Start at  12:51:06
+   Duration  210.75s (tests 98%, import 2%)
+
+[ELIFECYCLE] Command failed with exit code 1.

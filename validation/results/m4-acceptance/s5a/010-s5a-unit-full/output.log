@@ -1,0 +1,48 @@
+$ vitest run --project unit
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5a
+
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/client.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5a/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+ ❯ |unit| packages/application/src/approvals.test.ts (12 tests | 1 failed) 1605ms
+   ❯ bound production approvals (12)
+     × defaults an execution approval to a 30-minute window 30ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/approvals.test.ts > bound production approvals > defaults an execution approval to a 30-minute window
+AssertionError: expected 1800001 to be less than or equal to 1800000
+ ❯ packages/application/src/approvals.test.ts:255:20
+    253|     const approval = approvals.create(input);
+    254|     const window = Date.parse(approval.expiresAt) - before;
+    255|     expect(window).toBeLessThanOrEqual(30 * 60_000);
+       |                    ^
+    256|     expect(window).toBeGreaterThan(29 * 60_000);
+    257|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 162 passed (163)
+      Tests  1 failed | 1360 passed (1361)
+   Start at  12:49:42
+   Duration  35.50s (tests 75%, import 15%, transform 10%)
+
+[ELIFECYCLE] Test failed. See above for more details.

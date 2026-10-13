@@ -1,0 +1,46 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5a
+
+ ❯ |postgres| validation/journeys/portal-runs-compare.portal.test.ts (24 tests | 2 failed) 100042ms
+   ❯ quarantine (6)
+     × UX-038 quarantines a test with the keyboard alone 30427ms
+     × UX-038 the quarantine page reflows at 320 px and 200 % zoom 31913ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/portal-runs-compare.portal.test.ts > quarantine > UX-038 quarantines a test with the keyboard alone
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('dialog', { name: 'Quarantine this test?' }) to be visible
+
+ ❯ validation/journeys/portal-runs-compare.portal.test.ts:712:18
+    710|     await keyboard.press("Enter");
+    711|     const dialog = page.getByRole("dialog", { name: "Quarantine this t…
+    712|     await dialog.waitFor();
+       |                  ^
+    713|     await keyboard.tabTo((element) => element.name === "Quarantine tes…
+    714|     await keyboard.press("Enter");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| validation/journeys/portal-runs-compare.portal.test.ts > quarantine > UX-038 the quarantine page reflows at 320 px and 200 % zoom
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('row', { name: /Bulk comparison/ }) to be visible
+
+ ❯ validation/journeys/portal-runs-compare.portal.test.ts:724:62
+    722|     await atViewport(page, { width: 320, zoom: 2, textScale: 1 });
+    723|     await quarantineVia(page);
+    724|     await page.getByRole("row", { name: /Bulk comparison/ }).waitFor();
+       |                                                              ^
+    725|     await expectNoPageOverflow(page, "quarantine at 320 px");
+    726|     await expectAccessible(page, "quarantine 320px 200%");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  2 failed | 65 passed (67)
+   Start at  13:02:58
+   Duration  213.14s (tests 99%, import 1%)
+
