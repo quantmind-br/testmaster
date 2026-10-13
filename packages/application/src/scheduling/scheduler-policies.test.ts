@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { type Application, authenticateBearer, scaffoldPlan } from "../index.js";
 import { Scheduler } from "./scheduler.js";
+import { ScheduleStore } from "./store.js";
 import { createScheduleWorld, type ScheduleWorld, stubHost } from "./test-world.js";
 
 const worlds: ScheduleWorld[] = [];
@@ -289,6 +290,35 @@ it("OPS-019 a stale leader that loses the lease between planning and admission s
   expect(dispatched(w, schedule.id)).toHaveLength(1);
   expect(w.batches()).toHaveLength(1);
   expect(firings(w, schedule.id)).toHaveLength(1);
+});
+
+it("OPS-016 a crash after the batch was admitted but before the firing was recorded re-drives the firing onto the same batch", async () => {
+  const w = await world();
+  setClock("2026-05-04T10:00:00Z");
+  const schedule = w.schedule("crashy", { trigger: every10, overlap: "allow" });
+  const scheduler = w.scheduler({ holder: "crashy" });
+  const record = ScheduleStore.prototype.updateFiring;
+  const crash = vi.spyOn(ScheduleStore.prototype, "updateFiring").mockImplementation(function (
+    this: ScheduleStore,
+    firing,
+  ) {
+    if (firing.state === "dispatched") throw new Error("process died before recording the firing");
+    return record.call(this, firing);
+  });
+  try {
+    await expect(tickAt(scheduler, "2026-05-04T10:10:10Z")).rejects.toThrow(/process died/);
+    expect(w.batches()).toHaveLength(1);
+    expect(dispatched(w, schedule.id)).toHaveLength(0);
+  } finally {
+    crash.mockRestore();
+  }
+  const [admitted] = w.batches();
+  scheduler.release();
+  await tickAt(w.scheduler({ holder: "recovery" }), "2026-05-04T10:10:20Z");
+  // The retry reuses the admission idempotency key: one batch, and the firing points at it.
+  expect(w.batches()).toHaveLength(1);
+  expect(dispatched(w, schedule.id)).toHaveLength(1);
+  expect(dispatched(w, schedule.id)[0]?.batchId).toBe(admitted?.id);
 });
 
 it("OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule", async () => {

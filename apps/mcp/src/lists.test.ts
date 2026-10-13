@@ -112,3 +112,43 @@ it("REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, m
   expect(unknownExclusion.body).toMatchObject({ error: { code: "INVALID_ARGUMENT" } });
   expect(f.app.database.all("SELECT id FROM batches")).toEqual([]);
 });
+
+it("REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped project is confirmed and then declares it", async () => {
+  const f = await fixture();
+  const second = f.app.projects.create({ name: "Second project" });
+  const staging = f.app.environments.create({
+    projectId: second.id,
+    name: "staging",
+    baseUrl: "http://127.0.0.1:4102",
+  });
+  f.app.tests.create({ projectId: second.id, plan: scaffoldPlan("backend"), name: "b-one" });
+  const suite = f.app.suites.create({
+    name: "two-projects",
+    selection: {
+      kind: "dynamic",
+      projects: [
+        { projectId: f.init.projectId, environmentId: f.init.environmentId },
+        { projectId: second.id, environmentId: staging.id },
+      ],
+    },
+  });
+  f.app.environments.archive(
+    staging.id,
+    Number(f.app.environments.get(staging.id, second.id).version),
+  );
+  const client = await f.connect(["R", "W", "X"]);
+  const denied = await f.call(client, { suiteId: suite.id, mode: "replay" });
+  expect(denied.isError).toBe(true);
+  expect(denied.body).toMatchObject({
+    error: { code: "PRECONDITION_FAILED", details: { nextActions: ["confirm_subset"] } },
+  });
+  expect(f.app.database.all("SELECT id FROM batches")).toEqual([]);
+  const confirmed = await f.call(client, {
+    suiteId: suite.id,
+    mode: "replay",
+    confirmedExclusions: [`project:${second.id}`],
+  });
+  expect(confirmed.isError).toBe(false);
+  expect(JSON.stringify(confirmed.body)).toContain(`project:${second.id}`);
+  expect(f.app.database.all("SELECT id FROM runs")).toHaveLength(2);
+});
