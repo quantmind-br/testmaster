@@ -81,3 +81,39 @@ payload. An installation ID can be bound to one workspace only; another workspac
 - Agent pull requests are off by default (`allowAgentPullRequests`) and need `contents: write` and an explicit
   human approve grant.
 - The hosted proof against a real GitHub App installation is recorded separately from the fake-GitHub suite.
+
+## Hosted proof
+
+The fake-GitHub suites prove the state machine; `validation/hosted/github-app-hosted.mjs` proves it against
+real GitHub.com with a real App. It needs `gh` logged in with `repo` and `delete_repo` scopes, `cloudflared`,
+Docker (a throwaway `postgres:17-alpine` container and the sandbox runner image) and a built checkout
+(`pnpm build`). Stages share a 0700 work directory (`TM_HOSTED_WORK`, default `/tmp/m4/hosted-w2c`):
+
+1. `up`: starts PostgreSQL, a server-profile process behind a cloudflared quick tunnel (the tunnel URL is
+   `server.publicOrigin`), a preview app behind a second tunnel, a project, a `public` environment, one
+   backend health test and the disposable public repository `OWNER/testmaster-m4-app-<yyyymmdd>`.
+2. `setup`: runs `testmaster integrations github setup --mode server` and prints a loopback URL. This is the
+   only human step: open it, click **Create GitHub App**, confirm, then **Install** on the repository.
+3. `await-installation`: waits for the real `installation` webhook, enables the repository and records the
+   App and installation.
+4. `prove`: opens a pull request and drives GitHub deployments and statuses with `gh api`: a healthy preview
+   (both checks green on that SHA, one comment), redelivery of the same webhook deliveries through
+   `POST /app/hook/deliveries/{id}/attempts` (no new Run or comment), a push that waits for its own preview,
+   a further push that supersedes it (its checks become `cancelled`), a failing preview (both `failure`) and a
+   late deployment for the superseded SHA (creates nothing).
+5. `uninstall`: `DELETE /app/installations/{id}` with the App JWT; TestMaster must revoke the installation and
+   an event replayed afterwards must create nothing.
+6. `down`: stops the processes and containers and shreds the key material. Closing the pull request and
+   deleting the App (**Settings → Developer settings → GitHub Apps → Advanced → Delete**) stay manual.
+
+Support stages: `diagnose` lists GitHub's recent webhook deliveries with their status codes, `restart` restarts
+the server process on the same database, `redeliver-failed [--status N --dir NAME]` redelivers every failed
+delivery through the App JWT and records the answers, and `after-replay` replays an old delivery once the
+installation is gone (GitHub sends no new events after an uninstall, so this is the only possible check).
+The App is usually installed on every repository of the account: only the proof repository is enabled in
+TestMaster, and retained records of other repositories are reduced to routing metadata.
+
+Raw API records are written, scrubbed of secrets, to `validation/results/m4-acceptance/hosted/` and checked by
+`tools/src/github-app/hosted-evidence.ts`. A pull request from a fork needs a second GitHub account, so it is
+not exercised on real GitHub; the fork policy is proven by the fake-GitHub suite
+(`validation/journeys/j12-github.pg.test.ts`).
