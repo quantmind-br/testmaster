@@ -1110,12 +1110,17 @@ export class GithubService {
       version: repository.version,
     };
   }
+  /** Synchronous HTTP routes already run inside the idempotency transaction; other callers open their own. */
+  private inTx<T>(change: () => T): T {
+    const { database } = this.ctx;
+    return database.inTransaction ? change() : database.withTx(change);
+  }
   /** Per-repository toggles and bindings (INT-018/019/021): nothing runs until enabled and bound. */
   updateRepository(integrationId: string, repositoryId: string, patch: GithubRepositoryPatch): GithubRepository {
     this.ctx.authorize("A");
     validate("GithubRepositoryPatch", patch);
     this.requireIntegration(integrationId);
-    return this.ctx.database.withTx(() => {
+    return this.inTx(() => {
       const record = this.store
         .installations(this.ctx.workspaceId, integrationId)
         .map((installation) => this.store.repository(this.ctx.workspaceId, installation.installationId, repositoryId))

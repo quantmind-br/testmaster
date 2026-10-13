@@ -25,7 +25,7 @@ export interface GithubWorld {
   fake: FakeGithub;
   clock: { t: number };
   /** The preview origin every deployment points at; `healthy` flips `/health` to a 500. */
-  target: { origin: string; healthy: boolean; hits: string[] };
+  target: { origin: string; healthy: boolean; hits: string[]; redirect: string | null };
   projectId: string;
   environmentId: string;
   testId: string;
@@ -81,10 +81,16 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     join(home, ".config", "testmaster", "policy.json"),
     JSON.stringify({ security: { allowUnsafeProcessExecution: true } }),
   );
-  const clock = { t: Date.parse("2026-10-20T12:00:00.000Z") };
-  const target = { origin: "", healthy: true, hits: [] as string[] };
+  // Starts at the real time: server cursors cut off at the wall clock, so a fake future would hide every row.
+  const clock = { t: Date.now() };
+  const target = { origin: "", healthy: true, hits: [] as string[], redirect: null as string | null };
   const server: Server = createServer((request, response) => {
     target.hits.push(`${request.method} ${request.url}`);
+    if (target.redirect) {
+      response.writeHead(302, { location: target.redirect });
+      response.end();
+      return;
+    }
     response.writeHead(target.healthy ? 200 : 500, { "content-type": "application/json" });
     response.end(JSON.stringify({ status: target.healthy ? "ok" : "down" }));
   });

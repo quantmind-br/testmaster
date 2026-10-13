@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { createServer as createHttpServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import { scaffoldPlan } from "../../authoring.js";
 import { resolveRunProvenance } from "../../provenance.js";
@@ -183,6 +185,35 @@ describe("INT-017 preview provider contract and destination allowlist", () => {
     expect(accepted.state).toBe("running");
     await w.drive();
     expect(verdict(w, SHA_C)).toEqual(SUCCESS);
+  });
+  it("INT-017 refuses a redirect from the preview to another origin and never reaches it", async () => {
+    const outsider: string[] = [];
+    const server = createHttpServer((request, response) => {
+      outsider.push(String(request.url));
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end('{"status":"ok"}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const w = await world();
+      await w.install();
+      w.target.redirect = `http://127.0.0.1:${(server.address() as AddressInfo).port}/health`;
+      await w.openPr(7, SHA_A);
+      await w.deploy(1, SHA_A);
+      await w.drive();
+      expect(w.target.hits.length).toBeGreaterThan(0);
+      expect(outsider).toEqual([]);
+      expect(verdict(w, SHA_A)["TestMaster / required-gate"]).toBe("failure");
+      expect(verdict(w, SHA_A)["TestMaster / result"]).not.toBe("success");
+      // Positive control: the same preview without the redirect is green.
+      w.target.redirect = null;
+      await w.openPr(8, SHA_B);
+      await w.deploy(2, SHA_B);
+      await w.drive();
+      expect(verdict(w, SHA_B)).toEqual(SUCCESS);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 });
 
