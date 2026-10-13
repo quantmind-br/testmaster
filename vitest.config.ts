@@ -55,15 +55,10 @@ const rootlessDockerFiles = [
   "validation/journeys/postgres-tls.docker.test.ts",
 ];
 /**
- * Journeys that need the rootless daemon itself (compose stack, rootless uid mapping, rolling
- * upgrade with real workers). The default `docker` project, which uses the host's default daemon,
- * never runs them.
+ * Journeys that need the rootless daemon itself (rootless uid mapping and cgroup enforcement).
+ * The default `docker` project, which uses the host's default daemon, never runs them.
  */
-const rootlessOnlyFiles = [
-  "validation/journeys/rootless-daemon.docker.test.ts",
-  "validation/journeys/rolling-upgrade.docker.test.ts",
-  "validation/journeys/j17-server.docker.test.ts",
-];
+const rootlessOnlyFiles = ["validation/journeys/rootless-daemon.docker.test.ts"];
 
 const common = {
   resolve: { conditions: ["source"] },
