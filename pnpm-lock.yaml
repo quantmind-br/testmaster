@@ -199,6 +199,9 @@ importers:
       '@testmaster/model-gateway':
         specifier: workspace:*
         version: link:../../packages/model-gateway
+      '@testmaster/persistence':
+        specifier: workspace:*
+        version: link:../../packages/persistence
       '@testmaster/planner':
         specifier: workspace:*
         version: link:../../packages/planner
@@ -254,6 +257,16 @@ importers:
       fastify:
         specifier: 5.12.5
         version: 5.12.5
+
+  fixtures/reference-clinic: {}
+
+  fixtures/reference-dockyard: {}
+
+  fixtures/reference-helpdesk: {}
+
+  fixtures/reference-hostel: {}
+
+  fixtures/reference-library: {}
 
   fixtures/reference-shop:
     devDependencies:
@@ -358,11 +371,11 @@ importers:
       '@testmaster/domain':
         specifier: workspace:*
         version: link:../domain
-    devDependencies:
-      '@types/pg':
+      pg:
         specifier: 8.23.1
         version: 8.23.1
-      pg:
+    devDependencies:
+      '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
 
