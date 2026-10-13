@@ -1,0 +1,283 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-persisted-batch-comparison",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:29:34.262Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-persisted-batch-comparison",
+        "--base-url",
+        "http://127.0.0.1:37431",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3dba8c82-a733-47d0-af8d-3b87d1746325",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e2-0293-72b7-afe6-9ae748886756",
+    "run_01a135e2-02a2-77c9-9f8e-8d58f465f9a3",
+    "run_01a135e2-09b8-7765-a04f-989b6f8163fe",
+    "run_01a135e2-09c3-74f2-a48a-cdea806da988",
+    "run_01a135e2-10ff-76b7-b44d-8728c2198806",
+    "run_01a135e2-1112-7112-acae-00a6a811a671",
+    "run_01a135e2-18b3-74e2-9657-3aee767e1f31",
+    "run_01a135e2-18c0-7612-8dfd-7f6fc4accd5b"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "persistedLogicalBatchMatching",
+      "batches": [
+        "bat_01a135e2-0285-7590-9c67-5a0e6731a8f1",
+        "bat_01a135e2-09aa-74e4-92bb-d908a980f924",
+        "bat_01a135e2-10ef-7296-ad3e-1369691e4f8f",
+        "bat_01a135e2-18a6-70e4-a6a2-93e6ac6749e1"
+      ],
+      "diff": {
+        "comparability": "partially_comparable",
+        "reasons": [
+          "member-added-or-removed"
+        ],
+        "differences": [
+          {
+            "field": "member-00fd7a4d5499ca19a999aa4af0a53f94e3211e39d659fb2564deafed381de8e0",
+            "left": "run_01a135e2-02a2-77c9-9f8e-8d58f465f9a3",
+            "right": null
+          },
+          {
+            "field": "member-24a2811354e02ea08a3bbbecc1992bde19b280f4d44a80c971a8090f6bf4191d",
+            "left": null,
+            "right": "run_01a135e2-10ff-76b7-b44d-8728c2198806"
+          },
+          {
+            "field": "d49a687cf88de0cc062bad3a5155da1ae9c35424333115ab7561bff04bd36b79-steps",
+            "left": [
+              {
+                "createdAt": "2026-10-13T15:29:27.332Z",
+                "durationMs": 12,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a135e2-02e1-729f-9e0c-3a1eeba1699e"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135e2-01dc-72ac-ad53-e7a14f59d7e3"
+              },
+              {
+                "createdAt": "2026-10-13T15:29:27.333Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135e2-01dc-72ac-ad53-e7a14f59d7e3"
+              },
+              {
+                "createdAt": "2026-10-13T15:29:27.334Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135e2-01dc-72ac-ad53-e7a14f59d7e3"
+              }
+            ],
+            "right": [
+              {
+                "createdAt": "2026-10-13T15:29:31.991Z",
+                "durationMs": 48,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a135e2-1490-7175-93ad-a52d8ff11496"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135e2-01dc-72ac-ad53-e7a14f59d7e3"
+              },
+              {
+                "createdAt": "2026-10-13T15:29:31.993Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135e2-01dc-72ac-ad53-e7a14f59d7e3"
+              },
+              {
+                "createdAt": "2026-10-13T15:29:31.995Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135e2-01dc-72ac-ad53-e7a14f59d7e3"
+              }
+            ]
+          },
+          {
+            "field": "d49a687cf88de0cc062bad3a5155da1ae9c35424333115ab7561bff04bd36b79-artifacts",
+            "left": [
+              {
+                "kind": "http",
+                "hash": "b309c1fbf18501edfa98e44182dd06fd87cd45f997d80d33159e0fd369e3f892",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "194e689bd92bd53d95d1ccdd3953d3575d653509eafa6cf3c52953c56f64b0fa",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "d355e2b3a8740ec26332f73222c236b9a2637f8894b669b3a16ec0b5a963e6d4",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ],
+            "right": [
+              {
+                "kind": "http",
+                "hash": "0f3179d76d80c03be1577a9ba1fd9e116b16b2221af050f9b62346661cd8e05b",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "194e689bd92bd53d95d1ccdd3953d3575d653509eafa6cf3c52953c56f64b0fa",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "84249b760b3f786efc8b23d8017acdfaedfc6973b5c1774524870fb5956afc62",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ]
+          },
+          {
+            "field": "d49a687cf88de0cc062bad3a5155da1ae9c35424333115ab7561bff04bd36b79-durations",
+            "left": [
+              {
+                "number": 1,
+                "durationMs": 727
+              }
+            ],
+            "right": [
+              {
+                "number": 1,
+                "durationMs": 837
+              }
+            ]
+          }
+        ],
+        "comparisonIdentity": "e41a95694d210b5b11ac929ff32de2c1ffef507e0fdd125c40a8b08faecbbddd",
+        "nextCursor": null
+      },
+      "duplicate": {
+        "comparability": "incomparable",
+        "reasons": [
+          "member-added-or-removed",
+          "ambiguous-logical-member-key"
+        ],
+        "differences": [
+          {
+            "field": "member-00fd7a4d5499ca19a999aa4af0a53f94e3211e39d659fb2564deafed381de8e0",
+            "left": null,
+            "right": "run_01a135e2-09b8-7765-a04f-989b6f8163fe"
+          },
+          {
+            "field": "ambiguous-d49a687cf88de0cc062bad3a5155da1ae9c35424333115ab7561bff04bd36b79",
+            "left": [
+              "run_01a135e2-18b3-74e2-9657-3aee767e1f31",
+              "run_01a135e2-18c0-7612-8dfd-7f6fc4accd5b"
+            ],
+            "right": [
+              "run_01a135e2-09c3-74f2-a48a-cdea806da988"
+            ]
+          }
+        ],
+        "comparisonIdentity": "2662e1d0849ed0a573112411360e221af52c874c2fed3ceec7fb53238d2261a9",
+        "nextCursor": null
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

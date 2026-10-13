@@ -1,0 +1,186 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "ops027-correlation-chain",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:41:08.064Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "ops027-correlation-chain",
+        "--base-url",
+        "http://127.0.0.1:34279",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a6329ea4-42c2-41e4-b39d-ad6a1fa3a317",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-8qSKDZ/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bd08a025-be26-49d3-965f-19ac059bd5f6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d7b0ee77-4d80-41ed-bbaf-3ee0c148595b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9bcae970-338c-4672-9b29-50d04a01ae7d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135ec-a787-7622-a6c7-05ade3333b14",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e64be907-8ad9-4353-ae30-68cd1d5f190f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135ec-b0f7-713a-9873-58a3027f41db",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8130d490-ddc0-4bfd-b107-6509bdba9e0f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135ec-b0f7-713a-9873-58a3027f41db",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_620d8630-fa63-4e36-b6fd-d349c4beb8c9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135ec-b0f7-713a-9873-58a3027f41db",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_32d4e3c2-0a5a-4182-8a5b-68b5fa858f90",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "worker",
+        "start",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 143,
+      "signal": null,
+      "requestId": "cli_395aef89-4f13-4c9f-8f3a-21418c3f45d9",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Command interrupted",
+        "details": {
+          "signal": "SIGTERM",
+          "receipts": []
+        },
+        "retryable": true,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135ec-b0f7-713a-9873-58a3027f41db"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "ops027OneCorrelationAcrossRunLogArtifactOutbox",
+      "healthy": true,
+      "runId": "run_01a135ec-b0f7-713a-9873-58a3027f41db",
+      "correlation": "cli_e64be907-8ad9-4353-ae30-68cd1d5f190f",
+      "artifacts": 4
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

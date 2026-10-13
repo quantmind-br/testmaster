@@ -1,0 +1,248 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "provenance-strict-replay",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:33:01.246Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "provenance-strict-replay",
+        "--base-url",
+        "http://127.0.0.1:39393",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_85419cdc-86d1-4cfb-93ff-eb37b419f1ef",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-GjLQlj/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_32054c9f-9ddd-479b-b0ba-9d7332bf306f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135e5-1dd6-74aa-8f19-b1e116c3fb83",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_61b72c7b-2c98-413f-8062-a67e1bf53294",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "env",
+        "get",
+        "env_01a135e5-1ba8-7268-84e6-8b6659ffe94d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_57001fdf-6608-4fee-96f4-1557c177604b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "env",
+        "update",
+        "env_01a135e5-1ba8-7268-84e6-8b6659ffe94d",
+        "--locale",
+        "pt-BR",
+        "--expected-version",
+        "1",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c119b8a0-1e95-4b56-92fe-60b7e6f65a94",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a135e5-238a-768a-b908-6d30f9b0b115",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_105ad5ef-97b7-4dd7-b696-9eebd337470f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135e5-2ec1-733d-8bd8-19a50075c404",
+        "--format",
+        "json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8d9c5849-8383-4b31-bd53-6ed8cd653d09",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a135e5-238a-768a-b908-6d30f9b0b115",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_d7255b2a-6ba0-4be1-bee9-2db36b3aeb32",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Original execution evidence cannot be verified",
+        "details": {
+          "reasonCode": "security_precondition_failed",
+          "incompatibility": "evidence_hash_mismatch"
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "env",
+        "get",
+        "env_01a135e5-1ba8-7268-84e6-8b6659ffe94d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_adfbeda7-05f3-41c5-8bb5-b2da46d8cf94",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "env",
+        "archive",
+        "env_01a135e5-1ba8-7268-84e6-8b6659ffe94d",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_34123d81-c696-435a-af79-b33362791b98",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a135e5-238a-768a-b908-6d30f9b0b115",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_fcf5e63a-12e2-4168-b2c4-1703cf9c1804",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Original environment is unavailable",
+        "details": {
+          "reasonCode": "security_precondition_failed",
+          "incompatibility": "environment_unavailable"
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e5-238a-768a-b908-6d30f9b0b115",
+    "run_01a135e5-2ec1-733d-8bd8-19a50075c404"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "strictOldRunAndTamperImageRefusal",
+      "healthy": true,
+      "originalRunId": "run_01a135e5-238a-768a-b908-6d30f9b0b115",
+      "replayRunId": "run_01a135e5-2ec1-733d-8bd8-19a50075c404",
+      "blockedRunId": "run_01a135e5-4101-74dd-8a2d-cf6f2fbd67ed",
+      "sealedImage": "sha256:3ff94c1cb6657c87801a8548213e000964bcc1fff8526f771293108436a7c255"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

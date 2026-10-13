@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-concurrent-revisions",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:28:51.968Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-concurrent-revisions",
+        "--base-url",
+        "http://127.0.0.1:41967",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6788a098-c6c3-45c3-a246-cc16390262c3",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e1-61ce-756b-bb75-671ef253a855",
+    "run_01a135e1-620a-72ef-b3f9-f20a43eeadf4"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "concurrentPinnedCode",
+      "healthy": true,
+      "runs": [
+        {
+          "id": "run_01a135e1-61ce-756b-bb75-671ef253a855",
+          "revisionId": "rev_01a135e1-6127-7192-8c48-0dd1f371cf6b",
+          "outcome": "passed"
+        },
+        {
+          "id": "run_01a135e1-620a-72ef-b3f9-f20a43eeadf4",
+          "revisionId": "rev_01a135e1-6133-7420-b1f9-17a352f7dc8b",
+          "outcome": "failed"
+        }
+      ],
+      "stepsA": [
+        "open_login",
+        "password_present"
+      ],
+      "stepsB": [
+        "imported-test-0",
+        "imported-step-1",
+        "imported-code"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

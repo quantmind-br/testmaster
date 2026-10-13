@@ -1,0 +1,259 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m1-sensitive-dependencies",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:39:46.238Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m1-sensitive-dependencies",
+        "--base-url",
+        "http://127.0.0.1:34567",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fe35165e-3410-42d8-8053-2e8649298424",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-JdkA87/repo/producer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6ed06f1c-8aaf-4950-88e4-ce5f038993c8",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-JdkA87/repo/consumer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8e2be30b-fc98-4094-892d-9306cd073530",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135eb-4c55-7414-b689-f15f01143228",
+        "--partial-dispatch",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_dd85ff6e-029f-4cc5-8482-f8fad52536d4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135eb-5357-7305-9d65-52613ba69e40",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4f4497b5-4afc-47c0-ba2c-65704eeb5a80",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135eb-5355-77db-b36b-afcedc4d3fe3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6fed452d-9bfa-4b78-95f6-e3d0965bd6de",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135eb-5357-7305-9d65-52613ba69e40",
+        "--raw",
+        "--out",
+        "/tmp/tm-m1-JdkA87/repo/artifacts-run_01a135eb-5357-7305-9d65-52613ba69e40",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8c2f496c-d21b-48ba-a456-54d573efc007",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135eb-5357-7305-9d65-52613ba69e40",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-JdkA87/repo/report-run_01a135eb-5357-7305-9d65-52613ba69e40.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5057bbab-47f4-4ff9-b514-872fc0642420",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135eb-5355-77db-b36b-afcedc4d3fe3",
+        "--raw",
+        "--out",
+        "/tmp/tm-m1-JdkA87/repo/artifacts-run_01a135eb-5355-77db-b36b-afcedc4d3fe3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_84e64afc-5213-4522-b111-c8ee83b8654c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135eb-5355-77db-b36b-afcedc4d3fe3",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-JdkA87/repo/report-run_01a135eb-5355-77db-b36b-afcedc4d3fe3.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_11beedd8-0a0d-4c10-a2b1-2a9cbc70d7d5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-JdkA87/repo/query-consumer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3ea85994-6041-4f52-9d07-5aa40d3684f1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135eb-6817-72af-a913-9049e3c01a0b",
+        "--partial-dispatch",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_11ac42bc-f9ac-4c83-bc3d-c0afa2434666",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135eb-5355-77db-b36b-afcedc4d3fe3",
+    "run_01a135eb-5357-7305-9d65-52613ba69e40",
+    "run_01a135eb-6ee0-7743-a082-8082c5f6e69b",
+    "run_01a135eb-6ee4-70b3-be42-212d488c1552"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "sensitiveDependencyVaultTransfer",
+      "healthy": true,
+      "producerRunId": "run_01a135eb-5357-7305-9d65-52613ba69e40",
+      "consumerRunId": "run_01a135eb-5355-77db-b36b-afcedc4d3fe3",
+      "expandedRuns": 1,
+      "authenticatedConsumerRequests": 1,
+      "sensitiveQueryRequests": 0,
+      "protectedValueNotInDatabaseOrPublicEvidence": true,
+      "unsafeQueryExit": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

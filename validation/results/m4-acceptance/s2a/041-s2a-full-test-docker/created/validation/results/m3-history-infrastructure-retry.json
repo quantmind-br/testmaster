@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-history-infrastructure-retry",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:32:09.512Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-history-infrastructure-retry",
+        "--base-url",
+        "http://127.0.0.1:34289",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_211bdc8d-e963-45c8-a08d-6206bba1c82b",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e4-6f7e-7700-9929-a04c711bdf6e",
+    "run_01a135e4-772d-7342-8a1f-72c6acb5b830",
+    "run_01a135e4-773a-7492-8f27-0ce7999330c1"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "infraRecoveryOutsideStrictFirstAttempts",
+      "attempts": [
+        {
+          "number": 1,
+          "outcome": "inconclusive"
+        },
+        {
+          "number": 2,
+          "outcome": "passed"
+        }
+      ],
+      "firstAttempt": "inconclusive",
+      "passedOnRetry": false,
+      "study": {
+        "batchId": "bat_01a135e4-771b-75f7-b206-b9c810f7487e",
+        "studyIds": [
+          "bat_01a135e4-771b-75f7-b206-b9c810f7487e"
+        ],
+        "testId": "tst_01a135e4-6f2e-7011-b04d-685f685efe4a",
+        "revisionId": "rev_01a135e4-6f2f-7730-826a-215afa3938c2",
+        "environmentRevisionId": "evr_01a135e4-6f08-7682-b963-574cfafb6d61",
+        "identityHash": "d5844cf3dd017d1c29e6a8239b216470728c61d1810feb3c21c8c335c87ef7bf",
+        "window": {
+          "from": "2026-10-13T15:32:07.597Z",
+          "to": "2026-10-13T15:32:07.610Z"
+        },
+        "counts": {
+          "nPlanned": 2,
+          "nPass": 2,
+          "nFail": 0,
+          "nBlocked": 0,
+          "nCancelled": 0,
+          "nInconclusive": 0,
+          "nValid": 2,
+          "nInFlight": 0
+        },
+        "failureRate": 0,
+        "wilson95": {
+          "low": 0,
+          "high": 0.6576280471103807
+        },
+        "zeroFailureUpper95": 0.7763932022500211,
+        "classification": "passing_observed",
+        "limitations": [
+          "Sample independence requires separate evidence; repeated observations can be correlated",
+          "Target fixture reset and independent intermittent-cause evidence are not inferred from repeat count"
+        ],
+        "failureCauses": [],
+        "runIds": [
+          "run_01a135e4-772d-7342-8a1f-72c6acb5b830",
+          "run_01a135e4-773a-7492-8f27-0ce7999330c1"
+        ],
+        "incompatible": []
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

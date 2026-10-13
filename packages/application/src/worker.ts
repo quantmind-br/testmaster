@@ -71,6 +71,9 @@ import {
   type WorkerHandshake,
 } from "./worker-handshake.js";
 
+/** How often a running worker compares its migrations with the database's (OPS-038). */
+const schemaCheckIntervalMs = 2000;
+
 export interface WorkerHost {
   config: ResolvedConfig;
   images(): Promise<ImageLock>;
@@ -1706,6 +1709,10 @@ export class WorkerService {
     let lastMaintenance = Date.now();
     let drainStart: number | null = null;
     const tasks = new Set<Promise<void>>();
+    // A build older than the database must not claim: it stops claiming, lets in-flight work
+    // finish under its fenced leases, and ends with `worker_schema_behind` (ADR-015, OPS-038).
+    let schemaRefusal: ContractError | null = null;
+    let lastSchemaCheck = 0;
     try {
       for (;;) {
         if (this.workerId) {
@@ -1723,6 +1730,26 @@ export class WorkerService {
             this.workerId,
           );
           if (row?.state !== "ready") this.drainRequested = true;
+        }
+        if (!schemaRefusal && Date.now() - lastSchemaCheck >= schemaCheckIntervalMs) {
+          lastSchemaCheck = Date.now();
+          const schema = database.schemaCompatibility();
+          if (schema.state === "ahead") {
+            schemaRefusal = new ContractError(
+              "PRECONDITION_FAILED",
+              "Worker build is older than the database schema; upgrade this worker",
+              { reasonCode: "worker_schema_behind", ...schema },
+            );
+            this.drainRequested = true;
+            if (this.workerId)
+              database.withTx(() =>
+                database.run(
+                  "UPDATE workers SET state='draining' WHERE workspace_id=? AND id=? AND state='ready'",
+                  this.ctx.workspaceId,
+                  this.workerId,
+                ),
+              );
+          }
         }
         if (options.signal?.aborted) {
           this.drainRequested = true;
@@ -1826,6 +1853,7 @@ export class WorkerService {
         await delay(100);
       }
       await Promise.all(tasks);
+      if (schemaRefusal) throw schemaRefusal;
       return { workerId: this.workerId, drained: true };
     } finally {
       if (this.workerId)

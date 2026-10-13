@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "surface-missing-image",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:43:11.515Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "surface-missing-image",
+        "--base-url",
+        "http://127.0.0.1:40511",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f982a15e-a448-49d8-844b-c399bb99d927",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "missingImageUnavailable",
+      "runners": [],
+      "disabled": [
+        "local-execution",
+        "playwright",
+        "http",
+        "python",
+        "docker",
+        "unsafe-local",
+        "resolve_action",
+        "agent-mode",
+        "resources-cleanup",
+        "healing",
+        "flake-study",
+        "selective-run",
+        "ci",
+        "suites",
+        "schedules",
+        "auth-dynamic",
+        "workers-registration",
+        "deliveries",
+        "secrets-rotation",
+        "audit-api",
+        "distributed",
+        "tunnels",
+        "matrix-advanced",
+        "visualMatches",
+        "accessibilityViolations",
+        "memory",
+        "visual-baselines",
+        "sso",
+        "scim",
+        "portability",
+        "break-glass"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

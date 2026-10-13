@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-global-deadline",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:29:00.912Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-global-deadline",
+        "--base-url",
+        "http://127.0.0.1:45793",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_90c0f2e8-0700-470b-8584-9f688d537ae1",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e1-8ead-70e9-8b09-f7e51dde5316"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "globalDeadlineNoSubsequentEffects",
+      "healthy": true,
+      "runId": "run_01a135e1-8ead-70e9-8b09-f7e51dde5316",
+      "targetHits": 1,
+      "outcome": "inconclusive"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

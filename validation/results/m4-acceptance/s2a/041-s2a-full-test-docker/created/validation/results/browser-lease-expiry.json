@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "browser-lease-expiry",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:27:44.184Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "browser-lease-expiry",
+        "--base-url",
+        "http://127.0.0.1:43393",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5827245e-3f27-4ed6-8074-e90b13eae084",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e0-6ec3-7042-8dd6-8d8fb3926e30"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "lease loss reaps Chromium and fences next assertion",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

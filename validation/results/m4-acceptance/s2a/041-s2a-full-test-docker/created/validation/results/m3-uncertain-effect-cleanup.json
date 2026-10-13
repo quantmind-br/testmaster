@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-uncertain-effect-cleanup",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:26:58.710Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-uncertain-effect-cleanup",
+        "--base-url",
+        "http://127.0.0.1:45403",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e80f8db6-1154-496e-9d16-f55d64e8dcad",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135df-ad3d-72a1-bcbb-7d9e753f1712",
+    "run_01a135df-b8d3-755d-91f9-8e4dfd8afa77"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "lostEffectAndDeniedCleanup",
+      "runId": "run_01a135df-b8d3-755d-91f9-8e4dfd8afa77",
+      "postEffects": 1,
+      "persistedUsers": 1,
+      "deniedCleanupRequests": 0,
+      "authorizedCleanupRequests": 1,
+      "resourceId": "res_01a135df-be0b-75c3-929e-f0b250e79898"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

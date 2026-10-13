@@ -35,6 +35,36 @@ const postgresParityExclusions: ReadonlyArray<{ file: string; reason: string }> 
   },
 ];
 
+/**
+ * Sandbox security suites that also run against the rootless daemon (ADR-016). They are the files
+ * that exercise the container boundary itself: isolation, seccomp, egress, cleanup and the browser
+ * sandbox. The project names its daemon explicitly and refuses to start on a rootful one.
+ */
+const rootlessDockerSocket =
+  process.env.TESTMASTER_ROOTLESS_DOCKER_HOST ??
+  `unix://${process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid?.() ?? 1000}`}/docker.sock`;
+const rootlessDockerFiles = [
+  "packages/sandbox/src/**/*.docker.test.ts",
+  "validation/journeys/network-boundary.docker.test.ts",
+  "validation/journeys/cleanup-quarantine.docker.test.ts",
+  "validation/journeys/resource-cleanup.docker.test.ts",
+  "validation/journeys/m1-boundaries.docker.test.ts",
+  "validation/journeys/limits-recovery.docker.test.ts",
+  "validation/journeys/recovery-controls.docker.test.ts",
+  "validation/journeys/browser-matrix.docker.test.ts",
+  "validation/journeys/postgres-tls.docker.test.ts",
+];
+/**
+ * Journeys that need the rootless daemon itself (rootless uid mapping and cgroup enforcement, the
+ * compose stack with a rootless host worker, rolling upgrade with real workers). The default
+ * `docker` project, which uses the host's default daemon, never runs them.
+ */
+const rootlessOnlyFiles = [
+  "validation/journeys/rootless-daemon.docker.test.ts",
+  "validation/journeys/j17-server.docker.test.ts",
+  "validation/journeys/rolling-upgrade.docker.test.ts",
+];
+
 const common = {
   resolve: { conditions: ["source"] },
   ssr: { resolve: { conditions: ["source"] } },
@@ -71,10 +101,32 @@ export default defineConfig({
         test: {
           name: "docker",
           include: ["{packages,apps,fixtures,tools,validation}/**/*.docker.test.ts"],
+          exclude: ["**/node_modules/**", "**/dist/**", ...rootlessOnlyFiles],
+          testTimeout: 300_000,
+          hookTimeout: 600_000,
+          fileParallelism: false,
+        },
+      },
+      {
+        extends: true,
+        ...common,
+        test: {
+          name: "docker-rootless",
+          include: [...rootlessDockerFiles, ...rootlessOnlyFiles],
           exclude: ["**/node_modules/**", "**/dist/**"],
           testTimeout: 300_000,
           hookTimeout: 600_000,
           fileParallelism: false,
+          env: {
+            DOCKER_HOST: rootlessDockerSocket,
+            TESTMASTER_JOURNEY_DOCKER_HOST: rootlessDockerSocket,
+            TESTMASTER_EXPECT_ROOTLESS: "1",
+          },
+          // PostgreSQL test containers (createTestDatabase) start on the same rootless daemon.
+          globalSetup: [
+            "packages/sandbox/src/docker/rootless-global-setup.ts",
+            "packages/persistence/src/testing/global-setup.ts",
+          ],
         },
       },
       {

@@ -1,11 +1,16 @@
+import { createHash, randomBytes } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   type Application,
   issueLocalToken,
+  readServerConfig,
   runControllers,
   type ServerConfig,
+  serverReadiness,
 } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
+import { PersistenceDatabase } from "@testmaster/persistence";
 import { createServer } from "@testmaster/server";
 import type { Command } from "commander";
 import {
@@ -163,6 +168,50 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       };
     },
   );
+  // Reads the deployment file, not an Application: it must still report a database whose schema
+  // is behind or ahead, which `Application.open` refuses. Workers of every workspace are counted.
+  runtime.bind(
+    group
+      .command("readiness")
+      .description("Server-profile readiness probes for operators; exits 1 when not ready"),
+    async (rt) => {
+      const server = await readServerConfig(rt.path(required(rt.options, "config")));
+      const database = PersistenceDatabase.openPostgres({
+        ...server.database,
+        applicationName: "testmaster-readiness",
+      });
+      try {
+        const report = await serverReadiness({ database, server });
+        if (report.status !== "ready") process.exitCode = 1;
+        return {
+          data: report,
+          text: `Server ${report.status}${report.reasons.length ? `: ${report.reasons.join(", ")}` : ""}; ${report.worker.ready} worker(s) ready; schema ${report.schema.databaseVersion}/${report.schema.supportedVersion}\n`,
+        };
+      } finally {
+        database.close();
+      }
+    },
+  );
+  runtime.bind(
+    group
+      .command("keygen")
+      .option("--out <path>", "New key file (mode 0600); an existing file is never replaced")
+      .description("Create a 32-byte master or backup key file and print only its key id"),
+    async (rt, _args, options) => {
+      const path = rt.path(required(options, "out"));
+      const key = randomBytes(32);
+      try {
+        await writeFile(path, key, { flag: "wx", mode: 0o600 });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST")
+          throw new ContractError("PRECONDITION_FAILED", "Key file already exists");
+        throw error;
+      }
+      const keyId = createHash("sha256").update(key).digest("hex");
+      key.fill(0);
+      return { data: { path, keyId }, text: `Key ${keyId} written to ${path}\n` };
+    },
+  );
 }
 export function identityCommands(program: Command, runtime: Runtime): void {
   const group = program.command("identity");
@@ -182,14 +231,19 @@ export function identityCommands(program: Command, runtime: Runtime): void {
     },
   );
 }
-/** One worker loop per workspace; new workspaces are picked up while the process runs. */
+/**
+ * One worker loop per workspace; new workspaces are picked up while the process runs. A loop that
+ * ends with `worker_schema_behind` (this build is older than the database, OPS-038) stops the whole
+ * process with that error so the supervisor restarts it once the worker has been upgraded.
+ */
 export async function runServerWorkers(
   application: Application,
   signal: AbortSignal,
   onError: (workspaceId: string, error: unknown) => void,
 ): Promise<void> {
   const loops = new Map<string, Promise<unknown>>();
-  while (!signal.aborted) {
+  let refusal: unknown = null;
+  while (!signal.aborted && !refusal) {
     for (const workspaceId of application.operator.workspaceIds()) {
       if (loops.has(workspaceId)) continue;
       loops.set(
@@ -197,7 +251,15 @@ export async function runServerWorkers(
         application
           .forWorkspaceSystem(workspaceId)
           .worker.run({ signal })
-          .catch((error) => onError(workspaceId, error)),
+          .catch((error) => {
+            if (
+              error instanceof ContractError &&
+              (error.details as { reasonCode?: string } | undefined)?.reasonCode ===
+                "worker_schema_behind"
+            )
+              refusal ??= error;
+            onError(workspaceId, error);
+          }),
       );
     }
     try {
@@ -207,4 +269,5 @@ export async function runServerWorkers(
     }
   }
   await Promise.all(loops.values());
+  if (refusal) throw refusal;
 }

@@ -1,0 +1,20 @@
+# Starts the compose stack of deploy/compose as a user service. It needs the environment file
+# described in deploy/compose/README.md at %E/testmaster/compose.env.
+[Unit]
+Description=TestMaster server stack (PostgreSQL, API and portal, Caddy)
+Documentation=file://%h/testmaster/deploy/compose/README.md
+After=docker.socket network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=DOCKER_HOST=unix://%t/docker.sock
+EnvironmentFile=%E/testmaster/compose.env
+WorkingDirectory=%h/testmaster/deploy/compose
+ExecStart=/usr/bin/docker compose up -d --wait
+ExecStop=/usr/bin/docker compose stop
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

@@ -29,6 +29,11 @@ export interface ServiceContext {
   reauthorizeActor(actor: RunActor, projectId: string): boolean;
   authorizeRaw?(projectId: string, environmentId: string): void;
   /**
+   * Decrypting a secret outside worker execution: explicit unexpired `secrets:export` grant.
+   * Optional so that narrow test contexts need not provide it; the service then refuses.
+   */
+  authorizeDecrypt?(projectId?: string): void;
+  /**
    * Named resource authority (`healing:approve`, `artifacts:delete`) evaluated against role
    * defaults and resource-scoped PermissionGrants; generic W/X never implies it.
    */

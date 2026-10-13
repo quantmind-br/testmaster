@@ -1,0 +1,600 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "coverage-metrics",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:42:23.678Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "coverage-metrics",
+        "--base-url",
+        "http://127.0.0.1:42917",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_97540598-0e57-44d7-a69e-0513da7d3692",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-Agknl3/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_83532753-6c57-4f4c-afa3-e3493704b90a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135ed-c35e-76d3-8477-dae0c9d0604c",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1dd3322a-8470-4b98-bff7-15a34cde2914",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135ed-c9c9-75e6-ba7a-d7e14d748a00",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-Agknl3/repo/metrics.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a5e05612-7ed9-4758-a74c-df0bd0a298f2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135ed-c9c9-75e6-ba7a-d7e14d748a00",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4644f033-2668-4d0f-ad49-6f7dade747aa",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135ed-c9c9-75e6-ba7a-d7e14d748a00",
+        "--format",
+        "html",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c2775292-18a1-474a-be65-35f6ffdb38d0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135ed-c35e-76d3-8477-dae0c9d0604c",
+        "tst_01a135ed-c35e-76d3-8477-dae0c9d0604c",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ecbd3354-6c39-45ec-8d5e-f395251abe5f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "bat_01a135ed-d732-745f-937d-98df3c605f36",
+        "--format",
+        "json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_eedbf9f2-3f33-4793-8d1b-a2cb12f15559",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135ed-c9c9-75e6-ba7a-d7e14d748a00",
+    "run_01a135ed-d73f-7208-bf9e-5f650d4c86c2"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "serviceHealth",
+      "healthy": true,
+      "defective": false,
+      "observed": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "date": "Tue, 13 Oct 2026 15:42:20 GMT",
+          "connection": "keep-alive",
+          "keep-alive": "timeout=5",
+          "transfer-encoding": "chunked"
+        },
+        "body": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "check": "separateCoverageAndRuntimeMetrics",
+      "runId": "run_01a135ed-c9c9-75e6-ba7a-d7e14d748a00",
+      "observed": {
+        "coverage": {
+          "requirement": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)",
+            "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+          },
+          "route": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "Distinct observed routes / declared in-scope routes",
+            "scope": "Observed navigation; discovery is partial and total application route inventory is unknown"
+          },
+          "operation": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs",
+            "scope": "Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions"
+          },
+          "code": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "Instrumented covered code units / declared instrumented code units; never inferred from navigation",
+            "scope": "No code instrumentation supplied"
+          },
+          "execution": {
+            "numerator": 1,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 1,
+            "definition": "Requested cells with passed or failed outcome / frozen requested cells",
+            "scope": "Frozen requested selection; dependency expansion excluded"
+          }
+        },
+        "executionMetrics": {
+          "counts": {
+            "requested": 1,
+            "accepted": 1,
+            "notDispatched": 0,
+            "expanded": 0,
+            "allMembers": 1,
+            "executed": 1,
+            "attempts": 1,
+            "retried": 0,
+            "duplicates": 0,
+            "excluded": 0,
+            "passed": 1,
+            "failed": 0,
+            "blocked": 0,
+            "cancelled": 0,
+            "inconclusive": 0,
+            "nonterminal": 0
+          },
+          "rates": {
+            "selectionCompletionRate": {
+              "numerator": 1,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 1,
+              "definition": "(N_passed + N_failed) / N_selected",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "strictPassRate": {
+              "numerator": 1,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 1,
+              "definition": "First-attempt: N_firstAttemptPassed under strict/no-heal / N_selected",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "terminalPassRate": {
+              "numerator": 1,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 1,
+              "definition": "Terminal: N_passed / N_selected",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "blockedRate": {
+              "numerator": 0,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 0,
+              "definition": "N_blocked / N_selected",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "inconclusiveRate": {
+              "numerator": 0,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 0,
+              "definition": "N_inconclusive / N_selected",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "gatePassRate": {
+              "numerator": 1,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 1,
+              "definition": "End-to-end gate: N_requiredRunsWithGatePassed / N_selected; blocked, inconclusive and cleanup-failed runs never count as passed",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "retryRecoveryRate": {
+              "numerator": 0,
+              "denominator": 0,
+              "denominatorState": "known",
+              "state": "notApplicable",
+              "value": null,
+              "definition": "N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried (internal infrastructure retries only)",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "diagnosticRetryPassRate": {
+              "numerator": 0,
+              "denominator": 0,
+              "denominatorState": "known",
+              "state": "notApplicable",
+              "value": null,
+              "definition": "N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "firstAttemptFailureRate": {
+              "numerator": 0,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 0,
+              "definition": "Conditional: N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "artifactCompletenessRate": {
+              "numerator": 1,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 1,
+              "definition": "N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "staleEvidenceRate": {
+              "numerator": 0,
+              "denominator": 1,
+              "denominatorState": "known",
+              "state": "available",
+              "value": 0,
+              "definition": "N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)",
+              "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+            },
+            "requirementMappingCoverage": {
+              "numerator": 0,
+              "denominator": null,
+              "denominatorState": "unknown",
+              "state": "insufficientData",
+              "value": null,
+              "definition": "Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)",
+              "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+            },
+            "endpointContractCoverage": {
+              "numerator": 0,
+              "denominator": null,
+              "denominatorState": "unknown",
+              "state": "insufficientData",
+              "value": null,
+              "definition": "Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs",
+              "scope": "Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions"
+            },
+            "verifiedRequirementCoverage": {
+              "numerator": 0,
+              "denominator": null,
+              "denominatorState": "unknown",
+              "state": "insufficientData",
+              "value": null,
+              "definition": "N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces",
+              "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+            }
+          },
+          "exclusions": {
+            "firstAttemptNonPassOrFail": 0,
+            "expandedDependencies": 0,
+            "authorizedExcluded": 0,
+            "duplicateSelections": 0
+          },
+          "blockedReasons": {},
+          "retryPolicy": "Pinned execution limits; attempts never increase selected denominator; assertion failure remains failed after diagnostic pass"
+        },
+        "timings": {
+          "source": "monotonic",
+          "clockDomain": "7e8b94be-d0b2-4a90-b481-015641504e22",
+          "boundaries": [
+            {
+              "monotonicMs": 13484737.578507,
+              "occurredAt": "2026-10-13T15:42:18.577Z",
+              "phase": "queued"
+            },
+            {
+              "monotonicMs": 13484818.21139,
+              "occurredAt": "2026-10-13T15:42:18.658Z",
+              "phase": "preparing"
+            },
+            {
+              "monotonicMs": 13485583.58298,
+              "occurredAt": "2026-10-13T15:42:19.423Z",
+              "phase": "running"
+            },
+            {
+              "monotonicMs": 13485621.400234,
+              "occurredAt": "2026-10-13T15:42:19.461Z",
+              "phase": "collecting"
+            },
+            {
+              "monotonicMs": 13485763.794378,
+              "occurredAt": "2026-10-13T15:42:19.603Z",
+              "phase": "completed"
+            }
+          ],
+          "queueDuration": 80.63288299925625,
+          "preparationDuration": 765.371589999646,
+          "executionDuration": 37.817254001274705,
+          "collectionDuration": 142.3941439986229,
+          "analysisDuration": null,
+          "wallClockDuration": 1026.2158709987998,
+          "analysisStatus": "not_requested"
+        }
+      }
+    },
+    {
+      "check": "duplicateBatchCellsDoNotInflateDenominator",
+      "observed": {
+        "counts": {
+          "requested": 1,
+          "accepted": 1,
+          "notDispatched": 0,
+          "expanded": 0,
+          "allMembers": 1,
+          "executed": 1,
+          "attempts": 1,
+          "retried": 0,
+          "duplicates": 1,
+          "excluded": 0,
+          "passed": 1,
+          "failed": 0,
+          "blocked": 0,
+          "cancelled": 0,
+          "inconclusive": 0,
+          "nonterminal": 0
+        },
+        "rates": {
+          "selectionCompletionRate": {
+            "numerator": 1,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 1,
+            "definition": "(N_passed + N_failed) / N_selected",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "strictPassRate": {
+            "numerator": 1,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 1,
+            "definition": "First-attempt: N_firstAttemptPassed under strict/no-heal / N_selected",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "terminalPassRate": {
+            "numerator": 1,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 1,
+            "definition": "Terminal: N_passed / N_selected",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "blockedRate": {
+            "numerator": 0,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 0,
+            "definition": "N_blocked / N_selected",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "inconclusiveRate": {
+            "numerator": 0,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 0,
+            "definition": "N_inconclusive / N_selected",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "gatePassRate": {
+            "numerator": 1,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 1,
+            "definition": "End-to-end gate: N_requiredRunsWithGatePassed / N_selected; blocked, inconclusive and cleanup-failed runs never count as passed",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "retryRecoveryRate": {
+            "numerator": 0,
+            "denominator": 0,
+            "denominatorState": "known",
+            "state": "notApplicable",
+            "value": null,
+            "definition": "N_retrySafeInfraRunsRecoveredToPassed / N_retrySafeInfraRunsRetried (internal infrastructure retries only)",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "diagnosticRetryPassRate": {
+            "numerator": 0,
+            "denominator": 0,
+            "denominatorState": "known",
+            "state": "notApplicable",
+            "value": null,
+            "definition": "N_assertionFailedRunsWithPassedOnRetry / N_assertionFailedRunsDiagnosticallyRetried",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "firstAttemptFailureRate": {
+            "numerator": 0,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 0,
+            "definition": "Conditional: N_firstAttemptsFailed / N_firstAttemptsPassOrFail; blocked/cancelled/inconclusive excluded conditionally",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "artifactCompletenessRate": {
+            "numerator": 1,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 1,
+            "definition": "N_closedRunsWithAllRequiredArtifactsValid / N_closedRunsRequiringArtifacts; retention reflected in separate completeness/freshness views",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "staleEvidenceRate": {
+            "numerator": 0,
+            "denominator": 1,
+            "denominatorState": "known",
+            "state": "available",
+            "value": 0,
+            "definition": "N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)",
+            "scope": "Frozen requested Run/cell selection; expanded dependencies excluded from pass-rate denominator"
+          },
+          "requirementMappingCoverage": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "Distinct in-scope requirements with accepted scenarios / declared in-scope requirements (mapping, not verification)",
+            "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+          },
+          "endpointContractCoverage": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "Distinct operation/status/schema pairs exercised / declared in-scope operation/status/schema pairs",
+            "scope": "Ready current OpenAPI sources; method/path/status/media/schema pairs with passing status and schema assertions"
+          },
+          "verifiedRequirementCoverage": {
+            "numerator": 0,
+            "denominator": null,
+            "denominatorState": "unknown",
+            "state": "insufficientData",
+            "value": null,
+            "definition": "N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces",
+            "scope": "Current project requirement inventory and active accepted revisions; mapping only"
+          }
+        },
+        "exclusions": {
+          "firstAttemptNonPassOrFail": 0,
+          "expandedDependencies": 0,
+          "authorizedExcluded": 0,
+          "duplicateSelections": 1
+        },
+        "blockedReasons": {},
+        "retryPolicy": "Pinned execution limits; attempts never increase selected denominator; assertion failure remains failed after diagnostic pass"
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cli-003-readonly-home",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:36:03.190Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "Read-only home",
+        "--base-url",
+        "http://127.0.0.1:43210",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_43c04c8a-9888-4b3f-9f8b-b495d5cbd9da",
+      "warnings": [
+        "User profile cannot be persisted; session-only setup"
+      ],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "readonlyHomeSessionNotice",
+      "healthy": true,
+      "sessionOnly": true,
+      "notice": "User profile cannot be persisted; session-only setup"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

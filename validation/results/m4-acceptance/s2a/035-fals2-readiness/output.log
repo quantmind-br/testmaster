@@ -1,0 +1,55 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s2a
+
+ ❯ |postgres| packages/application/src/server-profile.pg.test.ts (6 tests | 2 failed) 2148ms
+   × OPS-001 server readiness reports the failing probe with its reason code 292ms
+   × OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking 503ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/server-profile.pg.test.ts > OPS-001 server readiness reports the failing probe with its reason code
+AssertionError: expected { status: 'unavailable', …(5) } to match object { status: 'unavailable', …(2) }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+@@ -3,9 +3,8 @@
+      "persistence": "ready",
+      "storage": "unavailable",
+    },
+    "reasons": [
+      "storage_unwritable",
+-     "master_key_unavailable",
+    ],
+    "status": "unavailable",
+  }
+
+ ❯ packages/application/src/server-profile.pg.test.ts:107:41
+    105|   // Storage: an unwritable evidence volume.
+    106|   await chmod(join(root, "evidence"), 0o500);
+    107|   expect(await application.readiness()).toMatchObject({
+       |                                         ^
+    108|     status: "unavailable",
+    109|     // The master key store lives on the same volume, so it fails with…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| packages/application/src/server-profile.pg.test.ts > OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking
+AssertionError: expected [ 'runtime' ] to include 'server'
+ ❯ packages/application/src/server-profile.pg.test.ts:161:27
+    159|   await rm(masterKeyFile);
+    160|   const report = await application.forIdentity(owner).doctor();
+    161|   expect(report.blocking).toContain("server");
+       |                           ^
+    162|   expect(report.checks.server).toMatchObject({
+    163|     status: "FAIL",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 4 passed (6)
+   Start at  12:21:43
+   Duration  4.43s (tests 71%, transform 19%, import 9%)
+
