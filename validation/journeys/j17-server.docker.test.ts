@@ -22,7 +22,7 @@ interface RunView {
  * Only meaningful on the rootless daemon, so it is part of the `docker-rootless` project.
  */
 describe.skipIf(process.env.TESTMASTER_EXPECT_ROOTLESS !== "1")("J17 server profile", () => {
-  it("J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result", async () => {
+  it("M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result", async () => {
     const session = await Journey.create("J17-server", {
       class: "deterministic-e2e",
       runner: "real-docker-rootless-compose",
@@ -65,6 +65,11 @@ describe.skipIf(process.env.TESTMASTER_EXPECT_ROOTLESS !== "1")("J17 server prof
       const ready = object(object(readiness.json()).data);
       expect(ready.atRestEncryption).toBe("operator_attested");
       expect(object(ready.worker).status).toBe("degraded");
+      const plain = await fetch(dep.baseUrl.replace("https:", "http:")).then(
+        (response) => response.status,
+        () => 0,
+      );
+      expect(plain).not.toBe(200);
       const portal = await dep.anonymous().request("GET", "/");
       expect(portal.status).toBe(200);
       expect(String(portal.headers["content-security-policy"])).toContain("default-src 'self'");
