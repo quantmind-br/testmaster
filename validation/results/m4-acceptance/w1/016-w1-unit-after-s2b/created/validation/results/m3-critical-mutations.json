@@ -1,0 +1,542 @@
+{
+  "schemaVersion": "1.0.0",
+  "method": "automatic-source-isolated-subprocess",
+  "observedAt": "2026-10-13T18:26:22.928Z",
+  "passed": true,
+  "durationMs": 32382,
+  "healthy": {
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "durationMs": 12886,
+    "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ✓ |unit| tools/src/evals/m3.test.ts (35 tests | 34 skipped) 3ms\n ✓ |unit| packages/application/src/ai/analysis.test.ts (59 tests | 58 skipped) 1474ms\n   ✓ execution handles cannot be promoted to source fix targets 1473ms\n ✓ |unit| packages/application/src/ai/healing.test.ts (42 tests | 39 skipped) 72ms\n ✓ |unit| packages/runner/src/browser.test.ts (24 tests | 23 skipped) 1347ms\n   ✓ retains business assertion values for diagnosis but omits secret-derived and oversized comparisons 1346ms\n ✓ |unit| packages/persistence/src/persistence.test.ts (44 tests | 43 skipped) 29ms\n ✓ |unit| packages/application/src/ai/healing-mask.test.ts (1 test) 535ms\n   ✓ refuses an otherwise schema-valid request method change outside the healing path allowlist 534ms\n ✓ |unit| packages/runner/src/http.test.ts (22 tests | 20 skipped) 208ms\n ✓ |unit| tools/src/github-action/publisher.test.ts (1 test) 147ms\n ✓ |unit| tools/src/distribution/distribution.test.ts (14 tests | 13 skipped) 8ms\n ✓ |unit| tools/src/github-action/download.test.ts (4 tests | 2 skipped) 29ms\n ✓ |unit| tools/src/github-action/inputs.test.ts (2 tests | 1 skipped) 5ms\n\n Test Files  11 passed (11)\n      Tests  15 passed | 233 skipped (248)\n   Start at  15:25:50\n   Duration  12.60s (import 41%, tests 33%, transform 25%)\n\n    Isolate  11 workers spawned · ~87ms startup each (spawn + environment, per file)\n             at least ~870ms faster with isolate: false — reuses workers across files instead of one per file\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-1.json\n",
+    "passedTests": 15,
+    "failures": [],
+    "setupFailure": false
+  },
+  "n": 13,
+  "killed": 12,
+  "survivors": [],
+  "invalid": [],
+  "equivalent": [
+    "m3-masked-comparison"
+  ],
+  "observations": [
+    {
+      "id": "m3-frame-assertion",
+      "invariant": "Recursive assertion protection: frame children",
+      "file": "packages/planner/src/agent/index.ts",
+      "original": "else if (step.operation === \"frame\") visit(step.input.childSteps, [...frames, step.id]);",
+      "replacement": "else if (step.operation === \"frame\") continue;",
+      "targetedTestFiles": [
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "targetedTestNames": [
+        "healing seals nested assertions, response status predicates and enclosing frame identity"
+      ],
+      "occurrences": 1,
+      "rationale": "Omitting frame traversal permits removal of the nested required business assertion.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 4027,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/application/src/ai/healing.test.ts (42 tests | 1 failed | 41 skipped) 13ms\n   × healing seals nested assertions, response status predicates and enclosing frame identity 12ms\n   ↓ healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields\n   ↓ business input replacements require manual review and retain all protected plan content\n   ↓ replacement generation exposes only present fields with schema shapes and marks drag manual-only\n   ↓ a foreign approval actor cannot dispatch verification or promote a candidate\n   ↓ healing approval requires named authority and ordinary promotion cannot bypass verification\n   ↓ failed verification returns to reviewable without another candidate and leaves historical failure immutable\n   ↓ healing reconciliation CAS preserves concurrent author edits and reports revision conflict\n   ↓ bound passing verification atomically promotes candidate and is restart-idempotent\n   ↓ local capability issuance cannot broaden issuer resource grants or expiry\n   ↓ evidence-backed model abstention completes once without a candidate, proposal or verification\n   ↓ unknown handles in the patch branch reject with only code-owned diagnostics\n   ↓ unknown handles in the abstain branch reject with only code-owned diagnostics\n   ↓ an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics\n   ↓ healing refuses missing provider without a candidate, persists the refusal and does not regenerate\n   ↓ healing refuses passed runs before creating a healing job\n   ↓ model UPSTREAM_TIMEOUT failures expose bounded code-owned deadline details\n   ↓ model INVALID_ARGUMENT failures expose bounded code-owned schema_invalid details\n   ↓ oversized evidence refuses before model dispatch rather than enlarging the ceiling\n   ↓ a repeated locator on an unexecuted step is deferred and promoted only after verification identity proof\n   ↓ a named password input without an ARIA role is deferred and promoted after verification identity proof\n   ↓ an unexecuted step with a different original locator remains manual\n   ↓ deferred admission refuses executed later\n   ↓ deferred admission refuses different replacement\n   ↓ deferred admission refuses renamed anchor\n   ↓ deferred admission refuses ambiguous baseline\n   ↓ deferred different identity cannot promote a passing verification\n   ↓ deferred missing evidence cannot promote a passing verification\n   ↓ deferred invalid evidence cannot promote a passing verification\n   ↓ deferred different origin cannot promote a passing verification\n   ↓ deferred ambiguous match cannot promote a passing verification\n   ↓ long reviewer rejection reasons are stored as explicitly truncated limitations\n   ↓ healing review reports frozen changes and recorded manual policy reasons without mutation\n   ↓ healing review resolves nested download replacement pointers from both immutable plans\n   ↓ healing review recalculates protected assertion hashes rather than trusting the proposal\n   ↓ healing review approval version remains mandatory and rejects a divergent version\n   ↓ healing review denies another project before exposing immutable plan or evidence\n   ↓ healing review shows policy-applied verification without rewriting historical failure\n   ↓ healing review exposes only recorded label and form attributes and never invents identity proof\n   ↓ healing review shows recorded truncated candidates without claiming locator equivalence\n   ↓ healing review propagates unexpected locator read failures instead of masking defects\n   ↓ model locator candidates keep the matched and interactive elements ahead of document scaffolding\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/application/src/ai/healing.test.ts > healing seals nested assertions, response status predicates and enclosing frame identity\nAssertionError: expected function to throw an error, but it didn't\n ❯ packages/application/src/ai/healing.test.ts:80:51\n     78|   if (frame.operation !== \"frame\") throw new Error(\"frame\");\n     79|   frame.input.childSteps = [];\n     80|   expect(() => preserveAssertions(base, removed)).toThrow(ContractErro…\n       |                                                   ^\n     81|   const response = structuredClone(base),\n     82|     wait = response.steps[2]!;\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 41 skipped (42)\n   Start at  15:26:03\n   Duration  3.44s (transform 60%, import 40%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-2.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "healing seals nested assertions, response status predicates and enclosing frame identity",
+            "messages": [
+              "AssertionError: expected function to throw an error, but it didn't\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing.test.ts:80:51\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "healing seals nested assertions, response status predicates and enclosing frame identity"
+      ],
+      "failureExcerpt": "AssertionError: expected function to throw an error, but it didn't\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing.test.ts:80:51\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+    },
+    {
+      "id": "m3-response-predicate",
+      "invariant": "Recursive assertion protection: response-wait status",
+      "file": "packages/planner/src/agent/index.ts",
+      "original": "protectedFields.push({ frames, responseWait: step });",
+      "replacement": "continue;",
+      "targetedTestFiles": [
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "targetedTestNames": [
+        "healing seals nested assertions, response status predicates and enclosing frame identity"
+      ],
+      "occurrences": 1,
+      "rationale": "Omitting response-wait protection permits changing the required readiness status.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 2853,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/application/src/ai/healing.test.ts (42 tests | 1 failed | 41 skipped) 6ms\n   × healing seals nested assertions, response status predicates and enclosing frame identity 5ms\n   ↓ healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields\n   ↓ business input replacements require manual review and retain all protected plan content\n   ↓ replacement generation exposes only present fields with schema shapes and marks drag manual-only\n   ↓ a foreign approval actor cannot dispatch verification or promote a candidate\n   ↓ healing approval requires named authority and ordinary promotion cannot bypass verification\n   ↓ failed verification returns to reviewable without another candidate and leaves historical failure immutable\n   ↓ healing reconciliation CAS preserves concurrent author edits and reports revision conflict\n   ↓ bound passing verification atomically promotes candidate and is restart-idempotent\n   ↓ local capability issuance cannot broaden issuer resource grants or expiry\n   ↓ evidence-backed model abstention completes once without a candidate, proposal or verification\n   ↓ unknown handles in the patch branch reject with only code-owned diagnostics\n   ↓ unknown handles in the abstain branch reject with only code-owned diagnostics\n   ↓ an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics\n   ↓ healing refuses missing provider without a candidate, persists the refusal and does not regenerate\n   ↓ healing refuses passed runs before creating a healing job\n   ↓ model UPSTREAM_TIMEOUT failures expose bounded code-owned deadline details\n   ↓ model INVALID_ARGUMENT failures expose bounded code-owned schema_invalid details\n   ↓ oversized evidence refuses before model dispatch rather than enlarging the ceiling\n   ↓ a repeated locator on an unexecuted step is deferred and promoted only after verification identity proof\n   ↓ a named password input without an ARIA role is deferred and promoted after verification identity proof\n   ↓ an unexecuted step with a different original locator remains manual\n   ↓ deferred admission refuses executed later\n   ↓ deferred admission refuses different replacement\n   ↓ deferred admission refuses renamed anchor\n   ↓ deferred admission refuses ambiguous baseline\n   ↓ deferred different identity cannot promote a passing verification\n   ↓ deferred missing evidence cannot promote a passing verification\n   ↓ deferred invalid evidence cannot promote a passing verification\n   ↓ deferred different origin cannot promote a passing verification\n   ↓ deferred ambiguous match cannot promote a passing verification\n   ↓ long reviewer rejection reasons are stored as explicitly truncated limitations\n   ↓ healing review reports frozen changes and recorded manual policy reasons without mutation\n   ↓ healing review resolves nested download replacement pointers from both immutable plans\n   ↓ healing review recalculates protected assertion hashes rather than trusting the proposal\n   ↓ healing review approval version remains mandatory and rejects a divergent version\n   ↓ healing review denies another project before exposing immutable plan or evidence\n   ↓ healing review shows policy-applied verification without rewriting historical failure\n   ↓ healing review exposes only recorded label and form attributes and never invents identity proof\n   ↓ healing review shows recorded truncated candidates without claiming locator equivalence\n   ↓ healing review propagates unexpected locator read failures instead of masking defects\n   ↓ model locator candidates keep the matched and interactive elements ahead of document scaffolding\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/application/src/ai/healing.test.ts > healing seals nested assertions, response status predicates and enclosing frame identity\nAssertionError: expected function to throw an error, but it didn't\n ❯ packages/application/src/ai/healing.test.ts:85:52\n     83|   if (wait.operation !== \"waitFor\" || !(\"response\" in wait.input)) thr…\n     84|   wait.input.response.status = 201;\n     85|   expect(() => preserveAssertions(base, response)).toThrow(ContractErr…\n       |                                                    ^\n     86|   const moved = structuredClone(base),\n     87|     movedFrame = moved.steps[1]!;\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 41 skipped (42)\n   Start at  15:26:07\n   Duration  2.39s (transform 60%, import 40%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-3.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "healing seals nested assertions, response status predicates and enclosing frame identity",
+            "messages": [
+              "AssertionError: expected function to throw an error, but it didn't\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing.test.ts:85:52\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "healing seals nested assertions, response status predicates and enclosing frame identity"
+      ],
+      "failureExcerpt": "AssertionError: expected function to throw an error, but it didn't\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing.test.ts:85:52\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+    },
+    {
+      "id": "m3-patch-allowlist",
+      "invariant": "Healing patch path allowlist",
+      "file": "packages/application/src/ai/healing-patch.ts",
+      "original": "const replacement = healingReplacements(step).find((entry) => entry.path === change.path);",
+      "replacement": "const replacement = healingReplacements(step).find((entry) => entry.path === change.path) ?? { path: change.path, valueShape: null, manualOnly: false };",
+      "targetedTestFiles": [
+        "packages/application/src/ai/healing-mask.test.ts"
+      ],
+      "targetedTestNames": [
+        "refuses an otherwise schema-valid request method change outside the healing path allowlist"
+      ],
+      "occurrences": 1,
+      "rationale": "A schema-valid GET-to-POST setup change is not an authorized patch; schema validation and assertion sealing alone do not reject it.",
+      "preexistingObservation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 1447,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/application/src/ai/healing.test.ts (42 tests | 1 failed | 41 skipped) 22ms\n   ↓ healing seals nested assertions, response status predicates and enclosing frame identity\n   × healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields 21ms\n   ↓ business input replacements require manual review and retain all protected plan content\n   ↓ replacement generation exposes only present fields with schema shapes and marks drag manual-only\n   ↓ a foreign approval actor cannot dispatch verification or promote a candidate\n   ↓ healing approval requires named authority and ordinary promotion cannot bypass verification\n   ↓ failed verification returns to reviewable without another candidate and leaves historical failure immutable\n   ↓ healing reconciliation CAS preserves concurrent author edits and reports revision conflict\n   ↓ bound passing verification atomically promotes candidate and is restart-idempotent\n   ↓ local capability issuance cannot broaden issuer resource grants or expiry\n   ↓ evidence-backed model abstention completes once without a candidate, proposal or verification\n   ↓ unknown handles in the patch branch reject with only code-owned diagnostics\n   ↓ unknown handles in the abstain branch reject with only code-owned diagnostics\n   ↓ an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics\n   ↓ healing refuses missing provider without a candidate, persists the refusal and does not regenerate\n   ↓ healing refuses passed runs before creating a healing job\n   ↓ model UPSTREAM_TIMEOUT failures expose bounded code-owned deadline details\n   ↓ model INVALID_ARGUMENT failures expose bounded code-owned schema_invalid details\n   ↓ oversized evidence refuses before model dispatch rather than enlarging the ceiling\n   ↓ a repeated locator on an unexecuted step is deferred and promoted only after verification identity proof\n   ↓ a named password input without an ARIA role is deferred and promoted after verification identity proof\n   ↓ an unexecuted step with a different original locator remains manual\n   ↓ deferred admission refuses executed later\n   ↓ deferred admission refuses different replacement\n   ↓ deferred admission refuses renamed anchor\n   ↓ deferred admission refuses ambiguous baseline\n   ↓ deferred different identity cannot promote a passing verification\n   ↓ deferred missing evidence cannot promote a passing verification\n   ↓ deferred invalid evidence cannot promote a passing verification\n   ↓ deferred different origin cannot promote a passing verification\n   ↓ deferred ambiguous match cannot promote a passing verification\n   ↓ long reviewer rejection reasons are stored as explicitly truncated limitations\n   ↓ healing review reports frozen changes and recorded manual policy reasons without mutation\n   ↓ healing review resolves nested download replacement pointers from both immutable plans\n   ↓ healing review recalculates protected assertion hashes rather than trusting the proposal\n   ↓ healing review approval version remains mandatory and rejects a divergent version\n   ↓ healing review denies another project before exposing immutable plan or evidence\n   ↓ healing review shows policy-applied verification without rewriting historical failure\n   ↓ healing review exposes only recorded label and form attributes and never invents identity proof\n   ↓ healing review shows recorded truncated candidates without claiming locator equivalence\n   ↓ healing review propagates unexpected locator read failures instead of masking defects\n   ↓ model locator candidates keep the matched and interactive elements ahead of document scaffolding\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/application/src/ai/healing.test.ts > healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields\nAssertionError: expected function to throw an error, but it didn't\n ❯ packages/application/src/ai/healing.test.ts:98:5\n     96|   expect(() =>\n     97|     applyHealingPatch(base, patch(\"fill_email\", \"/input/locator/value\"…\n     98|   ).toThrow(ContractError);\n       |     ^\n     99|   expect(() => applyHealingPatch(base, patch(\"fill_email\", \"/steps/0/i…\n    100|     ContractError,\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 41 skipped (42)\n   Start at  15:26:10\n   Duration  1.24s (transform 52%, import 46%, tests 2%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-4.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "healing rejects forbidden paths, overlapping replacements, duplicate recursive IDs and absent fields",
+            "messages": [
+              "AssertionError: expected function to throw an error, but it didn't\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing.test.ts:98:5\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3882:64"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "survivedBeforeKiller": false,
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 891,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/application/src/ai/healing-mask.test.ts (1 test | 1 failed) 267ms\n   × refuses an otherwise schema-valid request method change outside the healing path allowlist 267ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/application/src/ai/healing-mask.test.ts > refuses an otherwise schema-valid request method change outside the healing path allowlist\nAssertionError: expected [Function] to throw an error\n\n- Expected:\nnull\n\n+ Received:\nundefined\n\n ❯ packages/application/src/ai/healing-mask.test.ts:16:5\n     14|       explanation: \"Observed setup change cannot authorize a new effec…\n     15|     }),\n     16|   ).toThrow(\"Healing patch path is not authorized\");\n       |     ^\n     17| });\n     18|\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed (1)\n   Start at  15:26:11\n   Duration  695ms (tests 42%, transform 31%, import 26%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-5.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "refuses an otherwise schema-valid request method change outside the healing path allowlist",
+            "messages": [
+              "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing-mask.test.ts:16:5\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "refuses an otherwise schema-valid request method change outside the healing path allowlist"
+      ],
+      "failureExcerpt": "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/healing-mask.test.ts:16:5\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+    },
+    {
+      "id": "m3-masked-comparison",
+      "invariant": "Healing whole-plan masked comparison",
+      "file": "packages/application/src/ai/healing-patch.ts",
+      "original": "if (semanticHash(maskedBase) !== semanticHash(maskedCandidate))\n    throw new ContractError(\"POLICY_DENIED\", \"Healing changed protected plan content\");",
+      "replacement": "void maskedCandidate;",
+      "targetedTestFiles": [
+        "packages/application/src/ai/healing.test.ts"
+      ],
+      "targetedTestNames": [
+        "business input replacements require manual review and retain all protected plan content"
+      ],
+      "occurrences": 1,
+      "rationale": "Equivalent for this single-site mutation: candidate is a structuredClone(base); the only writes are replace(candidateSteps.get(step.id), change.path, change.value) after unique-ID, overlap, existing-field and path-allowlist checks. validate returns the same candidate without coercion/defaults. Masking those exact replacement paths on both clones therefore necessarily restores equal plans. There is no external candidate input or other unmasked write. This does not classify the comparison as unnecessary under future implementation changes.",
+      "outcome": "equivalent",
+      "observation": {
+        "code": 0,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 1421,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ✓ |unit| packages/application/src/ai/healing.test.ts (42 tests | 41 skipped) 22ms\n\n Test Files  1 passed (1)\n      Tests  1 passed | 41 skipped (42)\n   Start at  15:26:12\n   Duration  1.21s (transform 52%, import 46%, tests 2%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-6.json\n",
+        "passedTests": 1,
+        "failures": [],
+        "setupFailure": false
+      },
+      "killingTestNames": [],
+      "failureExcerpt": ""
+    },
+    {
+      "id": "m3-terminal-run",
+      "invariant": "Terminal Run immutability",
+      "file": "packages/persistence/migrations/sqlite/0001_initial.sql",
+      "original": "CREATE TRIGGER runs_terminal BEFORE UPDATE ON runs WHEN OLD.phase='completed' AND (NEW.phase<>OLD.phase OR NEW.outcome<>OLD.outcome OR NEW.status<>OLD.status OR NEW.data_json<>OLD.data_json) BEGIN SELECT RAISE(ABORT,'terminal_immutable'); END;",
+      "replacement": "-- Mutation: terminal Run updates are permitted.",
+      "targetedTestFiles": [
+        "packages/persistence/src/persistence.test.ts"
+      ],
+      "targetedTestNames": [
+        "constraint fixture: valid terminal and immutable verdict"
+      ],
+      "occurrences": 1,
+      "rationale": "The direct-SQL fixture first finalizes a failed Run then attempts to rewrite its verdict. Fresh disposable databases compute migration checksums from their copied bytes; any checksum/setup refusal is invalid, not killed.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 531,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/persistence/src/persistence.test.ts (44 tests | 1 failed | 43 skipped) 22ms\n   ❯ SQLite persistence (44)\n     ↓ applies immutable checksummed migrations and refuses altered bytes\n     ↓ rolls back a migration that dies after DDL\n     ↓ upgrades populated evidence while preserving code artifact foreign keys\n     ↓ rolls back an invalid rebuild upgrade and restores runtime foreign keys\n     ↓ same key replays the original receipt, changed request conflicts\n     ↓ outbox and state mutation roll back together\n     ↓ rejects stale owner fencing after expiry and a new claim\n     ↓ allows exactly one of two OS processes to claim\n     ↓ bounds writer contention with a typed retryable error and succeeds once the writer commits\n     ↓ enforces audit append-only even with direct SQL\n     ↓ never overspends under concurrent reserve and accounts settled usage\n     ↓ bounds concurrent model compute slots even without a price or monetary quota\n     ↓ reserves independent cumulative tokens atomically and retains unknown-response charges\n     ↓ applies no token quota until the operator sets one\n     ↓ stores consent with audit and complete model usage without converting null to zero\n     ↓ backs up WAL consistently and restores in suspended isolation preserving IDs\n     ↓ OPS-025 replays post-backup consent and approval revocations and invalidates server tokens\n     ↓ OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it\n     ↓ OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended\n     ↓ constraint fixture: negative independent token quota\n     ↓ constraint fixture: cross-workspace token quota\n     ↓ constraint fixture: invalid unknown cost consent\n     ↓ constraint fixture: valid independent token quota\n     ↓ constraint fixture: cross-workspace project reference\n     ↓ constraint fixture: duplicate test ordinal\n     ↓ constraint fixture: duplicate attempt number\n     ↓ constraint fixture: duplicate plan step\n     ↓ constraint fixture: environment name per project\n     ↓ constraint fixture: outbox aggregate sequence\n     ↓ constraint fixture: run revision belongs to test\n     ↓ constraint fixture: invalid artifact availability\n     ↓ constraint fixture: invalid phase\n     ↓ constraint fixture: terminal phase without outcome\n     × constraint fixture: valid terminal and immutable verdict 21ms\n     ↓ constraint fixture: phase cannot regress\n     ↓ constraint fixture: audit update rejected\n     ↓ constraint fixture: audit deletion rejected\n     ↓ constraint fixture: revision bytes immutable\n     ↓ constraint fixture: negative artifact bytes\n     ↓ constraint fixture: sensitive variable must have encrypted …\n     ↓ constraint fixture: valid artifact dimensions\n     ↓ constraint fixture: authored code artifact without executio…\n     ↓ constraint fixture: partial execution artifact provenance\n     ↓ constraint fixture: authored artifact cross-workspace revis…\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/persistence/src/persistence.test.ts > SQLite persistence > constraint fixture: valid terminal and immutable verdict\nAssertionError: expected 'accept' to be 'check' // Object.is equality\n\nExpected: \"check\"\nReceived: \"accept\"\n\n ❯ packages/persistence/src/persistence.test.ts:717:20\n    715|       actual = constraintErrorClass(error);\n    716|     }\n    717|     expect(actual).toBe(fixture.expected);\n       |                    ^\n    718|   });\n    719| });\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 43 skipped (44)\n   Start at  15:26:14\n   Duration  319ms (transform 55%, import 35%, tests 9%, worker 1%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-7.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "SQLite persistence constraint fixture: valid terminal and immutable verdict",
+            "messages": [
+              "AssertionError: expected 'accept' to be 'check' // Object.is equality\n    at /tmp/tm-m3-mutations-bNpXEE/packages/persistence/src/persistence.test.ts:717:20\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "SQLite persistence constraint fixture: valid terminal and immutable verdict"
+      ],
+      "failureExcerpt": "AssertionError: expected 'accept' to be 'check' // Object.is equality\n    at /tmp/tm-m3-mutations-bNpXEE/packages/persistence/src/persistence.test.ts:717:20\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+    },
+    {
+      "id": "m3-download-sha",
+      "invariant": "CI publication SHA binding: workflow assessed head",
+      "file": "tools/src/github-action/download.ts",
+      "original": "run.head_sha !== input.assessedSha ||",
+      "replacement": "false ||",
+      "targetedTestFiles": [
+        "tools/src/github-action/download.test.ts"
+      ],
+      "targetedTestNames": [
+        "refuses a workflow head SHA mismatch or unsupported event before artifact access"
+      ],
+      "occurrences": 1,
+      "rationale": "A workflow bound to the merge checkout instead of the assessed head must refuse before further artifact access. Pre-existing input tests do not import the downloader.",
+      "preexistingObservation": {
+        "code": 0,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 312,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ✓ |unit| tools/src/github-action/inputs.test.ts (2 tests | 1 skipped) 3ms\n\n Test Files  1 passed (1)\n      Tests  1 passed | 1 skipped (2)\n   Start at  15:26:14\n   Duration  83ms (transform 61%, import 20%, tests 11%, worker 8%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-8.json\n",
+        "passedTests": 1,
+        "failures": [],
+        "setupFailure": false
+      },
+      "survivedBeforeKiller": true,
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 322,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| tools/src/github-action/download.test.ts (4 tests | 1 failed | 3 skipped) 15ms\n   × refuses a workflow head SHA mismatch or unsupported event before artifact access 15ms\n   ↓ accepts matching assessed head for dispatch and same-repository pull request before job lookup\n   ↓ refuses fork or foreign-head pull request runs before job lookup\n   ↓ accepts only the five fixed artifact entries and refuses extra, missing, duplicate or nested names\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| tools/src/github-action/download.test.ts > refuses a workflow head SHA mismatch or unsupported event before artifact access\nAssertionError: expected Error: Execution job lookup failed { …(2) } to match object { code: 'POLICY_DENIED', …(1) }\n(1 matching property omitted from actual)\n\n- Expected\n+ Received\n\n- {\n-   \"code\": \"POLICY_DENIED\",\n-   \"message\": \"Workflow SHA/event differs from publication context\",\n+ ActionInputError {\n+   \"code\": \"UNAVAILABLE\",\n  }\n\n ❯ tools/src/github-action/download.test.ts:55:42\n     53|       .mockResolvedValueOnce(Response.json(run))\n     54|       .mockResolvedValueOnce(new Response(null, { status: 503 }));\n     55|     await expect(downloadEnvelope(input)).rejects.toMatchObject({\n       |                                          ^\n     56|       code: \"POLICY_DENIED\",\n     57|       message: \"Workflow SHA/event differs from publication context\",\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 3 skipped (4)\n   Start at  15:26:15\n   Duration  106ms (transform 44%, tests 34%, import 18%, worker 4%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-9.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "refuses a workflow head SHA mismatch or unsupported event before artifact access",
+            "messages": [
+              "Error: expected Error: Execution job lookup failed { …(2) } to match object { code: 'POLICY_DENIED', …(1) }\n(1 matching property omitted from actual)\n    at _Assertion.__VITEST_REJECTS__ (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1607:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1696:22)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/github-action/download.test.ts:55:42\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "refuses a workflow head SHA mismatch or unsupported event before artifact access"
+      ],
+      "failureExcerpt": "Error: expected Error: Execution job lookup failed { …(2) } to match object { code: 'POLICY_DENIED', …(1) }\n(1 matching property omitted from actual)\n    at _Assertion.__VITEST_REJECTS__ (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1607:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1696:22)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/github-action/download.test.ts:55:42\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)"
+    },
+    {
+      "id": "m3-publisher-sha",
+      "invariant": "CI publication SHA binding: envelope assessed and checkout identity",
+      "file": "tools/src/github-action/publisher.ts",
+      "original": "envelope.result.provenance.assessedSha !== input.sha ||\n    envelope.result.provenance.checkoutSha !== input.checkoutSha",
+      "replacement": "false",
+      "targetedTestFiles": [
+        "tools/src/github-action/publisher.test.ts"
+      ],
+      "targetedTestNames": [
+        "refuses assessed SHA, checkout SHA and report hash mismatch before opening a publisher workspace"
+      ],
+      "occurrences": 1,
+      "rationale": "Removing both envelope SHA comparisons allows an immutable result to be published under a different identity. The new killer invokes the real source-backed validator and publisher, without rebuilding the paid-evaluation runtime.",
+      "preexistingObservation": {
+        "code": 0,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 300,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ✓ |unit| tools/src/github-action/inputs.test.ts (2 tests | 1 skipped) 3ms\n\n Test Files  1 passed (1)\n      Tests  1 passed | 1 skipped (2)\n   Start at  15:26:15\n   Duration  75ms (transform 59%, import 21%, tests 12%, worker 8%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-10.json\n",
+        "passedTests": 1,
+        "failures": [],
+        "setupFailure": false
+      },
+      "survivedBeforeKiller": true,
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 1400,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| tools/src/github-action/publisher.test.ts (1 test | 1 failed) 82ms\n   × refuses assessed SHA, checkout SHA and report hash mismatch before opening a publisher workspace 81ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| tools/src/github-action/publisher.test.ts > refuses assessed SHA, checkout SHA and report hash mismatch before opening a publisher workspace\nAssertionError: expected \"open\" to not be called at all, but actually been called 2 times\n\nReceived:\n\n  1st open call:\n\n    Array [\n      Object {\n        \"cwd\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n        \"env\": Object {\n          \"CI\": \"true\",\n          \"TESTMASTER_DATA_DIR\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5/data\",\n          \"TESTMASTER_OFFLINE\": \"true\",\n        },\n        \"home\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n      },\n    ]\n\n  2nd open call:\n\n    Array [\n      Object {\n        \"cwd\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n        \"env\": Object {\n          \"CI\": \"true\",\n          \"TESTMASTER_DATA_DIR\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5/data\",\n          \"TESTMASTER_OFFLINE\": \"true\",\n        },\n        \"home\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n      },\n    ]\n\n\nNumber of calls: 2\n\n ❯ tools/src/github-action/publisher.test.ts:57:26\n     55|           refusal = error;\n     56|         }\n     57|         expect(open).not.toHaveBeenCalled();\n       |                          ^\n     58|         expect(refusal).toMatchObject({\n     59|           code: \"POLICY_DENIED\",\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed (1)\n   Start at  15:26:15\n   Duration  1.18s (transform 48%, import 45%, tests 7%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-11.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "refuses assessed SHA, checkout SHA and report hash mismatch before opening a publisher workspace",
+            "messages": [
+              "AssertionError: expected \"open\" to not be called at all, but actually been called 2 times\n\nReceived:\n\n  1st open call:\n\n    Array [\n      Object {\n        \"cwd\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n        \"env\": Object {\n          \"CI\": \"true\",\n          \"TESTMASTER_DATA_DIR\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5/data\",\n          \"TESTMASTER_OFFLINE\": \"true\",\n        },\n        \"home\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n      },\n    ]\n\n  2nd open call:\n\n    Array [\n      Object {\n        \"cwd\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n        \"env\": Object {\n          \"CI\": \"true\",\n          \"TESTMASTER_DATA_DIR\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5/data\",\n          \"TESTMASTER_OFFLINE\": \"true\",\n        },\n        \"home\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n      },\n    ]\n\n\nNumber of calls: 2\n\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2214:51)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/github-action/publisher.test.ts:57:26\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "refuses assessed SHA, checkout SHA and report hash mismatch before opening a publisher workspace"
+      ],
+      "failureExcerpt": "AssertionError: expected \"open\" to not be called at all, but actually been called 2 times\n\nReceived:\n\n  1st open call:\n\n    Array [\n      Object {\n        \"cwd\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n        \"env\": Object {\n          \"CI\": \"true\",\n          \"TESTMASTER_DATA_DIR\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5/data\",\n          \"TESTMASTER_OFFLINE\": \"true\",\n        },\n        \"home\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n      },\n    ]\n\n  2nd open call:\n\n    Array [\n      Object {\n        \"cwd\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n        \"env\": Object {\n          \"CI\": \"true\",\n          \"TESTMASTER_DATA_DIR\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5/data\",\n          \"TESTMASTER_OFFLINE\": \"true\",\n        },\n        \"home\": \"/tmp/tm-publisher-binding-2Nf8jC/testmaster-publisher-7Ef0R5\",\n      },\n    ]\n\n\nNumber of calls: 2\n\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2214:51)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/github-action/publisher.test.ts:57:26\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+    },
+    {
+      "id": "m3-comparison-redaction",
+      "invariant": "Secret-derived comparisons are omitted",
+      "file": "packages/runner/src/runtime.ts",
+      "original": "value === undefined || Buffer.byteLength(value) > 8192 || this.scrub(value) !== value,",
+      "replacement": "value === undefined || Buffer.byteLength(value) > 8192,",
+      "targetedTestFiles": [
+        "packages/runner/src/browser.test.ts"
+      ],
+      "targetedTestNames": [
+        "retains business assertion values for diagnosis but omits secret-derived and oversized comparisons"
+      ],
+      "occurrences": 1,
+      "rationale": "Ordinary comparisons remain available, but a secret-derived observed value must never enter step.finished diagnostic evidence.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 1279,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/runner/src/browser.test.ts (24 tests | 1 failed | 23 skipped) 669ms\n   ↓ requires the supervisor proxy and never silently disables Chromium sandbox\n   ↓ emits bounded hashed sanitized locator records on ordinary replay and failed actions\n   ↓ captures asynchronously attached action identity before acting and spends only the remaining step budget\n   ↓ captures missing action targets once without restarting their attachment deadline\n   ↓ retains a readiness transition that occurs while before screenshots are collected\n   ↓ preserves cancellation and attempt deadline precedence during attachment observation\n   ↓ fails ambiguous actions and skips the remaining required oracle\n   ↓ selects numeric indices without treating them as typed value references\n   ↓ restores lexical frame scope and emits child-step events\n   ↓ binds popup aliases only from approved policy and does not switch implicitly\n   ↓ captures before/after evidence and scrubs DOM and console canaries\n   ↓ waits for an authorized download before triggering and checks exact digest/MIME/size\n   ↓ enforces typed wait deadlines and refuses raw artifacts without explicit authorization\n   ↓ fails a real negative oracle instead of claiming screenshot capture means success\n   ↓ waits for an eventually consistent value within the step deadline but fails on a stale one\n   ↓ keeps a stale observation as the mismatch when the final sample read times out\n   ↓ blocks unauthorized uploads before touching filesystem or target inputs\n   ↓ allows detached waits to target absent elements but rejects ambiguous hidden waits\n   ↓ distinguishes a live state-wait timeout from a crashed page without treating either as passed\n   × retains business assertion values for diagnosis but omits secret-derived and oversized comparisons 669ms\n   ↓ launches Chromium with explicit password-store and keychain isolation and no default-arg override\n   ↓ blocks a fill whose secret reference is absent from the snapshot before typing\n   ↓ keeps a proven assertion failure when a later revocation cancels the attempt\n   ↓ refuses storage-state input as unsupported before launching Chromium\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/runner/src/browser.test.ts > retains business assertion values for diagnosis but omits secret-derived and oversized comparisons\nAssertionError: expected { stepId: 'assert', index: +0, …(7) } to not have property \"observed\"\n\n- Expected:\nundefined\n\n+ Received:\n\"private-business-value\"\n\n ❯ packages/runner/src/browser.test.ts:628:25\n    626|     expect(await runBrowser(attempt)).toMatchObject({ outcome: \"failed…\n    627|     const payload = events.find((event) => event.type === \"step.finish…\n    628|     expect(payload).not.toHaveProperty(\"observed\");\n       |                         ^\n    629|     expect(payload).not.toHaveProperty(\"expected\");\n    630|     expect(JSON.stringify(events)).not.toContain(\"private-business-val…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 23 skipped (24)\n   Start at  15:26:17\n   Duration  1.09s (tests 65%, import 23%, transform 13%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-12.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "retains business assertion values for diagnosis but omits secret-derived and oversized comparisons",
+            "messages": [
+              "AssertionError: expected { stepId: 'assert', index: +0, …(7) } to not have property \"observed\"\n    at /tmp/tm-m3-mutations-bNpXEE/packages/runner/src/browser.test.ts:628:25\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "retains business assertion values for diagnosis but omits secret-derived and oversized comparisons"
+      ],
+      "failureExcerpt": "AssertionError: expected { stepId: 'assert', index: +0, …(7) } to not have property \"observed\"\n    at /tmp/tm-m3-mutations-bNpXEE/packages/runner/src/browser.test.ts:628:25\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+    },
+    {
+      "id": "m3-fixture-context",
+      "invariant": "Evaluation fixture exact patch validity",
+      "file": "tools/src/evals/m3.ts",
+      "original": "if (!patch.before || source.split(patch.before).length !== 2)",
+      "replacement": "if (!patch.before)",
+      "targetedTestFiles": [
+        "tools/src/evals/m3.test.ts"
+      ],
+      "targetedTestNames": [
+        "rejects an absent exact context rather than substituting another patch"
+      ],
+      "occurrences": 1,
+      "rationale": "Removing exact-occurrence validation silently accepts an absent patch context; the killer exercises the validator directly, independent of any registration's frozen-file integrity.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 1587,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| tools/src/evals/m3.test.ts (35 tests | 1 failed | 34 skipped) 5ms\n   ↓ checks all fixed cases and budgets without network, model or Docker invocation\n   × rejects an absent exact context rather than substituting another patch 4ms\n   ↓ refuses a corpus whose frozen patch context is absent\n   ↓ refuses a previously started registration even when its observations are missing\n   ↓ refuses changed generation controls and quotas before dispatch\n   ↓ refuses hand-populated control booleans without retained run/step/oracle evidence\n   ↓ writes the registered provider as a profile the product configuration accepts\n   ↓ accepts the shared registered reasoning effort low\n   ↓ accepts the shared registered reasoning effort medium\n   ↓ accepts the shared registered reasoning effort high\n   ↓ accepts the shared registered reasoning effort xhigh\n   ↓ accepts the shared registered reasoning effort max\n   ↓ refuses unsupported reasoning or additional wire controls {\"reasoning_effort\":\"extreme\"}\n   ↓ refuses unsupported reasoning or additional wire controls {\"reasoning_effort\":\"max\",\"temperature\":1}\n   ↓ writes registered effort and local capabilities instead of fixed profile defaults\n   ↓ refuses unsafe dev labels and unknown IDs before creating results or a start marker\n   ↓ requires structurally valid dev provider even though freeze gates are skipped\n   ↓ requires structurally valid dev decoding even though freeze gates are skipped\n   ↓ requires structurally valid dev budget even though freeze gates are skipped\n   ↓ requires structurally valid dev corpus even though freeze gates are skipped\n   ↓ records an unstarted dev subset without freeze, scoring, dispatch or a start marker\n   ↓ does not consult an existing start marker and scores only complete dev cohorts\n   ↓ accepts a new exact round identity and confines it to its registration directory\n   ↓ admits only one concurrent controller and permanently refuses its start marker\n   ↓ compares stored normalized assertion bytes and detects an actual predicate mutation\n   ↓ retains typed refusals without confusing safe abstention with model failure\n   ↓ emits exact step-relative controlled replacements and never copies assertion mutations\n   ↓ binds implementation before controls and rejects stale hashes or missing catalogs\n   ↓ rotates the same integration secret across authenticated targets without widening its origin\n   ↓ requires comparable frozen apply baselines and real service proposals for policy probes\n   ↓ settles interrupted reserved calls without dispatch or releasing unknown charges\n   ↓ loads an external driver and derives cohort counts without reference-shop case identities\n   ↓ maps code-owned layered diagnoses and preserves unsupported-claim uncertainty\n   ↓ replays manual candidates on a disposable copy without approving or promoting them\n   ↓ retains a safe primary action while classifying dangerous and unknown model advice\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| tools/src/evals/m3.test.ts > rejects an absent exact context rather than substituting another patch\nAssertionError: expected [Function] to throw an error\n\n- Expected:\nnull\n\n+ Received:\nundefined\n\n ❯ tools/src/evals/m3.test.ts:88:5\n     86|       \"shop.html\",\n     87|     ),\n     88|   ).toThrow(\"context absent\");\n       |     ^\n     89| });\n     90| it(\"refuses a corpus whose frozen patch context is absent\", async () =…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 34 skipped (35)\n   Start at  15:26:18\n   Duration  1.34s (transform 54%, import 45%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-13.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "rejects an absent exact context rather than substituting another patch",
+            "messages": [
+              "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/evals/m3.test.ts:88:5\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "rejects an absent exact context rather than substituting another patch"
+      ],
+      "failureExcerpt": "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/evals/m3.test.ts:88:5\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+    },
+    {
+      "id": "m3-absent-json",
+      "invariant": "Absent asserted JSON target fails",
+      "file": "packages/runner/src/http.ts",
+      "original": "matches = target.present && isDeepStrictEqual(observed, expected);",
+      "replacement": "matches = isDeepStrictEqual(observed, expected);",
+      "targetedTestFiles": [
+        "packages/runner/src/http.test.ts"
+      ],
+      "targetedTestNames": [
+        "fails assertions whose JSON target is absent from a complete response"
+      ],
+      "occurrences": 1,
+      "rationale": "An absent JSON pointer yields null as its diagnostic value, but must not satisfy an expected-null business assertion.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 489,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/runner/src/http.test.ts (22 tests | 1 failed | 21 skipped) 19ms\n   ↓ escapes path/query once, preserves duplicate query names, and sends JSON through real HTTP\n   ↓ treats 401 as a response and fails a semantic negative control even with HTTP 200\n   ↓ evaluates header/count/schema expectations against named snapshot schemas\n   × fails assertions whose JSON target is absent from a complete response 18ms\n   ↓ records value-free missing-pointer structure and distinguishes empty arrays from absent keys\n   ↓ bounds structural keys and records no missing diagnostic for a resolved null\n   ↓ keeps a target the egress proxy could not reach inconclusive with its socket error code\n   ↓ sends typed sensitive captures only over trusted IPC and keeps artifacts redacted\n   ↓ propagates request taint into captures even when capture.sensitive is false\n   ↓ strips authorization/cookies/API keys on allowed cross-origin redirects\n   ↓ enforces ten redirects and reauthorizes each destination\n   ↓ records intent before mutations and executes explicit owned cleanup in reverse creation order\n   ↓ never cleans an unproven resource and reports uncertain side effects without retry\n   ↓ preserves business outcomes when cleanup fails and denies compensation after revocation\n   ↓ rejects secret queries, header injection, unsafe URLs and artifacts before IO\n   ↓ bounds response bodies and deadlines without converting transport absence into a pass\n   ↓ requires a proxy in runHttp and can use a real local CONNECT proxy\n   ↓ retains only bounded error metadata by default while assertions consume full responses in memory\n   ↓ requires explicit restricted body optin before any request and emits full bodies only separately\n   ↓ emits real HTTP business comparisons and redacts a secret-derived expected value\n   ↓ refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA\n   ↓ refuses storage-state input as unsupported before any HTTP request\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/runner/src/http.test.ts > fails assertions whose JSON target is absent from a complete response\nAssertionError: promise resolved \"undefined\" instead of rejecting\n\n- Expected:\nError {\n  \"message\": \"rejected promise\",\n}\n\n+ Received:\nundefined\n\n ❯ packages/runner/src/http.test.ts:246:6\n    244|         pointer,\n    245|       ),\n    246|     ).rejects.toMatchObject({ reasonCode: \"assertion_mismatch\", outcom…\n       |      ^\n    247| });\n    248| it(\"records value-free missing-pointer structure and distinguishes emp…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 21 skipped (22)\n   Start at  15:26:20\n   Duration  288ms (transform 48%, import 43%, tests 8%, worker 1%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-14.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "fails assertions whose JSON target is absent from a complete response",
+            "messages": [
+              "Error: promise resolved \"undefined\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1607:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1696:22)\n    at /tmp/tm-m3-mutations-bNpXEE/packages/runner/src/http.test.ts:246:6\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "fails assertions whose JSON target is absent from a complete response"
+      ],
+      "failureExcerpt": "Error: promise resolved \"undefined\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1607:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1696:22)\n    at /tmp/tm-m3-mutations-bNpXEE/packages/runner/src/http.test.ts:246:6\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+    },
+    {
+      "id": "m3-unsafe-upstream-effect",
+      "invariant": "Sent owned-resource mutation remains retry-unsafe on upstream failure",
+      "file": "packages/runner/src/http.ts",
+      "original": "resource && sent ? \"retry_unsafe_external_effect\" : \"insufficient_evidence\",",
+      "replacement": "\"insufficient_evidence\",",
+      "targetedTestFiles": [
+        "packages/runner/src/http.test.ts"
+      ],
+      "targetedTestNames": [
+        "keeps a target the egress proxy could not reach inconclusive with its socket error code"
+      ],
+      "occurrences": 1,
+      "rationale": "After the mutating owned-resource request was sent, a proxy ECONNRESET cannot establish that the effect never occurred; the existing real HTTP proxy fixture distinguishes read and write reasons.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 614,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/runner/src/http.test.ts (22 tests | 1 failed | 21 skipped) 85ms\n   ↓ escapes path/query once, preserves duplicate query names, and sends JSON through real HTTP\n   ↓ treats 401 as a response and fails a semantic negative control even with HTTP 200\n   ↓ evaluates header/count/schema expectations against named snapshot schemas\n   ↓ fails assertions whose JSON target is absent from a complete response\n   ↓ records value-free missing-pointer structure and distinguishes empty arrays from absent keys\n   ↓ bounds structural keys and records no missing diagnostic for a resolved null\n   × keeps a target the egress proxy could not reach inconclusive with its socket error code 84ms\n   ↓ sends typed sensitive captures only over trusted IPC and keeps artifacts redacted\n   ↓ propagates request taint into captures even when capture.sensitive is false\n   ↓ strips authorization/cookies/API keys on allowed cross-origin redirects\n   ↓ enforces ten redirects and reauthorizes each destination\n   ↓ records intent before mutations and executes explicit owned cleanup in reverse creation order\n   ↓ never cleans an unproven resource and reports uncertain side effects without retry\n   ↓ preserves business outcomes when cleanup fails and denies compensation after revocation\n   ↓ rejects secret queries, header injection, unsafe URLs and artifacts before IO\n   ↓ bounds response bodies and deadlines without converting transport absence into a pass\n   ↓ requires a proxy in runHttp and can use a real local CONNECT proxy\n   ↓ retains only bounded error metadata by default while assertions consume full responses in memory\n   ↓ requires explicit restricted body optin before any request and emits full bodies only separately\n   ↓ emits real HTTP business comparisons and redacts a secret-derived expected value\n   ↓ refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA\n   ↓ refuses storage-state input as unsupported before any HTTP request\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/runner/src/http.test.ts > keeps a target the egress proxy could not reach inconclusive with its socket error code\nAssertionError: expected { outcome: 'inconclusive', …(2) } to match object { outcome: 'inconclusive', …(1) }\n(1 matching property omitted from actual)\n\n- Expected\n+ Received\n\n  {\n    \"outcome\": \"inconclusive\",\n-   \"reasonCode\": \"retry_unsafe_external_effect\",\n+   \"reasonCode\": \"insufficient_evidence\",\n  }\n\n ❯ packages/runner/src/http.test.ts:375:40\n    373|   });\n    374|   const write = fixture(\"http://127.0.0.1:9\", { plan: plan([create]) }…\n    375|   expect(await runHttp(write.runtime)).toMatchObject({\n       |                                        ^\n    376|     outcome: \"inconclusive\",\n    377|     reasonCode: \"retry_unsafe_external_effect\",\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 21 skipped (22)\n   Start at  15:26:20\n   Duration  398ms (transform 39%, import 35%, tests 25%, worker 1%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-15.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "keeps a target the egress proxy could not reach inconclusive with its socket error code",
+            "messages": [
+              "AssertionError: expected { outcome: 'inconclusive', …(2) } to match object { outcome: 'inconclusive', …(1) }\n(1 matching property omitted from actual)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2050:10)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/packages/runner/src/http.test.ts:375:40\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "keeps a target the egress proxy could not reach inconclusive with its socket error code"
+      ],
+      "failureExcerpt": "AssertionError: expected { outcome: 'inconclusive', …(2) } to match object { outcome: 'inconclusive', …(1) }\n(1 matching property omitted from actual)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2050:10)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/packages/runner/src/http.test.ts:375:40\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+    },
+    {
+      "id": "m3-analysis-source-target",
+      "invariant": "Fix targets resolve only to authorized source evidence",
+      "file": "packages/application/src/ai/analysis.ts",
+      "original": "const fixTarget = proposedTarget?.codeSnapshotId ? proposedTarget : undefined;",
+      "replacement": "const fixTarget = proposedTarget;",
+      "targetedTestFiles": [
+        "packages/application/src/ai/analysis.test.ts"
+      ],
+      "targetedTestNames": [
+        "execution handles cannot be promoted to source fix targets"
+      ],
+      "occurrences": 1,
+      "rationale": "Accepting any supplied handle lets an execution artifact become a persisted source fix target without a code snapshot binding.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 1471,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| packages/application/src/ai/analysis.test.ts (59 tests | 1 failed | 58 skipped) 735ms\n   ↓ passed execution abstains without inventing a failure hypothesis\n   ↓ HTTP 500 request response is not locator drift or a certain product cause\n   ↓ required HTTP status mismatch records the observation without proving product causality\n   ↓ required unexpected successful status 201 is an observed product mismatch\n   ↓ required unexpected successful status 204 is an observed product mismatch\n   ↓ required unexpected successful status 299 is an observed product mismatch\n   ↓ required unexpected non-success status 302 remains unknown\n   ↓ required unexpected non-success status 401 remains unknown\n   ↓ required unexpected non-success status 404 remains unknown\n   ↓ missing JSON value does not establish an approved schema violation\n   ↓ missing pointer structure reaches the catalog without turning into a rules schema claim\n   ↓ structured catalog retains frozen assertion semantics and verified reference hashes\n   ↓ locator catalog preserves relevant identities and discloses summarized candidates (false, 1)\n   ↓ locator catalog preserves relevant identities and discloses summarized candidates (true, 1)\n   ↓ locator catalog preserves relevant identities and discloses summarized candidates (false, 40)\n   ↓ catalog exposes bounded runner event metadata while retaining its resolvable handle\n   ↓ collection failure after a required mismatch preserves the mismatch and collection limitation\n   ↓ required frozen business mismatch cites the scoped persisted step and canonical hash\n   ↓ missing bundle preserves null snapshot with a disclosed evidence limitation\n   ↓ model failure retains byte-identical immutable factual predecessor and does not retry identical requests\n   ↓ schema-valid enrichment that contradicts the rules cause abstains and names the rejecting rule\n   ↓ nonterminal and unknown Runs are refused without analysis or jobs\n   ↓ identical factual diagnosis returns its immutable stored receipt\n   ↓ lost paid lease settles with unknown usage and never reissues enrichment\n   ↓ approved-schema mismatch takes precedence over generic business mismatch\n   ↓ affected requirements come from the frozen revision, not the active test\n   ↓ execution evidence rejects wrong hashes and cross-Run compound bindings\n   ↓ evidence authorization errors propagate rather than becoming a missing-bundle limitation\n   ↓ persisted supervisor security refusal precedes business mismatch and resolves its observation\n   ↓ authorized frozen source handle persists exact snapshot path and content binding\n   ↓ wrong-project discovery and altered summary fail before model dispatch\n   × execution handles cannot be promoted to source fix targets 734ms\n   ↓ oversized evidence abstains before dispatch instead of silently dropping its binding\n   ↓ a hypothesis supported only by a locator handle is recorded: true\n   ↓ a hypothesis supported only by a run handle is recorded: false\n   ↓ an under-supported alternative is dropped with a disclosure while a supported hypothesis is kept\n   ↓ a model abstention does not erase the cause the rules established from observed evidence\n   ↓ unknown model handles reject the entire enrichment and preserve the factual predecessor\n   ↓ stale source identity is refused before dispatch and unbound Runs disclose missing targets\n   ↓ a passed creation followed by an empty collection recommends persistence inspection without healing\n   ↓ a wrong value on a read that follows a passed write recommends persistence inspection\n   ↓ a wrong value on the write's own response compares the requirement instead\n   ↓ a request that only captures a credential is not a write the read can be blamed on\n   ↓ missing pointer missing_field remains an observation rather than an approved contract claim\n   ↓ missing pointer null_value remains an observation rather than an approved contract claim\n   ↓ new persistence requires layered diagnosis and support without breaking historical reads\n   ↓ model next steps enrich evidence without overriding code-owned conclusion and healing\n   ↓ model next step citing E999 rejects enrichment and preserves rules layers\n   ↓ model next steps may cite a verified Run handle without establishing a hypothesis cause\n   ↓ model next steps are rendered by the application and dropped when they do not fit the recorded cause\n   ↓ a model cause without an execution-supported hypothesis keeps the rules cause and the typed steps\n   ↓ a passed Run records no model next steps because there is no failure to advise on\n   ↓ relational chain caps at 64 while retaining the failed step and its early response\n   ↓ relational baseline compares latest compatible passing run without dynamic action value noise\n   ↓ latest attempt evidence excludes obsolete failures and historical analyses receive immutable successors\n   ↓ rejected model response records actual unsupported hypothesis count without accepting its cause\n   ↓ observed network failure supports environment restoration rather than healing\n   ↓ ambiguous locator candidates produce manual-only advice without a supported cause\n   ↓ layered observations remain bounded and scrubbed while retaining immutable evidence references\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| packages/application/src/ai/analysis.test.ts > execution handles cannot be promoted to source fix targets\nAssertionError: expected { …(4) } to be undefined\n\n- Expected:\nundefined\n\n+ Received:\n{\n  \"attemptId\": \"att_00000000-0000-4000-8000-000000000001\",\n  \"contentHash\": \"7afd3d5e652c8ca4d100c14900166ae920447ccbbcd10277d1d9de96e8f680dd\",\n  \"runId\": \"run_00000000-0000-4000-8000-000000000001\",\n  \"stepId\": \"stp_00000000-0000-4000-8000-000000000002\",\n}\n\n ❯ packages/application/src/ai/analysis.test.ts:800:28\n    798|   }));\n    799|   const result = await f.service.analyze(f.run.id, { model: true });\n    800|   expect(result.fixTarget).toBeUndefined();\n       |                            ^\n    801|   expect(result.modelCallId).not.toBeNull();\n    802|   expect(result.failureKind).toBe(\"product_bug\");\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 58 skipped (59)\n   Start at  15:26:21\n   Duration  1.27s (tests 61%, transform 24%, import 16%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-16.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "execution handles cannot be promoted to source fix targets",
+            "messages": [
+              "AssertionError: expected { …(4) } to be undefined\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/analysis.test.ts:800:28\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "execution handles cannot be promoted to source fix targets"
+      ],
+      "failureExcerpt": "AssertionError: expected { …(4) } to be undefined\n    at /tmp/tm-m3-mutations-bNpXEE/packages/application/src/ai/analysis.test.ts:800:28\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+    },
+    {
+      "id": "m3-license-asset",
+      "invariant": "Runtime installation requires the shipped license assets",
+      "file": "tools/src/distribution/install.ts",
+      "original": "if (!value.files.some((file) => file.path === asset && file.size > 0))",
+      "replacement": "if (false)",
+      "targetedTestFiles": [
+        "tools/src/distribution/distribution.test.ts"
+      ],
+      "targetedTestNames": [
+        "refuses a hash-pinned manifest that omits the original LICENSE"
+      ],
+      "occurrences": 1,
+      "rationale": "A hash-pinned manifest is otherwise self-consistent; only the explicit asset check refuses a runtime stripped of its Apache-2.0 license.",
+      "outcome": "killed",
+      "observation": {
+        "code": 1,
+        "signal": null,
+        "timedOut": false,
+        "durationMs": 503,
+        "output": "\n RUN  v5.0.3 /tmp/tm-m3-mutations-bNpXEE\n\n ❯ |unit| tools/src/distribution/distribution.test.ts (14 tests | 1 failed | 13 skipped) 6ms\n   ↓ confined runtime archives (7)\n     ↓ rejects absolute path before creating an outside entry\n     ↓ rejects parent path before creating an outside entry\n     ↓ rejects escaping symlink before creating an outside entry\n     ↓ rejects hardlink before creating an outside entry\n     ↓ rejects device before creating an outside entry\n     ↓ rejects entries beneath a symlink and links escaping through a chained link\n     ↓ produces identical archive bytes regardless of input order and mtimes, preserving confined workspace links\n   ↓ pinned distribution verification (3)\n     ↓ rejects manifest hash mismatch before trusting any manifest fields\n     ↓ verifies ordered parts and full reassembly and refuses tampered part bytes\n     ↓ rejects a wrong full hash even when individual part hashes match\n   ❯ license-bound installation (3)\n     × refuses a hash-pinned manifest that omits the original LICENSE 5ms\n     ↓ requires a hash-bound source index when source archive provenance is advertised\n     ↓ refuses tampered runtime bytes before extracting or loading images\n   ↓ relocatable production dependency graph (1)\n     ↓ includes transitive production packages and runtime assets without workspace source, tests or declarations, keeping third-party runtime directories\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |unit| tools/src/distribution/distribution.test.ts > license-bound installation > refuses a hash-pinned manifest that omits the original LICENSE\nAssertionError: expected [Function] to throw an error\n\n- Expected:\nnull\n\n+ Received:\nundefined\n\n ❯ tools/src/distribution/distribution.test.ts:160:56\n    158|       ),\n    159|     );\n    160|     expect(() => verifyManifest(bytes, sha256(bytes))).toThrow(\n       |                                                        ^\n    161|       \"Required license asset missing: LICENSE\",\n    162|     );\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 13 skipped (14)\n   Start at  15:26:22\n   Duration  302ms (transform 57%, import 40%, tests 2%, worker 1%)\n\nJSON report written to /tmp/tm-m3-mutations-bNpXEE/mutation-report-17.json\n",
+        "passedTests": 0,
+        "failures": [
+          {
+            "name": "license-bound installation refuses a hash-pinned manifest that omits the original LICENSE",
+            "messages": [
+              "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/distribution/distribution.test.ts:160:56\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+            ]
+          }
+        ],
+        "setupFailure": false
+      },
+      "killingTestNames": [
+        "license-bound installation refuses a hash-pinned manifest that omits the original LICENSE"
+      ],
+      "failureExcerpt": "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2287:114)\n    at Proxy.<anonymous> (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:1944:14)\n    at Proxy.methodWrapper (file:///var/tmp/tm-m4/int/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)\n    at /tmp/tm-m3-mutations-bNpXEE/tools/src/distribution/distribution.test.ts:160:56\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file:///var/tmp/tm-m4/int/node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+    }
+  ],
+  "limitations": [
+    "Targeted deterministic unit controls, not live model-quality or hosted GitHub proof.",
+    "Equivalent masked-comparison classification applies only to the current pure replacement implementation."
+  ]
+}
