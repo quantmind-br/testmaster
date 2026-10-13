@@ -38,7 +38,7 @@ let lastRunId = "";
 const open: OpenPortal[] = [];
 
 const owner = () => stack.ownerClient();
-async function admit(plan: ReturnType<typeof whoAmIPlan>): Promise<string> {
+async function admit(plan: unknown): Promise<string> {
   return (
     await created<{ id: string }>(
       owner().mutate("POST", `/v1/projects/${projectId}/tests`, { origin: "manual", plan }),
@@ -361,13 +361,32 @@ describe("J10 auth, secrets and redaction", () => {
     await outsider.page.goto(`/auth-profiles/${captchaProfile.id}`);
     await outsider.page.getByRole("heading", { level: 1, name: "Not found" }).waitFor();
 
-    // The Run ends blocked at its deadline: the checkpoint expired and the CAPTCHA was never attempted.
+    // The worker runs in CI mode: the Run ends blocked at once and the CAPTCHA is never attempted.
     const ended = await waitForRun(harness, admitted.runId);
-    expect(ended).toMatchObject({ outcome: "blocked" });
-    expect(["auth_checkpoint_expired", "manual_auth_required"]).toContain(ended.reasonCode);
+    expect(ended).toMatchObject({ outcome: "blocked", reasonCode: "manual_auth_required" });
+    const stateOf = async (): Promise<string> =>
+      (await owner().request("GET", `/v1/auth-checkpoints/${checkpoint.id}`)).json<{
+        data: { state: string };
+      }>().data.state;
+    // Positive control: until its deadline the requester could still resolve this checkpoint.
+    expect(await stateOf()).toBe("pending");
+    // The five-minute deadline passes while nobody resolves it.
+    const database = (await stack.scope()).database;
+    const past = new Date(Date.now() - 1000).toISOString();
+    const row = database.get("SELECT data_json FROM auth_checkpoints WHERE id=?", checkpoint.id);
+    const data = JSON.parse(String(row?.data_json)) as { expiresAt: string };
+    data.expiresAt = past;
+    database.run(
+      "UPDATE auth_checkpoints SET expires_at=?,data_json=? WHERE id=?",
+      past,
+      JSON.stringify(data),
+      checkpoint.id,
+    );
+    expect(await stateOf()).toBe("expired");
     const late = await owner().mutate("POST", `/v1/auth-checkpoints/${checkpoint.id}/continue`, {});
     expect(late.status).toBeGreaterThanOrEqual(400);
     expect(late.status).toBeLessThan(500);
+    expect(JSON.stringify(late.json())).toContain("auth_checkpoint_expired");
     const after = await waitForRun(harness, admitted.runId);
     expect(after.outcome).toBe("blocked");
     expect(site.counters.logins).toBe(logins);

@@ -171,7 +171,7 @@ async function leaks(session: Journey, values: string[]): Promise<string[]> {
   return found;
 }
 
-it("M4-03 SEC-023 J10 an HTTP login runs before the Attempt and the managed token never reaches evidence", async () => {
+it("J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence", async () => {
   const site = (await startReferenceAuth()) as Site;
   try {
     await journey(
@@ -213,7 +213,7 @@ it("M4-03 SEC-023 J10 an HTTP login runs before the Attempt and the managed toke
   }
 });
 
-it("M4-03 SEC-024 J10 a failing assertion stays failed while rejected credentials block without reaching the target", async () => {
+it("J10 M4-03 SEC-024 a failing assertion stays failed while rejected credentials block without reaching the target", async () => {
   const site = (await startReferenceAuth()) as Site;
   try {
     await journey(
@@ -288,7 +288,7 @@ it("M4-03 SEC-024 J10 a failing assertion stays failed while rejected credential
   }
 });
 
-it("M4-03 SEC-023 J10 an expired target session is re-established once and a revoked session refuses use", async () => {
+it("J10 M4-03 SEC-023 an expired target session is re-established once and a revoked session refuses use", async () => {
   const site = (await startReferenceAuth()) as Site;
   try {
     await journey(
@@ -331,7 +331,7 @@ it("M4-03 SEC-023 J10 an expired target session is re-established once and a rev
   }
 });
 
-it("M4-03 SEC-022 SEC-024 J10 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint", async () => {
+it("J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint", async () => {
   const site = (await startReferenceAuth()) as Site;
   try {
     await journey(
