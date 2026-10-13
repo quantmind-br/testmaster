@@ -42,7 +42,7 @@ interface BundleEntry {
 }
 
 interface Bundle {
-  readonly entries: readonly BundleEntry[];
+  readonly manifest: { readonly entries: readonly BundleEntry[] };
 }
 
 export interface DeletionOperation {
@@ -339,10 +339,11 @@ function ArtifactsOfRun({
   ];
   return (
     <StatusView status={bundle.status} error={bundle.error} onRetry={() => void bundle.reload()}>
+      {reason ? <p className="hint">{reason}</p> : null}
       <SearchableTable
         caption={`Artifacts of run ${runId}`}
         columns={columns}
-        rows={bundle.data?.entries ?? []}
+        rows={bundle.data?.manifest.entries ?? []}
         rowKey={(item) => item.artifactId}
         searchText={(item) => `${item.relativePath} ${item.kind} ${item.state}`}
         empty={
