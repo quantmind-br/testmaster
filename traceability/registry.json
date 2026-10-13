@@ -9545,27 +9545,103 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
+      "status": "verified",
       "scenario": [
         "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
         "validation/journeys/deploy-compose.test.ts::SEC-036 pins the ADR-016 images by digest and publishes PostgreSQL on loopback only",
-        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption"
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption",
+        "packages/application/src/operations.pg.test.ts::M4-02 pauses, drains and resumes Run admission for one workspace and leaves running work and other workspaces alone",
+        "packages/application/src/operations.pg.test.ts::M4-02 previews reconciliation without changing state and records the applied pass",
+        "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+        "packages/application/src/operations.pg.test.ts::M4-02 lists dead-lettered deliveries and auxiliary jobs and requeues one without rerunning anything",
+        "apps/cli/src/operations.pg.test.ts::M4-02 operates a server deployment from the host CLI: status, admission, alert rules and reconcile",
+        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+        "validation/journeys/operations-api.pg.test.ts::M4-02 serves the operations routes over HTTPS: the owner pauses admission, a viewer may only read and an anonymous caller is refused",
+        "validation/journeys/operations.portal.test.ts::M4-02 UX-003 operations status page is accessible, keyboard operable and requests an audited backup",
+        "validation/journeys/operations.portal.test.ts::M4-02 admin pauses and resumes admission from the portal and a new run is refused while paused",
+        "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
+        "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured",
+        "packages/application/src/operations.pg.test.ts::M4-02 queues one backup request at a time for org owners only and refuses an unconfigured deployment",
+        "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI",
+        "validation/journeys/operations.portal.test.ts::M4-02 viewer sees disabled-with-reason operations controls"
       ],
-      "oracle": [],
+      "oracle": [
+        "A workspace owner pauses, drains and resumes Run admission (admission_paused and admission_draining refuse new Runs while running work and other workspaces are untouched), previews and applies reconciliation, requests an audited backup, requeues a dead-lettered delivery or auxiliary job without rerunning anything, and releases restore isolation only after the review is confirmed, through the application, the HTTPS API, the host CLI and the portal pages.",
+        "Viewers get disabled controls with the reason in the portal and 403 from the API, anonymous callers get 401, and instance-level backup requests need an org owner."
+      ],
       "evidence": [
         "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
         "validation/results/m4-acceptance/s2a/044-s2a-postgres-final/output.log",
         "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log",
-        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/J17-server.json"
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/J17-server.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
       ],
       "code": [
         "deploy/compose",
         "deploy/systemd",
         "containers/server/Dockerfile",
         "docs/operations/rootless-docker.md",
-        "validation/journeys/compose-deployment.ts"
+        "validation/journeys/compose-deployment.ts",
+        "packages/application/src/operations.ts",
+        "packages/application/src/operations-controllers.ts",
+        "packages/application/src/alerts.ts",
+        "packages/application/src/incidents.ts",
+        "packages/application/src/telemetry.ts",
+        "apps/server/src/routes/operations.ts",
+        "apps/cli/src/operations.ts",
+        "apps/web/src/routes/operations.tsx",
+        "docs/operations/alerts.md",
+        "docs/operations/backups.md",
+        "docs/operations/disaster-recovery.md",
+        "docs/operations/incidents.md",
+        "docs/operations/retention.md",
+        "docs/operations/slo.md",
+        "deploy/compose/dr-rehearsal.sh"
       ],
-      "note": "S2a contributed the compose reference deployment, TLS-only PostgreSQL, readiness probes and per-component upgrade gate."
+      "note": "S2a contributed the compose reference deployment, TLS-only PostgreSQL, readiness probes and per-component upgrade gate. S2b added the admin operations surface (admission pause/drain, reconcile, DLQ, backup and restore verification requests, isolation release, alerts, SLOs, incidents) across the application, HTTPS API, host CLI and portal.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/operations.pg.test.ts::M4-02 pauses, drains and resumes Run admission for one workspace and leaves running work and other workspaces alone",
+          "packages/application/src/operations.pg.test.ts::M4-02 previews reconciliation without changing state and records the applied pass",
+          "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+          "packages/application/src/operations.pg.test.ts::M4-02 lists dead-lettered deliveries and auxiliary jobs and requeues one without rerunning anything",
+          "apps/cli/src/operations.pg.test.ts::M4-02 operates a server deployment from the host CLI: status, admission, alert rules and reconcile",
+          "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+          "validation/journeys/operations-api.pg.test.ts::M4-02 serves the operations routes over HTTPS: the owner pauses admission, a viewer may only read and an anonymous caller is refused",
+          "validation/journeys/operations.portal.test.ts::M4-02 UX-003 operations status page is accessible, keyboard operable and requests an audited backup",
+          "validation/journeys/operations.portal.test.ts::M4-02 admin pauses and resumes admission from the portal and a new run is refused while paused",
+          "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
+          "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured"
+        ],
+        "negative": [
+          "packages/application/src/operations.pg.test.ts::M4-02 queues one backup request at a time for org owners only and refuses an unconfigured deployment",
+          "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI",
+          "validation/journeys/operations.portal.test.ts::M4-02 viewer sees disabled-with-reason operations controls"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/operations.pg.test.ts",
+            "assertion": "expect((await failure(owner.preflight())).details?.reasonCode).toBe(\"admission_paused\");"
+          },
+          {
+            "path": "packages/application/src/operations.pg.test.ts",
+            "assertion": "expect(owner.operations.dlq().filter((entry) => entry.source === \"delivery\")).toHaveLength(1);"
+          },
+          {
+            "path": "apps/cli/src/operations.pg.test.ts",
+            "assertion": "expect(early.body.error?.details?.reasonCode).toBe(\"restore_review_pending\");"
+          },
+          {
+            "path": "validation/journeys/operations-api.pg.test.ts",
+            "assertion": "expect(viewerWrite.status).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/operations.portal.test.ts",
+            "assertion": "expect(refusal.details.reasonCode).toBe(\"admission_paused\");"
+          }
+        ]
+      }
     },
     {
       "id": "M4-03",
@@ -10771,11 +10847,67 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/runs-listing.pg.test.ts::NFR-006 streams Runs newest first across internal pages and list() returns the same Runs",
+        "packages/application/src/runs-listing.pg.test.ts::NFR-006 pushes status, test, project and creation-time filters into the listing",
+        "validation/journeys/operations-api.pg.test.ts::NFR-006 pages GET /v1/runs through a signed cursor over the lazily ordered listing, newest first and filtered",
+        "packages/application/src/runs-listing.pg.test.ts::NFR-006 reads one page of rows when the consumer stops after a few Runs",
+        "packages/application/src/runs-listing.pg.test.ts::NFR-006 never lists another workspace's Runs and refuses a column filter that does not exist"
+      ],
+      "oracle": [
+        "The Run listing reads only the rows of the page it returns (one SQL page for a short consumer) in the same newest-first order as before, filters by status, test, batch, project and creation time in SQL, never crosses workspaces and keeps its signed cursor bound to the filters.",
+        "The published benchmark states every proposed NFR-006 target next to what a real server-profile stack measured on the reference host, and leaves targets it could not measure as not measured."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log",
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/manifest.json",
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/output.log",
+        "validation/results/m4-acceptance/s2b/028-s2b-capacity-benchmark-3/manifest.json",
+        "validation/results/m4-acceptance/s2b/028-s2b-capacity-benchmark-3/output.log",
+        "validation/results/m4-capacity-benchmark.json",
+        "validation/results/m4-acceptance/s2b/028-s2b-capacity-benchmark-3/created/validation/results/m4-capacity-benchmark.json"
+      ],
+      "code": [
+        "packages/application/src/runs.ts",
+        "packages/persistence/src/repositories.ts",
+        "apps/server/src/server.ts",
+        "apps/server/src/routes/core.ts",
+        "tools/src/benchmark/server-load.ts",
+        "tools/src/benchmark/server-load-stack.ts",
+        "docs/operations/capacity.md"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/runs-listing.pg.test.ts::NFR-006 streams Runs newest first across internal pages and list() returns the same Runs",
+          "packages/application/src/runs-listing.pg.test.ts::NFR-006 pushes status, test, project and creation-time filters into the listing",
+          "validation/journeys/operations-api.pg.test.ts::NFR-006 pages GET /v1/runs through a signed cursor over the lazily ordered listing, newest first and filtered"
+        ],
+        "negative": [
+          "packages/application/src/runs-listing.pg.test.ts::NFR-006 reads one page of rows when the consumer stops after a few Runs",
+          "packages/application/src/runs-listing.pg.test.ts::NFR-006 never lists another workspace's Runs and refuses a column filter that does not exist"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/runs-listing.pg.test.ts",
+            "assertion": "expect(page).toHaveBeenCalledTimes(1);"
+          },
+          {
+            "path": "packages/application/src/runs-listing.pg.test.ts",
+            "assertion": "expect(streamed).toEqual([...ids].reverse());"
+          },
+          {
+            "path": "validation/journeys/operations-api.pg.test.ts",
+            "assertion": "expect(collected).toEqual([...passed, ...failed].reverse());"
+          },
+          {
+            "path": "validation/journeys/operations-api.pg.test.ts",
+            "assertion": "expect(otherFilter.status).toBe(400);"
+          }
+        ]
+      },
+      "note": "The first benchmark run showed Run listing at about 15 s per page on 10,000 Runs; S2b fixed it (SQL filter and ordering, lazy page stream) and re-ran the benchmark. Orchestration overhead, queue start lag and artifact publication are not measured; the benchmark is control-plane only on one host (docs/operations/capacity.md)."
     },
     {
       "id": "NFR-007",
@@ -10924,11 +11056,59 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 reports each SLO with its denominator, window, histogram and a proposed target kept apart from the observation",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 measures evidence availability and backup freshness only where they apply",
+        "validation/journeys/operations-api.pg.test.ts::NFR-010 exposes opt-in Prometheus metrics for the caller's own workspace without tenant-identifying labels",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 refuses metrics unless the telemetry policy enables them",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 labels metrics without tenant identity and shows each workspace only its own counters",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
+      ],
+      "oracle": [
+        "Metrics are opt-in, Prometheus text with only method, route, status class, bucket, state and rule labels and only the caller's own workspace counters, and no tenant, principal or project identity appears in any line.",
+        "Each SLO reports its denominator, window and histogram with the proposed target kept apart from the observed value, shows not measured instead of a number when no data exists, and does not charge target timeouts or cancellations to the platform error budget."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+      ],
+      "code": [
+        "packages/application/src/telemetry.ts",
+        "apps/server/src/routes/operations.ts",
+        "docs/operations/slo.md"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 reports each SLO with its denominator, window, histogram and a proposed target kept apart from the observation",
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 measures evidence availability and backup freshness only where they apply",
+          "validation/journeys/operations-api.pg.test.ts::NFR-010 exposes opt-in Prometheus metrics for the caller's own workspace without tenant-identifying labels"
+        ],
+        "negative": [
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 refuses metrics unless the telemetry policy enables them",
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 labels metrics without tenant identity and shows each workspace only its own counters",
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/telemetry.pg.test.ts",
+            "assertion": "expect(indicator(stack, \"api_availability\")).toEqual(apiBefore);"
+          },
+          {
+            "path": "packages/application/src/telemetry.pg.test.ts",
+            "assertion": "expect(text).not.toContain(stack.workspaceId);"
+          },
+          {
+            "path": "packages/application/src/telemetry.pg.test.ts",
+            "assertion": "expect(item.observed, item.id).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/operations-api.pg.test.ts",
+            "assertion": "expect(theirs.text).not.toContain('route=\"/v1/operations/slo\"');"
+          }
+        ]
+      },
+      "note": "S2b added opt-in /v1/metrics, per-workspace API counters and the SLO report."
     },
     {
       "id": "NFR-011",
@@ -12596,31 +12776,46 @@
         "packages/application/src/retention.test.ts::dedup protects a shared blob only among artifacts of the same workspace",
         "packages/application/src/retention.test.ts::a valid-lease upload staged file survives maintenance until its lease expires",
         "packages/evidence/src/evidence.test.ts::GC rechecks CAS safety before deletion",
-        "packages/application/src/retention.test.ts::retries a crashed delete without duplicating expiry/tombstone audit or losing metadata"
+        "packages/application/src/retention.test.ts::retries a crashed delete without duplicating expiry/tombstone audit or losing metadata",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 purges terminal Runs past the metadata window with their whole subtree and keeps newer and running Runs",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 honours legal holds on the workspace, a Run and an artifact, and purges once the hold is lifted",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 keeps Runs whose evidence, backup hold, events, delivery or healing review are still needed",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 purges audit events past 365 days behind a signed chained summary and keeps newer events",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 a different signing key makes the summary chain fail verification",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 detects an altered or removed audit purge summary even when the owner disables the immutability trigger",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 refuses to delete audit events while the signing key is unavailable"
       ],
       "oracle": [
-        "Only expired, unreferenced, unheld, lease-free blobs are removed through mark, tombstone and delete with compare-and-set; audit and Run rows survive artifact expiry; dedup protects a blob only inside its workspace; staging orphans wait a 24 h default grace; a storage outage during delete leaves the object tombstoned and emits one storage.gc_delayed event with its visible deadline instead of marking it deleted."
+        "Only expired, unreferenced, unheld, lease-free blobs are removed through mark, tombstone and delete with compare-and-set; audit and Run rows survive artifact expiry; dedup protects a blob only inside its workspace; staging orphans wait a 24 h default grace; a storage outage during delete leaves the object tombstoned and emits one storage.gc_delayed event with its visible deadline instead of marking it deleted.",
+        "On the server profile a retention controller deletes terminal Runs past the 90-day metadata window with their whole subtree and audit events past 365 days behind an HMAC-signed, chained purge summary; legal holds, active Runs, Runs whose evidence, backup hold, events, delivery or healing review are still needed, and every other workspace are never purged, and an unavailable signing key refuses audit deletion."
       ],
       "evidence": [
         "packages/application/src/retention.test.ts",
         "packages/evidence/src/evidence.test.ts",
         "packages/evidence/src/publication-recovery.test.ts",
         "validation/journeys/recovery-controls.docker.test.ts",
-        "validation/results/ops-021-publication-gc-backup-holds.json"
+        "validation/results/ops-021-publication-gc-backup-holds.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
       ],
       "code": [
         "packages/application/src/retention.ts",
         "packages/evidence/src/gc.ts",
-        "packages/evidence/src/store.ts"
+        "packages/evidence/src/store.ts",
+        "packages/application/src/retention-purge.ts",
+        "packages/application/src/operations-controllers.ts",
+        "docs/operations/retention.md"
       ],
-      "note": "Artifact GC is enforced and tested; metadata (90 d) and audit (365 d) windows are declared, not enforced, and nothing deletes metadata or audit rows (exportEffectiveConfig reports metadataRetentionPurge and auditRetentionPurge as M4). A storage outage during physical removal keeps the artifact tombstoned and raises storage.gc_delayed once, with the 24 h physical-deletion deadline. Retention references are keyed by storage key and workspace, so equal hashes alone never keep bytes.",
+      "note": "Artifact GC is enforced and tested; metadata (90 d) and audit (365 d) windows are declared, not enforced, and nothing deletes metadata or audit rows (exportEffectiveConfig reports metadataRetentionPurge and auditRetentionPurge as M4). A storage outage during physical removal keeps the artifact tombstoned and raises storage.gc_delayed once, with the 24 h physical-deletion deadline. Retention references are keyed by storage key and workspace, so equal hashes alone never keep bytes. S2b added the server-profile purge of metadata (90 d) and audit (365 d) windows with signed summaries.",
       "coverage": {
         "positive": [
           "packages/application/src/retention.test.ts::tombstones before physical removal, preserves sealed metadata/verdict, and exposes verified expired reports",
           "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
           "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
           "packages/evidence/src/evidence.test.ts::default staging orphan grace is 24 hours",
-          "packages/application/src/retention.test.ts::unavailable storage during GC emits a delayed-deletion event with its deadline"
+          "packages/application/src/retention.test.ts::unavailable storage during GC emits a delayed-deletion event with its deadline",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 purges terminal Runs past the metadata window with their whole subtree and keeps newer and running Runs",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 purges audit events past 365 days behind a signed chained summary and keeps newer events"
         ],
         "negative": [
           "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
@@ -12628,7 +12823,11 @@
           "packages/application/src/retention.test.ts::dedup protects a shared blob only among artifacts of the same workspace",
           "packages/application/src/retention.test.ts::a valid-lease upload staged file survives maintenance until its lease expires",
           "packages/evidence/src/evidence.test.ts::GC rechecks CAS safety before deletion",
-          "packages/application/src/retention.test.ts::retries a crashed delete without duplicating expiry/tombstone audit or losing metadata"
+          "packages/application/src/retention.test.ts::retries a crashed delete without duplicating expiry/tombstone audit or losing metadata",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 honours legal holds on the workspace, a Run and an artifact, and purges once the hold is lifted",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 keeps Runs whose evidence, backup hold, events, delivery or healing review are still needed",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 detects an altered or removed audit purge summary even when the owner disables the immutability trigger",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 refuses to delete audit events while the signing key is unavailable"
         ],
         "criticalAssertions": [
           {
@@ -12650,19 +12849,21 @@
           {
             "path": "packages/evidence/src/evidence.test.ts",
             "assertion": "expect(await findOrphanStaging(rootDir, undefined, now + 24 * hour - 60_000)).toEqual([]);"
+          },
+          {
+            "path": "packages/application/src/retention-purge.pg.test.ts",
+            "assertion": "expect(report.runs.skipped[0]?.reason, key).toBe(\"legal_hold\");"
+          },
+          {
+            "path": "packages/application/src/retention-purge.pg.test.ts",
+            "assertion": "expect(summary?.signature).toMatch(/^[0-9a-f]{64}$/);"
+          },
+          {
+            "path": "packages/application/src/retention-purge.pg.test.ts",
+            "assertion": "expect(broken.problems).toEqual([`${second}: chain broken`]);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Metadata and audit retention windows (90 and 365 days) are declared in operationalDefaults but no purge job enforces them; only the artifact class is collected. Enforcement of the other classes belongs to the server profile.",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "OPS-021 — Retention e GC concorrente (M1–M4)."
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-022",
@@ -12768,17 +12969,7 @@
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "S3 versioned blob lifecycle and version removal (no S3 storage is implemented)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility; PostgreSQL/S3 profiles"
-          }
-        }
-      ],
-      "note": "Delete, tombstone, read revocation, outbox and report contracts are proven; in-flight publication is proven at predicate level (assertArtifactPublishable, called by the worker inside the publication transaction) because local Artifacts are published only at the final worker commit; S3 versioned lifecycle is M4."
+      "note": "Delete, tombstone, read revocation, outbox and report contracts are proven; in-flight publication is proven at predicate level (assertArtifactPublishable, called by the worker inside the publication transaction) because local Artifacts are published only at the final worker commit; S3 versioned lifecycle is M4. S3 storage is not implemented in M4 (ADR-016); the S3 lifecycle moves to the M5 distributed profile."
     },
     {
       "id": "OPS-023",
@@ -12873,10 +13064,25 @@
         "packages/application/src/backup-alert.test.ts::OPS-024 real backup destination failure emits a durable non-green alert",
         "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
         "packages/application/src/input-fixtures.test.ts::backs up fixture bytes and reapplies post-backup deletion tombstones before restored use",
-        "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds"
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 chunked backup encryption round-trips an empty stream, one chunk and many chunks",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 PostgreSQL backup is a consistent encrypted dump and restores database rows and evidence into a fresh isolated stack",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 backup retention keeps 7 daily, 4 weekly and 3 monthly copies and never deletes an unauthentic entry",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 the retention controller removes only expired authentic backups from the destination",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 the backup agent fulfils a queued request, a missing backup fails verification and nothing is invented",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 schedules one daily backup only when the last success is old and none is pending",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 a restore replays post-backup revocations from the live ledger so it can only tighten access",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 a flipped ciphertext byte, a reordered chunk, a truncated tail and extra trailing bytes are refused",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 a stream cannot be opened under another context or another key",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 the manifest MAC covers every field and rejects another key",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 a tampered ciphertext, manifest or wrong key makes verification and restore fail before anything is written",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 an evidence object missing at backup time marks the backup incomplete and is reported, not hidden",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 a request left running by a stopped agent is failed instead of silently retried",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 refuses to run when the server process can read the backup key or write the destination"
       ],
       "oracle": [
-        "Online snapshot (SQLite backup API, never a raw .db copy) contains the active Run and a valid DB; manifest secretIncluded=false with no canary and lists key IDs, config digests and the unavailable objects (missingObjects) before the backup can be called complete; an unavailable blob makes the evidence index incomplete and raises a durable artifact_unavailable alert (outbox backup.failed plus operational_state backup:last-warning) instead of a green report; a destination failure raises storage_unavailable."
+        "Online snapshot (SQLite backup API, never a raw .db copy) contains the active Run and a valid DB; manifest secretIncluded=false with no canary and lists key IDs, config digests and the unavailable objects (missingObjects) before the backup can be called complete; an unavailable blob makes the evidence index incomplete and raises a durable artifact_unavailable alert (outbox backup.failed plus operational_state backup:last-warning) instead of a green report; a destination failure raises storage_unavailable.",
+        "The server profile takes a consistent serializable-deferrable pg_dump plus an evidence snapshot, encrypts it with AES-256-GCM chunks bound to their context and a MAC'd manifest, writes it to a destination only the separate backup agent (the sole holder of the backup key) can write, keeps 7 daily, 4 weekly and 3 monthly copies without ever deleting an unauthentic entry, and a restore into a fresh stack replays post-backup revocations so it can only tighten access; a flipped, reordered, truncated or foreign-key stream, a tampered manifest and a missing evidence object are refused or reported before anything is written."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
@@ -12884,26 +13090,49 @@
         "validation/journeys/recovery-controls.docker.test.ts",
         "packages/application/src/backup-alert.test.ts",
         "packages/persistence/src/persistence.test.ts",
-        "packages/application/src/input-fixtures.test.ts"
+        "packages/application/src/input-fixtures.test.ts",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log",
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/manifest.json",
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/output.log"
       ],
       "code": [
         "packages/persistence/src/database.ts",
         "packages/application/src/backups.ts",
-        "packages/contracts/src/operations.ts"
+        "packages/contracts/src/operations.ts",
+        "packages/application/src/backup-crypto.ts",
+        "packages/application/src/server-backup.ts",
+        "packages/application/src/operations-controllers.ts",
+        "apps/cli/src/backups.ts",
+        "docs/operations/backups.md"
       ],
-      "note": "Verified for the local SQLite profile. BackupManifest gained the optional missingObjects list (artifact or fixture IDs, and snapshot metadata keys, that could not be copied); older manifests stay valid. The remote-backup and PostgreSQL clauses deferred to M4 rest on the OPS-024 heading range (M1–M4); the sentence itself names no milestone.",
+      "note": "Verified for the local SQLite profile. BackupManifest gained the optional missingObjects list (artifact or fixture IDs, and snapshot metadata keys, that could not be copied); older manifests stay valid. The remote-backup and PostgreSQL clauses deferred to M4 rest on the OPS-024 heading range (M1–M4); the sentence itself names no milestone. S2b added encrypted, access-separated PostgreSQL backups with retention and verified restore; the base-backup-plus-WAL variant is documented as an operator option and is not claimed as point-in-time recovery.",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
           "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
           "packages/application/src/input-fixtures.test.ts::backs up fixture bytes and reapplies post-backup deletion tombstones before restored use",
           "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds",
-          "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert"
+          "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
+          "packages/application/src/backup-crypto.test.ts::OPS-024 chunked backup encryption round-trips an empty stream, one chunk and many chunks",
+          "packages/application/src/server-backup.pg.test.ts::OPS-024 PostgreSQL backup is a consistent encrypted dump and restores database rows and evidence into a fresh isolated stack",
+          "packages/application/src/server-backup.pg.test.ts::OPS-024 backup retention keeps 7 daily, 4 weekly and 3 monthly copies and never deletes an unauthentic entry",
+          "packages/application/src/server-backup.pg.test.ts::OPS-024 the retention controller removes only expired authentic backups from the destination",
+          "packages/application/src/backup-agent.pg.test.ts::OPS-024 the backup agent fulfils a queued request, a missing backup fails verification and nothing is invented",
+          "packages/application/src/backup-agent.pg.test.ts::OPS-024 schedules one daily backup only when the last success is old and none is pending",
+          "packages/application/src/server-backup.pg.test.ts::OPS-024 a restore replays post-backup revocations from the live ledger so it can only tighten access"
         ],
         "negative": [
           "packages/application/src/backup-alert.test.ts::OPS-024 real backup destination failure emits a durable non-green alert",
           "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
-          "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation"
+          "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+          "packages/application/src/backup-crypto.test.ts::OPS-024 a flipped ciphertext byte, a reordered chunk, a truncated tail and extra trailing bytes are refused",
+          "packages/application/src/backup-crypto.test.ts::OPS-024 a stream cannot be opened under another context or another key",
+          "packages/application/src/backup-crypto.test.ts::OPS-024 the manifest MAC covers every field and rejects another key",
+          "packages/application/src/server-backup.pg.test.ts::OPS-024 a tampered ciphertext, manifest or wrong key makes verification and restore fail before anything is written",
+          "packages/application/src/server-backup.pg.test.ts::OPS-024 an evidence object missing at backup time marks the backup incomplete and is reported, not hidden",
+          "packages/application/src/backup-agent.pg.test.ts::OPS-024 a request left running by a stopped agent is failed instead of silently retried",
+          "packages/application/src/backup-agent.pg.test.ts::OPS-024 refuses to run when the server process can read the backup key or write the destination"
         ],
         "criticalAssertions": [
           {
@@ -12925,27 +13154,25 @@
           {
             "path": "packages/application/src/backup-alert.test.ts",
             "assertion": "expect(manifest.missingObjects).toEqual([imported.id]);"
+          },
+          {
+            "path": "packages/application/src/server-backup.pg.test.ts",
+            "assertion": "expect(bytes.includes(payload)).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/backup-crypto.test.ts",
+            "assertion": "expect(verifyManifestMac(other, { ...manifest, mac })).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/server-backup.pg.test.ts",
+            "assertion": "expect(decision.remove).not.toContain(\"forged\");"
+          },
+          {
+            "path": "packages/application/src/server-backup.pg.test.ts",
+            "assertion": "expect(result.evidenceComplete).toBe(false);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Remote encrypted backup with its own access control and retention (7 daily, 4 weekly, 3 monthly defaults), separate from active retention",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "**OPS-024 — Backup consistente (M1–M4).**"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "PostgreSQL consistent dump or base backup plus WAL (the local profile backs up SQLite only; PostgreSQL DDL is not runtime support per docs/support-matrix.md)",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "**OPS-024 — Backup consistente (M1–M4).**"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-025",
@@ -12971,11 +13198,14 @@
         "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
         "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
         "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
-        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)"
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
+        "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed"
       ],
       "oracle": [
         "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted.",
-        "A restored GitHub installation that was revoked stays revoked after restoring a backup taken while it was active, and one that was never revoked keeps working."
+        "A restored GitHub installation that was revoked stays revoked after restoring a backup taken while it was active, and one that was never revoked keeps working.",
+        "A restored server starts isolated (operational_state restore:isolated and admission suspended_restore): admission is paused, schedules, integrations and outbox dispatch read application.operations.isolated() and do nothing, alert evaluation is skipped, and isolation ends only when an operator confirms the restore review and releases it; the DR rehearsal records the same gates on a fresh stack."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
@@ -12989,7 +13219,9 @@
         "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
         "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
         "packages/application/src/integrations/github/github-restore.test.ts",
-        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
       ],
       "code": [
         "packages/application/src/backups.ts",
@@ -12998,9 +13230,11 @@
         "packages/application/src/scheduling/scheduler.ts",
         "packages/application/src/operations-state.ts",
         "packages/application/src/notifications/controllers.ts",
-        "packages/application/src/integrations/github/service.ts"
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/operations.ts",
+        "deploy/compose/dr-rehearsal.sh"
       ],
-      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof.",
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof. S2b added the restore:isolated flag, application.operations.isolated() and the review-then-release gate.",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
@@ -13011,7 +13245,8 @@
           "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
           "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
-          "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)"
+          "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
+          "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it"
         ],
         "negative": [
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
@@ -13022,7 +13257,8 @@
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
           "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
           "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
-          "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests"
+          "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
+          "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed"
         ],
         "criticalAssertions": [
           {
@@ -13064,6 +13300,14 @@
           {
             "path": "packages/application/src/integrations/github/github-restore.test.ts",
             "assertion": "    expect(revoked?.state).toBe(\"revoked\");"
+          },
+          {
+            "path": "apps/cli/src/operations.pg.test.ts",
+            "assertion": "expect(early.body.error?.details?.reasonCode).toBe(\"restore_review_pending\");"
+          },
+          {
+            "path": "packages/application/src/operations.pg.test.ts",
+            "assertion": "expect(owner.operations.status().isolation).toEqual({ isolated: true, review: \"pending\" });"
           }
         ]
       },
@@ -13084,11 +13328,64 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained rehearsal restored content, hashes and access on a fresh stack from only the backup and keys",
+        "tools/src/operations/dr-evidence.test.ts::OPS-026 a restored hash, an access check, a failed step or a missing measurement is reported instead of accepted",
+        "tools/src/operations/dr-evidence.test.ts::OPS-026 never accepts a claim about S3 loss or a verdict that its rows contradict"
+      ],
+      "oracle": [
+        "A rehearsal loses the source PostgreSQL container, data volume, evidence directory and server configuration, restores a fresh stack from only the encrypted backup and the two key files, and proves identical row counts, audit digest, evidence file hashes and principals, a rejected pre-backup token, an owner who recovers access, and isolation until review; the post-backup write is absent.",
+        "The record states measured RPO and RTO with their breakdown and keeps S3 loss deferred; a validator re-derives the verdict from the raw rows, so a hash difference, failed access check or missing measurement is reported."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/manifest.json",
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/output.log",
+        "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/manifest.json",
+        "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/output.log",
+        "validation/results/m4-dr-rehearsal.json",
+        "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/created/validation/results/m4-dr-rehearsal.json"
+      ],
+      "code": [
+        "deploy/compose/dr-rehearsal.sh",
+        "deploy/compose/dr-rehearsal-helper.mjs",
+        "tools/src/operations/dr-evidence.ts",
+        "docs/operations/disaster-recovery.md"
+      ],
+      "coverage": {
+        "positive": [
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained rehearsal restored content, hashes and access on a fresh stack from only the backup and keys"
+        ],
+        "negative": [
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 a restored hash, an access check, a failed step or a missing measurement is reported instead of accepted",
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 never accepts a claim about S3 loss or a verdict that its rows contradict"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/operations/dr-evidence.test.ts",
+            "assertion": "expect(findDrRehearsalViolations(record)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/operations/dr-evidence.test.ts",
+            "assertion": "expect(record.s3Loss).toEqual({ status: \"deferred\", milestone: \"M5\" });"
+          },
+          {
+            "path": "tools/src/operations/dr-evidence.test.ts",
+            "assertion": "expect(findDrRehearsalViolations(digest)).toContain(\"comparison row auditEvents.digest differs\");"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "S3 evidence loss and off-host object-store protection in the disaster-recovery checklist and rehearsal (the M4 server profile stores evidence on the filesystem only)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
+          }
+        }
+      ],
+      "note": "The rehearsal ran on one host against the filesystem profile with a small seeded dataset: RTO and RPO describe that dataset only. Host, database and key loss are covered by docs/operations/disaster-recovery.md; S3 loss and larger datasets are not measured."
     },
     {
       "id": "OPS-027",
@@ -13106,18 +13403,22 @@
         "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox",
         "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request",
         "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell",
-        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid"
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+        "validation/journeys/operations-api.pg.test.ts::OPS-027 exports redacted JSON log lines on stdout only under the log export policy and never a secret"
       ],
       "oracle": [
         "One correlation ID is observable on the admitted Run, the worker log, the published Artifact and the run.completed outbox event; logs never carry the secret canary; a supplied correlation ID never authorizes; real file rotation/14 day expiry/flood drop and 300 concurrent loopback GETs succeed.",
-        "A remote CLI command sends X-Correlation-ID; the same ID is the Run's matrix-cell correlation and every audit event of the request, and a different request carries a different server request ID."
+        "A remote CLI command sends X-Correlation-ID; the same ID is the Run's matrix-cell correlation and every audit event of the request, and a different request carries a different server request ID.",
+        "Under telemetry.logExport = stdout-json the server prints only redacted, bounded request lines with a fixed key set (never a secret, token, session cookie or request body) and with the policy off it prints none."
       ],
       "evidence": [
         "packages/application/src/observability.test.ts",
         "packages/application/src/governance-runtime.test.ts",
         "validation/journeys/governance-ops.docker.test.ts",
         "apps/server/src/server.test.ts",
-        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log"
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
       ],
       "code": [
         "packages/application/src/observability.ts",
@@ -13128,22 +13429,25 @@
         "apps/server/src/server.ts",
         "apps/cli/src/runtime.ts",
         "apps/mcp/src/server.ts",
-        "apps/cli/src/remote.ts"
+        "apps/cli/src/remote.ts",
+        "docs/operations/slo.md"
       ],
-      "note": "Local chain verified end to end by a real CLI Run (Run, worker log, Artifact, outbox). CLI to API remote transport and the telemetry/log export policy are M4; the zero-network recorder is owned by the network-boundary journey. M4 proved the CLI to API correlation chain over the remote endpoint profile (remote.test.ts).",
+      "note": "Local chain verified end to end by a real CLI Run (Run, worker log, Artifact, outbox). CLI to API remote transport and the telemetry/log export policy are M4; the zero-network recorder is owned by the network-boundary journey. M4 proved the CLI to API correlation chain over the remote endpoint profile (remote.test.ts). S2b added the server telemetry and log export policy.",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::propagates one correlation through durable admission and attempt logs without serializing secret fields",
           "validation/journeys/governance-ops.docker.test.ts::OPS027 actual loopback API remains available during a bounded diagnostic log flood",
           "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox",
           "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell",
-          "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid"
+          "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+          "validation/journeys/operations-api.pg.test.ts::OPS-027 exports redacted JSON log lines on stdout only under the log export policy and never a secret"
         ],
         "negative": [
           "packages/application/src/observability.test.ts::generates safe IDs and denies overlong or injected correlation before use",
           "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request",
           "packages/application/src/observability.test.ts::drops excess log flood immediately and serializes only the safe metadata allowlist",
-          "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell"
+          "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell",
+          "validation/journeys/operations-api.pg.test.ts::OPS-027 exports redacted JSON log lines on stdout only under the log export policy and never a secret"
         ],
         "criticalAssertions": [
           {
@@ -13173,19 +13477,17 @@
           {
             "path": "apps/cli/src/remote.test.ts",
             "assertion": "    expect(run.matrixCell.correlationId).toBe(correlationId);"
+          },
+          {
+            "path": "validation/journeys/operations-api.pg.test.ts",
+            "assertion": "expect(logs).not.toContain(canary);"
+          },
+          {
+            "path": "validation/journeys/operations-api.pg.test.ts",
+            "assertion": "expect(jsonLines(silent.logs()).filter((line) => line.event === \"request.completed\")).toEqual([]);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Telemetry and log export policy",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "OPS-027 — Correlação, logs bounded e privacidade (M1–M4)."
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-028",
@@ -13193,11 +13495,97 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/alerts.pg.test.ts::OPS-028 defines an alert rule for every required condition with an owner, severity and runbook anchor",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 lease_expirations_abnormal fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 queue_age_high fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 storage_warning fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 storage_critical fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 backup_failing fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 dlq_not_empty fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 audit_unavailable fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 budget_exhausted fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 cancellation_stuck fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 tenant_violation fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 reports each SLO with its denominator, window, histogram and a proposed target kept apart from the observation",
+        "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
+        "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 stays quiet on a healthy deployment and below every threshold",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 raises one alert per condition, refreshes it, keeps acknowledgement and never hides a failing rule",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 evaluates each workspace on its own findings",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
+      ],
+      "oracle": [
+        "Eleven alert rules cover every OPS-028 condition (abnormal lease expirations, oldest queue age, storage 80% and 90%, continuous backup failure, non-empty DLQ, audit unavailable, budget exhaustion, cancellation with a live worker, cross-tenant suspicion and egress denied), each with an owner, a severity and a runbook anchor that exists in docs/operations/alerts.md.",
+        "A controlled synthetic condition fires each rule once with an outbox event and an audit row and resolves it on recovery; a healthy deployment stays quiet, a failing rule keeps its open alerts, a target timeout does not consume the API error budget, and the SLO page separates the proposed target from the observed measurement."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+      ],
+      "code": [
+        "packages/application/src/alerts.ts",
+        "packages/application/src/operations-controllers.ts",
+        "packages/application/src/telemetry.ts",
+        "docs/operations/alerts.md",
+        "docs/operations/slo.md"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/alerts.pg.test.ts::OPS-028 defines an alert rule for every required condition with an owner, severity and runbook anchor",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 lease_expirations_abnormal fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 queue_age_high fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 storage_warning fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 storage_critical fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 backup_failing fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 dlq_not_empty fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 audit_unavailable fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 budget_exhausted fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 cancellation_stuck fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 tenant_violation fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 reports each SLO with its denominator, window, histogram and a proposed target kept apart from the observation",
+          "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
+          "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured"
+        ],
+        "negative": [
+          "packages/application/src/alerts.pg.test.ts::OPS-028 stays quiet on a healthy deployment and below every threshold",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 raises one alert per condition, refreshes it, keeps acknowledgement and never hides a failing rule",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 evaluates each workspace on its own findings",
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/alerts.pg.test.ts",
+            "assertion": "expect(second.fired).toEqual([]);"
+          },
+          {
+            "path": "packages/application/src/alerts.pg.test.ts",
+            "assertion": "expect(Object.keys(broken.errors).sort()).toEqual([\"storage_critical\", \"storage_warning\"]);"
+          },
+          {
+            "path": "packages/application/src/alerts.pg.test.ts",
+            "assertion": "expect(rule.runbook).toBe(`docs/operations/alerts.md#${rule.id}`);"
+          },
+          {
+            "path": "packages/application/src/alerts.pg.test.ts",
+            "assertion": "expect(quiet).toEqual({ fired: [], resolved: [], errors: {} });"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "SLO indicators and alert rules for the distributed profile (elected scheduler, remote workers, artifact gateway); the M4 indicators describe the single-host server profile only",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "API/controller stateless, scheduler eleito, workers remotos e artifact gateway | PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
+          }
+        }
+      ],
+      "note": "Alert rules and thresholds are defined for the single-host server profile."
     },
     {
       "id": "OPS-029",
@@ -13532,11 +13920,79 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "tools/src/benchmark/server-load.test.ts::OPS-034 uses the nearest-rank definition",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 judges the worst reference concurrency and ignores stress levels",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 never exceeds the configured concurrency and runs every iteration",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 defaults to 20 projects, 1000 tests, 10000 Runs and concurrency 1/4/8/32",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 never turns missing, thin or erroring data into a pass",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 does not claim dataset-bound targets on a smaller dataset",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 leaves targets that need executed Runs as not measured",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 reports not measured when a reference level is absent, thin or has errors above target",
+        "tools/src/benchmark/server-load.test.ts::OPS-034 stops at the time limit and says so"
+      ],
+      "oracle": [
+        "A load tool drives admission, run detail, run and test listing, artifact reads, SSE and the rate limiter against a real server-profile stack (PostgreSQL, filesystem evidence, built CLI) with an HTTP fixture target, and records hardware, dataset, concurrency and p50/p95/p99 with sample counts; the target fixture's traffic is kept separate from control-plane load.",
+        "Verdicts never turn missing, thin or erroring data into a pass: a percentile needs enough successful samples, dataset-bound targets need the full dataset, and targets that need executed Runs stay not measured; saturation shows backpressure (429) instead of a crash."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/manifest.json",
+        "validation/results/m4-acceptance/s2b/039-s2b-r3-owned-unit/output.log",
+        "validation/results/m4-acceptance/s2b/028-s2b-capacity-benchmark-3/manifest.json",
+        "validation/results/m4-acceptance/s2b/028-s2b-capacity-benchmark-3/output.log",
+        "validation/results/m4-capacity-benchmark.json",
+        "validation/results/m4-acceptance/s2b/028-s2b-capacity-benchmark-3/created/validation/results/m4-capacity-benchmark.json"
+      ],
+      "code": [
+        "tools/src/benchmark/server-load.ts",
+        "tools/src/benchmark/server-load-stack.ts",
+        "docs/operations/capacity.md"
+      ],
+      "coverage": {
+        "positive": [
+          "tools/src/benchmark/server-load.test.ts::OPS-034 uses the nearest-rank definition",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 judges the worst reference concurrency and ignores stress levels",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 never exceeds the configured concurrency and runs every iteration",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 defaults to 20 projects, 1000 tests, 10000 Runs and concurrency 1/4/8/32"
+        ],
+        "negative": [
+          "tools/src/benchmark/server-load.test.ts::OPS-034 never turns missing, thin or erroring data into a pass",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 does not claim dataset-bound targets on a smaller dataset",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 leaves targets that need executed Runs as not measured",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 reports not measured when a reference level is absent, thin or has errors above target",
+          "tools/src/benchmark/server-load.test.ts::OPS-034 stops at the time limit and says so"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/benchmark/server-load.test.ts",
+            "assertion": "expect(judgeUpperBound(10, 2000, false)).toBe(\"not measured\");"
+          },
+          {
+            "path": "tools/src/benchmark/server-load.test.ts",
+            "assertion": "expect(row?.verdict).toBe(\"not measured\");"
+          },
+          {
+            "path": "tools/src/benchmark/server-load.test.ts",
+            "assertion": "expect(orchestration?.verdict).toBe(\"not measured\");"
+          },
+          {
+            "path": "tools/src/benchmark/server-load.test.ts",
+            "assertion": "expect(result.iterations).toBe(40);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M6",
+          "scope": "Windows and macOS capacity and portability validation: the benchmark and capacity numbers describe Linux x64 only",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "M6 | OPS-026/028/034–036/038 e revisão de todos os anteriores | Restore medido, operação documentada, matriz de portabilidade e SLO observado separado do objetivo"
+          }
+        }
+      ],
+      "note": "Measured on one non-idle Linux x64 host, plain HTTP on loopback, control plane only, seeded Runs without attempts, p99 indicative only; numbers are in docs/operations/capacity.md and validation/results/m4-capacity-benchmark.json."
     },
     {
       "id": "OPS-035",
@@ -13731,11 +14187,60 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/incidents.pg.test.ts::OPS-036 records an append-only incident with timeline, evidence, confirmed and suspected reach, verified actions and communication state",
+        "packages/application/src/incidents.pg.test.ts::OPS-036 enforces private notice before disclosure, verified actions and resume gates before an incident closes",
+        "apps/cli/src/operations.pg.test.ts::OPS-036 records and closes an incident from the CLI and refuses an unsupported no-data-affected claim",
+        "packages/application/src/incidents.pg.test.ts::OPS-036 refuses to close a 'no data affected' claim without evidence, with missing evidence or against confirmed reach",
+        "packages/application/src/incidents.pg.test.ts::OPS-036 keeps incidents and evidence inside their workspace and for administrators only",
+        "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI"
+      ],
+      "oracle": [
+        "Incident records are append-only with a sequenced timeline, evidence references, confirmed versus suspected reach, verified corrective actions and communication state; a loss of isolation, secret or tenant is critical and private notice precedes public disclosure.",
+        "A 'no data affected' claim cannot close an incident without evidence, with missing evidence or against confirmed reach, and an incident closes only after verified actions and resume gates; incidents and their evidence stay inside their workspace and are visible to administrators only."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+      ],
+      "code": [
+        "packages/application/src/incidents.ts",
+        "apps/server/src/routes/operations.ts",
+        "apps/cli/src/operations.ts",
+        "docs/operations/incidents.md"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/incidents.pg.test.ts::OPS-036 records an append-only incident with timeline, evidence, confirmed and suspected reach, verified actions and communication state",
+          "packages/application/src/incidents.pg.test.ts::OPS-036 enforces private notice before disclosure, verified actions and resume gates before an incident closes",
+          "apps/cli/src/operations.pg.test.ts::OPS-036 records and closes an incident from the CLI and refuses an unsupported no-data-affected claim"
+        ],
+        "negative": [
+          "packages/application/src/incidents.pg.test.ts::OPS-036 refuses to close a 'no data affected' claim without evidence, with missing evidence or against confirmed reach",
+          "packages/application/src/incidents.pg.test.ts::OPS-036 keeps incidents and evidence inside their workspace and for administrators only",
+          "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/incidents.pg.test.ts",
+            "assertion": "expect(owner.incidents.get(bare.id).state).toBe(\"open\");"
+          },
+          {
+            "path": "apps/cli/src/operations.pg.test.ts",
+            "assertion": "expect(refused.body.error?.details?.reasonCode).toBe(\"no_data_affected_evidence_required\");"
+          },
+          {
+            "path": "packages/application/src/incidents.pg.test.ts",
+            "assertion": "expect(noticed.timeline.map((event) => event.seq)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);"
+          },
+          {
+            "path": "packages/application/src/incidents.pg.test.ts",
+            "assertion": "expect(() => viewer.incidents.list()).toThrowError("
+          }
+        ]
+      },
+      "note": "Severity model, template and post-incident procedure are in docs/operations/incidents.md."
     },
     {
       "id": "OPS-037",
@@ -19878,11 +20383,13 @@
         "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
         "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
         "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
-        "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data"
+        "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows"
       ],
       "oracle": [
         "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission.",
-        "A user's audit export and report export on a two-organization PostgreSQL database never include the other organization's workspace, ids, principals or secret values, and a report export of another organization's Run is refused with nothing written."
+        "A user's audit export and report export on a two-organization PostgreSQL database never include the other organization's workspace, ids, principals or secret values, and a report export of another organization's Run is refused with nothing written.",
+        "The server-profile retention purge of one workspace never reads or deletes another workspace's Runs or audit events."
       ],
       "evidence": [
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
@@ -19892,13 +20399,16 @@
         "packages/application/src/retention.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json",
         "packages/application/src/audit.test.ts",
-        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
       ],
       "code": [
         "packages/application/src/retention.ts",
         "packages/application/src/backups.ts",
         "packages/application/src/artifacts.ts",
-        "packages/application/src/audit.ts"
+        "packages/application/src/audit.ts",
+        "packages/application/src/retention-purge.ts"
       ],
       "coverage": {
         "positive": [
@@ -19909,7 +20419,8 @@
           "packages/application/src/retention.test.ts::keeps audit rows and revoked secret tombstones when artifact bytes are collected",
           "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
           "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
-          "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data"
+          "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows"
         ],
         "negative": [
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
@@ -19920,7 +20431,8 @@
           "packages/application/src/retention.test.ts::does not retain bytes merely because another artifact records the same hash",
           "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
           "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
-          "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data"
+          "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows"
         ],
         "criticalAssertions": [
           {
@@ -19982,6 +20494,10 @@
           {
             "path": "packages/application/src/tenancy.pg.test.ts",
             "assertion": "    await expect(t.a.reports.export(t.dataB.run.runId, \"json\", outB)).rejects.toMatchObject({\n      code: \"NOT_FOUND\",\n    });"
+          },
+          {
+            "path": "packages/application/src/retention-purge.pg.test.ts",
+            "assertion": "expect(count(stack, \"runs\", \"id\", theirs.runId, otherId)).toBe(1);"
           }
         ]
       },
@@ -19995,7 +20511,7 @@
           }
         }
       ],
-      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name). M4 added multi-organization export isolation (tenancy.pg.test.ts); retention windows remain with the operations slice."
+      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name). M4 added multi-organization export isolation (tenancy.pg.test.ts); retention windows remain with the operations slice. S2b enforced the declared metadata and audit retention windows per workspace."
     },
     {
       "id": "SEC-038",
@@ -26569,35 +27085,81 @@
         "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
         "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
         "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
-        "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts"
+        "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 the fault matrix names every write boundary of retention, backup and restore found in the implementation",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash while removing an expired backup leaves every backup authentic and the next pass finishes",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.run_deleted leaves retention consistent, never half purged, and a rerun converges",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.runs_committed leaves retention consistent, never half purged, and a rerun converges",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.audit_summarized leaves retention consistent, never half purged, and a rerun converges",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.audit_deleted leaves retention consistent, never half purged, and a rerun converges",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.audit_committed leaves retention consistent, never half purged, and a rerun converges",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.holds never promotes a partial backup and the next backup verifies",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.dump never promotes a partial backup and the next backup verifies",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.evidence never promotes a partial backup and the next backup verifies",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.index never promotes a partial backup and the next backup verifies",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.manifest never promotes a partial backup and the next backup verifies",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.renamed never promotes a partial backup and the next backup verifies",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.verified keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.target_prepared keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.evidence_restored keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.database_restored keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.migrated keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalizing keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore"
       ],
       "oracle": [
-        "No false promoted partial bundle or rewritten terminal verdict; original metadata/hash integrity across kill points at the publication boundaries, multipart abort and hash mismatch, GC concurrent with publication, restore with a missing key and later revocation, and real ENOSPC."
+        "No false promoted partial bundle or rewritten terminal verdict; original metadata/hash integrity across kill points at the publication boundaries, multipart abort and hash mismatch, GC concurrent with publication, restore with a missing key and later revocation, and real ENOSPC.",
+        "A crash injected at each write boundary of the PostgreSQL retention purge (5 points), backup (6 points) and restore (7 points) leaves retention never half purged, never promotes a partial backup, keeps the backup recoverable and refuses a half-restored database, and a rerun converges to the state of an uninterrupted run; a source-coverage test fails when an implementation write boundary has no matrix entry."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
         "validation/results/j17-publication-crash-matrix.json",
         "packages/application/src/secrets.test.ts",
         "packages/evidence/src/publication-recovery.test.ts",
-        "packages/persistence/src/disk-pressure.docker.test.ts"
+        "packages/persistence/src/disk-pressure.docker.test.ts",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
       ],
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
         "packages/application/src/worker.ts",
-        "packages/persistence/src/database.ts"
+        "packages/persistence/src/database.ts",
+        "packages/application/src/retention-purge.ts",
+        "packages/application/src/server-backup.ts",
+        "packages/application/src/fault-matrix.pg.test.ts"
       ],
-      "note": "Covered: three publication kill points (not six), multipart abort/hash mismatch, GC concurrent with publication, restore with missing key and revocation merge, real tmpfs ENOSPC. Existing boundary coverage must not be generalized to every write boundary: the exhaustive fault matrix for restore/import/migration/installer/retention is M4 (PostgreSQL/S3 profiles) and M6 (import/migration/installer governance).",
+      "note": "Covered: three publication kill points (not six), multipart abort/hash mismatch, GC concurrent with publication, restore with missing key and revocation merge, real tmpfs ENOSPC. Existing boundary coverage must not be generalized to every write boundary: the exhaustive fault matrix for restore/import/migration/installer/retention is M4 (PostgreSQL/S3 profiles) and M6 (import/migration/installer governance). S2b proved every write boundary of retention, backup and restore on the PostgreSQL filesystem profile; the S3 part moves to M5.",
       "coverage": {
         "positive": [
           "packages/evidence/src/publication-recovery.test.ts::OPS-020 interrupted multipart artifacts and mismatched hashes never become available",
           "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
-          "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts"
+          "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 the fault matrix names every write boundary of retention, backup and restore found in the implementation",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash while removing an expired backup leaves every backup authentic and the next pass finishes"
         ],
         "negative": [
           "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
-          "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement"
+          "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.run_deleted leaves retention consistent, never half purged, and a rerun converges",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.runs_committed leaves retention consistent, never half purged, and a rerun converges",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.audit_summarized leaves retention consistent, never half purged, and a rerun converges",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.audit_deleted leaves retention consistent, never half purged, and a rerun converges",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.audit_committed leaves retention consistent, never half purged, and a rerun converges",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.holds never promotes a partial backup and the next backup verifies",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.dump never promotes a partial backup and the next backup verifies",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.evidence never promotes a partial backup and the next backup verifies",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.index never promotes a partial backup and the next backup verifies",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.manifest never promotes a partial backup and the next backup verifies",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at backup.renamed never promotes a partial backup and the next backup verifies",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.verified keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.target_prepared keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.evidence_restored keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.database_restored keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.migrated keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalizing keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore"
         ],
         "criticalAssertions": [
           {
@@ -26611,24 +27173,40 @@
           {
             "path": "packages/persistence/src/disk-pressure.docker.test.ts",
             "assertion": "expect(code, stderr).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/fault-matrix.pg.test.ts",
+            "assertion": "expect(state()).toEqual({ ...purgeExpectations[point], permits: 0 });"
+          },
+          {
+            "path": "packages/application/src/fault-matrix.pg.test.ts",
+            "assertion": "expect(rerun.wipedInterruptedRestore).toBe(point !== \"restore.verified\");"
+          },
+          {
+            "path": "packages/application/src/fault-matrix.pg.test.ts",
+            "assertion": "expect(await restoredDigest(target.server)).toEqual(expected);"
+          },
+          {
+            "path": "packages/application/src/fault-matrix.pg.test.ts",
+            "assertion": "expect(entries).toEqual([]);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "every-write-boundary fault matrix for retention and restore on PostgreSQL/S3 profiles",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "VAL-026/027/033–037/041/043/045/052 no escopo M4"
-          }
-        },
         {
           "milestone": "M6",
           "scope": "every-write-boundary fault matrix for import/migration/installer governance and backup restore",
           "specQuote": {
             "path": "specs/10-validation.md",
             "text": "**M6 — SSO/SCIM/plugins/portability/governance/GA** | SSO OIDC/SAML/SCIM, import/export nativo/TestSprite manual, plugins, schema migration/backup restore, installer governance"
+          }
+        },
+        {
+          "milestone": "M5",
+          "scope": "every-write-boundary fault matrix for retention and restore on the S3 profile (no S3 storage is implemented)",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
           }
         }
       ]
