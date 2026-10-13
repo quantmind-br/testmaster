@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "hostile-repository-boundary",
+  "class": "adversarial-cli",
+  "runner": "real-cli-git",
+  "externalDependency": "none",
+  "observedAt": "2026-10-13T16:07:53.826Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "hostile-repository-boundary",
+        "--base-url",
+        "http://127.0.0.1:43210",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d6f48b71-b0f5-4339-a00a-1234593f505a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "a0a88b017c7ae0720e522f85c4784712718ffebc",
+        "--head",
+        "f8322f201a2f1b87e9b11c3aff93881641a9db7f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9f5de895-a9ff-41c3-83b5-e133ac558ea5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "diff",
+        "--base",
+        "f8322f201a2f1b87e9b11c3aff93881641a9db7f",
+        "--working-tree",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a6da64a8-2f77-4cd2-9e40-222333564f87",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "discover",
+        "--scope",
+        "codebase",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4d7ffda3-5839-43c3-ae9e-0e71cf05ab08",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "/tmp/tm-m1-pYSFGx/repo/external.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f07e813e-dbb5-428c-af57-62f6771981ad",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "/tmp/tm-m1-pYSFGx/repo/cycle.json",
+        "--role",
+        "api-spec",
+        "--format",
+        "openapi",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_58888580-f7d0-43ce-8edc-661ef0f1003d",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "hostileForkReadOnlyBoundary",
+      "healthy": true,
+      "baseSha": "a0a88b017c7ae0720e522f85c4784712718ffebc",
+      "headSha": "f8322f201a2f1b87e9b11c3aff93881641a9db7f",
+      "markerFiles": [],
+      "remotesAndConfigUnchanged": true,
+      "tokenDisclosed": false,
+      "internetConnections": 0,
+      "evidence": "validation/results/hostile-repository-boundary-hostile-network.json"
+    }
+  ],
+  "limitations": [
+    "Local fork analysis only; GitHub App installation tokens/check-SHA publishing are unavailable until M4."
+  ]
+}

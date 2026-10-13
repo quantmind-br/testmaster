@@ -1,0 +1,563 @@
+$ vitest run --project postgres
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/team.portal.test.ts (7 tests | 1 failed) 9515ms
+   ❯ team, tokens and audit trail in the portal (7)
+     × UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret 891ms
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+ ❯ |postgres| validation/journeys/j12-github.pg.test.ts (5 tests | 5 failed) 1267ms
+   × J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing 444ms
+   × J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing 183ms
+   × J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network 205ms
+   × J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey 202ms
+   × J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry 230ms
+ ❯ |postgres| validation/journeys/lists-schedules.portal.test.ts (9 tests | 2 failed) 84336ms
+   ❯ schedules in the portal (4)
+     × OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it 30508ms
+     × UX-005 a viewer reads schedules but cannot change them 30344ms
+ ❯ |postgres| validation/journeys/portal-accessibility.portal.test.ts (7 tests | 7 skipped) 2955ms
+ ❯ |postgres| packages/application/src/tenancy.pg.test.ts (7 tests | 7 failed) 2270ms
+   ❯ tenant isolation on PostgreSQL (7)
+     × SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows 521ms
+     × SEC-030 a tenant cannot read, list, stream or cancel another tenant's objects by identifier 272ms
+     × SEC-022 a credential of one organization is never referenced from another, by id or by name 299ms
+     × SEC-037 a user's audit export holds only the events of their own workspace 292ms
+     × SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data 296ms
+     × SEC-027 a Run admitted by an actor whose credential was revoked ends blocked with actor_revoked 292ms
+     × SEC-027 demoting the admitting member between admission and claim blocks the Run, a still-allowed member keeps running 296ms
+ ❯ |postgres| packages/application/src/auth/identity.pg.test.ts (6 tests | 6 failed) 1312ms
+   × SEC-024 only the requester or an admin of the same workspace can resolve a checkpoint 243ms
+   × SEC-024 an admin of the workspace can cancel a checkpoint somebody else's Run is waiting on 225ms
+   × SEC-024 SEC-030 a checkpoint of another tenant is invisible and cannot be resolved 224ms
+   × SEC-022 SEC-030 an auth profile or credential of one tenant can never be referenced from another 212ms
+   × SEC-022 exporting a storage state needs the export permission, the caller's password and a bounded lifetime 198ms
+   × M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login 210ms
+ ❯ |postgres| validation/journeys/j16-accessibility.portal.test.ts (18 tests | 18 skipped) 2620ms
+ ❯ |postgres| validation/journeys/github-portal.portal.test.ts (6 tests | 6 skipped) 588ms
+ ❯ |postgres| packages/application/src/integrations/github/github.pg.test.ts (2 tests | 2 failed) 651ms
+   × INT-014 INT-002 PostgreSQL row-level security hides one workspace's GitHub installations, pulls, checks and deployments from another 464ms
+   × INT-014 SEC-047 a tenant cannot claim another tenant's installation or read its management views by ID 186ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/github-portal.portal.test.ts [ validation/journeys/github-portal.portal.test.ts ]
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ validation/journeys/github-portal.portal.test.ts:64:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/26]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts [ validation/journeys/j16-accessibility.portal.test.ts ]
+Error: compare.ts: route parameter "batchId" is already claimed by another seed
+ ❯ claim validation/journeys/portal-seeds/index.ts:34:15
+     32|     const claim = <V>(target: Map<string, V>, key: string, value: V, w…
+     33|       if (target.has(key))
+     34|         throw new Error(`${file}: ${what} "${key}" is already claimed …
+       |               ^
+     35|       target.set(key, value);
+     36|     };
+ ❯ loadSeeds validation/journeys/portal-seeds/index.ts:38:7
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:53:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/26]⎯
+
+ FAIL  |postgres| validation/journeys/portal-accessibility.portal.test.ts [ validation/journeys/portal-accessibility.portal.test.ts ]
+Error: compare.ts: route parameter "batchId" is already claimed by another seed
+ ❯ claim validation/journeys/portal-seeds/index.ts:34:15
+     32|     const claim = <V>(target: Map<string, V>, key: string, value: V, w…
+     33|       if (target.has(key))
+     34|         throw new Error(`${file}: ${what} "${key}" is already claimed …
+       |               ^
+     35|       target.set(key, value);
+     36|     };
+ ❯ loadSeeds validation/journeys/portal-seeds/index.ts:38:7
+ ❯ validation/journeys/portal-accessibility.portal.test.ts:36:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/26]⎯
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 23 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j12-github.pg.test.ts > J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ stack validation/journeys/j12-github.pg.test.ts:71:30
+ ❯ validation/journeys/j12-github.pg.test.ts:155:39
+ ❯ recorded validation/journeys/j12-github.pg.test.ts:146:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/26]⎯
+
+ FAIL  |postgres| validation/journeys/j12-github.pg.test.ts > J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ stack validation/journeys/j12-github.pg.test.ts:71:30
+ ❯ validation/journeys/j12-github.pg.test.ts:213:38
+ ❯ recorded validation/journeys/j12-github.pg.test.ts:146:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/26]⎯
+
+ FAIL  |postgres| validation/journeys/j12-github.pg.test.ts > J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ stack validation/journeys/j12-github.pg.test.ts:71:30
+ ❯ validation/journeys/j12-github.pg.test.ts:304:45
+ ❯ recorded validation/journeys/j12-github.pg.test.ts:146:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/26]⎯
+
+ FAIL  |postgres| validation/journeys/j12-github.pg.test.ts > J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ stack validation/journeys/j12-github.pg.test.ts:71:30
+ ❯ validation/journeys/j12-github.pg.test.ts:388:39
+ ❯ recorded validation/journeys/j12-github.pg.test.ts:146:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/26]⎯
+
+ FAIL  |postgres| validation/journeys/j12-github.pg.test.ts > J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ stack validation/journeys/j12-github.pg.test.ts:71:30
+ ❯ validation/journeys/j12-github.pg.test.ts:428:51
+ ❯ recorded validation/journeys/j12-github.pg.test.ts:146:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/26]⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('table', { name: 'Next ten occurrences' }) to be visible
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:303:69
+    301|     await page.getByRole("button", { name: "Resume" }).click();
+    302|     await page.getByRole("dialog").getByRole("button", { name: "Resume…
+    303|     await page.getByRole("table", { name: "Next ten occurrences" }).wa…
+       |                                                                     ^
+    304|     expect(await page.getByText("Nothing is scheduled").count()).toBe(…
+    305|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/26]⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > UX-005 a viewer reads schedules but cannot change them
+TimeoutError: locator.getAttribute: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Pause', exact: true })
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:357:27
+    355|     for (const label of ["Edit schedule", "Pause", "Archive"]) {
+    356|       const button = page.getByRole("button", { name: label, exact: tr…
+    357|       expect(await button.getAttribute("aria-disabled"), label).toBe("…
+       |                           ^
+    358|     }
+    359|     expect(await page.getByText("needs write and execute access").coun…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/26]⎯
+
+ FAIL  |postgres| validation/journeys/team.portal.test.ts > team, tokens and audit trail in the portal > UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret
+Error: keyboardOnly: target not reachable within 20 Tab presses
+ ❯ Object.tabTo validation/journeys/portal.ts:280:13
+    278|         if (matches(await focusedElement(page))) return presses;
+    279|       }
+    280|       throw new Error(`keyboardOnly: target not reachable within ${lim…
+       |             ^
+    281|     },
+    282|     async assertNoPointerUsed() {
+ ❯ validation/journeys/team.portal.test.ts:518:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:107:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-030 a tenant cannot read, list, stream or cancel another tenant's objects by identifier
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:152:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-022 a credential of one organization is never referenced from another, by id or by name
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:175:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-037 a user's audit export holds only the events of their own workspace
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:233:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:280:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-027 a Run admitted by an actor whose credential was revoked ends blocked with actor_revoked
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:304:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/26]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-027 demoting the admitting member between admission and claim blocks the Run, a still-allowed member keeps running
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ seed packages/application/src/tenancy.pg.test.ts:82:20
+ ❯ tenants packages/application/src/tenancy.pg.test.ts:100:12
+ ❯ packages/application/src/tenancy.pg.test.ts:337:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/26]⎯
+
+ FAIL  |postgres| packages/application/src/auth/identity.pg.test.ts > SEC-024 only the requester or an admin of the same workspace can resolve a checkpoint
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ populate packages/application/src/auth/identity.pg.test.ts:123:20
+ ❯ firstTenant packages/application/src/auth/identity.pg.test.ts:93:10
+ ❯ packages/application/src/auth/identity.pg.test.ts:202:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/26]⎯
+
+ FAIL  |postgres| packages/application/src/auth/identity.pg.test.ts > SEC-024 an admin of the workspace can cancel a checkpoint somebody else's Run is waiting on
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ populate packages/application/src/auth/identity.pg.test.ts:123:20
+ ❯ firstTenant packages/application/src/auth/identity.pg.test.ts:93:10
+ ❯ packages/application/src/auth/identity.pg.test.ts:226:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/26]⎯
+
+ FAIL  |postgres| packages/application/src/auth/identity.pg.test.ts > SEC-024 SEC-030 a checkpoint of another tenant is invisible and cannot be resolved
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ populate packages/application/src/auth/identity.pg.test.ts:123:20
+ ❯ firstTenant packages/application/src/auth/identity.pg.test.ts:93:10
+ ❯ packages/application/src/auth/identity.pg.test.ts:242:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/26]⎯
+
+ FAIL  |postgres| packages/application/src/auth/identity.pg.test.ts > SEC-022 SEC-030 an auth profile or credential of one tenant can never be referenced from another
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ populate packages/application/src/auth/identity.pg.test.ts:123:20
+ ❯ firstTenant packages/application/src/auth/identity.pg.test.ts:93:10
+ ❯ packages/application/src/auth/identity.pg.test.ts:271:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/26]⎯
+
+ FAIL  |postgres| packages/application/src/auth/identity.pg.test.ts > SEC-022 exporting a storage state needs the export permission, the caller's password and a bounded lifetime
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ populate packages/application/src/auth/identity.pg.test.ts:123:20
+ ❯ firstTenant packages/application/src/auth/identity.pg.test.ts:93:10
+ ❯ packages/application/src/auth/identity.pg.test.ts:311:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/26]⎯
+
+ FAIL  |postgres| packages/application/src/auth/identity.pg.test.ts > M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ populate packages/application/src/auth/identity.pg.test.ts:123:20
+ ❯ firstTenant packages/application/src/auth/identity.pg.test.ts:93:10
+ ❯ packages/application/src/auth/identity.pg.test.ts:407:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/26]⎯
+
+ FAIL  |postgres| packages/application/src/integrations/github/github.pg.test.ts > INT-014 INT-002 PostgreSQL row-level security hides one workspace's GitHub installations, pulls, checks and deployments from another
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ twoTenants packages/application/src/integrations/github/github.pg.test.ts:47:30
+ ❯ packages/application/src/integrations/github/github.pg.test.ts:120:69
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/26]⎯
+
+ FAIL  |postgres| packages/application/src/integrations/github/github.pg.test.ts > INT-014 SEC-047 a tenant cannot claim another tenant's installation or read its management views by ID
+ContractError: Master key is unavailable
+ ❯ masterKeyUnavailable packages/application/src/secrets.ts:255:10
+    253| /** A restore or a misconfigured deployment without its key must fail …
+    254| function masterKeyUnavailable(): ContractError {
+    255|   return new ContractError("PRECONDITION_FAILED", "Master key is unava…
+       |          ^
+    256|     reasonCode: "master_key_unavailable",
+    257|   });
+ ❯ vaultKey packages/application/src/secrets.ts:268:46
+ ❯ vaultWrite packages/application/src/secrets.ts:423:11
+ ❯ SecretsService.persist packages/application/src/secrets.ts:632:7
+ ❯ SecretsService.setValue packages/application/src/secrets.ts:702:26
+ ❯ auditedOperation packages/application/src/audit.ts:102:20
+ ❯ startGithubWorld packages/application/src/integrations/github/testing/world.ts:142:5
+ ❯ twoTenants packages/application/src/integrations/github/github.pg.test.ts:47:30
+ ❯ packages/application/src/integrations/github/github.pg.test.ts:174:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/26]⎯
+
+
+ Test Files  9 failed | 29 passed (38)
+      Tests  23 failed | 235 passed | 31 skipped (289)
+   Start at  13:59:33
+   Duration  470.43s (tests 95%, import 5%)
+
+[ELIFECYCLE] Command failed with exit code 1.

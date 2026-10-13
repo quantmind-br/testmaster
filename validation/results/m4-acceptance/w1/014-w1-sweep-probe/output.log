@@ -1,0 +1,114 @@
+$ vitest run --project postgres validation/journeys/j16-accessibility.portal.test.ts validation/journeys/portal-accessibility.portal.test.ts validation/journeys/team.portal.test.ts validation/journeys/lists-schedules.portal.test.ts packages/application/src/tenancy.pg.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/portal-accessibility.portal.test.ts (7 tests | 1 failed) 151904ms
+   ❯ portal accessibility sweep (3)
+     × UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe 145040ms
+ ❯ |postgres| validation/journeys/j16-accessibility.portal.test.ts (18 tests | 3 failed) 29104ms
+   ❯ J16 the journey pages come from the route table and the seed registry (fails closed) (10)
+     × J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 2157ms
+     × J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 1744ms
+     × J16 UX-051 UX-052 UX-053 UX-054 comparison: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 1792ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: onboarding at 320px: page scrolls horizontally: expected 322 to be less than or equal to 320
+ ❯ expectNoPageOverflow validation/journeys/portal.ts:355:71
+    353|     innerWidth: window.innerWidth,
+    354|   }));
+    355|   expect(overflow.scrollWidth, `${label}: page scrolls horizontally`).…
+       |                                                                       ^
+    356|     overflow.innerWidth,
+    357|   );
+ ❯ exerciseJourneyPage validation/journeys/j16-accessibility.portal.test.ts:313:3
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:358:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "textualArtifact: keyboard: 38 of 41 interactive element(s) are not reachable with Tab",
++ ]
+
+ ❯ exerciseJourneyPage validation/journeys/j16-accessibility.portal.test.ts:296:20
+    294|   const problems = await journeyProblems(page, step);
+    295|   await expectAccessible(page, `j16 ${step}`);
+    296|   expect(problems).toEqual([]);
+       |                    ^
+    297|   // The main region has content for a screen reader: more than a head…
+    298|   const lines = (await outline(page)).split("\n").filter((line) => lin…
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:358:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 comparison: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: comparison while loading: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "no loading state while the data has not arrived",
++ ]
+
+ ❯ exerciseJourneyPage validation/journeys/j16-accessibility.portal.test.ts:306:80
+    304|   await page.goto(path, { waitUntil: "domcontentloaded" });
+    305|   await page.locator("main").waitFor();
+    306|   expect(await checkLoadingNeverPassed(page, 30_000), `${step} while l…
+       |                                                                                ^
+    307|   await releaseData(page);
+    308|
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:358:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |postgres| validation/journeys/portal-accessibility.portal.test.ts > portal accessibility sweep > UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe
+AssertionError: expected [ …(14) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/projects/:projectId/onboarding: 1 of 44 interactive element(s) are not reachable with Tab",
++   "/projects/:projectId/discovery: keyboard trap or loop: \"Skip to content\" focused again before 1 control(s) were reached",
++   "/projects/:projectId/discovery: 1 of 36 interactive element(s) are not reachable with Tab",
++   "/lists/new: 1 of 28 interactive element(s) are not reachable with Tab",
++   "/schedules/new: /schedules/new: held requests do not render a loading view",
++   "/schedules/new: /schedules/new: a failed request does not render an error view",
++   "/schedules/new: /schedules/new: a forbidden request renders neither the forbidden nor the not-found view",
++   "/audit: keyboard trap or loop: \"\" focused again before 5 control(s) were reached",
++   "/audit: 5 of 27 interactive element(s) are not reachable with Tab",
++   "/projects/:projectId/quarantine: keyboard trap or loop: \"\" focused again before 1 control(s) were reached",
++   "/projects/:projectId/quarantine: 1 of 35 interactive element(s) are not reachable with Tab",
++   "/auth-profiles/new: /auth-profiles/new: held requests do not render a loading view",
++   "/auth-profiles/new: /auth-profiles/new: a failed request does not render an error view",
++   "/auth-profiles/new: /auth-profiles/new: a forbidden request renders neither the forbidden nor the not-found view",
++ ]
+
+ ❯ validation/journeys/portal-accessibility.portal.test.ts:295:22
+    293|       )}\n`,
+    294|     );
+    295|     expect(failures).toEqual([]);
+       |                      ^
+    296|   }, 1_800_000);
+    297|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 3 passed (5)
+      Tests  4 failed | 44 passed (48)
+   Start at  14:21:29
+   Duration  223.37s (tests 98%, import 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.

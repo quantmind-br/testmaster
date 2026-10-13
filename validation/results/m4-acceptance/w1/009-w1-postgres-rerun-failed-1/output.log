@@ -1,0 +1,156 @@
+$ vitest run --project postgres packages/application/src/auth/identity.pg.test.ts packages/application/src/tenancy.pg.test.ts packages/application/src/integrations/github/github.pg.test.ts validation/journeys/j12-github.pg.test.ts validation/journeys/github-portal.portal.test.ts validation/journeys/j16-accessibility.portal.test.ts validation/journeys/lists-schedules.portal.test.ts validation/journeys/portal-accessibility.portal.test.ts validation/journeys/team.portal.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/lists-schedules.portal.test.ts (9 tests | 2 failed) 84152ms
+   ❯ schedules in the portal (4)
+     × OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it 30485ms
+     × UX-005 a viewer reads schedules but cannot change them 30325ms
+ ❯ |postgres| validation/journeys/team.portal.test.ts (7 tests | 1 failed) 9334ms
+   ❯ team, tokens and audit trail in the portal (7)
+     × UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret 925ms
+ ❯ |postgres| validation/journeys/portal-accessibility.portal.test.ts (7 tests | 1 failed) 150218ms
+   ❯ portal accessibility sweep (3)
+     × UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe 143257ms
+ ❯ |postgres| validation/journeys/j16-accessibility.portal.test.ts (18 tests | 2 failed) 30545ms
+   ❯ J16 the journey pages come from the route table and the seed registry (fails closed) (10)
+     × J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 2178ms
+     × J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 1764ms
+ ❯ |postgres| packages/application/src/tenancy.pg.test.ts (7 tests | 1 failed) 3216ms
+   ❯ tenant isolation on PostgreSQL (7)
+     × SEC-022 a credential of one organization is never referenced from another, by id or by name 341ms
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: onboarding at 320px: page scrolls horizontally: expected 322 to be less than or equal to 320
+ ❯ expectNoPageOverflow validation/journeys/portal.ts:355:71
+    353|     innerWidth: window.innerWidth,
+    354|   }));
+    355|   expect(overflow.scrollWidth, `${label}: page scrolls horizontally`).…
+       |                                                                       ^
+    356|     overflow.innerWidth,
+    357|   );
+ ❯ exerciseJourneyPage validation/journeys/j16-accessibility.portal.test.ts:313:3
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:358:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "textualArtifact: keyboard: 38 of 41 interactive element(s) are not reachable with Tab",
++ ]
+
+ ❯ exerciseJourneyPage validation/journeys/j16-accessibility.portal.test.ts:296:20
+    294|   const problems = await journeyProblems(page, step);
+    295|   await expectAccessible(page, `j16 ${step}`);
+    296|   expect(problems).toEqual([]);
+       |                    ^
+    297|   // The main region has content for a screen reader: more than a head…
+    298|   const lines = (await outline(page)).split("\n").filter((line) => lin…
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:358:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('table', { name: 'Next ten occurrences' }) to be visible
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:303:69
+    301|     await page.getByRole("button", { name: "Resume" }).click();
+    302|     await page.getByRole("dialog").getByRole("button", { name: "Resume…
+    303|     await page.getByRole("table", { name: "Next ten occurrences" }).wa…
+       |                                                                     ^
+    304|     expect(await page.getByText("Nothing is scheduled").count()).toBe(…
+    305|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > UX-005 a viewer reads schedules but cannot change them
+TimeoutError: locator.getAttribute: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Pause', exact: true })
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:357:27
+    355|     for (const label of ["Edit schedule", "Pause", "Archive"]) {
+    356|       const button = page.getByRole("button", { name: label, exact: tr…
+    357|       expect(await button.getAttribute("aria-disabled"), label).toBe("…
+       |                           ^
+    358|     }
+    359|     expect(await page.getByText("needs write and execute access").coun…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |postgres| validation/journeys/portal-accessibility.portal.test.ts > portal accessibility sweep > UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe
+Error: Route /integrations/github/:integrationId has parameters no seed resolves and is not listed in allowUnseeded. Add a resolver to validation/journeys/portal-seeds/<area>.ts.
+ ❯ resolveRoute validation/journeys/portal-accessibility.portal.test.ts:92:11
+     90|   const reason = merged.allowUnseeded.get(path) ?? null;
+     91|   if (!seeded && reason === null)
+     92|     throw new Error(
+       |           ^
+     93|       `Route ${path} has parameters no seed resolves and is not listed…
+     94|     );
+ ❯ validation/journeys/portal-accessibility.portal.test.ts:224:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  |postgres| validation/journeys/team.portal.test.ts > team, tokens and audit trail in the portal > UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret
+Error: keyboardOnly: target not reachable within 20 Tab presses
+ ❯ Object.tabTo validation/journeys/portal.ts:280:13
+    278|         if (matches(await focusedElement(page))) return presses;
+    279|       }
+    280|       throw new Error(`keyboardOnly: target not reachable within ${lim…
+       |             ^
+    281|     },
+    282|     async assertNoPointerUsed() {
+ ❯ validation/journeys/team.portal.test.ts:518:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  |postgres| packages/application/src/tenancy.pg.test.ts > tenant isolation on PostgreSQL > SEC-022 a credential of one organization is never referenced from another, by id or by name
+ContractError: Invalid AuthProfile
+ ❯ validate packages/contracts/src/validation.ts:115:11
+    113|       message: error.message ?? "Invalid value",
+    114|     }));
+    115|     throw new ContractError("INVALID_ARGUMENT", `Invalid ${name}`, { i…
+       |           ^
+    116|   }
+    117|   const validateNestedPlans = (candidate: unknown): void => {
+ ❯ EntityRepository.insert packages/persistence/src/repositories.ts:49:5
+ ❯ packages/persistence/src/repositories.ts:39:39
+ ❯ PersistenceDatabase.withTx packages/persistence/src/database.ts:338:23
+ ❯ EntityRepository.insert packages/persistence/src/repositories.ts:39:21
+ ❯ packages/application/src/tenancy.pg.test.ts:228:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  5 failed | 4 passed (9)
+      Tests  7 failed | 60 passed (67)
+   Start at  14:08:36
+   Duration  301.01s (tests 98%, import 2%)
+
+[ELIFECYCLE] Command failed with exit code 1.

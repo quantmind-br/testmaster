@@ -1,0 +1,62 @@
+$ vitest run --project postgres validation/journeys/lists-schedules.portal.test.ts -t 'REQ-035 UX-049|pausing asks'
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/lists-schedules.portal.test.ts (9 tests | 2 failed | 7 skipped) 64204ms
+   ❯ schedules in the portal (4)
+     × REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision 30310ms
+     × OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it 30270ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision
+TimeoutError: locator.selectOption: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('#schedule-suite')
+    - locator resolved to <select id="schedule-suite" aria-required="true" name="schedule-suite">…</select>
+  - attempting select option action
+    2 × waiting for element to be visible and enabled
+      - did not find some options
+    - retrying select option action
+    - waiting 20ms
+    2 × waiting for element to be visible and enabled
+      - did not find some options
+    - retrying select option action
+      - waiting 100ms
+    60 × waiting for element to be visible and enabled
+       - did not find some options
+     - retrying select option action
+       - waiting 500ms
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:255:43
+    253|     await page.getByRole("heading", { level: 1, name: "New schedule" }…
+    254|     await page.locator("#schedule-name").fill("Weekday smoke");
+    255|     await page.locator("#schedule-suite").selectOption({ label: "Night…
+       |                                           ^
+    256|     await page.locator("#schedule-cron").fill("30 2 * * 1-5");
+    257|     await page.locator("#schedule-timezone").fill("America/New_York");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('heading', { name: 'Weekday smoke', level: 1 }) to be visible
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:294:74
+    292|     const { page } = await portal(stack.owner);
+    293|     await page.goto(`/schedules/${scheduleId}`);
+    294|     await page.getByRole("heading", { level: 1, name: "Weekday smoke" …
+       |                                                                          ^
+    295|     await page.getByRole("button", { name: "Pause", exact: true }).cli…
+    296|     const dialog = page.getByRole("dialog");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 skipped (9)
+   Start at  14:17:06
+   Duration  66.63s (tests 98%, import 1%, transform 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.

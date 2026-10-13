@@ -1,0 +1,43 @@
+$ vitest run --project postgres validation/journeys/lists-schedules.portal.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/lists-schedules.portal.test.ts (9 tests | 2 failed) 89328ms
+   ❯ schedules in the portal (4)
+     × OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it 34500ms
+     × UX-005 a viewer reads schedules but cannot change them 30334ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('table', { name: 'Next ten occurrences' }) to be visible
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:305:69
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > UX-005 a viewer reads schedules but cannot change them
+TimeoutError: locator.getAttribute: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Pause', exact: true })
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:359:27
+    357|     for (const label of ["Edit schedule", "Pause", "Archive"]) {
+    358|       const button = page.getByRole("button", { name: label, exact: tr…
+    359|       expect(await button.getAttribute("aria-disabled"), label).toBe("…
+       |                           ^
+    360|     }
+    361|     expect(await page.getByText("needs write and execute access").coun…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  14:18:20
+   Duration  91.76s (tests 99%, import 1%, transform 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.

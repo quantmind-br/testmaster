@@ -1,0 +1,32 @@
+$ vitest run --project postgres validation/journeys/lists-schedules.portal.test.ts -t 'pausing asks'
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/lists-schedules.portal.test.ts (9 tests | 1 failed | 8 skipped) 33727ms
+   ❯ schedules in the portal (4)
+     × OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it 30295ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/lists-schedules.portal.test.ts > schedules in the portal > OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('heading', { name: 'Weekday smoke', level: 1 }) to be visible
+
+ ❯ validation/journeys/lists-schedules.portal.test.ts:294:74
+    292|     const { page } = await portal(stack.owner);
+    293|     await page.goto(`/schedules/${scheduleId}`);
+    294|     await page.getByRole("heading", { level: 1, name: "Weekday smoke" …
+       |                                                                          ^
+    295|     await page.getByRole("button", { name: "Pause", exact: true }).cli…
+    296|     const dialog = page.getByRole("dialog");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 skipped (9)
+   Start at  14:16:24
+   Duration  36.21s (tests 97%, import 2%, transform 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.

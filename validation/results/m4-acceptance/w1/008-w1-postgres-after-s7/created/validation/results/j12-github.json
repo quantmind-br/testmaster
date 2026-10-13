@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j12-github",
+  "class": "deterministic-e2e",
+  "runner": "process-executor",
+  "externalDependency": "local-fake-github",
+  "observedAt": "2026-10-13T17:04:00.449Z",
+  "passed": false,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "error": "ContractError: Master key is unavailable",
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [],
+  "failureDiagnostics": {
+    "runs": [],
+    "artifacts": []
+  },
+  "limitations": [
+    "Local fake GitHub API and webhook sender; no real GitHub App, tunnel or vendor preview is exercised here.",
+    "The ephemeral worker uses the unsafe-local process executor; Docker execution is proven by j12-github.docker.test.ts.",
+    "PostgreSQL 17 profile on one host; fork 'fixture-only' is proven with a loopback fixture."
+  ]
+}
