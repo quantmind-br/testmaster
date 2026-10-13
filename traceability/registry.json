@@ -26989,33 +26989,48 @@
       "scenario": [
         "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI",
         "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes",
-        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+        "validation/journeys/m4-journey-manifests.test.ts::VAL-035 J09 J10 J12 J13 J16 J17 each have a versioned script, a passing retained run and an automatic, reviewer-named manifest",
+        "validation/journeys/m4-journey-manifests.test.ts::VAL-035 rejects a journey whose script does not name it, whose run failed, or whose manifest claims a human"
       ],
       "oracle": [
-        "Real new manifests record automatic method, named automated reviewer and precise limitations, never human sign-off."
+        "Real new manifests record automatic method, named automated reviewer and precise limitations, never human sign-off.",
+        "Each M4 journey (J09, J10, J12, J13, J16, J17-server) is a versioned script that names its journey, has a retained wrapper record of a passing run that ran it or created its manifest, and the harness manifests carry the automatic method, the named automated reviewer and the no-independent-human-sign-off limitation; a script without the journey id, a failed run, a manual method, missing limitations or a missing manifest are each refused."
       ],
       "evidence": [
         "validation/journeys/harness-metadata.test.ts",
         "validation/results/journey-manifest-metadata.json",
         "validation/results/ops002-daemon-readiness.json",
         "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log",
-        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/J17-server.json"
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/J17-server.json",
+        "validation/results/m4-acceptance/w1/024-w1-val035-manifests/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/created/validation/results/j09-cross-project-list.json",
+        "validation/results/m4-acceptance/w2b/034-w2b-postgres-final3/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/created/validation/results/j13-schedule-notify.json"
       ],
       "code": [
         "validation/journeys/harness.ts",
         "validation/journeys/j14-agent-skills.test.ts",
         "validation/journeys/j17-server.docker.test.ts",
-        "validation/journeys/compose-deployment.ts"
+        "validation/journeys/compose-deployment.ts",
+        "validation/journeys/m4-journey-manifests.test.ts",
+        "validation/journeys/j09-cross-project-list.portal.test.ts",
+        "validation/journeys/j10-auth-secrets.portal.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j13-schedule-notify.pg.test.ts",
+        "validation/journeys/j16-accessibility.portal.test.ts"
       ],
-      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. J09/J10/J12-App/J13/J16/J17-server fixtures (M4), J13-tracker/J18 (M5) and the full J01-J18 supported-scope corpus (M6) are deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations. S2a added the J17-server journey manifest (compose stack, rootless host worker, crash recovery) produced through the harness metadata.",
+      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. J09/J10/J12-App/J13/J16/J17-server fixtures (M4), J13-tracker/J18 (M5) and the full J01-J18 supported-scope corpus (M6) are deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations. S2a added the J17-server journey manifest (compose stack, rootless host worker, crash recovery) produced through the harness metadata. The M4 journeys J09, J10, J12, J13, J16 and J17-server are versioned scripts with retained passing runs; J10 and J16 keep the preservation wrapper's record as their manifest of the execution (no harness manifest).",
       "coverage": {
         "positive": [
           "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI",
-          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+          "validation/journeys/m4-journey-manifests.test.ts::VAL-035 J09 J10 J12 J13 J16 J17 each have a versioned script, a passing retained run and an automatic, reviewer-named manifest"
         ],
         "negative": [
           "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes",
-          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+          "validation/journeys/m4-journey-manifests.test.ts::VAL-035 rejects a journey whose script does not name it, whose run failed, or whose manifest claims a human"
         ],
         "criticalAssertions": [
           {
@@ -27033,18 +27048,18 @@
           {
             "path": "validation/journeys/j17-server.docker.test.ts",
             "assertion": "      expect(attemptsBefore[0]?.outcome ?? null).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/m4-journey-manifests.test.ts",
+            "assertion": "expect(journeyProblems(entry, text, record, { ...harness, method: \"manual\" })).toContain("
+          },
+          {
+            "path": "validation/journeys/m4-journey-manifests.test.ts",
+            "assertion": "expect(journeyProblems(entry, text, { ...record, exitCode: 1 }, harness)).toContain("
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "manifests and fixtures for J09, J10, J12 (GitHub App), J13 (schedule), J16 and J17 (server) journeys",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "VAL-026/027/033–037/041/043/045/052 no escopo M4; J09/J10/J12 App/J13 schedule/J16/J17 server"
-          }
-        },
         {
           "milestone": "M5",
           "scope": "J13 tracker and J18 advanced-quality journey manifests",
