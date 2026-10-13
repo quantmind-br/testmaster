@@ -52,6 +52,7 @@ const rootlessDockerFiles = [
   "validation/journeys/limits-recovery.docker.test.ts",
   "validation/journeys/recovery-controls.docker.test.ts",
   "validation/journeys/browser-matrix.docker.test.ts",
+  "validation/journeys/postgres-tls.docker.test.ts",
 ];
 /**
  * Journeys that need the rootless daemon itself (compose stack, rootless uid mapping, rolling
