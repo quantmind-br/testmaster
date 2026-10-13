@@ -2123,7 +2123,73 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SecretInput"
+                "$ref": "#/components/schemas/SecretRotationInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/secrets/{id}/history": {
+      "get": {
+        "operationId": "get__secrets_id_history",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "secrets:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SecretVersionRecord"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
               }
             }
           }
@@ -9381,6 +9447,63 @@
         }
       }
     },
+    "/deletion-operations": {
+      "get": {
+        "operationId": "get__deletion_operations",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [],
+        "x-scope": "deletion:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletionOperation"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/deletion-operations/{id}": {
       "get": {
         "operationId": "get__deletion_operations_id_",
@@ -9421,6 +9544,294 @@
                     },
                     "data": {
                       "$ref": "#/components/schemas/DeletionOperation"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/model-consents": {
+      "get": {
+        "operationId": "get__projects_id_model_consents",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "models:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ModelConsentSettings"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/model-consents/{provider}": {
+      "put": {
+        "operationId": "put__projects_id_model_consents_provider_",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "models:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ModelConsentSettings"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelConsentInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete__projects_id_model_consents_provider_",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "models:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ModelConsentSettings"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/environments/{id}/revisions": {
+      "get": {
+        "operationId": "get__environments_id_revisions",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "env:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EnvironmentRevisionView"
                     },
                     "warnings": {
                       "type": "array",
@@ -34037,6 +34448,76 @@
           }
         }
       },
+      "EnvironmentRevisionView": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "targetOrigins",
+          "networkProfile",
+          "authProfileRefs",
+          "locale",
+          "timezone",
+          "production"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "targetOrigins": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "networkProfile": {
+            "anyOf": [
+              {
+                "const": "public",
+                "type": "string"
+              },
+              {
+                "const": "private",
+                "type": "string"
+              },
+              {
+                "const": "local-loopback",
+                "type": "string"
+              }
+            ]
+          },
+          "authProfileRefs": {
+            "type": "array",
+            "items": {
+              "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          "locale": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "timezone": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "production": {
+            "type": "boolean"
+          }
+        },
+        "$defs": {}
+      },
       "ErrorEnvelope": {
         "additionalProperties": false,
         "type": "object",
@@ -55246,6 +55727,207 @@
             ]
           }
         }
+      },
+      "ModelConsentInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataClasses"
+        ],
+        "properties": {
+          "dataClasses": {
+            "minItems": 1,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "documents",
+                  "type": "string"
+                },
+                {
+                  "const": "code_summary",
+                  "type": "string"
+                },
+                {
+                  "const": "dom",
+                  "type": "string"
+                },
+                {
+                  "const": "requirements",
+                  "type": "string"
+                },
+                {
+                  "const": "plans",
+                  "type": "string"
+                },
+                {
+                  "const": "execution_evidence",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "allowUnknownCost": {
+            "type": "boolean"
+          }
+        },
+        "$defs": {}
+      },
+      "ModelConsentSettings": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "projectId",
+          "dataClasses",
+          "providers"
+        ],
+        "properties": {
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "dataClasses": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "description"
+              ],
+              "properties": {
+                "id": {
+                  "anyOf": [
+                    {
+                      "const": "documents",
+                      "type": "string"
+                    },
+                    {
+                      "const": "code_summary",
+                      "type": "string"
+                    },
+                    {
+                      "const": "dom",
+                      "type": "string"
+                    },
+                    {
+                      "const": "requirements",
+                      "type": "string"
+                    },
+                    {
+                      "const": "plans",
+                      "type": "string"
+                    },
+                    {
+                      "const": "execution_evidence",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": {
+                  "maxLength": 8000,
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "baseUrl",
+                "remote",
+                "models",
+                "allowedByProfile",
+                "consent"
+              ],
+              "properties": {
+                "id": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "baseUrl": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "remote": {
+                  "type": "boolean"
+                },
+                "models": {
+                  "type": "array",
+                  "items": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                },
+                "allowedByProfile": {
+                  "type": "boolean"
+                },
+                "consent": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "dataClasses",
+                        "allowUnknownCost",
+                        "grantedBy",
+                        "grantedAt",
+                        "revokedAt"
+                      ],
+                      "properties": {
+                        "dataClasses": {
+                          "type": "array",
+                          "items": {
+                            "minLength": 1,
+                            "maxLength": 200,
+                            "type": "string"
+                          }
+                        },
+                        "allowUnknownCost": {
+                          "type": "boolean"
+                        },
+                        "grantedBy": {
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "type": "string"
+                        },
+                        "grantedAt": {
+                          "format": "date-time",
+                          "pattern": "Z$",
+                          "type": "string"
+                        },
+                        "revokedAt": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "pattern": "Z$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "$defs": {}
       },
       "ModelRequest": {
         "additionalProperties": false,
@@ -76794,6 +77476,73 @@
             ]
           }
         }
+      },
+      "SecretRotationInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "SecretVersionRecord": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "version",
+          "event",
+          "actor",
+          "requestId"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^aud_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "const": "created",
+                "type": "string"
+              },
+              {
+                "const": "rotated",
+                "type": "string"
+              },
+              {
+                "const": "revoked",
+                "type": "string"
+              }
+            ]
+          },
+          "actor": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "requestId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "$defs": {}
       },
       "SelectionInput": {
         "additionalProperties": false,

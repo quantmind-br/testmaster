@@ -1,0 +1,48 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "dataClasses"
+  ],
+  "properties": {
+    "dataClasses": {
+      "minItems": 1,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "documents",
+            "type": "string"
+          },
+          {
+            "const": "code_summary",
+            "type": "string"
+          },
+          {
+            "const": "dom",
+            "type": "string"
+          },
+          {
+            "const": "requirements",
+            "type": "string"
+          },
+          {
+            "const": "plans",
+            "type": "string"
+          },
+          {
+            "const": "execution_evidence",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "allowUnknownCost": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ModelConsentInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

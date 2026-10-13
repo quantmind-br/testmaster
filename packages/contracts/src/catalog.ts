@@ -2,6 +2,7 @@ import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
+import { settingsContracts } from "./m4/settings.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -620,6 +621,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...httpInputs,
   ...integrationContracts,
   ...identityContracts,
+  ...settingsContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),
