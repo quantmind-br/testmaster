@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type ReactNode, useMemo } from "react";
+import { stableOrder } from "../lib/table-model";
 
 export type SortDirection = "ascending" | "descending";
 export interface SortState {
@@ -58,14 +59,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactNode {
   const rows = useMemo(() => {
     const column = columns.find((candidate) => candidate.key === sort?.key);
     if (!column?.sortValue || !sort) return props.rows;
-    const value = column.sortValue;
-    const factor = sort.direction === "ascending" ? 1 : -1;
-    return [...props.rows].sort((a, b) => {
-      const left = value(a);
-      const right = value(b);
-      return (left < right ? -1 : left > right ? 1 : 0) * factor;
-    });
-  }, [props.rows, columns, sort]);
+    return stableOrder(props.rows, column.sortValue, sort.direction, props.rowKey);
+  }, [props.rows, props.rowKey, columns, sort]);
 
   function toggle(column: Column<T>): void {
     if (!props.onSortChange) return;

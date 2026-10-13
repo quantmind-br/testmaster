@@ -13,7 +13,12 @@ export interface Me {
     readonly kind: "human" | "service";
     readonly displayName: string;
   };
-  readonly workspace: { readonly id: string; readonly name: string };
+  readonly workspace: {
+    readonly id: string;
+    readonly name: string;
+    /** `"demo"` marks a demonstration workspace (UX-056). */
+    readonly quotaPolicyId?: string;
+  };
   readonly membership: { readonly role: string; readonly projectRestrictions: readonly string[] };
   readonly permissions: Readonly<Record<PermissionArea, boolean>>;
   readonly csrfToken: string | null;

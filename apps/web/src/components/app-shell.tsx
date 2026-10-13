@@ -10,6 +10,7 @@ import {
 import { logout, type Me } from "../api/session";
 import { siteName } from "../hooks/use-page-title";
 import type { PortalRoute } from "../routes/types";
+import { DemoBanner } from "./demo-banner";
 import { useAnnounce } from "./live-region";
 import { usePortalContext } from "./portal-context";
 
@@ -80,6 +81,7 @@ export function AppShell({ routes }: { routes: readonly PortalRoute[] }): ReactN
       <a className="skip-link" href="#main">
         Skip to content
       </a>
+      <DemoBanner workspace={me.workspace} />
       <header className="shell-header">
         <NavLink to="/" className="brand">
           {siteName}

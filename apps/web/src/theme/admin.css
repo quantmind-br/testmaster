@@ -1,0 +1,131 @@
+/* Settings, secrets, retention and shared global-UX components. Only token colours are used. */
+.hint {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin: var(--space-3) 0;
+}
+
+.row-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.settings-section,
+.panel {
+  margin: var(--space-6) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.settings-section > h2,
+.panel > h3 {
+  margin-top: 0;
+}
+
+.settings-section.danger-zone {
+  border-color: var(--danger-text);
+}
+
+.provider-card {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.provider-card fieldset {
+  margin: var(--space-3) 0;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+}
+
+.impact-panel {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.impact-panel h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.impact-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.impact-panel li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.table-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+  margin-bottom: var(--space-2);
+}
+
+.table-controls .field {
+  margin-bottom: 0;
+}
+
+.demo-banner {
+  display: flex;
+  width: 100%;
+  border-radius: 0;
+}
+
+.run-state-dimensions {
+  margin: var(--space-3) 0;
+}
+
+dialog.confirm .field {
+  margin: var(--space-3) 0;
+}
+
+@media (max-width: 40rem) {
+  .settings-section,
+  .panel {
+    padding: var(--space-3);
+  }
+
+  .actions .button,
+  .row-actions .button {
+    flex: 1 1 auto;
+  }
+}

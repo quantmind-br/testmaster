@@ -14,6 +14,8 @@ interface ConfirmDialogProps {
   readonly confirmLabel: string;
   readonly cancelLabel?: string;
   readonly destructive?: boolean;
+  /** The user must type `expected` before the confirm button works (irreversible actions). */
+  readonly typed?: { readonly label: string; readonly expected: string };
   readonly onConfirm: () => Promise<void> | void;
   readonly onCancel: () => void;
 }
@@ -30,16 +32,20 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactNode {
   const [failure, setFailure] = useState<string | null>(null);
   const titleId = useId();
   const descriptionId = useId();
+  const typedId = useId();
+  const [typedValue, setTypedValue] = useState("");
 
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
     if (props.open && !element.open) {
       setFailure(null);
+      setTypedValue("");
       element.showModal();
     } else if (!props.open && element.open) element.close();
   }, [props.open]);
 
+  const typedOk = props.typed === undefined || typedValue === props.typed.expected;
   async function confirm(): Promise<void> {
     if (submitting.current) return;
     submitting.current = true;
@@ -83,6 +89,22 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactNode {
           {failure}
         </p>
       ) : null}
+      {props.typed ? (
+        <div className="field">
+          <label htmlFor={typedId}>{props.typed.label}</label>
+          <p className="hint" id={`${typedId}-hint`}>
+            Type <code>{props.typed.expected}</code> exactly to enable the button.
+          </p>
+          <input
+            id={typedId}
+            aria-describedby={`${typedId}-hint`}
+            autoComplete="off"
+            spellCheck={false}
+            value={typedValue}
+            onChange={(event) => setTypedValue(event.target.value)}
+          />
+        </div>
+      ) : null}
       <div className="actions">
         <button
           type="button"
@@ -97,8 +119,10 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactNode {
         <button
           type="button"
           className={props.destructive ? "button danger" : "button"}
-          aria-disabled={pending}
-          onClick={() => void confirm()}
+          aria-disabled={pending || !typedOk}
+          onClick={() => {
+            if (typedOk) void confirm();
+          }}
         >
           {pending ? "Working…" : props.confirmLabel}
         </button>
