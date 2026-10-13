@@ -8355,10 +8355,26 @@
       "milestone": "M4",
       "ownerRole": "Operations",
       "status": "planned",
-      "scenario": [],
+      "scenario": [
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+        "validation/journeys/deploy-compose.test.ts::SEC-036 pins the ADR-016 images by digest and publishes PostgreSQL on loopback only",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption"
+      ],
       "oracle": [],
-      "evidence": [],
-      "code": []
+      "evidence": [
+        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
+        "validation/results/m4-acceptance/s2a/044-s2a-postgres-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/J17-server.json"
+      ],
+      "code": [
+        "deploy/compose",
+        "deploy/systemd",
+        "containers/server/Dockerfile",
+        "docs/operations/rootless-docker.md",
+        "validation/journeys/compose-deployment.ts"
+      ],
+      "note": "S2a contributed the compose reference deployment, TLS-only PostgreSQL, readiness probes and per-component upgrade gate."
     },
     {
       "id": "M4-03",
@@ -9385,10 +9401,22 @@
         "apps/cli/src/cli.test.ts::init opens no network listener",
         "apps/server/src/server.test.ts::refuses any non-loopback listen host and never listens publicly",
         "packages/application/src/runtime-control.test.ts::missing enforcement produces a durable typed blocked Run without a job or fallback",
-        "packages/application/src/governance-runtime.test.ts::an old local worker advertises real digests but never claims a queued action it does not understand"
+        "packages/application/src/governance-runtime.test.ts::an old local worker advertises real digests but never claims a queued action it does not understand",
+        "packages/sandbox/src/docker/executor.test.ts::OPS-001 doctor refuses a rootless daemon that cannot enforce cgroup limits and accepts one that can",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness counts only workers with a recent heartbeat",
+        "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 the executor doctor identifies the rootless daemon and finds it usable",
+        "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 container users map into the operator's subordinate uid range, never host root or the operator",
+        "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 memory, swap and pid limits are enforced by the rootless cgroup and visible to the container",
+        "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 a container without capabilities cannot regain privileges or write its root filesystem",
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+        "packages/sandbox/src/docker/executor.test.ts::OPS-001 stops an attempt whose container lost a resource limit and removes it",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports the failing probe with its reason code",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking"
       ],
       "oracle": [
-        "Doctor exits FAIL with reasons on an unsupported Node or unwritable data dir; the CLI refuses every command on an unsupported Node before opening state; installing/initialising opens no network listener; unwritable storage never admits a container Run; checks split blocking vs recommendation; effective config is redacted."
+        "Doctor exits FAIL with reasons on an unsupported Node or unwritable data dir; the CLI refuses every command on an unsupported Node before opening state; installing/initialising opens no network listener; unwritable storage never admits a container Run; checks split blocking vs recommendation; effective config is redacted.",
+        "The executor refuses a daemon or container that does not enforce cgroup limits, the rootless daemon runs containers under mapped subordinate uids without capabilities or a writable root filesystem, and server readiness reports each failing probe with a reason code."
       ],
       "evidence": [
         "validation/results/j01-docker-unavailable.json",
@@ -9398,28 +9426,44 @@
         "packages/application/src/doctor.test.ts",
         "apps/cli/src/cli.test.ts",
         "apps/server/src/server.test.ts",
-        "packages/sandbox/src/docker/executor.test.ts"
+        "packages/sandbox/src/docker/executor.test.ts",
+        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
+        "validation/results/m4-acceptance/s2a/044-s2a-postgres-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log"
       ],
       "code": [
         "packages/application/src/application.ts",
         "packages/application/src/runtime-support.ts",
         "apps/cli/src/cli.ts",
         "packages/sandbox/src/docker/executor.ts",
-        "apps/server/src/server.ts"
+        "apps/server/src/server.ts",
+        "packages/application/src/server-profile.ts",
+        "docs/operations/rootless-docker.md"
       ],
-      "note": "Doctor now checks Node, writable paths, database, timezone, network policy, browser sandbox (advisory, so the HTTP runner stays ready) and redacted config, and reports blocking checks apart from recommendations. Rootless validation is deferred to M4 (ADR-014); the approved rootful hardened deviation stays in force. PostgreSQL/server probe is M4 and the distributed profile refusal is M5.",
+      "note": "Doctor now checks Node, writable paths, database, timezone, network policy, browser sandbox (advisory, so the HTTP runner stays ready) and redacted config, and reports blocking checks apart from recommendations. Rootless validation is deferred to M4 (ADR-014); the approved rootful hardened deviation stays in force. PostgreSQL/server probe is M4 and the distributed profile refusal is M5. M4 validated rootless Docker as the reference daemon and added server-profile readiness probes.",
       "coverage": {
         "positive": [
           "packages/application/src/doctor.test.ts::doctor reports blocking failures apart from recommendations and exposes only redacted effective config",
           "apps/cli/src/cli.test.ts::init opens no network listener",
-          "packages/sandbox/src/docker/executor.test.ts::doctor refuses missing seccomp or cgroup v2 and reports rootless/rootful accurately"
+          "packages/sandbox/src/docker/executor.test.ts::doctor refuses missing seccomp or cgroup v2 and reports rootless/rootful accurately",
+          "packages/sandbox/src/docker/executor.test.ts::OPS-001 doctor refuses a rootless daemon that cannot enforce cgroup limits and accepts one that can",
+          "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption",
+          "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness counts only workers with a recent heartbeat",
+          "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 the executor doctor identifies the rootless daemon and finds it usable",
+          "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 container users map into the operator's subordinate uid range, never host root or the operator",
+          "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 memory, swap and pid limits are enforced by the rootless cgroup and visible to the container",
+          "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 a container without capabilities cannot regain privileges or write its root filesystem",
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
         ],
         "negative": [
           "packages/application/src/doctor.test.ts::doctor fails closed on an unsupported Node major and on an unwritable data directory",
           "packages/application/src/doctor.test.ts::admission refuses a Run when the data directory is not writable before any container starts",
           "apps/cli/src/cli.test.ts::refuses every command on an unsupported Node major before any state is opened",
           "packages/application/src/runtime-control.test.ts::missing enforcement produces a durable typed blocked Run without a job or fallback",
-          "apps/server/src/server.test.ts::refuses any non-loopback listen host and never listens publicly"
+          "apps/server/src/server.test.ts::refuses any non-loopback listen host and never listens publicly",
+          "packages/sandbox/src/docker/executor.test.ts::OPS-001 stops an attempt whose container lost a resource limit and removes it",
+          "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports the failing probe with its reason code",
+          "packages/application/src/server-profile.pg.test.ts::OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking"
         ],
         "criticalAssertions": [
           {
@@ -9449,26 +9493,54 @@
           {
             "path": "packages/application/src/runtime-control.test.ts",
             "assertion": "expect(app.database.all(\"SELECT * FROM job_leases\")).toHaveLength(0);"
+          },
+          {
+            "path": "packages/sandbox/src/docker/executor.test.ts",
+            "assertion": "  expect(enforced).toMatchObject({ available: true, mode: \"rootless\", diagnostics: [] });"
+          },
+          {
+            "path": "packages/application/src/server-profile.pg.test.ts",
+            "assertion": "  expect(report.blocking).toContain(\"server\");"
+          },
+          {
+            "path": "packages/application/src/server-profile.pg.test.ts",
+            "assertion": "  expect((await application.readiness()).worker).toEqual({ status: \"degraded\", ready: 0 });"
+          },
+          {
+            "path": "packages/application/src/server-profile.pg.test.ts",
+            "assertion": "  expect(report.schema.state).toBe(\"current\");"
+          },
+          {
+            "path": "validation/journeys/j17-server.docker.test.ts",
+            "assertion": "      expect(plain).not.toBe(200);"
+          },
+          {
+            "path": "validation/journeys/j17-server.docker.test.ts",
+            "assertion": "      expect(unavailable).toBeGreaterThanOrEqual(500);"
+          },
+          {
+            "path": "validation/journeys/rootless-daemon.docker.test.ts",
+            "assertion": "    expect(doctor).toMatchObject({ available: true, mode: \"rootless\" });"
+          },
+          {
+            "path": "validation/journeys/rootless-daemon.docker.test.ts",
+            "assertion": "    expect(hostUid).not.toBe(0);"
+          },
+          {
+            "path": "validation/journeys/rootless-daemon.docker.test.ts",
+            "assertion": "    expect(hostUid).toBeLessThan(first + count);"
+          },
+          {
+            "path": "validation/journeys/rootless-daemon.docker.test.ts",
+            "assertion": "    expect(JSON.parse(inside.stdout)).toEqual({ memory: String(96 * 1024 * 1024), pids: \"64\" });"
+          },
+          {
+            "path": "validation/journeys/rootless-daemon.docker.test.ts",
+            "assertion": "    expect(JSON.parse(attempt.stdout)).toEqual({ write: \"EROFS\", caps: \"0000000000000000\" });"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Rootless Docker validation (normative reference profile)",
-          "specQuote": {
-            "path": "docs/adr/014-rootless-deferral.md",
-            "text": "Rootless Docker validation is deferred to M4"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "PostgreSQL/server connection probe and multi-user server profile",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "M4; multiusuário exige controles SEC"
-          }
-        },
         {
           "milestone": "M5",
           "scope": "Distributed profile refusal when only SQLite storage is configured",
@@ -11501,10 +11573,12 @@
         "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
         "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
-        "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
+        "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
+        "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem"
       ],
       "oracle": [
-        "Local JUnit/JSON/HTML exports never call GitHub; GitHub 401 dead-letters without changing the local result; a newer SHA is refused; the execute job has no checks permission and no token in the download step; absent committed bytes produce partial without fake evidence."
+        "Local JUnit/JSON/HTML exports never call GitHub; GitHub 401 dead-letters without changing the local result; a newer SHA is refused; the execute job has no checks permission and no token in the download step; absent committed bytes produce partial without fake evidence.",
+        "A server configuration with S3 storage is refused with CAPABILITY_UNAVAILABLE for M5 at parse time and at application open, while the filesystem option is accepted."
       ],
       "evidence": [
         "validation/journeys/m3-ci.docker.test.ts",
@@ -11514,12 +11588,14 @@
         "apps/cli/src/ci-workflow.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
         "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json",
-        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json",
+        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "packages/application/src/artifacts.ts",
-        "apps/cli/src/ci-workflow.ts"
+        "apps/cli/src/ci-workflow.ts",
+        "packages/application/src/server-config.ts"
       ],
       "coverage": {
         "positive": [
@@ -11527,13 +11603,15 @@
           "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
-          "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download"
+          "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
+          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
           "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
-          "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
+          "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
+          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem"
         ],
         "criticalAssertions": [
           {
@@ -11559,18 +11637,18 @@
           {
             "path": "validation/journeys/m3-ci.docker.test.ts",
             "assertion": "expect(command.exitCode).toBe(mutant === \"healthy\" ? 0 : 1);"
+          },
+          {
+            "path": "packages/application/src/server-s3-refusal.test.ts",
+            "assertion": "  expect(() => parseServerConfig(document({ kind: \"s3\" }))).toThrowError(refused);"
+          },
+          {
+            "path": "packages/application/src/server-s3-refusal.test.ts",
+            "assertion": "  expect(() => filesystemRoot({ kind: \"s3\" })).toThrowError(refused);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "S3-only server profile must be degraded or blocked, not silently switched to filesystem (no S3 implementation)",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "`server` | API/web/controller/scheduler e pool local segregado de workers | PostgreSQL + filesystem ou S3 compatível | TLS/reverse proxy, RBAC e organização | M4"
-          }
-        },
         {
           "milestone": "M4",
           "scope": "notification deduplication and notification-owned verdict isolation",
@@ -11604,7 +11682,7 @@
           }
         }
       ],
-      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope."
+      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016)."
     },
     {
       "id": "OPS-038",
@@ -11628,10 +11706,15 @@
         "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering",
         "tools/src/distribution/release-notes.test.ts::publishes every shipped SQLite migration in the changelog with its checksum",
         "tools/src/distribution/release-notes.test.ts::keeps the support matrix statements for Node, Playwright and Python tied to the repository",
-        "tools/src/distribution/release-notes.test.ts::ties the OS, SQLite and container runtime rows of the support matrix to repository evidence"
+        "tools/src/distribution/release-notes.test.ts::ties the OS, SQLite and container runtime rows of the support matrix to repository evidence",
+        "packages/application/src/worker-schema-gate.test.ts::OPS-038 a worker whose build is older than the database stops claiming and ends with worker_schema_behind",
+        "packages/application/src/server-profile.pg.test.ts::OPS-038 a build older than the database refuses to start, and the new build refuses until it is migrated",
+        "validation/journeys/rolling-upgrade.docker.test.ts::OPS-038 an older worker finishes its fenced leases and claims nothing new while a next-release worker takes over",
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
       ],
       "oracle": [
-        "Real SQLite databases at schema N-1 are upgraded through preflight, drain, backup, migrate and readiness. The backup is the old schema and is taken before migration. In-flight work stops the upgrade before backup or migration. A schema newer than the candidate, or a pinned revoked image, refuses the install or upgrade with a clear error and no mutation of the installation or database. A --keep-schema restore of the pre-upgrade backup is the only route to an older release. The same flow ran end to end between two real consecutive releases (see the smoke log)."
+        "Real SQLite databases at schema N-1 are upgraded through preflight, drain, backup, migrate and readiness. The backup is the old schema and is taken before migration. In-flight work stops the upgrade before backup or migration. A schema newer than the candidate, or a pinned revoked image, refuses the install or upgrade with a clear error and no mutation of the installation or database. A --keep-schema restore of the pre-upgrade backup is the only route to an older release. The same flow ran end to end between two real consecutive releases (see the smoke log).",
+        "A worker older than the database schema stops claiming and exits with worker_schema_behind while in-flight work finishes; a build that is ahead of or behind the database is refused until the migration or upgrade completes."
       ],
       "evidence": [
         "packages/persistence/src/migration-startup.test.ts",
@@ -11643,7 +11726,11 @@
         "validation/results/ops-038-local-upgrade-rollback-smoke.log",
         "CHANGELOG.md",
         "docs/operations/local-operations.md",
-        "docs/support-matrix.md"
+        "docs/support-matrix.md",
+        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
+        "validation/results/m4-acceptance/s2a/044-s2a-postgres-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/OPS-038-rolling-upgrade.json"
       ],
       "code": [
         "packages/persistence/src/database.ts",
@@ -11657,9 +11744,11 @@
         "apps/cli/src/images.ts",
         "apps/cli/src/backups.ts",
         "docs/operations/local-operations.md",
-        "tools/src/distribution/release-notes.test.ts"
+        "tools/src/distribution/release-notes.test.ts",
+        "packages/application/src/worker.ts",
+        "deploy/systemd/testmaster-worker@.service"
       ],
-      "note": "Verified for the local single-user profile only. Upgrade is offline: preflight, drain, backup, migrate, readiness. Rollback is allowed only when the installed schema is compatible; otherwise it is a planned restore with --keep-schema. Install, upgrade and rollback never write config, policy or secrets. Revoked image IDs are refused and are carried into restores. Not covered and not claimed: per-component rolling upgrades (the local profile has one controller with an embedded worker; resumption is a controller restart), distributed profiles (M4+), release signatures and license approval (other items). Consent and approval revocations made after a backup are merged into the restored directory (OPS-025), and a restore that cannot read its post-backup ledger says so and stays suspended until --ledger-loss-accepted. The support matrix cites only repository paths that exist, and labels host facts that no repository file pins (Docker 29.x, host OS and kernel, image Node version) as observations.",
+      "note": "Verified for the local single-user profile only. Upgrade is offline: preflight, drain, backup, migrate, readiness. Rollback is allowed only when the installed schema is compatible; otherwise it is a planned restore with --keep-schema. Install, upgrade and rollback never write config, policy or secrets. Revoked image IDs are refused and are carried into restores. Not covered and not claimed: per-component rolling upgrades (the local profile has one controller with an embedded worker; resumption is a controller restart), distributed profiles (M4+), release signatures and license approval (other items). Consent and approval revocations made after a backup are merged into the restored directory (OPS-025), and a restore that cannot read its post-backup ledger says so and stays suspended until --ledger-loss-accepted. The support matrix cites only repository paths that exist, and labels host facts that no repository file pins (Docker 29.x, host OS and kernel, image Node version) as observations. M4 added the per-component schema compatibility gate for workers and servers.",
       "coverage": {
         "positive": [
           "packages/persistence/src/upgrade.test.ts::upgrades in order: preflight, drain, backup of the old schema, migrate, readiness",
@@ -11668,7 +11757,11 @@
           "packages/persistence/src/upgrade.test.ts::restores the pre-upgrade backup at its own schema so the older release can open it",
           "tools/src/distribution/release-notes.test.ts::publishes every shipped SQLite migration in the changelog with its checksum",
           "tools/src/distribution/release-notes.test.ts::keeps the support matrix statements for Node, Playwright and Python tied to the repository",
-          "tools/src/distribution/release-notes.test.ts::ties the OS, SQLite and container runtime rows of the support matrix to repository evidence"
+          "tools/src/distribution/release-notes.test.ts::ties the OS, SQLite and container runtime rows of the support matrix to repository evidence",
+          "packages/application/src/worker-schema-gate.test.ts::OPS-038 a worker whose build is older than the database stops claiming and ends with worker_schema_behind",
+          "packages/application/src/server-profile.pg.test.ts::OPS-038 a build older than the database refuses to start, and the new build refuses until it is migrated",
+          "validation/journeys/rolling-upgrade.docker.test.ts::OPS-038 an older worker finishes its fenced leases and claims nothing new while a next-release worker takes over",
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
         ],
         "negative": [
           "packages/persistence/src/migration-startup.test.ts::refuses incompatible controller startup even when migrations are disabled without mutating newer data",
@@ -11678,7 +11771,11 @@
           "tools/src/distribution/release-lifecycle.test.ts::refuses a rollback to a release whose pinned image was revoked even when the schema is compatible",
           "packages/application/src/release.test.ts::refuses a release that pins a revoked image and allows one that does not",
           "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
-          "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering"
+          "packages/sandbox/src/images/lock.test.ts::refuses image substitution and seccomp tampering",
+          "packages/application/src/worker-schema-gate.test.ts::OPS-038 a worker whose build is older than the database stops claiming and ends with worker_schema_behind",
+          "packages/application/src/server-profile.pg.test.ts::OPS-038 a build older than the database refuses to start, and the new build refuses until it is migrated",
+          "validation/journeys/rolling-upgrade.docker.test.ts::OPS-038 an older worker finishes its fenced leases and claims nothing new while a next-release worker takes over",
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
         ],
         "criticalAssertions": [
           {
@@ -11756,19 +11853,49 @@
           {
             "path": "tools/src/distribution/release-notes.test.ts",
             "assertion": "for (const path of paths) await expect(stat(join(root, path))).resolves.toBeDefined();"
+          },
+          {
+            "path": "packages/application/src/worker-schema-gate.test.ts",
+            "assertion": "  expect(application.database.schemaCompatibility().state).toBe(\"current\");"
+          },
+          {
+            "path": "packages/application/src/worker-schema-gate.test.ts",
+            "assertion": "  await expect(application.worker.run({ ephemeral: true, runIds: [] })).rejects.toMatchObject({"
+          },
+          {
+            "path": "validation/journeys/rolling-upgrade.docker.test.ts",
+            "assertion": "      expect(attempts(queued)).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/rolling-upgrade.docker.test.ts",
+            "assertion": "        expect(attempts(id).length).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/rolling-upgrade.docker.test.ts",
+            "assertion": "      expect(oldWorker.stderr()).toContain(\"older than the database schema\");"
+          },
+          {
+            "path": "validation/journeys/j17-server.docker.test.ts",
+            "assertion": "      expect(attemptsBefore[0]?.outcome ?? null).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/j17-server.docker.test.ts",
+            "assertion": "      expect(afterRestart.outcome ?? null).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/j17-server.docker.test.ts",
+            "assertion": "      expect(attemptsAfter[0]?.outcome).not.toBe(\"passed\");"
+          },
+          {
+            "path": "packages/application/src/server-profile.pg.test.ts",
+            "assertion": "  expect(application.database.schemaCompatibility().state).toBe(\"ahead\");"
+          },
+          {
+            "path": "packages/application/src/server-profile.pg.test.ts",
+            "assertion": "  expect((await upgraded.readiness()).schema.state).toBe(\"current\");"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Per-component rolling upgrade and per-component resumption (the local profile is one controller with an embedded worker; resumption is a controller restart)",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "| M4 | OPS-005–007/010–012/015–019/024–028/032–033/035–038: servidor/team/scheduler"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "REQ-001",
@@ -16253,31 +16380,62 @@
         "packages/application/src/secrets.test.ts::fails closed on vault tampering and missing keys after metadata restore",
         "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
         "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes",
-        "packages/application/src/secrets.test.ts::SEC-036 backup files alone cannot reveal secrets and never contain the vault key"
+        "packages/application/src/secrets.test.ts::SEC-036 backup files alone cannot reveal secrets and never contain the vault key",
+        "packages/application/src/server-secrets.test.ts::SEC-036 server vault encrypts under the operator master key file and names the key by its sha256",
+        "packages/application/src/server-secrets.test.ts::SEC-036 rewrapKeys rotates the master key, keeps reads working and keeps retired keys beside the key",
+        "packages/application/src/server-secrets.test.ts::SEC-036 reveal needs an explicit secrets:export grant and returns plaintext only to the authorized caller",
+        "packages/application/src/server-profile.pg.test.ts::SEC-036 decrypting a secret needs an explicit unexpired secrets:export grant even for the organization owner",
+        "validation/journeys/postgres-tls.docker.test.ts::SEC-036 PostgreSQL accepts a verify-full client that trusts its CA over TLS",
+        "validation/journeys/deploy-compose.test.ts::SEC-036 pins the ADR-016 images by digest and publishes PostgreSQL on loopback only",
+        "validation/journeys/deploy-compose.test.ts::SEC-036 PostgreSQL accepts TLS only and the shipped example configuration is a valid verify-full server profile",
+        "validation/journeys/deploy-compose.test.ts::SEC-036 Caddy terminates TLS and the worker unit restarts after a schema refusal",
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+        "packages/application/src/server-secrets.test.ts::SEC-036 server vault fails closed without the master key and never mints a replacement",
+        "packages/application/src/server-secrets.test.ts::SEC-036 a copy of the evidence volume without the master key cannot reveal secrets",
+        "validation/journeys/postgres-tls.docker.test.ts::SEC-036 PostgreSQL refuses a client that trusts a different CA, and a plaintext client"
       ],
       "oracle": [
-        "Vault ciphertext is authenticated, key-ID versioned and stored 0600 outside the data directory; rewrap precedes old-key retirement and a retired or missing key is refused (PRECONDITION_FAILED, no replacement key, restored admission suspended); a backup directory contains no vault file, no secret canary and no vault key bytes, so backup access alone reveals no secret."
+        "Vault ciphertext is authenticated, key-ID versioned and stored 0600 outside the data directory; rewrap precedes old-key retirement and a retired or missing key is refused (PRECONDITION_FAILED, no replacement key, restored admission suspended); a backup directory contains no vault file, no secret canary and no vault key bytes, so backup access alone reveals no secret.",
+        "Server secrets are sealed under the operator master key file with a sha256 key id, fail closed without it, rotate through rewrapKeys, and decrypt only for a caller holding an unexpired secrets:export grant; PostgreSQL accepts only TLS verify-full clients and the reference deployment ships TLS-only configuration."
       ],
       "evidence": [
         "packages/application/src/secrets.test.ts",
-        "packages/application/src/backups.ts"
+        "packages/application/src/backups.ts",
+        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
+        "validation/results/m4-acceptance/s2a/044-s2a-postgres-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log"
       ],
       "code": [
         "packages/application/src/secrets.ts",
         "packages/persistence/src/database.ts",
-        "packages/application/src/backups.ts"
+        "packages/application/src/backups.ts",
+        "packages/application/src/application.ts",
+        "packages/persistence/src/postgres",
+        "deploy/compose"
       ],
-      "note": "Verified for the local single-user vault. Backups copy only the SQLite snapshot and evidence objects: the vault ciphertext and key live under home and are never inside a backup, so the old-key retirement rule (rewrap first, then retire) needs no backup catalogue; the retention of an old key for backups is satisfied by construction and proven by the backup-secrecy test. The TLS, server at-rest and decrypt-grant clauses deferred to M4 rest on the SEC-036 heading range (M1–M4).",
+      "note": "Verified for the local single-user vault. Backups copy only the SQLite snapshot and evidence objects: the vault ciphertext and key live under home and are never inside a backup, so the old-key retirement rule (rewrap first, then retire) needs no backup catalogue; the retention of an old key for backups is satisfied by construction and proven by the backup-secrecy test. The TLS, server at-rest and decrypt-grant clauses deferred to M4 rest on the SEC-036 heading range (M1–M4). M4 added the server master-key vault, the decrypt grant, PostgreSQL verify-full TLS proof and operator-attested at-rest encryption.",
       "coverage": {
         "positive": [
           "packages/application/src/secrets.test.ts::persists authenticated ciphertext with private permissions and metadata-only database rows",
           "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes",
-          "packages/application/src/secrets.test.ts::SEC-036 backup files alone cannot reveal secrets and never contain the vault key"
+          "packages/application/src/secrets.test.ts::SEC-036 backup files alone cannot reveal secrets and never contain the vault key",
+          "packages/application/src/server-secrets.test.ts::SEC-036 server vault encrypts under the operator master key file and names the key by its sha256",
+          "packages/application/src/server-secrets.test.ts::SEC-036 rewrapKeys rotates the master key, keeps reads working and keeps retired keys beside the key",
+          "packages/application/src/server-secrets.test.ts::SEC-036 reveal needs an explicit secrets:export grant and returns plaintext only to the authorized caller",
+          "packages/application/src/server-profile.pg.test.ts::SEC-036 decrypting a secret needs an explicit unexpired secrets:export grant even for the organization owner",
+          "validation/journeys/postgres-tls.docker.test.ts::SEC-036 PostgreSQL accepts a verify-full client that trusts its CA over TLS",
+          "validation/journeys/deploy-compose.test.ts::SEC-036 pins the ADR-016 images by digest and publishes PostgreSQL on loopback only",
+          "validation/journeys/deploy-compose.test.ts::SEC-036 PostgreSQL accepts TLS only and the shipped example configuration is a valid verify-full server profile",
+          "validation/journeys/deploy-compose.test.ts::SEC-036 Caddy terminates TLS and the worker unit restarts after a schema refusal",
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
         ],
         "negative": [
           "packages/application/src/secrets.test.ts::fails closed on vault tampering and missing keys after metadata restore",
           "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
-          "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes"
+          "packages/application/src/secrets.test.ts::SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes",
+          "packages/application/src/server-secrets.test.ts::SEC-036 server vault fails closed without the master key and never mints a replacement",
+          "packages/application/src/server-secrets.test.ts::SEC-036 a copy of the evidence volume without the master key cannot reveal secrets",
+          "validation/journeys/postgres-tls.docker.test.ts::SEC-036 PostgreSQL refuses a client that trusts a different CA, and a plaintext client"
         ],
         "criticalAssertions": [
           {
@@ -16295,19 +16453,53 @@
           {
             "path": "packages/application/src/secrets.test.ts",
             "assertion": "expect(bytes.includes(key)).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/server-secrets.test.ts",
+            "assertion": "  expect(stored.includes(Buffer.from(canary))).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/server-secrets.test.ts",
+            "assertion": "  expect(envelope.keyId).toBe(sha256(masterKey));"
+          },
+          {
+            "path": "packages/application/src/server-secrets.test.ts",
+            "assertion": "  await expect(release.resolve()).rejects.toMatchObject(missing);"
+          },
+          {
+            "path": "packages/application/src/server-secrets.test.ts",
+            "assertion": "  expect(await readdir(keyDirectory)).toEqual([]);"
+          },
+          {
+            "path": "packages/application/src/server-secrets.test.ts",
+            "assertion": "  expect(envelope.keyId).toBe(sha256(next));"
+          },
+          {
+            "path": "packages/application/src/server-secrets.test.ts",
+            "assertion": "  expect(failure).toMatchObject({ code: \"FORBIDDEN\" });"
+          },
+          {
+            "path": "packages/application/src/server-profile.pg.test.ts",
+            "assertion": "    await expect(as(grants).secrets.reveal(stored.id)).rejects.toMatchObject({"
+          },
+          {
+            "path": "validation/journeys/postgres-tls.docker.test.ts",
+            "assertion": "    expect(database.get(\"SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()\")?.ssl).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/postgres-tls.docker.test.ts",
+            "assertion": "  expect(() => open({ caFile: join(directory, \"other-tls\", \"ca.crt\") })).toThrow();"
+          },
+          {
+            "path": "validation/journeys/postgres-tls.docker.test.ts",
+            "assertion": "  expect(() => open({ caFile: join(directory, \"tls\", \"ca.crt\"), sslmode: \"disable\" })).toThrow();"
+          },
+          {
+            "path": "validation/journeys/deploy-compose.test.ts",
+            "assertion": "    expect(hba.filter((line) => /^host\\s/u.test(line))).toEqual([]);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "TLS on remote channels, server at-rest encryption of database, object storage and backups, server envelope encryption with KMS key IDs, and decrypt-grant access control for operators",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "**SEC-036 — Criptografia e gestão de chaves (M1–M4).**"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "SEC-037",
@@ -19929,7 +20121,8 @@
       "status": "verified",
       "scenario": [
         "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI",
-        "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes"
+        "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes",
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
       ],
       "oracle": [
         "Real new manifests record automatic method, named automated reviewer and precise limitations, never human sign-off."
@@ -19937,19 +20130,25 @@
       "evidence": [
         "validation/journeys/harness-metadata.test.ts",
         "validation/results/journey-manifest-metadata.json",
-        "validation/results/ops002-daemon-readiness.json"
+        "validation/results/ops002-daemon-readiness.json",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log",
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/created/validation/results/J17-server.json"
       ],
       "code": [
         "validation/journeys/harness.ts",
-        "validation/journeys/j14-agent-skills.test.ts"
+        "validation/journeys/j14-agent-skills.test.ts",
+        "validation/journeys/j17-server.docker.test.ts",
+        "validation/journeys/compose-deployment.ts"
       ],
-      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. J09/J10/J12-App/J13/J16/J17-server fixtures (M4), J13-tracker/J18 (M5) and the full J01-J18 supported-scope corpus (M6) are deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations.",
+      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. J09/J10/J12-App/J13/J16/J17-server fixtures (M4), J13-tracker/J18 (M5) and the full J01-J18 supported-scope corpus (M6) are deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations. S2a added the J17-server journey manifest (compose stack, rootless host worker, crash recovery) produced through the harness metadata.",
       "coverage": {
         "positive": [
-          "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI"
+          "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI",
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
         ],
         "negative": [
-          "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes"
+          "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes",
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
         ],
         "criticalAssertions": [
           {
@@ -19963,6 +20162,10 @@
           {
             "path": "validation/journeys/harness-metadata.test.ts",
             "assertion": "expect(result.oracleVerdicts).toEqual([{ check: \"manifest-field-acceptance\", passed: true }]);"
+          },
+          {
+            "path": "validation/journeys/j17-server.docker.test.ts",
+            "assertion": "      expect(attemptsBefore[0]?.outcome ?? null).toBeNull();"
           }
         ]
       },
