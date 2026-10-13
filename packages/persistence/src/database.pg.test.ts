@@ -75,6 +75,31 @@ async function administratorConfig(
   return { url: `postgres://postgres@${server.host}:${server.port}/${database}`, passwordFile };
 }
 
+/** A server deployment file (C2) naming `database`, as `db migrate --mode server --config` reads it. */
+async function serverConfigFile(database: { url: string; passwordFile?: string }): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "tm-pg-server-config-"));
+  cleanups.push(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "server.json");
+  const document = {
+    mode: "server",
+    database: { engine: "postgres", ...database },
+    storage: { kind: "filesystem", root: join(directory, "data") },
+    server: {
+      listen: { host: "127.0.0.1", port: 0 },
+      publicOrigin: "https://testmaster.example.test",
+      trustedProxies: [],
+      origins: [],
+    },
+    security: {
+      masterKeyFile: join(directory, "master.key"),
+      backupKeyFile: join(directory, "backup.key"),
+      atRestEncryption: { database: "operator-volume", evidence: "operator-volume" },
+    },
+  };
+  await writeFile(path, JSON.stringify(document), { mode: 0o600 });
+  return path;
+}
+
 interface Envelope {
   data: { engine: string; currentVersion: number; pending: number[] };
 }
@@ -223,10 +248,10 @@ describe("PostgreSQL engine", () => {
       "db",
       "migrate",
       "--json",
-      "--database-url",
-      created.config.url,
-      "--password-file",
-      passwordFileOf(created),
+      "--mode",
+      "server",
+      "--config",
+      await serverConfigFile(created.config),
     ];
     const migrators = [
       startChild(cliMain, arguments_, process.execPath, []),
@@ -273,10 +298,10 @@ describe("PostgreSQL engine", () => {
         "db",
         "status",
         "--json",
-        "--database-url",
-        created.config.url,
-        "--password-file",
-        passwordFileOf(created),
+        "--mode",
+        "server",
+        "--config",
+        await serverConfigFile(created.config),
       ],
       process.execPath,
       [],
@@ -296,10 +321,10 @@ describe("PostgreSQL engine", () => {
         "db",
         "migrate",
         "--json",
-        "--database-url",
-        administrator.url,
-        "--password-file",
-        administrator.passwordFile,
+        "--mode",
+        "server",
+        "--config",
+        await serverConfigFile(administrator),
       ],
       process.execPath,
       [],

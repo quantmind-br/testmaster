@@ -26,6 +26,7 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
   {
     codes: [
       "missing_secret",
+      "actor_revoked",
       "credential_revoked",
       "manual_auth_required",
       "auth_checkpoint_expired",
@@ -240,6 +241,17 @@ const features: Record<Milestone, readonly string[]> = {
   ],
   M6: ["sso", "scim", "portability", "break-glass"],
 };
+/**
+ * Every feature whose behavior ships in this build. The capability manifest reads this one set;
+ * M4 identifiers are added by the slice that implements them.
+ */
+export const implementedFeatures: ReadonlySet<string> = new Set([
+  ...features.M0,
+  ...features.M1,
+  ...features.M2,
+  ...features.M3,
+  ...["server", "postgres", "multi-user", "identity"],
+]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(
     Object.entries(features).flatMap(([milestone, ids]) =>
@@ -247,11 +259,9 @@ export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.f
         id,
         Object.freeze({
           id,
-          enabled: ["M0", "M1", "M2", "M3"].includes(milestone),
+          enabled: implementedFeatures.has(id),
           milestone: milestone as Milestone,
-          disabledReason: ["M0", "M1", "M2", "M3"].includes(milestone)
-            ? null
-            : `Available in ${milestone}`,
+          disabledReason: implementedFeatures.has(id) ? null : `Available in ${milestone}`,
           ...(milestone === "M2" && ["plan", "generate_code", "agent-mode"].includes(id)
             ? { experimental: true }
             : {}),

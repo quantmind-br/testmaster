@@ -128,12 +128,10 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   expect(manifest.databaseVersion).toBe(all.length - 1);
   expect(versionOf(join(backupDir, "testmaster.db"))).toBe(all.length - 1);
   const snapshot = new DatabaseSync(join(backupDir, "testmaster.db"), { readOnly: true });
+  // The backup keeps the pre-migration schema: the identity tables of migration 10 do not exist yet.
   expect(
-    String(
-      snapshot.prepare("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'").get()
-        ?.sql,
-    ),
-  ).toContain("OLD.state IN ('delivered','dead_letter')");
+    snapshot.prepare("SELECT name FROM sqlite_master WHERE name='sessions'").get(),
+  ).toBeUndefined();
   snapshot.close();
   const live = await PersistenceDatabase.open(path, { migrate: false });
   try {
@@ -141,6 +139,7 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
     expect(
       String(live.get("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'")?.sql),
     ).toContain("OLD.state='dead_letter' AND NEW.state<>'pending'");
+    expect(live.get("SELECT name FROM sqlite_master WHERE name='sessions'")?.name).toBe("sessions");
     expect(live.get("SELECT value FROM operational_state WHERE key='user:state'")?.value).toBe(
       "keep-me",
     );

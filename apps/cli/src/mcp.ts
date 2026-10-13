@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { Application, authenticateLocalToken } from "@testmaster/application";
+import { Application, authenticateBearer } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { createMcpServer } from "@testmaster/mcp";
 import { createServer } from "@testmaster/server";
@@ -50,17 +50,17 @@ export function mcpCommands(program: Command, runtime: Runtime): void {
             await file.close();
           }
         }
-        const identity = authenticateLocalToken(app, token);
+        const identity = authenticateBearer(app, token);
         const roots = (options.root as string[]).length
           ? (options.root as string[]).map((path) => resolve(app.config.cwd, path))
           : [app.config.cwd];
         if (options.transport === "stdio") {
           const authenticatedToken = token;
           const mcp = createMcpServer({
-            application: app.withIdentity(identity),
+            application: app.forIdentity(identity),
             roots,
             authenticate: () => {
-              authenticateLocalToken(app, authenticatedToken);
+              authenticateBearer(app, authenticatedToken);
             },
           });
           await mcp.confined(app.config.cwd);

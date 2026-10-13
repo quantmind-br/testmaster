@@ -6,6 +6,7 @@ export * from "./operations.js";
 export * from "./plans.js";
 export * from "./primitives.js";
 export * from "./protocol.js";
+export * from "./rbac.js";
 export * from "./registries.js";
 export * from "./session.js";
 export * from "./surfaces.js";

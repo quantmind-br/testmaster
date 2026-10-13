@@ -859,6 +859,9 @@ export class PersistenceDatabase {
         );
         restored.run("UPDATE outbox SET dispatchable=0");
         restored.run("DELETE FROM server_tokens");
+        // Backups taken before migration 10 have no session table.
+        if (restored.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'"))
+          restored.run("DELETE FROM sessions");
         restored.run("UPDATE cursor_signing_keys SET revoked_at=?", new Date().toISOString());
       });
       return {

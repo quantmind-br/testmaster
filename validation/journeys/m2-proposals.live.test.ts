@@ -58,7 +58,7 @@ it("J03 real model A/B/C subset review survives retry and concurrent duplicate w
           home: session.home,
         });
         try {
-          const unauthorized = app.withIdentity({
+          const unauthorized = app.forIdentity({
             principalId: app.context.principalId,
             scopes: ["R"],
           });

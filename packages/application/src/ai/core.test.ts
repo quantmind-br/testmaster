@@ -297,7 +297,7 @@ it("subset retries and concurrent duplicates create only selected generated revi
       details: expect.objectContaining({ diff: expect.any(Object) }),
     }),
   );
-  const reader = f.app.withIdentity({ principalId: f.app.context.principalId, scopes: ["R"] });
+  const reader = f.app.forIdentity({ principalId: f.app.context.principalId, scopes: ["R"] });
   expect(() =>
     reader.proposals.accept(batch.id, {
       ...input,

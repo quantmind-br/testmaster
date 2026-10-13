@@ -39,7 +39,9 @@ END $$;
 -- 3. Tenant isolation: every table with a workspace_id column enforces row-level security for the
 --    owner too (FORCE). The session scope is set by the persistence layer through
 --    set_config('testmaster.workspace', <id> | '*', false). An unset scope matches no row.
---    Later migrations that create such a table MUST call tm_enable_tenant_rls('<table>').
+--    The DO block below covers every table that exists when this migration runs, including the
+--    identity tables of 0010 (password_credentials, sessions). Migrations after 0011 that create
+--    such a table MUST call tm_enable_tenant_rls('<table>').
 CREATE FUNCTION tm_enable_tenant_rls(target regclass) RETURNS void
   LANGUAGE plpgsql
   AS $$

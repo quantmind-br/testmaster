@@ -55,6 +55,7 @@ export const RUNTIME_RESOURCES = [
   "LICENSE",
   "NOTICE",
   "containers/NOTICE",
+  "apps/web/dist",
   "packages/contracts/schemas",
   "packages/contracts/openapi.json",
   "packages/persistence/migrations/sqlite",

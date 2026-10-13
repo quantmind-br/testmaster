@@ -42,31 +42,33 @@ async function fixture() {
 it("rejects expired, wrong-audience, wrong-workspace and revoked tokens on an actual loopback socket", async () => {
   const f = await fixture();
   expect((await f.request(f.issued.token)).status).toBe(200);
-  const key = `local-token:${createHash("sha256").update(f.issued.token).digest("hex")}`;
-  const original = JSON.parse(
-    String(
-      f.application.database.get("SELECT value FROM operational_state WHERE key=?", key)?.value,
-    ),
-  );
+  const hash = createHash("sha256").update(f.issued.token).digest("hex");
+  const original = f.application.database.get(
+    "SELECT data_json,expires_at FROM server_tokens WHERE token_hash=?",
+    hash,
+  ) as { data_json: string; expires_at: string };
+  const data = JSON.parse(original.data_json);
   for (const change of [
-    { expiresAt: new Date(Date.now() - 1).toISOString() },
-    { expiresAt: "invalid" },
-    { audience: "other-service" },
-    { workspaceId: "other-workspace" },
+    { expires_at: new Date(Date.now() - 1).toISOString(), data },
+    { expires_at: "invalid", data },
+    { expires_at: original.expires_at, data: { ...data, audience: "other-service" } },
+    { expires_at: original.expires_at, data: { ...data, kind: "api" } },
   ]) {
     f.application.database.run(
-      "UPDATE operational_state SET value=? WHERE key=?",
-      JSON.stringify({ ...original, ...change }),
-      key,
+      "UPDATE server_tokens SET expires_at=?,data_json=? WHERE token_hash=?",
+      change.expires_at,
+      JSON.stringify(change.data),
+      hash,
     );
     const response = await f.request(f.issued.token);
     expect(response.status).toBe(401);
     expect((await response.json()).error.code).toBe("UNAUTHENTICATED");
   }
   f.application.database.run(
-    "UPDATE operational_state SET value=? WHERE key=?",
-    JSON.stringify(original),
-    key,
+    "UPDATE server_tokens SET expires_at=?,data_json=? WHERE token_hash=?",
+    original.expires_at,
+    original.data_json,
+    hash,
   );
   expect((await f.request(f.issued.token)).status).toBe(200);
   revokeLocalToken(f.application, f.issued.token);

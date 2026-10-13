@@ -24,6 +24,11 @@ const postgresParityExclusions: ReadonlyArray<{ file: string; reason: string }> 
       "Subject is in-place upgrade of a SQLite data directory with backup and restore; PostgreSQL upgrades go through db migrate.",
   },
   {
+    file: "packages/persistence/src/team-identity-migration.test.ts",
+    reason:
+      "Subject is the SQLite 0010 migration applied to a legacy SQLite data directory; the PostgreSQL schema and RLS coverage of the identity tables is proven by database.pg.test.ts and identity.pg.test.ts.",
+  },
+  {
     file: "packages/persistence/src/outbox-crash.test.ts",
     reason:
       "SIGKILLs a child process that opens the SQLite file by path; database.pg.test.ts covers the PostgreSQL crash cases.",

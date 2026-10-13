@@ -345,7 +345,7 @@ it("local capability issuance cannot broaden issuer resource grants or expiry", 
       },
     ],
   };
-  const view = f.app.withIdentity({
+  const view = f.app.forIdentity({
     ...identity,
     scopes: [...identity.scopes],
     grants: identity.grants.map((grant) => ({ ...grant, actions: [...grant.actions] })),
@@ -1018,7 +1018,7 @@ it("healing review approval version remains mandatory and rejects a divergent ve
 it("healing review denies another project before exposing immutable plan or evidence", async () => {
   const f = await fixture();
   const other = f.app.projects.create({ name: "Other project" });
-  const reader = f.app.withIdentity({
+  const reader = f.app.forIdentity({
     principalId: f.app.context.principalId,
     scopes: ["R"],
     grants: [

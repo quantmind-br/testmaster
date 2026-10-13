@@ -1,14 +1,34 @@
-import type { Command } from "commander";
+import { type Command, Option } from "commander";
 import type { Runtime } from "./runtime.js";
+import { runServerWorkers } from "./server.js";
 
 export function workerCommands(program: Command, runtime: Runtime): void {
   const group = program.command("worker");
-  runtime.bind(group.command("start"), async (rt) => {
-    const app = await rt.app();
-    await app.worker.run({ signal: rt.controller.signal });
-    if (rt.signal) throw rt.interrupted();
-    return { data: await app.worker.status() };
-  });
+  runtime.bind(
+    group
+      .command("start")
+      .addOption(
+        new Option("--mode <mode>", "Deployment mode")
+          .choices(["local", "server"])
+          .default("local"),
+      ),
+    async (rt, _args, options) => {
+      if (options.mode === "server") {
+        const { application } = await rt.serverApp();
+        await runServerWorkers(application, rt.controller.signal, (workspaceId, error) =>
+          rt.stderr.write(
+            `worker for workspace ${workspaceId} stopped: ${error instanceof Error ? error.message : "unknown"}\n`,
+          ),
+        );
+        if (rt.signal) throw rt.interrupted();
+        return { data: { mode: "server", workspaces: application.operator.workspaceIds() } };
+      }
+      const app = await rt.app();
+      await app.worker.run({ signal: rt.controller.signal });
+      if (rt.signal) throw rt.interrupted();
+      return { data: await app.worker.status() };
+    },
+  );
   runtime.bind(group.command("status"), async (rt) => ({
     data: await (await rt.app()).worker.status(),
   }));

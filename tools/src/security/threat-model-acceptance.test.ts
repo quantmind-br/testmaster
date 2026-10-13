@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveConfig } from "@testmaster/application";
-import { capabilityRegistry, requireCapability } from "@testmaster/contracts";
+import { capabilityRegistry, implementedFeatures, requireCapability } from "@testmaster/contracts";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   type CodeComponents,
@@ -249,12 +249,17 @@ describe("M0-03 boundary defaults", () => {
 
 describe("disabled boundaries", () => {
   it("tunnel, distributed workers, multi-user and every other M4+ capability stay disabled and refuse use", () => {
-    const future = Object.values(capabilityRegistry).filter((capability) =>
-      ["M4", "M5", "M6"].includes(capability.milestone),
+    const future = Object.values(capabilityRegistry).filter(
+      (capability) =>
+        ["M4", "M5", "M6"].includes(capability.milestone) &&
+        !implementedFeatures.has(capability.id),
     );
     expect(future.map((capability) => capability.id)).toEqual(
-      expect.arrayContaining(["tunnels", "distributed", "multi-user", "server", "sso", "scim"]),
+      expect.arrayContaining(["tunnels", "distributed", "sso", "scim"]),
     );
+    // Negative control: the M4 server identity capabilities are implemented, so they are not refused.
+    for (const id of ["server", "multi-user", "identity", "postgres"])
+      expect(() => requireCapability(id)).not.toThrow();
     for (const capability of future) {
       expect(capability.enabled).toBe(false);
       expect(() => requireCapability(capability.id)).toThrowError(

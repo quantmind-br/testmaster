@@ -229,10 +229,10 @@ it.skipIf(postgresParity)(
     const dataDir = first.config.dataDir;
     first.close();
 
-    // Re-create the previous release's state: the application rows are real, migration 9 is undone and later no-op migrations are forgotten.
+    // Re-create the previous release's state: the application rows are real, migrations 10 and later are undone.
     const old = await PersistenceDatabase.open(join(dataDir, "testmaster.db"), { migrate: false });
     old.exec(
-      "DROP TRIGGER deliveries_frozen_subject; CREATE TRIGGER deliveries_frozen_subject BEFORE UPDATE ON deliveries WHEN NEW.destination_ref<>OLD.destination_ref OR NEW.subject_sha<>OLD.subject_sha OR NEW.report_hash<>OLD.report_hash OR NEW.check_name<>OLD.check_name OR NEW.payload_hash<>OLD.payload_hash OR NEW.event_id<>OLD.event_id OR (OLD.external_id IS NOT NULL AND (NEW.external_id IS NULL OR NEW.external_id<>OLD.external_id)) OR OLD.state IN ('delivered','dead_letter') BEGIN SELECT RAISE(ABORT,'delivery_subject_frozen'); END; DELETE FROM schema_migrations WHERE version>=9",
+      "DROP TABLE sessions; DROP TABLE password_credentials; DELETE FROM schema_migrations WHERE version>=10",
     );
     old.run(
       "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES(?, 'wrk_previous',?, 'ready',?)",
@@ -241,7 +241,7 @@ it.skipIf(postgresParity)(
       new Date(Date.now() - 3_600_000).toISOString(),
     );
     const before = old.all("SELECT id,created_at,data_json FROM projects ORDER BY id");
-    expect(old.status().currentVersion).toBe(8);
+    expect(old.status().currentVersion).toBe(9);
     old.close();
 
     const { receipt } = await upgradeLocalProfile({
@@ -249,7 +249,7 @@ it.skipIf(postgresParity)(
       backupDir: join(cwd, "before-upgrade"),
       drainTimeoutMs: 0,
     });
-    expect(receipt).toMatchObject({ upgraded: true, fromVersion: 8, irreversible: true });
+    expect(receipt).toMatchObject({ upgraded: true, fromVersion: 9, irreversible: true });
 
     const resumed = await Application.open({ cwd, home: join(cwd, "home") });
     try {
