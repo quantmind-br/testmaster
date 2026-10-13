@@ -348,6 +348,24 @@ export function createServer(options: ServerOptions): FastifyInstance {
         const body = request.body ?? {};
         if (route.method !== "GET" && route.requestSchema !== "Binary")
           validate(route.requestSchema, body);
+        // Checked before the idempotent transaction: an audit row written inside it would roll back with the refusal.
+        if (
+          identity &&
+          route.method !== "GET" &&
+          typeof body === "object" &&
+          "workspaceId" in body &&
+          typeof body.workspaceId === "string" &&
+          body.workspaceId !== identity.workspaceId
+        ) {
+          auditSecurity(
+            service.context,
+            "tenant.violation",
+            body.workspaceId,
+            "denied",
+            request.id,
+          );
+          throw new ContractError("FORBIDDEN", "Workspace mismatch");
+        }
         // Signed webhooks come from third parties that cannot send Idempotency-Key; their dedupe is the delivery ID.
         const mutation = route.auth !== "signature" && !["GET", "HEAD"].includes(route.method);
         const key = request.headers["idempotency-key"];

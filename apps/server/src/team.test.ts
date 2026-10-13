@@ -184,6 +184,11 @@ describe("team permissions over HTTP", () => {
       expect(refused.json().error.code, field).toBe(answer.code);
     }
     expect(f.application.projects.list()).toHaveLength(before);
+    // The cross-tenant attempt leaves exactly one alertable audit row; the schema rejection leaves none.
+    const violations = f.application.audit.list({ operation: "tenant.violation" }).items;
+    expect(violations.map((entry) => [entry.operation, entry.outcome])).toEqual([
+      ["tenant.violation", "denied"],
+    ]);
     // Positive control: the same body without the foreign field creates the project in this workspace.
     const created = await f.call("POST", "/v1/projects", f.ownerToken, {
       payload: { name: "Honest" },
