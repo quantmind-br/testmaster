@@ -96,6 +96,29 @@ describe("INT-003 OPS-011 ARCH-004 OPS-037 an unavailable notifier never changes
     expect(() => h.service.requeue(dead.id)).toThrow(/dead-lettered/u);
   });
 
+  it("OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ", async () => {
+    const h = await harness();
+    const receiver = await h.receiver();
+    receiver.behave(() => ({ status: 500 }));
+    await h.webhook(receiver);
+    h.completedRun();
+    await h.settle(60);
+    const [dead] = h.service.list({ state: "dead_letter" });
+    if (!dead) throw new Error("Missing dead letter");
+    const reader = h.app.forIdentity({ principalId: h.app.context.principalId, scopes: ["R"] });
+
+    expect(reader.notifications.get(dead.id).id).toBe(dead.id);
+    expect(() => reader.notifications.requeue(dead.id)).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+    expect(() => reader.notifications.deadLetters()).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+    // Negative control: the administrator's call still works and the reader changed nothing.
+    expect(h.service.get(dead.id).state).toBe("dead_letter");
+    expect(h.service.deadLetters()).toHaveLength(1);
+  });
+
   it("INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once", async () => {
     const h = await harness();
     const limited = await h.receiver();

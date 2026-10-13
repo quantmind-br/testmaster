@@ -5,6 +5,7 @@ import {
   createNotificationHarness,
   type NotificationHarness,
 } from "@testmaster/application/testing/notification-harness";
+import { uuidV7IdGenerator } from "@testmaster/domain";
 import { afterEach, expect, it } from "vitest";
 import { createServer, type RateBudget } from "./server.js";
 
@@ -222,6 +223,39 @@ it("INT-026 OPS-011 the deliveries routes list check and notification deliveries
     integrationId: integration.id,
   });
   expect(delivery.id).toMatch(/^ntd_/u);
+  // A GitHub check delivery lives in the same inventory; the notification filters leave it out.
+  const eventId = String(f.h.app.database.get("SELECT id FROM outbox LIMIT 1")?.id);
+  const checkId = uuidV7IdGenerator.next("dlv");
+  f.h.app.context.entities.insert("Delivery", {
+    id: checkId,
+    workspaceId: f.h.workspaceId,
+    createdAt: new Date().toISOString(),
+    version: 1,
+    eventId,
+    destinationRef: "owner/repo",
+    payloadHash: "a".repeat(64),
+    reportHash: "b".repeat(64),
+    batchId: null,
+    checkName: "TestMaster / result",
+    subjectSha: "c".repeat(40),
+    attempts: 0,
+    nextAttemptAt: null,
+    state: "dead_letter",
+    checkStatus: "completed",
+    conclusion: "failure",
+    externalId: null,
+    lastError: null,
+  });
+  const everything = (await f.call("GET", "/v1/deliveries")).json().data.items;
+  expect(everything.map((item: { id: string }) => item.id.slice(0, 4)).sort()).toEqual([
+    "dlv_",
+    "ntd_",
+  ]);
+  expect((await f.call("GET", `/v1/deliveries/${checkId}`)).json().data.checkName).toBe(
+    "TestMaster / result",
+  );
+  const typed = (await f.call("GET", "/v1/deliveries?type=run.failed")).json().data.items;
+  expect(typed.map((item: { id: string }) => item.id.slice(0, 4))).toEqual(["ntd_"]);
   expect(
     (await f.call("GET", `/v1/deliveries?type=run.failed&integrationId=${integration.id}`)).json()
       .data.items,

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -98,6 +98,15 @@ describe("REQ-038 M4-08 enrollment, drain and revoke of pool workers", () => {
 
     // Negative controls: an unknown token is refused, and revoking blocks resumption.
     expect(codeOf(() => controller.enroll(`tm_wrk_${"A".repeat(43)}`))).toBe("UNAUTHENTICATED");
+    // An enrollment token past its expiry is refused although it was never revoked.
+    const late = app.workerPool.createEnrollment({ name: "late" });
+    app.database.run(
+      "UPDATE server_tokens SET expires_at=? WHERE workspace_id=? AND token_hash=?",
+      new Date(Date.now() - 1_000).toISOString(),
+      workspaceId,
+      createHash("sha256").update(late.enrollmentToken).digest("hex"),
+    );
+    expect(codeOf(() => controller.enroll(late.enrollmentToken))).toBe("UNAUTHENTICATED");
     app.workerPool.revoke(created.worker.id);
     expect(codeOf(() => controller.enroll(created.enrollmentToken))).toBe("UNAUTHENTICATED");
   });
@@ -253,6 +262,18 @@ describe("REQ-038 an enrolled worker heartbeats its lease with its own credentia
         }),
       ),
     ).toBe("UNAUTHENTICATED");
+    // An enrolled worker still cannot heartbeat on behalf of another worker.
+    const enrolledStranger = app.workerPool.createEnrollment({ name: "enrolled-stranger" });
+    controller.enroll(enrolledStranger.enrollmentToken);
+    expect(
+      codeOf(() =>
+        controller.heartbeat(enrolledStranger.enrollmentToken, created.worker.id, {
+          leaseId: claim.jobId,
+          state: "ready",
+          version: version(),
+        }),
+      ),
+    ).toBe("UNAUTHENTICATED");
     expect(
       codeOf(() =>
         controller.heartbeat(stranger.enrollmentToken, stranger.worker.id, {
@@ -264,6 +285,25 @@ describe("REQ-038 an enrolled worker heartbeats its lease with its own credentia
     ).toBe("UNAUTHENTICATED");
     app.workerPool.revoke(created.worker.id);
     expect(codeOf(() => beat("ready"))).toBe("UNAUTHENTICATED");
+  });
+});
+
+describe("M4-08 REQ-038 worker administration needs the admin permission", () => {
+  it("M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can", async () => {
+    const { app } = await open();
+    const created = app.workerPool.createEnrollment({ name: "admin-made" });
+    const reader = app.forIdentity({ principalId: app.context.principalId, scopes: ["R"] });
+
+    expect(app.workerPool.list()).toHaveLength(1);
+    expect(app.workerPool.get(created.worker.id).id).toBe(created.worker.id);
+    expect(codeOf(() => reader.workerPool.list())).toBe("FORBIDDEN");
+    expect(codeOf(() => reader.workerPool.get(created.worker.id))).toBe("FORBIDDEN");
+    expect(codeOf(() => reader.workerPool.createEnrollment({ name: "denied" }))).toBe("FORBIDDEN");
+    expect(codeOf(() => reader.workerPool.drain(created.worker.id))).toBe("FORBIDDEN");
+    expect(codeOf(() => reader.workerPool.revoke(created.worker.id))).toBe("FORBIDDEN");
+    // Nothing the reader attempted changed the pool.
+    expect(app.workerPool.list()).toHaveLength(1);
+    expect(app.workerPool.get(created.worker.id).state).toBe("enrolling");
   });
 });
 
