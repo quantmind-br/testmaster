@@ -12,6 +12,15 @@ export interface SweepContext {
   recall(key: string): string | undefined;
 }
 
+/** The six steps of the J16 journey (spec J16: onboarding, review, RunDetail, text artifact, comparison, healing). */
+export type JourneyStepKey =
+  | "onboarding"
+  | "review"
+  | "runDetail"
+  | "textualArtifact"
+  | "comparison"
+  | "healing";
+
 /**
  * One slice's contribution to the portal accessibility sweep
  * (`portal-accessibility.portal.test.ts`). The sweep discovers pages from
@@ -42,4 +51,14 @@ export interface SweepSeed {
    * (for example a page that renders no remote data).
    */
   readonly skipStateChecks?: Readonly<Record<string, string>>;
+  /**
+   * Pages of the J16 accessibility journey (`j16-accessibility.portal.test.ts`). The slice that
+   * owns a step returns the concrete portal path (with query string) of a page that shows that
+   * step with real data: `onboarding` (S4a), `review` (S4b), `runDetail`, `textualArtifact`,
+   * `comparison` and `healing` (S5a). Each step must be claimed by exactly one seed; J16 fails,
+   * never skips, when a step is unclaimed or its page is missing from the route table.
+   */
+  readonly journeySteps?: Readonly<
+    Partial<Record<JourneyStepKey, (context: SweepContext) => Promise<string>>>
+  >;
 }

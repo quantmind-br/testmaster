@@ -203,3 +203,92 @@ export async function checkStructure(page: Page): Promise<string[]> {
     return problems;
   });
 }
+
+/**
+ * Colour is never the only signal (UX-054/056, spec J16): every status element carries visible
+ * text and a shape icon.
+ */
+export async function checkColourNotOnlySignal(
+  page: Page,
+): Promise<{ checked: number; problems: string[] }> {
+  return page.evaluate(() => {
+    const problems: string[] = [];
+    const badges = [...document.querySelectorAll(".badge, [data-status]")].filter(
+      (element) => element.getClientRects().length > 0,
+    );
+    for (const badge of badges) {
+      const text = (badge.textContent ?? "").trim();
+      const label = text === "" ? "(no text)" : text;
+      if (text === "")
+        problems.push(`status element without text: ${badge.outerHTML.slice(0, 80)}`);
+      if (!badge.querySelector("svg[data-shape], svg"))
+        problems.push(`status "${label}" has no shape icon`);
+    }
+    return { checked: badges.length, problems };
+  });
+}
+
+/**
+ * A third-party viewer (frame) must not be the only way to reach the content: it has a title and
+ * the container offers a download or text link (spec J16 negative, section 7).
+ */
+export async function checkThirdPartyAlternative(
+  page: Page,
+): Promise<{ checked: number; problems: string[] }> {
+  return page.evaluate(() => {
+    const problems: string[] = [];
+    const frames = [...document.querySelectorAll("iframe, embed, object")];
+    for (const frame of frames) {
+      const title = frame.getAttribute("title") ?? "";
+      if (title.trim() === "") problems.push(`<${frame.tagName.toLowerCase()}> without a title`);
+      if (frame.tagName === "IFRAME" && !(frame as HTMLIFrameElement).hasAttribute("sandbox"))
+        problems.push(`<iframe> "${title}" is not sandboxed`);
+      const container = frame.parentElement;
+      const alternative = container?.querySelector("a[href], a[download], pre, p, table");
+      if (!alternative) problems.push(`"${title}" has no text, link or download alternative`);
+    }
+    return { checked: frames.length, problems };
+  });
+}
+
+const successWord = /\b(passed|approved|verified|succeeded|healed)\b/iu;
+
+/**
+ * Loading without evidence never turns into a pass because time passed (spec J16 negative). The
+ * page must show a loading state at the start and still show it (and no success word in the main
+ * region) after `holdMs` of page time. The caller installs the fake clock (`page.clock.install()`)
+ * before the page loads, so the time that passes is deterministic and costs no wall-clock delay.
+ */
+export async function checkLoadingNeverPassed(page: Page, holdMs: number): Promise<string[]> {
+  const problems: string[] = [];
+  const snapshot = () =>
+    page.evaluate(() => ({
+      loading: document.querySelectorAll(".view-loading, [aria-busy=true]").length,
+      text: (document.querySelector("main") as HTMLElement | null)?.innerText ?? "",
+    }));
+  const first = await snapshot();
+  if (first.loading === 0) problems.push("no loading state while the data has not arrived");
+  await page.clock.runFor(holdMs);
+  const later = await snapshot();
+  if (later.loading === 0)
+    problems.push(`the loading state disappeared after ${holdMs} ms without data`);
+  const word = successWord.exec(later.text);
+  if (word) problems.push(`a success word ("${word[0]}") appeared while nothing had loaded`);
+  return problems;
+}
+
+/** Screen-reader-facing outline (`aria snapshot`) must name landmarks, a level-1 heading and every control. */
+export function checkAriaOutline(outline: string): string[] {
+  const problems: string[] = [];
+  if (!/^\s*- heading ".+" \[level=1\]/mu.test(outline))
+    problems.push("no level-1 heading in the outline");
+  if (!/^\s*- (button|link|textbox|table|checkbox|combobox)\b/mu.test(outline))
+    problems.push("no operable or tabular element in the outline");
+  for (const line of outline.split("\n")) {
+    const match = /^\s*- (button|link|textbox|checkbox|combobox|radio)(?: \[[^\]]+\])*(:|$)/u.exec(
+      line,
+    );
+    if (match) problems.push(`unnamed ${match[1]} in the outline: ${line.trim()}`);
+  }
+  return problems;
+}

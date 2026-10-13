@@ -34,7 +34,8 @@ const seed: SweepSeed = {
         value: "sweep-secret-value-0001",
         allowedOrigins: ["https://staging.sweep.test"],
       });
-      if (created.status !== 201 && created.status !== 200)
+      // 412 REVISION_CONFLICT means an earlier visit already stored it (the seed runs once per stack).
+      if (created.status !== 201 && created.status !== 200 && created.status !== 412)
         throw new Error(`secret seed failed: ${created.status} ${created.text}`);
     },
   },

@@ -157,10 +157,22 @@ async function checkStates(
       });
     });
   };
+  await page.clock.install();
   for (const mode of ["hold", "error", "forbidden"] as const) {
     await intercept(mode);
     await page.goto(url, { waitUntil: "commit" });
-    await page.waitForTimeout(mode === "hold" ? 1500 : 800);
+    await page.locator("main").waitFor({ timeout: 15_000 });
+    if (mode === "hold") {
+      // Deterministic time: a minute of page time passes with the requests still unanswered.
+      await page.clock.runFor(60_000);
+    } else {
+      // Await the real signal (the failure view) instead of guessing a delay; absence is reported below.
+      await page
+        .locator(".view-error, .error-banner, .view-forbidden, .view-not-found")
+        .first()
+        .waitFor({ timeout: 10_000 })
+        .catch(() => undefined);
+    }
     const view = await page.evaluate(() => ({
       loading: document.querySelectorAll(".view-loading").length,
       error: document.querySelectorAll(".view-error, .error-banner").length,

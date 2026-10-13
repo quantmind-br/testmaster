@@ -8,6 +8,7 @@ export interface MergedSeeds {
   readonly routes: ReadonlyMap<string, (context: SweepContext) => Promise<void>>;
   readonly allowUnseeded: ReadonlyMap<string, string>;
   readonly skipStateChecks: ReadonlyMap<string, string>;
+  readonly journeySteps: ReadonlyMap<string, (context: SweepContext) => Promise<string>>;
   readonly files: readonly string[];
 }
 
@@ -21,6 +22,7 @@ export async function loadSeeds(): Promise<MergedSeeds> {
   const routes = new Map<string, (context: SweepContext) => Promise<void>>();
   const allowUnseeded = new Map<string, string>();
   const skipStateChecks = new Map<string, string>();
+  const journeySteps = new Map<string, (context: SweepContext) => Promise<string>>();
   for (const file of files) {
     // Runtime-selected on purpose: slices add seed files without editing any shared module.
     const module = (await import(pathToFileURL(join(directory, file)).href)) as {
@@ -40,6 +42,8 @@ export async function loadSeeds(): Promise<MergedSeeds> {
       claim(allowUnseeded, key, value, "unseeded route");
     for (const [key, value] of Object.entries(module.default.skipStateChecks ?? {}))
       claim(skipStateChecks, key, value, "state-check exemption");
+    for (const [key, value] of Object.entries(module.default.journeySteps ?? {}))
+      if (value) claim(journeySteps, key, value, "journey step");
   }
-  return { params, routes, allowUnseeded, skipStateChecks, files };
+  return { params, routes, allowUnseeded, skipStateChecks, journeySteps, files };
 }
