@@ -7001,11 +7001,81 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 settings, secrets and retention pass keyboard, ARIA, live-region, colour and reflow checks",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 reaches and operates a settings action with the keyboard alone, with the ARIA tree following the dialog",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 UX-054 the journey procedure itself passes on a real page (project settings)",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 every step of the journey has its page in apps/web/src/routes/index.ts",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 every step of the journey is claimed by a seed in validation/journeys/portal-seeds",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 UX-056 colour is not the only signal: a badge without text or shape is reported",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 a third-party viewer without title, sandbox or text alternative is reported",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading without evidence never turns into passed: settings, secrets and retention keep loading while data is withheld",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 the fail-closed check names a step whose page or seed is absent"
+      ],
+      "oracle": [
+        "Onboarding, review, RunDetail, a textual artifact, comparison and healing are walked with the keyboard and the ARIA tree at desktop width and at 320 px / 200 % zoom; the pages come from the route table and the seed registry and the journey fails, never skips, when a step has no route or no seed.",
+        "Loading without evidence never turns into passed as page time advances, colour is never the only signal (status is text plus a shape), and a third-party viewer always keeps a title, sandbox and a text or download alternative."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/a11y/021-final-j16/output.log",
+        "validation/results/m4-acceptance/a11y/022-final-sweep/output.log"
+      ],
+      "code": [
+        "validation/journeys/j16-accessibility.portal.test.ts",
+        "validation/journeys/portal-checks.ts",
+        "validation/journeys/portal-seeds"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 settings, secrets and retention pass keyboard, ARIA, live-region, colour and reflow checks",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 reaches and operates a settings action with the keyboard alone, with the ARIA tree following the dialog",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 UX-054 the journey procedure itself passes on a real page (project settings)",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 every step of the journey has its page in apps/web/src/routes/index.ts",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 every step of the journey is claimed by a seed in validation/journeys/portal-seeds"
+        ],
+        "negative": [
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 UX-056 colour is not the only signal: a badge without text or shape is reported",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 a third-party viewer without title, sandbox or text alternative is reported",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading without evidence never turns into passed: settings, secrets and retention keep loading while data is withheld",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 the fail-closed check names a step whose page or seed is absent"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect(missing).toEqual(stepKeys);"
+          },
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect(unclaimed, \"journey steps no seed provides a page for\").toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect(await checkThirdPartyAlternative(page)).toEqual({ checked: 1, problems: [] });"
+          },
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect(turned.some((entry) => entry.includes(\"loading state disappeared\"))).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "      expect(problems, path).toEqual([]);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M6",
+          "scope": "human screen-reader session and the pt-BR/en visual and accessibility matrix (VAL-041); M4 proves keyboard, axe and ARIA-snapshot evidence on Chromium only",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "UX-051–056, VAL-034/041; M4/M6"
+          }
+        }
+      ],
+      "note": "Chromium only (ADR-018). The six step pages are provided by the slices that own them; their runs belong to the integration re-run."
     },
     {
       "id": "J17",
@@ -9690,36 +9760,51 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
+      "status": "verified",
       "scenario": [
-        "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history lists Runs with filters, sortable columns, paging and a project scope",
-        "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history loads further pages on request and applies the filter form by keyboard",
-        "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history says which state it is in: empty, forbidden and unknown Run are distinct",
-        "validation/journeys/portal-static.portal.test.ts::M4-05 the portal only calls catalog /v1 routes and its own static assets"
+        "validation/journeys/portal-settings.portal.test.ts::M4-05 REQ-036 every request the settings, secrets and retention pages made is a catalog /v1 route",
+        "apps/web/src/routes/routes.test.ts::UX-006 M4-05 registers every route module in routes/index.ts",
+        "packages/application/src/settings.test.ts::M4-05 lists environment revisions newest first and never returns variables",
+        "apps/server/src/settings.test.ts::M4-05 lists environment revisions over HTTP newest first and answers every portal settings route",
+        "packages/application/src/settings.pg.test.ts::M4-05 answers another workspace's environment with not found for revisions"
       ],
-      "oracle": [],
+      "oracle": [
+        "The settings, secrets and retention pages (environments, model data sharing, budget, limits, secrets, retention and deletion) call only public /v1 catalog routes; every portal settings route answers over HTTP.",
+        "Environment revisions are listed newest first without variables and another workspace's environment answers not found. Setup, review, run and artifact pages of the portal are appended by the other portal slices."
+      ],
       "evidence": [
-        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
-        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
+        "validation/results/m4-acceptance/s5b/016-merge2-backend-unit/output.log"
       ],
       "code": [
-        "apps/web/src/routes/runs.tsx",
-        "apps/web/src/components/artifact-viewer.tsx",
-        "apps/web/src/components/run-facts.tsx"
+        "apps/web/src/routes",
+        "apps/web/src/features",
+        "apps/server/src/routes/settings.ts",
+        "validation/journeys/catalog-routes.ts"
       ],
       "coverage": {
         "positive": [
-          "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history lists Runs with filters, sortable columns, paging and a project scope",
-          "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history loads further pages on request and applies the filter form by keyboard"
+          "validation/journeys/portal-settings.portal.test.ts::M4-05 REQ-036 every request the settings, secrets and retention pages made is a catalog /v1 route",
+          "apps/web/src/routes/routes.test.ts::UX-006 M4-05 registers every route module in routes/index.ts",
+          "packages/application/src/settings.test.ts::M4-05 lists environment revisions newest first and never returns variables",
+          "apps/server/src/settings.test.ts::M4-05 lists environment revisions over HTTP newest first and answers every portal settings route"
         ],
         "negative": [
-          "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history says which state it is in: empty, forbidden and unknown Run are distinct",
-          "validation/journeys/portal-static.portal.test.ts::M4-05 the portal only calls catalog /v1 routes and its own static assets"
+          "packages/application/src/settings.pg.test.ts::M4-05 answers another workspace's environment with not found for revisions"
         ],
         "criticalAssertions": [
           {
-            "path": "validation/journeys/portal-runs-detail.portal.test.ts",
-            "assertion": "    expect(await page.getByRole(\"link\", { name: runs.passed.runId }).count()).toBe(0);"
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(nonCatalogApiRequests(allRequests)).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(nonCatalogApiRequests([\"GET /v1/admin/private-dump\", \"POST /v1/secrets\"])).toEqual(["
+          },
+          {
+            "path": "apps/server/src/settings.test.ts",
+            "assertion": "  expect(listed.body).not.toContain(\"variables\");"
           }
         ]
       },
@@ -10741,11 +10826,53 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 settings, secrets and retention pass keyboard, ARIA, live-region, colour and reflow checks",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-051 NFR-008 reports a control the keyboard cannot reach, a missing focus ring and a keyboard trap",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-054 NFR-008 resolves route parameters through the seed registry and refuses a parametrised page nobody can seed",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 UX-056 colour is not the only signal: a badge without text or shape is reported"
+      ],
+      "oracle": [
+        "Every portal page registered in the route table passes axe with zero serious or critical violations (WCAG 2.2 AA tags) at desktop width and at 320 px / 200 % zoom, with one h1, one main landmark, a title, keyboard reachability and visible focus.",
+        "The checks fail on deliberately defective pages, and status is always text plus a shape icon, never colour alone. Chromium only; no human screen-reader session is claimed."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/a11y/021-final-j16/output.log",
+        "validation/results/m4-acceptance/a11y/022-final-sweep/output.log"
+      ],
+      "code": [
+        "validation/journeys/portal-accessibility.portal.test.ts",
+        "validation/journeys/portal-checks.ts",
+        "validation/journeys/portal-seeds",
+        "apps/web/src/theme"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 settings, secrets and retention pass keyboard, ARIA, live-region, colour and reflow checks"
+        ],
+        "negative": [
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-051 NFR-008 reports a control the keyboard cannot reach, a missing focus ring and a keyboard trap",
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-054 NFR-008 resolves route parameters through the seed registry and refuses a parametrised page nobody can seed",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 UX-056 colour is not the only signal: a badge without text or shape is reported"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(failures).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect(defective.problems).toContain('status \"(no text)\" has no shape icon');"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(report.problems.join(\"\\n\")).toContain(\"no visible focus indicator\");"
+          }
+        ]
+      }
     },
     {
       "id": "NFR-009",
@@ -16464,11 +16591,47 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-settings.portal.test.ts::M4-05 REQ-036 every request the settings, secrets and retention pages made is a catalog /v1 route",
+        "validation/journeys/portal-settings.portal.test.ts::UX-048 SEC-030 purges a project only after archiving it and typing its slug, and lists the deletion",
+        "validation/journeys/portal-settings.portal.test.ts::UX-046 stores a write-only secret, never shows or prefills the value, and rotation bumps the version",
+        "validation/journeys/portal-settings.portal.test.ts::VAL-034 SEC-030 only an admin can purge: a maintainer sees why it is off and the server refuses",
+        "apps/web/src/routes/routes.test.ts::UX-006 gives every page one absolute, unique, titled path"
+      ],
+      "oracle": [
+        "The portal covers settings, secrets, retention and deletion administration through public catalog routes only, each page reachable at its own path.",
+        "Administrative actions are refused server side to roles without the right even though the UI shows them disabled; run, review and history pages are appended by the other portal slices."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log"
+      ],
+      "code": [
+        "apps/web/src/features",
+        "apps/web/src/routes"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-settings.portal.test.ts::M4-05 REQ-036 every request the settings, secrets and retention pages made is a catalog /v1 route",
+          "validation/journeys/portal-settings.portal.test.ts::UX-048 SEC-030 purges a project only after archiving it and typing its slug, and lists the deletion",
+          "validation/journeys/portal-settings.portal.test.ts::UX-046 stores a write-only secret, never shows or prefills the value, and rotation bumps the version"
+        ],
+        "negative": [
+          "validation/journeys/portal-settings.portal.test.ts::VAL-034 SEC-030 only an admin can purge: a maintainer sees why it is off and the server refuses",
+          "apps/web/src/routes/routes.test.ts::UX-006 gives every page one absolute, unique, titled path"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(nonCatalogApiRequests(allRequests)).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(refused.status).toBe(403);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-037",
@@ -20542,11 +20705,58 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/global-ux.test.ts::UX-003 approves only a completed passed run with settled cleanup and a passed gate",
+        "apps/web/src/global-ux.test.ts::UX-003 renders each fact under its own label and no combined verdict label",
+        "apps/web/src/global-ux.test.ts::UX-003 does not approve the gate when cleanup failed even though the assertions passed",
+        "apps/web/src/global-ux.test.ts::UX-003 never shows passed for a run that has not completed",
+        "apps/web/src/global-ux.test.ts::UX-003 shows missing and unknown values as such, never as zero or success"
+      ],
+      "oracle": [
+        "A run shows outcome, lifecycle, cleanup and gate as separate labelled facts; approval needs a completed run, passed assertions, settled cleanup and a passed gate.",
+        "A running or incomplete run shows 'Unconfirmed', a failed cleanup blocks approval even when assertions passed, and missing or unknown values render as 'Not reported'/'Unknown', never as zero or success."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/run-state.ts",
+        "apps/web/src/components/run-state.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/global-ux.test.ts::UX-003 approves only a completed passed run with settled cleanup and a passed gate",
+          "apps/web/src/global-ux.test.ts::UX-003 renders each fact under its own label and no combined verdict label"
+        ],
+        "negative": [
+          "apps/web/src/global-ux.test.ts::UX-003 does not approve the gate when cleanup failed even though the assertions passed",
+          "apps/web/src/global-ux.test.ts::UX-003 never shows passed for a run that has not completed",
+          "apps/web/src/global-ux.test.ts::UX-003 shows missing and unknown values as such, never as zero or success"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(view.approved).toBe(true);"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(gate?.display).toBe(\"Not approved\");"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(outcome?.display).toBe(\"Unconfirmed\");"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(cleanup?.display).toBe(\"Not reported\");"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(markup).not.toMatch(/Verdict|Lifecycle/u);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-004",
@@ -20660,11 +20870,50 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/routes/routes.test.ts::UX-006 M4-05 registers every route module in routes/index.ts",
+        "apps/web/src/routes/routes.test.ts::UX-006 gives every page one absolute, unique, titled path",
+        "validation/journeys/portal-settings.portal.test.ts::UX-006 SEC-030 another tenant's project and a missing one render the same page on the settings and retention routes",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 the fail-closed check names a step whose page or seed is absent"
+      ],
+      "oracle": [
+        "Every page has one absolute, unique, titled path and every route module is registered, so each state has a deep link.",
+        "A project that belongs to another tenant and a project that does not exist render the identical not-found view, exposing no name, id or count."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/index.ts",
+        "apps/web/src/features/project-page.tsx",
+        "apps/web/src/api/controllers.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/routes/routes.test.ts::UX-006 M4-05 registers every route module in routes/index.ts",
+          "apps/web/src/routes/routes.test.ts::UX-006 gives every page one absolute, unique, titled path"
+        ],
+        "negative": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-006 SEC-030 another tenant's project and a missing one render the same page on the settings and retention routes",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-006 the fail-closed check names a step whose page or seed is absent"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(new Set(views).size).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(views[0]).not.toContain(\"Other tenant project\");"
+          },
+          {
+            "path": "apps/web/src/routes/routes.test.ts",
+            "assertion": "    expect(duplicatePaths(portalRoutes)).toEqual([]);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-007",
@@ -20672,11 +20921,52 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/global-ux.test.ts::UX-007 names the workspace and project in the dialog and demands typed input only when asked",
+        "apps/web/src/routes/routes.test.ts::UX-007 only lists project sub-navigation entries for pages under /projects/:projectId/",
+        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 UX-007 M4-05 shows the impact of an environment change before saving, binds errors to fields and records a new revision",
+        "apps/web/src/global-ux.test.ts::UX-007 drops a selection made under another scope so it cannot apply to the current one",
+        "validation/journeys/portal-settings.portal.test.ts::UX-006 SEC-030 another tenant's project and a missing one render the same page on the settings and retention routes"
+      ],
+      "oracle": [
+        "Every confirmation names the workspace and project it acts on, and the project sub-navigation only lists pages under the current project.",
+        "A selection made under one project or workspace scope is discarded when the scope changes, so an action never applies to another context."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log"
+      ],
+      "code": [
+        "apps/web/src/components/confirm-dialog.tsx",
+        "apps/web/src/lib/selection.ts",
+        "apps/web/src/routes/types.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/global-ux.test.ts::UX-007 names the workspace and project in the dialog and demands typed input only when asked",
+          "apps/web/src/routes/routes.test.ts::UX-007 only lists project sub-navigation entries for pages under /projects/:projectId/",
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 UX-007 M4-05 shows the impact of an environment change before saving, binds errors to fields and records a new revision"
+        ],
+        "negative": [
+          "apps/web/src/global-ux.test.ts::UX-007 drops a selection made under another scope so it cannot apply to the current one",
+          "validation/journeys/portal-settings.portal.test.ts::UX-006 SEC-030 another tenant's project and a missing one render the same page on the settings and retention routes"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(plain).toContain(\"<dt>Workspace</dt><dd>Acme</dd>\");"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(other.ids.size).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(new Set(views).size).toBe(1);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-008",
@@ -20684,11 +20974,50 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/global-ux.test.ts::UX-008 orders ties by row key so a sort is stable and repeatable",
+        "apps/web/src/global-ux.test.ts::UX-008 requires every search term and ignores filter values that are not options",
+        "apps/web/src/global-ux.test.ts::UX-008 tells an empty list apart from a filter that matches nothing"
+      ],
+      "oracle": [
+        "Tables search by every term, filter only by declared options, sort with a stable row-key tiebreak and paginate by cursor; filters live in the URL.",
+        "An empty list and a filter that matches nothing are different states, and an undeclared filter value is ignored instead of being applied."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/table-model.ts",
+        "apps/web/src/components/searchable-table.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/global-ux.test.ts::UX-008 orders ties by row key so a sort is stable and repeatable",
+          "apps/web/src/global-ux.test.ts::UX-008 requires every search term and ignores filter values that are not options"
+        ],
+        "negative": [
+          "apps/web/src/global-ux.test.ts::UX-008 tells an empty list apart from a filter that matches nothing"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(sorted.map((row) => row.id)).toEqual([\"c\", \"a\", \"b\", \"d\"]);"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(searchRows(rows, \"login fail\", (row) => row.name).map((row) => row.id)).toEqual([\"a\"]);"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(applyFilters(rows, filters, { state: \"<script>\" })).toHaveLength(3);"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(tableEmptiness(5, 0)).toBe(\"no-matches\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-009",
@@ -22927,11 +23256,79 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-settings.portal.test.ts::UX-046 stores a write-only secret, never shows or prefills the value, and rotation bumps the version",
+        "packages/application/src/settings.test.ts::UX-046 rotates a secret, bumps its version and lists created and rotated events newest first without any value",
+        "apps/server/src/settings.test.ts::UX-046 rotates a secret over HTTP, replays an idempotent request once, lists its history and never returns a value",
+        "packages/application/src/settings.test.ts::UX-046 replays an idempotent rotation without rotating twice and refuses the key for another value",
+        "packages/application/src/settings.test.ts::UX-046 rotates once when two requests with one idempotency key race",
+        "validation/journeys/portal-settings.portal.test.ts::UX-005 VAL-034 a viewer sees the secrets page with the reason controls are off and the server refuses the call",
+        "packages/application/src/settings.test.ts::UX-046 refuses rotation to roles without the secret column and lets the roles that hold it rotate",
+        "packages/application/src/settings.test.ts::UX-046 reads created, rotated, revoked as versions 1, 2, 2 and refuses to rotate a revoked secret",
+        "apps/server/src/settings.test.ts::UX-046 refuses HTTP rotation to viewers and runners even with a write scope and answers other ids with not found",
+        "packages/application/src/settings.pg.test.ts::UX-046 answers another workspace's secret with not found for history and rotation"
+      ],
+      "oracle": [
+        "A secret value is write-only: the form is never prefilled and is cleared after storing or rotating, the value appears in no DOM, URL, storage, cookie or API response, rotation bumps the version and history lists created, rotated and revoked events without values.",
+        "Rotation is idempotent (one rotation per key even under a race), refused to roles without the secret column and to revoked secrets, and another workspace's secret answers not found."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/016-merge2-backend-unit/output.log",
+        "validation/results/m4-acceptance/s5b/015-parity-final-1/output.log"
+      ],
+      "code": [
+        "apps/web/src/features/secrets/secrets.tsx",
+        "packages/application/src/secrets.ts",
+        "apps/server/src/routes/settings.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-046 stores a write-only secret, never shows or prefills the value, and rotation bumps the version",
+          "packages/application/src/settings.test.ts::UX-046 rotates a secret, bumps its version and lists created and rotated events newest first without any value",
+          "apps/server/src/settings.test.ts::UX-046 rotates a secret over HTTP, replays an idempotent request once, lists its history and never returns a value",
+          "packages/application/src/settings.test.ts::UX-046 replays an idempotent rotation without rotating twice and refuses the key for another value",
+          "packages/application/src/settings.test.ts::UX-046 rotates once when two requests with one idempotency key race"
+        ],
+        "negative": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-005 VAL-034 a viewer sees the secrets page with the reason controls are off and the server refuses the call",
+          "packages/application/src/settings.test.ts::UX-046 refuses rotation to roles without the secret column and lets the roles that hold it rotate",
+          "packages/application/src/settings.test.ts::UX-046 reads created, rotated, revoked as versions 1, 2, 2 and refuses to rotate a revoked secret",
+          "apps/server/src/settings.test.ts::UX-046 refuses HTTP rotation to viewers and runners even with a write scope and answers other ids with not found",
+          "packages/application/src/settings.pg.test.ts::UX-046 answers another workspace's secret with not found for history and rotation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "      expect(dom.text).not.toContain(value);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "      expect(bodies.join(\"\\n\")).not.toContain(value);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(reference?.secretVersion).toBe(2);"
+          },
+          {
+            "path": "packages/application/src/settings.test.ts",
+            "assertion": "  for (const canary of canaries) expect(everything).not.toContain(canary);"
+          },
+          {
+            "path": "packages/application/src/settings.test.ts",
+            "assertion": "  expect(replay).toEqual(first);"
+          },
+          {
+            "path": "apps/server/src/settings.test.ts",
+            "assertion": "    expect(denied.statusCode).toBe(403);"
+          },
+          {
+            "path": "packages/application/src/settings.pg.test.ts",
+            "assertion": "  expect(() => globex.secrets.history(secret.id)).toThrowError(notFound);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-047",
@@ -22939,11 +23336,86 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/global-ux.test.ts::UX-047 states the reproducibility, cost and data-protection effect of an environment change",
+        "apps/web/src/global-ux.test.ts::UX-047 warns that unknown-cost calls escape the budget and that revoking does not recall data",
+        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 sets data-sharing consent by named category with impact first, and revokes it",
+        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit",
+        "packages/application/src/settings.test.ts::UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials",
+        "apps/server/src/settings.test.ts::UX-047 reads, grants and revokes model data sharing over HTTP without exposing credentials",
+        "apps/server/src/settings.test.ts::UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers",
+        "apps/web/src/global-ux.test.ts::UX-047 says nothing will be saved when no setting changed",
+        "packages/application/src/settings.test.ts::UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers",
+        "packages/application/src/settings.test.ts::UX-047 refuses to revoke a provider that is not configured and writes no audit row for it",
+        "packages/application/src/settings.test.ts::UX-047 keeps the grantor on the consent record and never reports an unknown grantor",
+        "packages/application/src/settings.test.ts::UX-047 lets every role read the consent settings but only the admin column change them"
+      ],
+      "oracle": [
+        "Before an environment, model-sharing or budget change is saved, the portal states its effect on reproducibility, cost and data protection with text and a shape; nothing is saved when nothing changed.",
+        "Model data sharing is granted per provider and named data class, refused for classes or providers the profile does not allow, records the real grantor, and revoking never recalls data already sent; only the admin column may change it."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/016-merge2-backend-unit/output.log",
+        "validation/results/m4-acceptance/s5b/015-parity-final-1/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/impact.ts",
+        "apps/web/src/components/impact-panel.tsx",
+        "apps/web/src/features/settings",
+        "packages/application/src/ai/model.ts",
+        "apps/server/src/routes/settings.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/global-ux.test.ts::UX-047 states the reproducibility, cost and data-protection effect of an environment change",
+          "apps/web/src/global-ux.test.ts::UX-047 warns that unknown-cost calls escape the budget and that revoking does not recall data",
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 sets data-sharing consent by named category with impact first, and revokes it",
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit",
+          "packages/application/src/settings.test.ts::UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials",
+          "apps/server/src/settings.test.ts::UX-047 reads, grants and revokes model data sharing over HTTP without exposing credentials",
+          "apps/server/src/settings.test.ts::UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers"
+        ],
+        "negative": [
+          "apps/web/src/global-ux.test.ts::UX-047 says nothing will be saved when no setting changed",
+          "packages/application/src/settings.test.ts::UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers",
+          "packages/application/src/settings.test.ts::UX-047 refuses to revoke a provider that is not configured and writes no audit row for it",
+          "packages/application/src/settings.test.ts::UX-047 keeps the grantor on the consent record and never reports an unknown grantor",
+          "packages/application/src/settings.test.ts::UX-047 lets every role read the consent settings but only the admin column change them"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(impacts[0]?.text).toContain(\"not recomputed\");"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(impacts[0]?.text).toBe(\"No setting changed; nothing will be saved.\");"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(lax[1]?.level).toBe(\"warning\");"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(consent?.dataClasses.sort()).toEqual([\"dom\", \"requirements\"]);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(usage.lifetimeBudget.tokenBudget.limit).toBe(250000);"
+          },
+          {
+            "path": "packages/application/src/settings.test.ts",
+            "assertion": "  expect(revoked()).toBe(0);"
+          },
+          {
+            "path": "apps/server/src/settings.test.ts",
+            "assertion": "  expect(notAllowed.json().error.code).toBe(\"POLICY_DENIED\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-048",
@@ -22951,11 +23423,83 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-settings.portal.test.ts::UX-048 SEC-030 purges a project only after archiving it and typing its slug, and lists the deletion",
+        "validation/journeys/portal-settings.portal.test.ts::UX-048 UX-055 keeps remove-reference, archive-test and expire-artifact apart and archives only the selected tests",
+        "validation/journeys/portal-retention-artifact.portal.test.ts::UX-048 UX-055 expires exactly one artifact after a contextual confirmation, keeps the run and the other artifact, and records a tombstone",
+        "packages/application/src/settings.test.ts::UX-048 purges an archived project: tombstones every live artifact and fixture under one operation and replays idempotently",
+        "apps/server/src/settings.test.ts::UX-048 purges an archived project over HTTP with the slug, replays it and lists the operation by project",
+        "apps/server/src/settings.test.ts::UX-048 revokes an artifact over HTTP through the idempotency wrapper and replays the same operation",
+        "validation/journeys/portal-settings.portal.test.ts::VAL-034 SEC-030 only an admin can purge: a maintainer sees why it is off and the server refuses",
+        "validation/journeys/portal-retention-artifact.portal.test.ts::UX-048 UX-005 a viewer sees why artifacts cannot be expired and the server refuses the call",
+        "packages/application/src/settings.test.ts::UX-048 refuses a missing or wrong confirmation token and an unarchived project without changing any state",
+        "packages/application/src/settings.test.ts::UX-048 refuses a purge while a Run is unfinished before tombstoning anything and succeeds once it completes",
+        "packages/application/src/settings.test.ts::UX-048 keeps a multi-reference operation unfinished until every artifact is physically deleted and never bypasses a hold",
+        "packages/application/src/settings.pg.test.ts::UX-048 answers another workspace's project and operations with not found and never lists them"
+      ],
+      "oracle": [
+        "Remove reference, archive test and expire artifact are distinct actions with their own confirmation; bulk archive applies only to the selected tests and never to the whole list; expiring one artifact leaves the Run, its result and the other artifacts, records a tombstone, and the page never says the evidence never existed.",
+        "Purging a project needs admin access, an archived project, no unfinished Run and the typed project slug; it creates one durable deletion operation that stays unfinished until every artifact is physically deleted and never bypasses a legal hold."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/016-merge2-backend-unit/output.log",
+        "validation/results/m4-acceptance/s5b/015-parity-final-1/output.log"
+      ],
+      "code": [
+        "apps/web/src/features/retention/retention.tsx",
+        "packages/application/src/retention.ts",
+        "apps/server/src/routes/settings.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-048 SEC-030 purges a project only after archiving it and typing its slug, and lists the deletion",
+          "validation/journeys/portal-settings.portal.test.ts::UX-048 UX-055 keeps remove-reference, archive-test and expire-artifact apart and archives only the selected tests",
+          "validation/journeys/portal-retention-artifact.portal.test.ts::UX-048 UX-055 expires exactly one artifact after a contextual confirmation, keeps the run and the other artifact, and records a tombstone",
+          "packages/application/src/settings.test.ts::UX-048 purges an archived project: tombstones every live artifact and fixture under one operation and replays idempotently",
+          "apps/server/src/settings.test.ts::UX-048 purges an archived project over HTTP with the slug, replays it and lists the operation by project",
+          "apps/server/src/settings.test.ts::UX-048 revokes an artifact over HTTP through the idempotency wrapper and replays the same operation"
+        ],
+        "negative": [
+          "validation/journeys/portal-settings.portal.test.ts::VAL-034 SEC-030 only an admin can purge: a maintainer sees why it is off and the server refuses",
+          "validation/journeys/portal-retention-artifact.portal.test.ts::UX-048 UX-005 a viewer sees why artifacts cannot be expired and the server refuses the call",
+          "packages/application/src/settings.test.ts::UX-048 refuses a missing or wrong confirmation token and an unarchived project without changing any state",
+          "packages/application/src/settings.test.ts::UX-048 refuses a purge while a Run is unfinished before tombstoning anything and succeeds once it completes",
+          "packages/application/src/settings.test.ts::UX-048 keeps a multi-reference operation unfinished until every artifact is physically deleted and never bypasses a hold",
+          "packages/application/src/settings.pg.test.ts::UX-048 answers another workspace's project and operations with not found and never lists them"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(archived(three?.id)).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/portal-retention-artifact.portal.test.ts",
+            "assertion": "    expect(byPath.get(\"logs/network.txt\")).toBe(\"available\");"
+          },
+          {
+            "path": "validation/journeys/portal-retention-artifact.portal.test.ts",
+            "assertion": "    expect(await page.innerText(\"main\")).not.toMatch(/never existed/iu);"
+          },
+          {
+            "path": "packages/application/src/settings.test.ts",
+            "assertion": "  expect(auditActions(f.app, \"project.purge\")).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/settings.test.ts",
+            "assertion": "  expect(f.app.retention.deletionStatus(operation.id).physicalState).toBe(\"pending\");"
+          },
+          {
+            "path": "apps/server/src/settings.test.ts",
+            "assertion": "  expect(live.json().error.details).toEqual({ reason: \"project_not_archived\" });"
+          },
+          {
+            "path": "packages/application/src/settings.pg.test.ts",
+            "assertion": "  expect(globex.retention.listDeletionOperations()).toEqual([]);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-049",
@@ -23096,11 +23640,56 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe",
+        "validation/journeys/portal-settings.portal.test.ts::UX-051 saves an environment change with the keyboard alone and returns focus to the invoker when the dialog is cancelled",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 reaches and operates a settings action with the keyboard alone, with the ARIA tree following the dialog",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-051 NFR-008 reports a control the keyboard cannot reach, a missing focus ring and a keyboard trap",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 the ARIA outline check rejects an unnamed control and a page without a level-1 heading"
+      ],
+      "oracle": [
+        "Every page of the route table is walked with Tab alone: every control is reached with a visible focus ring, no keyboard trap, no positive tabindex; an environment change can be saved by keyboard and Escape returns focus to the invoking button.",
+        "The traversal check reports a control the keyboard cannot reach, a missing focus indicator and a keyboard trap on defective pages."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/a11y/021-final-j16/output.log",
+        "validation/results/m4-acceptance/a11y/022-final-sweep/output.log"
+      ],
+      "code": [
+        "validation/journeys/portal-checks.ts",
+        "apps/web/src/components/confirm-action.tsx",
+        "apps/web/src/components/confirm-dialog.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe",
+          "validation/journeys/portal-settings.portal.test.ts::UX-051 saves an environment change with the keyboard alone and returns focus to the invoker when the dialog is cancelled",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 reaches and operates a settings action with the keyboard alone, with the ARIA tree following the dialog"
+        ],
+        "negative": [
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-051 NFR-008 reports a control the keyboard cannot reach, a missing focus ring and a keyboard trap",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 the ARIA outline check rejects an unnamed control and a page without a level-1 heading"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(report.problems.join(\"\\n\")).toContain(\"not reachable with Tab\");"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(trapped.problems.join(\"\\n\")).toContain(\"keyboard trap or loop\");"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect((await keyboard.focused()).name).toBe(\"Save environment\");"
+          },
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect((await keyboard.focused()).name).toBe(\"Save environment\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-052",
@@ -23108,11 +23697,52 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-settings.portal.test.ts::UX-052 announces a stored secret once in the polite live region, never assertively, and never moves focus into it",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-052 reports assertive regions, several polite regions and focus moved on load"
+      ],
+      "oracle": [
+        "A completed action is announced once in one polite, atomic live region that never moves focus; no assertive region exists and no page moves focus on load.",
+        "The live-region check reports assertive regions, several polite regions and focus moved on load on defective pages, and a failed action announces nothing about success."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/a11y/021-final-j16/output.log",
+        "validation/results/m4-acceptance/a11y/022-final-sweep/output.log"
+      ],
+      "code": [
+        "apps/web/src/components/live-region.tsx",
+        "apps/web/src/lib/announcer.ts",
+        "validation/journeys/portal-checks.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-052 announces a stored secret once in the polite live region, never assertively, and never moves focus into it",
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-052 UX-053 UX-054 NFR-008 J16 sweeps every registered route for keyboard, reflow, live regions, structure and axe"
+        ],
+        "negative": [
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-052 reports assertive regions, several polite regions and focus moved on load"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(announced.filter((entry) => entry.includes(\"Secret stored\"))).toHaveLength(1);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(await page.locator('[aria-live=\"assertive\"]').count()).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(problems).toContain('aria-live=\"assertive\"');"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(problems).toContain(\"moved focus to <input>\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-053",
@@ -23120,11 +23750,47 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-settings.portal.test.ts::UX-053 keeps the settings, secrets and retention actions usable at 320 px and 200 % zoom",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 settings, secrets and retention pass keyboard, ARIA, live-region, colour and reflow checks",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-053 reports horizontal page scroll, overlap and controls outside the 320 px viewport"
+      ],
+      "oracle": [
+        "At 320 CSS px and 200 % zoom the settings, secrets and retention pages keep every critical action inside the viewport without horizontal page scroll or overlapping controls; tabular data scrolls inside its own region.",
+        "The reflow check reports horizontal page scroll, overlapping controls and controls outside the viewport on defective pages."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/a11y/021-final-j16/output.log",
+        "validation/results/m4-acceptance/a11y/022-final-sweep/output.log"
+      ],
+      "code": [
+        "validation/journeys/portal-checks.ts",
+        "apps/web/src/theme/admin.css"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-053 keeps the settings, secrets and retention actions usable at 320 px and 200 % zoom",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-051 UX-052 UX-053 settings, secrets and retention pass keyboard, ARIA, live-region, colour and reflow checks"
+        ],
+        "negative": [
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-053 reports horizontal page scroll, overlap and controls outside the 320 px viewport"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(problems).toContain(\"page scrolls horizontally\");"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(problems).toContain('\"Far\" lies outside');"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "        expect(button.right, `${path}: ${button.text}`).toBeLessThanOrEqual(321);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-054",
@@ -23132,11 +23798,61 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 UX-007 M4-05 shows the impact of an environment change before saving, binds errors to fields and records a new revision",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-054 NFR-008 resolves route parameters through the seed registry and refuses a parametrised page nobody can seed",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-054 sweeps the shell pages outside the route table: login, recover and the not-found page",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading without evidence never turns into passed: settings, secrets and retention keep loading while data is withheld",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not",
+        "validation/journeys/portal-accessibility.portal.test.ts::UX-054 reports a page without exactly one h1 and main landmark, title or language",
+        "validation/journeys/portal-settings.portal.test.ts::VAL-034 UX-054 an edit conflict is reported without overwriting the other change"
+      ],
+      "oracle": [
+        "A form error is reported in an error summary and next to its field (aria-invalid, aria-describedby) before any dialog opens; loading, empty, error, partial and forbidden render as distinct states and a page that is still loading never shows a success word, however much time passes.",
+        "An edit conflict shows REVISION_CONFLICT with 'Reload latest' and overwrites nothing; a parametrised page nobody can seed fails the sweep instead of being skipped."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/a11y/021-final-j16/output.log",
+        "validation/results/m4-acceptance/a11y/022-final-sweep/output.log"
+      ],
+      "code": [
+        "apps/web/src/components/form.tsx",
+        "apps/web/src/components/view-state.tsx",
+        "apps/web/src/components/error-banner.tsx",
+        "validation/journeys/portal-checks.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 UX-007 M4-05 shows the impact of an environment change before saving, binds errors to fields and records a new revision",
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-054 NFR-008 resolves route parameters through the seed registry and refuses a parametrised page nobody can seed",
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-051 UX-054 sweeps the shell pages outside the route table: login, recover and the not-found page",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading without evidence never turns into passed: settings, secrets and retention keep loading while data is withheld"
+        ],
+        "negative": [
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not",
+          "validation/journeys/portal-accessibility.portal.test.ts::UX-054 reports a page without exactly one h1 and main landmark, title or language",
+          "validation/journeys/portal-settings.portal.test.ts::VAL-034 UX-054 an edit conflict is reported without overwriting the other change"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j16-accessibility.portal.test.ts",
+            "assertion": "    expect(turned.some((entry) => entry.includes('success word (\"Passed\")'))).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(problems).toContain(\"0 main landmarks\");"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(after.find((entry) => entry.id === environmentId)?.name).toBe(\"Renamed elsewhere\");"
+          },
+          {
+            "path": "validation/journeys/portal-accessibility.portal.test.ts",
+            "assertion": "    expect(allowed.url).toBe(`/widgets/${nonexistentId}`);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-055",
@@ -23144,11 +23860,57 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/global-ux.test.ts::UX-055 shows why a confirm button is inert instead of hiding it",
+        "validation/journeys/portal-settings.portal.test.ts::UX-046 UX-055 revokes a secret reference after a contextual confirmation that sends one request",
+        "validation/journeys/portal-retention-artifact.portal.test.ts::UX-048 UX-055 expires exactly one artifact after a contextual confirmation, keeps the run and the other artifact, and records a tombstone",
+        "apps/web/src/global-ux.test.ts::UX-055 blocks a bulk action with nothing selected and never widens it to the whole list",
+        "validation/journeys/portal-settings.portal.test.ts::UX-048 UX-055 keeps remove-reference, archive-test and expire-artifact apart and archives only the selected tests"
+      ],
+      "oracle": [
+        "A destructive action needs a contextual confirmation naming workspace, project and resource; a double click sends exactly one request; a button that cannot act is inert with its reason shown.",
+        "A bulk action with nothing selected does nothing and never widens to the whole list, and with a selection it applies only to the selected rows."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log"
+      ],
+      "code": [
+        "apps/web/src/components/confirm-action.tsx",
+        "apps/web/src/hooks/use-api-action.ts",
+        "apps/web/src/components/bulk-action-bar.tsx",
+        "apps/web/src/lib/selection.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/global-ux.test.ts::UX-055 shows why a confirm button is inert instead of hiding it",
+          "validation/journeys/portal-settings.portal.test.ts::UX-046 UX-055 revokes a secret reference after a contextual confirmation that sends one request",
+          "validation/journeys/portal-retention-artifact.portal.test.ts::UX-048 UX-055 expires exactly one artifact after a contextual confirmation, keeps the run and the other artifact, and records a tombstone"
+        ],
+        "negative": [
+          "apps/web/src/global-ux.test.ts::UX-055 blocks a bulk action with nothing selected and never widens it to the whole list",
+          "validation/journeys/portal-settings.portal.test.ts::UX-048 UX-055 keeps remove-reference, archive-test and expire-artifact apart and archives only the selected tests"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(none.allowed).toBe(false);"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(none.reason).toContain(\"Nothing is applied to the whole list\");"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(archived(two?.id)).toBeTruthy();"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(listed.find((entry) => entry.locator === \"to-revoke\")?.revokedAt).toBeTruthy();"
+          }
+        ]
+      }
     },
     {
       "id": "UX-056",
@@ -23156,11 +23918,55 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/global-ux.test.ts::UX-056 labels only a workspace whose quota policy is the demo policy",
+        "validation/journeys/portal-settings.portal.test.ts::UX-056 shows the real limits and no demo label in an ordinary workspace",
+        "validation/journeys/portal-settings.portal.test.ts::UX-056 labels a demonstration workspace on every page and only that workspace",
+        "packages/application/src/settings.test.ts::UX-056 refuses CI gates in a demonstration workspace without writing any gate artifact and resumes after the policy changes",
+        "apps/web/src/routes/routes.test.ts::UX-003 UX-056 names the S5b pages and keeps secrets out of the project sub-navigation"
+      ],
+      "oracle": [
+        "A workspace whose quota policy is the demo policy shows a banner on every page and no other workspace does; the limits table shows real values and labels an unreported one 'Not reported' instead of inventing it.",
+        "A demonstration workspace cannot gate CI: the server refuses it with POLICY_DENIED and writes no gate artifact, and resumes when the policy changes."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/016-merge2-backend-unit/output.log",
+        "validation/results/m4-acceptance/s5b/015-parity-final-1/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/demo.ts",
+        "apps/web/src/components/demo-banner.tsx",
+        "apps/web/src/features/settings/limits.tsx",
+        "packages/application/src/ci.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/global-ux.test.ts::UX-056 labels only a workspace whose quota policy is the demo policy",
+          "validation/journeys/portal-settings.portal.test.ts::UX-056 shows the real limits and no demo label in an ordinary workspace",
+          "validation/journeys/portal-settings.portal.test.ts::UX-056 labels a demonstration workspace on every page and only that workspace"
+        ],
+        "negative": [
+          "packages/application/src/settings.test.ts::UX-056 refuses CI gates in a demonstration workspace without writing any gate artifact and resumes after the policy changes",
+          "apps/web/src/routes/routes.test.ts::UX-003 UX-056 names the S5b pages and keeps secrets out of the project sub-navigation"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(isDemoWorkspace({ quotaPolicyId: \"standard\" })).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(text).not.toContain(\"Not reported\");"
+          },
+          {
+            "path": "packages/application/src/settings.test.ts",
+            "assertion": "  expect(await exists(join(f.root, \"demo\"))).toBe(false);"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-001",
@@ -25349,41 +26155,56 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
+      "status": "verified",
       "scenario": [
-        "apps/web/src/lib/run-timeline.test.ts::VAL-034 duplicate and reordered events never regress the phase or replace the terminal result",
-        "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 a sequence gap refetches the snapshot, a contiguous stream does not",
-        "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 duplicates, reordered events and events after the terminal result never regress the Run"
+        "validation/journeys/portal-settings.portal.test.ts::VAL-034 UX-054 an edit conflict is reported without overwriting the other change",
+        "validation/journeys/portal-settings.portal.test.ts::UX-005 VAL-034 a viewer sees the secrets page with the reason controls are off and the server refuses the call",
+        "validation/journeys/portal-settings.portal.test.ts::UX-051 saves an environment change with the keyboard alone and returns focus to the invoker when the dialog is cancelled",
+        "validation/journeys/portal-settings.portal.test.ts::VAL-034 SEC-030 only an admin can purge: a maintainer sees why it is off and the server refuses",
+        "apps/web/src/global-ux.test.ts::UX-003 never shows passed for a run that has not completed",
+        "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not"
       ],
-      "oracle": [],
+      "oracle": [
+        "Portal authorization is server side: a viewer or maintainer sees controls disabled with a reason and the same calls made directly are refused with 403; an edit conflict is reported as REVISION_CONFLICT and nothing is overwritten.",
+        "Status never shows passed for a run that has not completed and loading never turns into success over time; keyboard access and accessibility are proven by the sweep and J16 (live event reorder and gap are appended by the run-detail slice)."
+      ],
       "evidence": [
-        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
-        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+        "validation/results/m4-acceptance/s5b/017-merge2-journeys/output.log",
+        "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log"
       ],
       "code": [
-        "apps/web/src/lib/run-timeline.ts",
-        "apps/web/src/api/sse.ts"
+        "apps/web/src/features/settings",
+        "apps/web/src/features/secrets",
+        "apps/web/src/features/retention",
+        "validation/journeys/portal-checks.ts"
       ],
       "coverage": {
         "positive": [
-          "apps/web/src/lib/run-timeline.test.ts::VAL-034 duplicate and reordered events never regress the phase or replace the terminal result",
-          "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 a sequence gap refetches the snapshot, a contiguous stream does not"
+          "validation/journeys/portal-settings.portal.test.ts::VAL-034 UX-054 an edit conflict is reported without overwriting the other change",
+          "validation/journeys/portal-settings.portal.test.ts::UX-005 VAL-034 a viewer sees the secrets page with the reason controls are off and the server refuses the call",
+          "validation/journeys/portal-settings.portal.test.ts::UX-051 saves an environment change with the keyboard alone and returns focus to the invoker when the dialog is cancelled"
         ],
         "negative": [
-          "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 duplicates, reordered events and events after the terminal result never regress the Run"
+          "validation/journeys/portal-settings.portal.test.ts::VAL-034 SEC-030 only an admin can purge: a maintainer sees why it is off and the server refuses",
+          "apps/web/src/global-ux.test.ts::UX-003 never shows passed for a run that has not completed",
+          "validation/journeys/j16-accessibility.portal.test.ts::J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not"
         ],
         "criticalAssertions": [
           {
-            "path": "apps/web/src/lib/run-timeline.test.ts",
-            "assertion": "    expect(applyEvent(ordered, happyPath[4] as RunEventEnvelope)).toBe(ordered);"
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(refused.status).toBe(403);"
           },
           {
-            "path": "validation/journeys/portal-runs-live.portal.test.ts",
-            "assertion": "    expect(terminal.toLowerCase()).toContain(\"passed\");"
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(create.status).toBe(403);"
           },
           {
-            "path": "validation/journeys/portal-runs-live.portal.test.ts",
-            "assertion": "    expect(gappedReads).toBeGreaterThan(contiguousReads);"
+            "path": "validation/journeys/portal-settings.portal.test.ts",
+            "assertion": "    expect(await banner.getByRole(\"button\", { name: \"Reload latest\" }).count()).toBe(1);"
+          },
+          {
+            "path": "apps/web/src/global-ux.test.ts",
+            "assertion": "    expect(outcome?.display).toBe(\"Unconfirmed\");"
           }
         ]
       },
