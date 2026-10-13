@@ -687,9 +687,14 @@ export class Application {
         environmentId,
         action,
       );
-      const allowed = this.identity
-        ? decision.allowed && decision.granted
-        : rbacMatrix[role][column] === "allow";
+      // Cookie sessions belong to a signed-in human and carry no grants; they use the role
+      // default like the in-process CLI. Bearer tokens still need an explicit named grant.
+      const roleDecides =
+        !this.identity ||
+        ("credential" in this.identity && this.identity.credential.kind === "session");
+      const allowed = roleDecides
+        ? rbacMatrix[role][column] === "allow"
+        : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
           scope: `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets" }[resourceType]}:${action}`,

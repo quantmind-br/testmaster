@@ -1,0 +1,241 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-source-bound-flake",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:36:57.358Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-source-bound-flake",
+        "--base-url",
+        "http://127.0.0.1:46163",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_88f5377f-e0d5-410a-b289-c868d45ff4b1",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b1-c12c-738d-a00d-3a939d04471d",
+    "run_01a135b1-c138-76ed-ae4e-cbdbb249ed1c",
+    "run_01a135b1-ce57-7499-ae65-e51417f22711",
+    "run_01a135b1-ce62-7708-83d5-e99d4dc00f18",
+    "run_01a135b1-c814-709a-becb-2c63b5c948ea",
+    "run_01a135b1-c81f-7350-9914-e887f09838d1",
+    "run_01a135b1-d569-71bf-9084-a14406595512",
+    "run_01a135b1-d572-76df-9742-42ceb20eed14",
+    "run_01a135b1-db7a-76ca-bb14-adca383139fc",
+    "run_01a135b1-deaf-746e-baaf-77bfdd264172",
+    "run_01a135b1-e226-733d-8587-478a58f1e48d",
+    "run_01a135b1-e232-7173-af88-4b802222b950",
+    "run_01a135b1-e86d-724e-af5c-921c887c9564",
+    "run_01a135b1-e879-76ac-8dc1-e9dda660aaba",
+    "run_01a135b1-eebf-7445-934b-6bae63f953d4",
+    "run_01a135b1-eeca-766b-ae39-497c30588eaa"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "independentIntermittentProductCause",
+      "sourceA": "bbb419438cdf88a569ee4713b6b407b77d3eab87",
+      "sourceB": "b9491a9dc6cd76647025823aa33fcb8aa2254b6b",
+      "confirmation": {
+        "mechanism": "alternating response body with HTTP 200",
+        "observations": [
+          "ok",
+          "broken",
+          "ok",
+          "broken"
+        ]
+      },
+      "combined": {
+        "batchId": "bat_01a135b1-ce4a-7638-bddc-bd3953dc897a",
+        "studyIds": [
+          "bat_01a135b1-ce4a-7638-bddc-bd3953dc897a",
+          "bat_01a135b1-c807-7759-a90f-f7a02082631c"
+        ],
+        "testId": "tst_01a135b1-bd83-777b-9562-a69e60ee8be4",
+        "revisionId": "rev_01a135b1-bd89-74a3-b82b-5db50098968b",
+        "environmentRevisionId": "evr_01a135b1-bc48-7362-838d-6e2aa2b24809",
+        "identityHash": "b8e5e516c2b87a6a9771e995f2b39489c3a4d8eb93ce6c2dc393828170753194",
+        "window": {
+          "from": "2026-10-13T14:36:45.972Z",
+          "to": "2026-10-13T14:36:47.586Z"
+        },
+        "counts": {
+          "nPlanned": 4,
+          "nPass": 2,
+          "nFail": 2,
+          "nBlocked": 0,
+          "nCancelled": 0,
+          "nInconclusive": 0,
+          "nValid": 4,
+          "nInFlight": 0
+        },
+        "failureRate": 0.5,
+        "wilson95": {
+          "low": 0.15003570882017148,
+          "high": 0.8499642911798285
+        },
+        "zeroFailureUpper95": null,
+        "classification": "suspected_flaky",
+        "limitations": [
+          "Sample independence requires separate evidence; repeated observations can be correlated",
+          "Independent intermittent-cause evidence is required for confirmed flakiness",
+          "Target fixture reset and independent intermittent-cause evidence are not inferred from repeat count"
+        ],
+        "failureCauses": [
+          {
+            "runId": "run_01a135b1-ce62-7708-83d5-e99d4dc00f18",
+            "attemptId": "att_01a135b1-d1c7-75d5-931d-e0c519557dd7",
+            "stepId": "health_value",
+            "category": "product_or_contract",
+            "reasonCode": "assertion_mismatch",
+            "contentHash": "5ae49ba893e6906bd68574b721e6c0d9818ec4c6fdb7a5ddb6298ec43235f67f"
+          },
+          {
+            "runId": "run_01a135b1-c81f-7350-9914-e887f09838d1",
+            "attemptId": "att_01a135b1-cb1d-75e6-bec6-0626b35123c9",
+            "stepId": "health_value",
+            "category": "product_or_contract",
+            "reasonCode": "assertion_mismatch",
+            "contentHash": "d70876085cbbe3d511c68cfca00e1432c8822064bb10e810aa736ceabcf62301"
+          }
+        ],
+        "runIds": [
+          "run_01a135b1-ce57-7499-ae65-e51417f22711",
+          "run_01a135b1-ce62-7708-83d5-e99d4dc00f18",
+          "run_01a135b1-c814-709a-becb-2c63b5c948ea",
+          "run_01a135b1-c81f-7350-9914-e887f09838d1"
+        ],
+        "incompatible": []
+      },
+      "deterministic": {
+        "batchId": "bat_01a135b1-d55e-7556-ad02-1ce27d625958",
+        "studyIds": [
+          "bat_01a135b1-d55e-7556-ad02-1ce27d625958"
+        ],
+        "testId": "tst_01a135b1-bd83-777b-9562-a69e60ee8be4",
+        "revisionId": "rev_01a135b1-bd89-74a3-b82b-5db50098968b",
+        "environmentRevisionId": "evr_01a135b1-bc48-7362-838d-6e2aa2b24809",
+        "identityHash": "b8e5e516c2b87a6a9771e995f2b39489c3a4d8eb93ce6c2dc393828170753194",
+        "window": {
+          "from": "2026-10-13T14:36:49.385Z",
+          "to": "2026-10-13T14:36:49.394Z"
+        },
+        "counts": {
+          "nPlanned": 2,
+          "nPass": 0,
+          "nFail": 2,
+          "nBlocked": 0,
+          "nCancelled": 0,
+          "nInconclusive": 0,
+          "nValid": 2,
+          "nInFlight": 0
+        },
+        "failureRate": 1,
+        "wilson95": {
+          "low": 0.34237195288961925,
+          "high": 1
+        },
+        "zeroFailureUpper95": null,
+        "classification": "deterministic_failure",
+        "limitations": [
+          "Sample independence requires separate evidence; repeated observations can be correlated",
+          "Target fixture reset and independent intermittent-cause evidence are not inferred from repeat count"
+        ],
+        "failureCauses": [
+          {
+            "runId": "run_01a135b1-d569-71bf-9084-a14406595512",
+            "attemptId": "att_01a135b1-d5ac-7725-a98d-5437578a139d",
+            "stepId": "health_value",
+            "category": "product_or_contract",
+            "reasonCode": "assertion_mismatch",
+            "contentHash": "88828fddf2132c502e17648a90f914e4af5e787a7fd372ffff0637a48c637761"
+          },
+          {
+            "runId": "run_01a135b1-d572-76df-9742-42ceb20eed14",
+            "attemptId": "att_01a135b1-d872-7239-ae0d-e62e93961432",
+            "stepId": "health_value",
+            "category": "product_or_contract",
+            "reasonCode": "assertion_mismatch",
+            "contentHash": "47d7911834569c7c5d43233430ef86d5ab135e9fd6fa9135e29d412fc28cbd54"
+          }
+        ],
+        "runIds": [
+          "run_01a135b1-d569-71bf-9084-a14406595512",
+          "run_01a135b1-d572-76df-9742-42ceb20eed14"
+        ],
+        "incompatible": []
+      },
+      "split": {
+        "batchId": "bat_01a135b1-e219-7553-85f2-c164c0e69d3c",
+        "studyIds": [
+          "bat_01a135b1-e219-7553-85f2-c164c0e69d3c"
+        ],
+        "testId": "tst_01a135b1-bd83-777b-9562-a69e60ee8be4",
+        "revisionId": "rev_01a135b1-bd89-74a3-b82b-5db50098968b",
+        "environmentRevisionId": "evr_01a135b1-bc48-7362-838d-6e2aa2b24809",
+        "identityHash": "d45c8ebf277106bcc99bc452abb3f1028e42956f5ed80db91e9493890c6f6714",
+        "window": {
+          "from": "2026-10-13T14:36:52.646Z",
+          "to": "2026-10-13T14:36:52.658Z"
+        },
+        "counts": {
+          "nPlanned": 2,
+          "nPass": 2,
+          "nFail": 0,
+          "nBlocked": 0,
+          "nCancelled": 0,
+          "nInconclusive": 0,
+          "nValid": 2,
+          "nInFlight": 0
+        },
+        "failureRate": 0,
+        "wilson95": {
+          "low": 0,
+          "high": 0.6576280471103807
+        },
+        "zeroFailureUpper95": 0.7763932022500211,
+        "classification": "passing_observed",
+        "limitations": [
+          "Sample independence requires separate evidence; repeated observations can be correlated",
+          "Target fixture reset and independent intermittent-cause evidence are not inferred from repeat count"
+        ],
+        "failureCauses": [],
+        "runIds": [
+          "run_01a135b1-e226-733d-8587-478a58f1e48d",
+          "run_01a135b1-e232-7173-af88-4b802222b950"
+        ],
+        "incompatible": [
+          {
+            "batchId": "bat_01a135b1-ce4a-7638-bddc-bd3953dc897a",
+            "reasons": [
+              "cohort-identity-changed"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
