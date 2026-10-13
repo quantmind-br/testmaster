@@ -8469,11 +8469,82 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
+        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+        "apps/cli/src/remote.test.ts::M4-01 auth login refuses plain HTTP outside loopback, an empty variable and a token the server rejects",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once"
+      ],
+      "oracle": [
+        "Two organizations share one PostgreSQL database behind the TLS server: tenant B's token, session, MCP tool call and CLI profile receive exactly the response of a missing identifier for tenant A's objects, a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service, and one cancel changes the same persisted Run and revision whether it is sent from the portal API, the remote CLI or MCP.",
+        "The remote CLI stores only a private endpoint profile and token file (0600), refuses plain HTTP outside loopback, and fails every command that has no /v1 route with CAPABILITY_UNAVAILABLE naming it; a revoked token ends on all three surfaces at once."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
+        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log"
+      ],
+      "code": [
+        "apps/cli/src/remote.ts",
+        "apps/server/src/server.ts",
+        "packages/application/src/local-auth.ts",
+        "packages/persistence/migrations/postgres/0011_tenant_rls.sql",
+        "packages/evidence/src/store.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+          "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
+          "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's"
+        ],
+        "negative": [
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
+          "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+          "apps/cli/src/remote.test.ts::M4-01 auth login refuses plain HTTP outside loopback, an empty variable and a token the server rejects",
+          "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "      expect(scrub(foreign.text), `B ${path}`).toBe(scrub(unknown.text));"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.docker.test.ts",
+            "assertion": "    expect(found.read_b_evidence).toBe(\"error:ENOENT\");"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.docker.test.ts",
+            "assertion": "    expect(bRequests).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "      expect(after.mcp, `${surface} after`).toEqual(after.portal);"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "    expect(mcp.status).toBe(401);"
+          },
+          {
+            "path": "apps/cli/src/remote.test.ts",
+            "assertion": "    expect((await stat(tokenPath)).mode & 0o777).toBe(0o600);"
+          },
+          {
+            "path": "apps/cli/src/remote.test.ts",
+            "assertion": "    expect(plain.document.error?.code).toBe(\"INVALID_ARGUMENT\");"
+          }
+        ]
+      },
+      "note": "M4-01 verified for the PostgreSQL plus filesystem server profile on one host; S3-compatible storage is not claimed (ADR-016). Tenant isolation is proven by the RLS role, workspace-bound identities, signed cursors bound to principal and path, per-tenant idempotency and workspace-scoped evidence paths."
     },
     {
       "id": "M4-02",
@@ -9247,10 +9318,14 @@
         "packages/sandbox/src/attempt/adversarial.docker.test.ts::blocks service-worker registration rather than permitting a worker fetch bypass",
         "packages/sandbox/src/attempt/adversarial.docker.test.ts::controller withholds compromised runner PII corpus and malformed JSON with no raw fallback",
         "packages/evidence/src/evidence.test.ts::refuses path, hardlink, symlink and swapped ancestor escapes",
-        "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA"
+        "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA",
+        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+        "packages/application/src/tenancy.pg.test.ts::SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows"
       ],
       "oracle": [
-        "Hostile target host, malicious runner code, path escape and DNS rebinding are blocked by sandbox, supervisor and evidence-root enforcement, each with an approved positive control."
+        "Hostile target host, malicious runner code, path escape and DNS rebinding are blocked by sandbox, supervisor and evidence-root enforcement, each with an approved positive control.",
+        "Cross-tenant isolation of hostile execution on the PostgreSQL server profile: tenant A's sandboxed attempt cannot read tenant B's evidence, secret or network service, and B's evidence tree is byte-identical afterwards; a raw SELECT scoped to A never returns B's rows."
       ],
       "evidence": [
         "packages/sandbox/src/docker/isolation.docker.test.ts",
@@ -9258,24 +9333,30 @@
         "packages/evidence/src/evidence.test.ts",
         "packages/sandbox/src/egress/proxy.test.ts",
         "validation/results/sandbox-adversarial.json",
-        "docs/security/threat-model.md"
+        "docs/security/threat-model.md",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
+        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log"
       ],
       "code": [
         "packages/sandbox/src/docker/executor.ts",
         "packages/sandbox/src/egress/proxy.ts",
-        "packages/evidence/src/path.ts"
+        "packages/evidence/src/path.ts",
+        "packages/persistence/migrations/postgres/0011_tenant_rls.sql"
       ],
-      "note": "Single-user local profile. Malicious host, code, path escape and DNS rebinding are exercised; cross-tenant hostile execution is deferred to M4 (SEC-030).",
+      "note": "Single-user local profile. Malicious host, code, path escape and DNS rebinding are exercised; cross-tenant hostile execution is deferred to M4 (SEC-030). M4 proved cross-tenant isolation of hostile execution on the PostgreSQL server profile with Docker sandboxes (tenant-isolation.docker.test.ts).",
       "coverage": {
         "positive": [
           "packages/sandbox/src/docker/isolation.docker.test.ts::reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access",
-          "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA"
+          "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier"
         ],
         "negative": [
           "packages/sandbox/src/attempt/adversarial.docker.test.ts::blocks service-worker registration rather than permitting a worker fetch bypass",
           "packages/sandbox/src/attempt/adversarial.docker.test.ts::controller withholds compromised runner PII corpus and malformed JSON with no raw fallback",
           "packages/evidence/src/evidence.test.ts::refuses path, hardlink, symlink and swapped ancestor escapes",
-          "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA"
+          "packages/sandbox/src/egress/proxy.test.ts::pins vetted DNS, rechecks subsequent sockets and refuses mixed A/AAAA",
+          "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+          "packages/application/src/tenancy.pg.test.ts::SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows"
         ],
         "criticalAssertions": [
           {
@@ -9289,19 +9370,21 @@
           {
             "path": "packages/sandbox/src/attempt/adversarial.docker.test.ts",
             "assertion": "expect(network).toContain(\"Service Worker registration blocked\");"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.docker.test.ts",
+            "assertion": "    expect(found.read_b_evidence).toBe(\"error:ENOENT\");"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.docker.test.ts",
+            "assertion": "    expect(bRequests).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "      expect(Number(foreign?.n), `${table} leaks rows of another workspace`).toBe(0);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Cross-tenant isolation of hostile execution; the local single-user profile is the only enabled profile through M3.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "**SEC-030 — Isolamento multi-tenant (M4–M5).**"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "NFR-004",
@@ -11652,16 +11735,20 @@
         "packages/application/src/governance-runtime.test.ts::propagates one correlation through durable admission and attempt logs without serializing secret fields",
         "validation/journeys/governance-ops.docker.test.ts::OPS027 actual loopback API remains available during a bounded diagnostic log flood",
         "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox",
-        "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request"
+        "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request",
+        "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid"
       ],
       "oracle": [
-        "One correlation ID is observable on the admitted Run, the worker log, the published Artifact and the run.completed outbox event; logs never carry the secret canary; a supplied correlation ID never authorizes; real file rotation/14 day expiry/flood drop and 300 concurrent loopback GETs succeed."
+        "One correlation ID is observable on the admitted Run, the worker log, the published Artifact and the run.completed outbox event; logs never carry the secret canary; a supplied correlation ID never authorizes; real file rotation/14 day expiry/flood drop and 300 concurrent loopback GETs succeed.",
+        "A remote CLI command sends X-Correlation-ID; the same ID is the Run's matrix-cell correlation and every audit event of the request, and a different request carries a different server request ID."
       ],
       "evidence": [
         "packages/application/src/observability.test.ts",
         "packages/application/src/governance-runtime.test.ts",
         "validation/journeys/governance-ops.docker.test.ts",
-        "apps/server/src/server.test.ts"
+        "apps/server/src/server.test.ts",
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log"
       ],
       "code": [
         "packages/application/src/observability.ts",
@@ -11671,19 +11758,23 @@
         "packages/persistence/src/repositories.ts",
         "apps/server/src/server.ts",
         "apps/cli/src/runtime.ts",
-        "apps/mcp/src/server.ts"
+        "apps/mcp/src/server.ts",
+        "apps/cli/src/remote.ts"
       ],
-      "note": "Local chain verified end to end by a real CLI Run (Run, worker log, Artifact, outbox). CLI to API remote transport and the telemetry/log export policy are M4; the zero-network recorder is owned by the network-boundary journey.",
+      "note": "Local chain verified end to end by a real CLI Run (Run, worker log, Artifact, outbox). CLI to API remote transport and the telemetry/log export policy are M4; the zero-network recorder is owned by the network-boundary journey. M4 proved the CLI to API correlation chain over the remote endpoint profile (remote.test.ts).",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::propagates one correlation through durable admission and attempt logs without serializing secret fields",
           "validation/journeys/governance-ops.docker.test.ts::OPS027 actual loopback API remains available during a bounded diagnostic log flood",
-          "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox"
+          "validation/journeys/governance-ops.docker.test.ts::OPS027 one CLI correlation ID links the admitted Run, worker log, Artifact and outbox",
+          "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell",
+          "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid"
         ],
         "negative": [
           "packages/application/src/observability.test.ts::generates safe IDs and denies overlong or injected correlation before use",
           "apps/server/src/server.test.ts::a supplied correlation ID never authorizes a request",
-          "packages/application/src/observability.test.ts::drops excess log flood immediately and serializes only the safe metadata allowlist"
+          "packages/application/src/observability.test.ts::drops excess log flood immediately and serializes only the safe metadata allowlist",
+          "apps/cli/src/remote.test.ts::OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell"
         ],
         "criticalAssertions": [
           {
@@ -11705,18 +11796,18 @@
           {
             "path": "apps/server/src/server.test.ts",
             "assertion": "expect((await f.app.inject({ url: \"/v1/projects\", headers })).statusCode).toBe(401);"
+          },
+          {
+            "path": "apps/cli/src/remote.test.ts",
+            "assertion": "    expect(audited.every((entry) => entry.correlationId === correlationId)).toBe(true);"
+          },
+          {
+            "path": "apps/cli/src/remote.test.ts",
+            "assertion": "    expect(run.matrixCell.correlationId).toBe(correlationId);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "CLI to API remote endpoint correlation chain (server profile)",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "M4; multiusuário exige controles SEC"
-          }
-        },
         {
           "milestone": "M4",
           "scope": "Telemetry and log export policy",
@@ -12025,10 +12116,13 @@
         "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
         "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
         "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree",
-        "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider"
+        "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider",
+        "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
+        "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request"
       ],
       "oracle": [
-        "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only."
+        "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only.",
+        "The portal grant editor issues allow and deny grants by resource type, actions, projects, environments and expiry, lists them, and the server refuses grants beyond the issuer; the member editor changes roles with If-Match and refuses self-promotion."
       ],
       "evidence": [
         "docs/operations/local-operations.md",
@@ -12036,27 +12130,34 @@
         "packages/application/src/governance-runtime.test.ts",
         "packages/application/src/audit.test.ts",
         "validation/journeys/runtime-control.docker.test.ts",
-        "validation/journeys/recovery-controls.docker.test.ts"
+        "validation/journeys/recovery-controls.docker.test.ts",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
       ],
       "code": [
         "docs/operations/local-operations.md",
         "apps/cli/src/cli.ts",
         "packages/application/src/worker.ts",
         "packages/application/src/application.ts",
-        "packages/application/src/secrets.ts"
+        "packages/application/src/secrets.ts",
+        "apps/web/src/team/tokens.tsx",
+        "apps/web/src/team/members.tsx",
+        "apps/web/src/routes/team.tsx"
       ],
-      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces.",
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts).",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
           "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
-          "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree"
+          "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree",
+          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
+          "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request"
         ],
         "negative": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
           "packages/application/src/governance-runtime.test.ts::refuses a viewer image revocation and secret removal without changing revocation state",
-          "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider"
+          "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider",
+          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer"
         ],
         "criticalAssertions": [
           {
@@ -12078,6 +12179,14 @@
           {
             "path": "apps/cli/src/runbook.test.ts",
             "assertion": "expect(section).toContain(\"Resumption decider\");"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(await row.innerText()).toContain(\"allow read+execute on Run (1 project(s))\");"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(overGrant.status).toBe(403);"
           }
         ]
       },
@@ -14807,11 +14916,63 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+        "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+        "apps/server/src/team.test.ts::SEC-027 list filters and batch operations stay inside the member's project restrictions",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 every role and column follows the matrix and an explicit grant widens grant-only cells only",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it",
+        "validation/journeys/team.portal.test.ts::UX-005 the permission table follows the role: a maintainer holds everything except administration, an owner holds everything"
+      ],
+      "oracle": [
+        "An owner adds a member in the portal, shares the one-time recovery token, changes the role with If-Match and removes the member, each as one request; each role gets the matrix answer on read, write, execute, secret and admin routes and a project-restricted member sees only its own projects in lists and batches."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+      ],
+      "code": [
+        "packages/contracts/src/rbac.ts",
+        "packages/application/src/team.ts",
+        "apps/web/src/team/members.tsx",
+        "apps/web/src/routes/team.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+          "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 every role and column follows the matrix and an explicit grant widens grant-only cells only",
+          "validation/journeys/team.portal.test.ts::UX-005 the permission table follows the role: a maintainer holds everything except administration, an owner holds everything"
+        ],
+        "negative": [
+          "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+          "apps/server/src/team.test.ts::SEC-027 list filters and batch operations stay inside the member's project restrictions",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(selfChange.status).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(await save.isDisabled()).toBe(true);"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "          expect(response.statusCode, `${role}/${column}`).toBe(403);"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "    expect(batches()).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/rbac-matrix.test.ts",
+            "assertion": "    expect(cells).toBe(roleNames.length * rbacColumns.length);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-040",
@@ -16526,28 +16687,35 @@
         "packages/runner/src/browser.test.ts::keeps a proven assertion failure when a later revocation cancels the attempt",
         "packages/runner/src/browser.test.ts::refuses storage-state input as unsupported before launching Chromium",
         "packages/runner/src/http.test.ts::refuses storage-state input as unsupported before any HTTP request",
-        "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+        "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects",
+        "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B"
       ],
       "oracle": [
-        "Credential positive/negative independent HTTP controls; fresh browser cookies at each new Attempt and different target; absent secret reference blocks before typing; Chromium launches with the basic password store and mock keychain; storage-state input is refused as unsupported before any browser or HTTP effect."
+        "Credential positive/negative independent HTTP controls; fresh browser cookies at each new Attempt and different target; absent secret reference blocks before typing; Chromium launches with the basic password store and mock keychain; storage-state input is refused as unsupported before any browser or HTTP effect.",
+        "A secret or auth profile of one organization can never be referenced, listed, deleted or shadowed from another, by identifier or by name; the same name resolves to each organization's own secret."
       ],
       "evidence": [
         "validation/journeys/browser-matrix.docker.test.ts",
         "packages/runner/src/browser.test.ts",
         "packages/runner/src/http.test.ts",
-        "docs/security/threat-model.md"
+        "docs/security/threat-model.md",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
       ],
       "code": [
         "packages/runner/src/browser.ts",
         "packages/runner/src/http.ts",
-        "packages/runner/src/runtime.ts"
+        "packages/runner/src/runtime.ts",
+        "packages/application/src/secrets.ts",
+        "packages/persistence/migrations/postgres/0011_tenant_rls.sql"
       ],
-      "note": "Static secret bindings, form login, cookie non-reuse, cross-origin credential stripping, absent-secret blocking and password-store/keychain isolation verified; the flags are asserted at the launch boundary, not against a running host password manager. Storage-state input is refused as unsupported_capability; import, TTL and reauthentication are deferred to M4.",
+      "note": "Static secret bindings, form login, cookie non-reuse, cross-origin credential stripping, absent-secret blocking and password-store/keychain isolation verified; the flags are asserted at the launch boundary, not against a running host password manager. Storage-state input is refused as unsupported_capability; import, TTL and reauthentication are deferred to M4. M4 proved that credentials are never shared across organizations (tenancy.pg.test.ts, tenant-isolation.pg.test.ts).",
       "coverage": {
         "positive": [
           "validation/journeys/browser-matrix.docker.test.ts::executes all six static authentication bindings against independent HTTP oracles",
           "validation/journeys/browser-matrix.docker.test.ts::captures real frame, popup, upload/download, hook/wait and opt-in evidence channels",
-          "packages/runner/src/browser.test.ts::launches Chromium with explicit password-store and keychain isolation and no default-arg override"
+          "packages/runner/src/browser.test.ts::launches Chromium with explicit password-store and keychain isolation and no default-arg override",
+          "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name"
         ],
         "negative": [
           "validation/journeys/browser-matrix.docker.test.ts::never reuses cookie/profile state between attempts or staging and production targets",
@@ -16555,7 +16723,9 @@
           "packages/runner/src/browser.test.ts::keeps a proven assertion failure when a later revocation cancels the attempt",
           "packages/runner/src/browser.test.ts::refuses storage-state input as unsupported before launching Chromium",
           "packages/runner/src/http.test.ts::refuses storage-state input as unsupported before any HTTP request",
-          "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+          "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects",
+          "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B"
         ],
         "criticalAssertions": [
           {
@@ -16577,6 +16747,14 @@
           {
             "path": "packages/runner/src/http.test.ts",
             "assertion": "expect(observed.authorization).toBeUndefined();"
+          },
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "    expect(() => t.a.secrets.get(t.dataB.secret.id)).toThrowError(\n      expect.objectContaining({ code: \"NOT_FOUND\" }),\n    );"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(deleted.status).toBe(404);"
           }
         ]
       },
@@ -16587,14 +16765,6 @@
           "specQuote": {
             "path": "specs/07-security.md",
             "text": "checkpoint autorizado em M4"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "Cross-organization credential sharing.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "**SEC-030 — Isolamento multi-tenant (M4–M5).**"
           }
         }
       ]
@@ -16721,11 +16891,87 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M4",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 every role and column follows the matrix and an explicit grant widens grant-only cells only",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 the permissions reported to a caller equal the matrix for that role",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 an authorization refusal is audited with the denied scope and no secret payload",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it",
+        "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+        "apps/server/src/team.test.ts::SEC-027 a request body naming another organization or workspace is refused and creates nothing",
+        "apps/server/src/team.test.ts::SEC-027 list filters and batch operations stay inside the member's project restrictions",
+        "packages/application/src/tenancy.pg.test.ts::SEC-027 a Run admitted by an actor whose credential was revoked ends blocked with actor_revoked",
+        "packages/application/src/tenancy.pg.test.ts::SEC-027 demoting the admitting member between admission and claim blocks the Run, a still-allowed member keeps running",
+        "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer"
+      ],
+      "oracle": [
+        "Every role crosses every permission column through the application and HTTP: allow cells pass, deny cells and grant-only cells without a grant are refused and audited with the denied scope; an explicit grant widens only grant-only cells and a deny grant always narrows.",
+        "A request body naming another workspace is refused and creates nothing; filters and batches stay inside project restrictions; a token never exceeds its issuer; a Run admitted by an actor that was revoked or demoted before claim ends blocked/actor_revoked while a still-authorized member keeps running."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+      ],
+      "code": [
+        "packages/contracts/src/rbac.ts",
+        "packages/application/src/application.ts",
+        "packages/application/src/local-auth.ts",
+        "packages/application/src/team.ts",
+        "packages/application/src/worker.ts",
+        "apps/server/src/server.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 every role and column follows the matrix and an explicit grant widens grant-only cells only",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 the permissions reported to a caller equal the matrix for that role",
+          "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+          "packages/application/src/tenancy.pg.test.ts::SEC-027 demoting the admitting member between admission and claim blocks the Run, a still-allowed member keeps running",
+          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer"
+        ],
+        "negative": [
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 every role and column follows the matrix and an explicit grant widens grant-only cells only",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 an authorization refusal is audited with the denied scope and no secret payload",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it",
+          "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+          "apps/server/src/team.test.ts::SEC-027 a request body naming another organization or workspace is refused and creates nothing",
+          "apps/server/src/team.test.ts::SEC-027 list filters and batch operations stay inside the member's project restrictions",
+          "packages/application/src/tenancy.pg.test.ts::SEC-027 a Run admitted by an actor whose credential was revoked ends blocked with actor_revoked"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/rbac-matrix.test.ts",
+            "assertion": "        expect(attempt(as(role), column), `${role}/${column} without grants`).toBe(\n          value === \"allow\" ? \"allowed\" : \"denied\",\n        );"
+          },
+          {
+            "path": "packages/application/src/rbac-matrix.test.ts",
+            "assertion": "    expect(cells).toBe(roleNames.length * rbacColumns.length);"
+          },
+          {
+            "path": "packages/application/src/rbac-matrix.test.ts",
+            "assertion": "    expect(() => narrowed.context.authorize(\"W\")).toThrowError(\n      expect.objectContaining({ code: \"FORBIDDEN\" }),\n    );"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "          expect(response.statusCode, `${role}/${column}`).toBe(403);"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "      expect(refused.statusCode, field).toBe(answer.status);"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "    expect(f.application.projects.list()).toHaveLength(before);"
+          },
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "    expect(t.a.runs.get(receipt.runId)).toMatchObject({ phase: \"completed\", status: \"blocked\" });"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(overGrant.text).toContain(\"Requested grants exceed current issuer grants\");"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-028",
@@ -16757,11 +17003,113 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M4",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/tenancy.pg.test.ts::SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows",
+        "packages/application/src/tenancy.pg.test.ts::SEC-030 a tenant cannot read, list, stream or cancel another tenant's objects by identifier",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 list filters and cursors never cross the tenant boundary",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 an event stream of tenant A's Run is not served to tenant B",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 an idempotency key is scoped to the tenant that sent it",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 identical artifact bytes in two tenants stay in separate workspace-scoped blobs",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B",
+        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service"
+      ],
+      "oracle": [
+        "A raw SELECT through a connection scoped to workspace A returns zero rows of workspace B on every workspace_id table; tenant B cannot read, list, stream, cancel, page, condition on, deduplicate against or download tenant A's objects through REST, SSE, MCP, CLI, cache headers, idempotency keys or artifact blobs, and every foreign probe is byte-identical to a missing identifier.",
+        "A hostile attempt of tenant A runs with only its own evidence mounted: it cannot read tenant B's evidence, secret or network service."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
+        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log"
+      ],
+      "code": [
+        "packages/persistence/migrations/postgres/0011_tenant_rls.sql",
+        "packages/persistence/src/database.ts",
+        "packages/persistence/src/repositories.ts",
+        "packages/application/src/http-support.ts",
+        "packages/evidence/src/store.ts",
+        "apps/server/src/server.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/tenancy.pg.test.ts::SEC-030 a tenant cannot read, list, stream or cancel another tenant's objects by identifier",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 list filters and cursors never cross the tenant boundary",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 identical artifact bytes in two tenants stay in separate workspace-scoped blobs"
+        ],
+        "negative": [
+          "packages/application/src/tenancy.pg.test.ts::SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 list filters and cursors never cross the tenant boundary",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 an event stream of tenant A's Run is not served to tenant B",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 an idempotency key is scoped to the tenant that sent it",
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B",
+          "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "      expect(Number(foreign?.n), `${table} leaks rows of another workspace`).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "    expect(t.a.runs.list().map((run) => run.id)).toEqual([t.dataA.run.runId]);"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "      expect(scrub(foreign.text), `B ${path}`).toBe(scrub(unknown.text));"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(reusedByB.status).toBe(400);"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(scrub(foreign.body)).toBe(scrub(unknown.body));"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "      expect(foreign.raw).not.toContain(a.projectId);"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(foreign.document.error?.code).toBe(\"NOT_FOUND\");"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(String(own.headers.vary).toLowerCase()).toContain(\"authorization\");"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(envelope(other).data?.id).not.toBe(envelope(first).data?.id);"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.pg.test.ts",
+            "assertion": "    expect(keyA.startsWith(`runs/${a.workspaceId}/`)).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/tenant-isolation.docker.test.ts",
+            "assertion": "    expect(found.env_has_b_secret).toBe(\"false\");"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "S3-compatible shared storage keys and IAM isolation between tenants (service identities, TLS/mTLS, leases and fencing); M4 proves PostgreSQL plus filesystem evidence storage on one host.",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
+          }
+        }
+      ],
+      "note": "SEC-030 verified for PostgreSQL with row-level security plus filesystem evidence on one host. S3 keys and IAM are not claimed."
     },
     {
       "id": "SEC-031",
@@ -17289,10 +17637,13 @@
         "packages/application/src/retention.test.ts::keeps audit rows and revoked secret tombstones when artifact bytes are collected",
         "packages/application/src/retention.test.ts::does not retain bytes merely because another artifact records the same hash",
         "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
-        "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched"
+        "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
+        "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
+        "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data"
       ],
       "oracle": [
-        "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission."
+        "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission.",
+        "A user's audit export and report export on a two-organization PostgreSQL database never include the other organization's workspace, ids, principals or secret values, and a report export of another organization's Run is refused with nothing written."
       ],
       "evidence": [
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
@@ -17301,12 +17652,14 @@
         "validation/journeys/m3-ci.docker.test.ts",
         "packages/application/src/retention.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-artifact-privacy.json",
-        "packages/application/src/audit.test.ts"
+        "packages/application/src/audit.test.ts",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
       ],
       "code": [
         "packages/application/src/retention.ts",
         "packages/application/src/backups.ts",
-        "packages/application/src/artifacts.ts"
+        "packages/application/src/artifacts.ts",
+        "packages/application/src/audit.ts"
       ],
       "coverage": {
         "positive": [
@@ -17315,7 +17668,9 @@
           "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
           "packages/application/src/retention.test.ts::keeps audit rows and revoked secret tombstones when artifact bytes are collected",
-          "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched"
+          "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
+          "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
+          "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data"
         ],
         "negative": [
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
@@ -17324,7 +17679,9 @@
           "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
           "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
           "packages/application/src/retention.test.ts::does not retain bytes merely because another artifact records the same hash",
-          "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies"
+          "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
+          "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
+          "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data"
         ],
         "criticalAssertions": [
           {
@@ -17378,6 +17735,14 @@
           {
             "path": "packages/application/src/audit.test.ts",
             "assertion": "expect(JSON.stringify(rows)).not.toContain(contact);"
+          },
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "      expect(exportA.bytes, `A's export leaked ${foreign}`).not.toContain(foreign);"
+          },
+          {
+            "path": "packages/application/src/tenancy.pg.test.ts",
+            "assertion": "    await expect(t.a.reports.export(t.dataB.run.runId, \"json\", outB)).rejects.toMatchObject({\n      code: \"NOT_FOUND\",\n    });"
           }
         ]
       },
@@ -17391,7 +17756,7 @@
           }
         }
       ],
-      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name)."
+      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name). M4 added multi-organization export isolation (tenancy.pg.test.ts); retention windows remain with the operations slice."
     },
     {
       "id": "SEC-038",
@@ -17452,30 +17817,45 @@
         "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer",
         "packages/application/src/approvals.test.ts::defaults an execution approval to a 30-minute window",
         "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval",
-        "apps/mcp/src/mcp.test.ts::exposes no MCP tool that creates or revokes approvals"
+        "apps/mcp/src/mcp.test.ts::exposes no MCP tool that creates or revokes approvals",
+        "packages/application/src/approval-policy.test.ts::SEC-039 two independent approvers: one approval, a repeat and the requester never admit the action",
+        "packages/application/src/approval-policy.test.ts::SEC-039 separation of duties alone keeps one independent approver sufficient",
+        "packages/application/src/approval-policy.test.ts::SEC-039 duplicate rows and a disabled second reviewer never satisfy two approvers",
+        "packages/application/src/approval-policy.test.ts::SEC-039 cleanup compensation needs the same independent approvals",
+        "packages/application/src/approval-policy.test.ts::SEC-039 policy is validated, versioned, audited and defaults to a single approver",
+        "apps/server/src/team.test.ts::SEC-039 reads the default policy, changes it with If-Match and refuses non-admins and bad values"
       ],
       "oracle": [
         "Real owned-account DELETE occurs exactly once under bound approval, leaving sibling intact and audit verified/consumed request_id equal to admitted Run. Missing/body/environment/consumed/rotated-credential approvals refuse before target recorder advances.",
-        "Every new approval stores a 1 to 200 character reason, defaults to a 30-minute window, and no MCP tool creates or revokes approvals; rows stored before the reason field stay readable and usable."
+        "Every new approval stores a 1 to 200 character reason, defaults to a 30-minute window, and no MCP tool creates or revokes approvals; rows stored before the reason field stay readable and usable.",
+        "With approvals.requiredApprovers=2 and separationOfDuties, one independent approval, a repeated approver and the requester are refused and nothing is consumed; two distinct humans other than the requester admit the action once and both approvals are consumed, also for cleanup compensation, over the application service and the HTTP policy route."
       ],
       "evidence": [
         "packages/application/src/approvals.test.ts",
         "validation/journeys/m3-live-security-acceptance.docker.test.ts",
         "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-bound-destructive-approval.json",
-        "apps/mcp/src/mcp.test.ts"
+        "apps/mcp/src/mcp.test.ts",
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log"
       ],
       "code": [
         "packages/application/src/approvals.ts",
         "packages/contracts/src/catalog.ts",
         "packages/contracts/src/entities.ts",
-        "apps/cli/src/approvals.ts"
+        "apps/cli/src/approvals.ts",
+        "apps/server/src/routes/audit.ts",
+        "packages/contracts/src/m4/audit.ts"
       ],
       "coverage": {
         "positive": [
           "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
           "packages/application/src/approvals.test.ts::denies a destructive GET declared read, binds approval and consumes it once",
           "packages/application/src/approvals.test.ts::defaults an execution approval to a 30-minute window",
-          "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval"
+          "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval",
+          "packages/application/src/approval-policy.test.ts::SEC-039 two independent approvers: one approval, a repeat and the requester never admit the action",
+          "packages/application/src/approval-policy.test.ts::SEC-039 separation of duties alone keeps one independent approver sufficient",
+          "packages/application/src/approval-policy.test.ts::SEC-039 cleanup compensation needs the same independent approvals",
+          "packages/application/src/approval-policy.test.ts::SEC-039 policy is validated, versioned, audited and defaults to a single approver",
+          "apps/server/src/team.test.ts::SEC-039 reads the default policy, changes it with If-Match and refuses non-admins and bad values"
         ],
         "negative": [
           "validation/journeys/m3-live-security-acceptance.docker.test.ts::SEC-039 exact destructive approval permits one audited effect and rejects body/environment/credential/reuse before requests",
@@ -17484,7 +17864,10 @@
           "packages/application/src/approvals.test.ts::refuses credential rotation after approval without consuming it",
           "packages/application/src/approvals.test.ts::rejects expired approval and service reviewer/spoofed reviewer",
           "packages/application/src/approvals.test.ts::requires a non-empty reason and stores it on the approval",
-          "apps/mcp/src/mcp.test.ts::exposes no MCP tool that creates or revokes approvals"
+          "apps/mcp/src/mcp.test.ts::exposes no MCP tool that creates or revokes approvals",
+          "packages/application/src/approval-policy.test.ts::SEC-039 two independent approvers: one approval, a repeat and the requester never admit the action",
+          "packages/application/src/approval-policy.test.ts::SEC-039 duplicate rows and a disabled second reviewer never satisfy two approvers",
+          "packages/application/src/approval-policy.test.ts::SEC-039 cleanup compensation needs the same independent approvals"
         ],
         "criticalAssertions": [
           {
@@ -17526,20 +17909,26 @@
           {
             "path": "apps/mcp/src/mcp.test.ts",
             "assertion": "expect(names.filter((name) => /approv|revoke/.test(name))).toEqual([\n    \"testmaster_approve_healing\",\n  ]);"
+          },
+          {
+            "path": "packages/application/src/approval-policy.test.ts",
+            "assertion": "    expect(short.details).toMatchObject({\n      reasonCode: \"approval_required\",\n      requiredApprovers: 2,\n      separationOfDuties: true,\n    });"
+          },
+          {
+            "path": "packages/application/src/approval-policy.test.ts",
+            "assertion": "    expect(self.details).toMatchObject({ reason: \"separation_of_duties\" });"
+          },
+          {
+            "path": "packages/application/src/approval-policy.test.ts",
+            "assertion": "    expect(world.executor.verify(world.run, world.test, world.env)?.id).toBe(open.id);"
+          },
+          {
+            "path": "packages/application/src/approval-policy.test.ts",
+            "assertion": "    expect(events).toEqual([{ actor: world.requesterId, resource_id: world.project.id }]);"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Dual independent approvers and separation-of-duties policy acceptance.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "**SEC-039 — Aprovação vinculada e sem TOCTOU (M3–M4).**"
-          }
-        }
-      ],
-      "note": "Exact destructive approval, body, environment, credential and single-use binding with audit-to-effect correlation, a required human-entered reason and the 30-minute default window verified. Dual approvers and separation of duties are deferred to M4 and not claimed. The m3-bound-destructive-approval evidence file predates the reason field and is refreshed by the next docker run."
+      "note": "Exact destructive approval, body, environment, credential and single-use binding with audit-to-effect correlation, a required human-entered reason and the 30-minute default window verified. Dual approvers and separation of duties are deferred to M4 and not claimed. The m3-bound-destructive-approval evidence file predates the reason field and is refreshed by the next docker run. M4 enforced dual independent approvers and separation of duties as a per-project policy (approval-policy.test.ts, team.test.ts)."
     },
     {
       "id": "SEC-040",
@@ -17946,11 +18335,62 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 UX-005 a viewer is refused the same operation on every surface, and the Run keeps its state and revision",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
+        "validation/journeys/team.portal.test.ts::UX-005 UX-001 a viewer sees every permission with its reason, disabled controls explain themselves and the server refuses the same actions"
+      ],
+      "oracle": [
+        "The same Run is cancelled through the portal session, the remote CLI profile and MCP HTTP, each as one revision step visible as the same ETag, status, phase and gate on every surface; repeating from another surface is the same already_terminal no-op, a viewer is refused identically on all of them and leaves state and revision untouched, and revoking a token ends it on all of them at once."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+      ],
+      "code": [
+        "apps/cli/src/remote.ts",
+        "apps/server/src/server.ts",
+        "apps/mcp/src/server.ts",
+        "validation/journeys/surface-clients.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
+          "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+          "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
+          "validation/journeys/team.portal.test.ts::UX-005 UX-001 a viewer sees every permission with its reason, disabled controls explain themselves and the server refuses the same actions"
+        ],
+        "negative": [
+          "validation/journeys/surfaces.pg.test.ts::UX-001 UX-005 a viewer is refused the same operation on every surface, and the Run keeps its state and revision",
+          "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "      expect(after.mcp, `${surface} after`).toEqual(after.portal);"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "    expect(repeatedCli.document.data?.result).toBe(\"already_terminal\");"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "    expect(stored(runId)).toEqual(before);"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "    expect(cli.document.error?.code).toBe(\"FORBIDDEN\");"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "    expect(mcp.status).toBe(401);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-002",
@@ -18050,11 +18490,66 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/team.portal.test.ts::UX-005 UX-001 a viewer sees every permission with its reason, disabled controls explain themselves and the server refuses the same actions",
+        "validation/journeys/team.portal.test.ts::UX-005 the permission table follows the role: a maintainer holds everything except administration, an owner holds everything",
+        "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+        "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
+        "validation/journeys/team.portal.test.ts::UX-005 UX-050 M4-04 every request of the team and audit pages is a catalog /v1 route, and hostile display names render as inert text",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 UX-005 a viewer is refused the same operation on every surface, and the Run keeps its state and revision"
+      ],
+      "oracle": [
+        "The portal shows read, author, approve, execute, manage-secrets, export and administer as separate permissions of the signed-in role; a missing one stays visible and focusable as a disabled control with its reason bound by aria-describedby, the admin-only API calls are not issued for it, and the server refuses the same actions with 403.",
+        "Maintainers hold everything except administration, owners everything; approve is human-only; a token or grant beyond the issuer is refused by the server."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+      ],
+      "code": [
+        "apps/web/src/team/permissions.tsx",
+        "apps/web/src/team/tokens.tsx",
+        "apps/web/src/routes/team.tsx",
+        "packages/contracts/src/rbac.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/team.portal.test.ts::UX-005 the permission table follows the role: a maintainer holds everything except administration, an owner holds everything",
+          "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it"
+        ],
+        "negative": [
+          "validation/journeys/team.portal.test.ts::UX-005 UX-001 a viewer sees every permission with its reason, disabled controls explain themselves and the server refuses the same actions",
+          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
+          "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it",
+          "validation/journeys/surfaces.pg.test.ts::UX-001 UX-005 a viewer is refused the same operation on every surface, and the Run keeps its state and revision"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(await add.getAttribute(\"aria-disabled\")).toBe(\"true\");"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(diagnostics.requests.filter((entry) => entry.includes(\"/members\"))).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(await text(asMaintainer.page, \"Administer\")).toContain(\"Not allowed\");"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(overScope.status).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/surfaces.pg.test.ts",
+            "assertion": "    expect(stored(runId)).toEqual(before);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-006",
@@ -19879,11 +20374,60 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/server/src/team.test.ts::UX-050 filters by actor kind, operation, outcome and correlation ID without exposing secret values",
+        "apps/server/src/team.test.ts::UX-050 pages with a signed cursor bound to the filters and refuses a viewer",
+        "validation/journeys/team.portal.test.ts::UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret",
+        "validation/journeys/team.portal.test.ts::UX-005 UX-050 M4-04 every request of the team and audit pages is a catalog /v1 route, and hostile display names render as inert text"
+      ],
+      "oracle": [
+        "The admin-only audit trail lists actor kind (human, agent, integration), operation, outcome, scope and correlation ID; filters by actor kind, operation, outcome, correlation and time, cursor-pages with a signed cursor bound to principal, path and filters, refuses viewers, and no secret or recovery token value appears in the API or the portal page; filters live in the URL."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+      ],
+      "code": [
+        "packages/application/src/audit.ts",
+        "apps/server/src/routes/audit.ts",
+        "apps/web/src/routes/audit.tsx",
+        "packages/contracts/src/m4/audit.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/server/src/team.test.ts::UX-050 filters by actor kind, operation, outcome and correlation ID without exposing secret values",
+          "apps/server/src/team.test.ts::UX-050 pages with a signed cursor bound to the filters and refuses a viewer",
+          "validation/journeys/team.portal.test.ts::UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret"
+        ],
+        "negative": [
+          "apps/server/src/team.test.ts::UX-050 filters by actor kind, operation, outcome and correlation ID without exposing secret values",
+          "apps/server/src/team.test.ts::UX-050 pages with a signed cursor bound to the filters and refuses a viewer",
+          "validation/journeys/team.portal.test.ts::UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "    expect(byCorrelation.data.every((entry) => entry.correlationId === correlation)).toBe(true);"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "    expect(everything.body).not.toContain(canary);"
+          },
+          {
+            "path": "apps/server/src/team.test.ts",
+            "assertion": "    expect(replay.statusCode).toBe(400);"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(text).not.toContain(\"tm_api_\");"
+          },
+          {
+            "path": "validation/journeys/team.portal.test.ts",
+            "assertion": "    expect(await page.getByRole(\"row\").count()).toBe(51);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-051",
