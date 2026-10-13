@@ -2,7 +2,9 @@ import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
+import { onboardingContracts } from "./m4/onboarding.js";
 import { settingsContracts } from "./m4/settings.js";
+import { sourceInsightContracts } from "./m4/sources.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -128,6 +130,9 @@ const supplemental = {
     name: P.Name,
     uploadId: P.Name,
     sourceId: Type.Optional(P.id("src")),
+    format: Type.Optional(
+      P.Enum(["markdown", "text", "prd-json", "pdf", "openapi", "graphql", "postman"]),
+    ),
   }),
   DiscoveryRetryInput: P.Obj({
     featureIds: Type.Array(P.id("fea")),
@@ -622,6 +627,8 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...integrationContracts,
   ...identityContracts,
   ...settingsContracts,
+  ...onboardingContracts,
+  ...sourceInsightContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

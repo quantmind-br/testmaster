@@ -43,6 +43,12 @@ export interface ServerStackOptions {
   readonly config?: DeepPartial<ServerConfig>;
   /** Files written under the stack's HOME before anything starts (for example `.config/testmaster/profiles.json`). */
   readonly homeFiles?: Readonly<Record<string, string>>;
+  /** User policy written to `<home>/.config/testmaster/policy.json` before the server starts. */
+  readonly userPolicy?: unknown;
+  /** Model profiles written to `<home>/.config/testmaster/profiles.json` before the server starts. */
+  readonly profiles?: unknown;
+  /** Extra environment for every spawned TestMaster process (for example a fake provider key). */
+  readonly extraEnv?: Readonly<Record<string, string>>;
 }
 
 export interface ServerStack {
@@ -52,6 +58,10 @@ export interface ServerStack {
   readonly proxy: TlsProxy;
   readonly configPath: string;
   readonly workspaceId: string;
+  /** Repository directory the server process runs in (project root for discovery and sources). */
+  readonly cwd: string;
+  /** HOME of the server process; user policy and model profiles live under `.config/testmaster`. */
+  readonly home: string;
   readonly owner: StackUser;
   readonly workspaces: readonly StackWorkspace[];
   readonly operatorToken: string;
@@ -193,6 +203,18 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
   const configPath = join(directory, "server.json");
   await writeFile(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
   await chmod(configPath, 0o600);
+  if (options.userPolicy !== undefined || options.profiles !== undefined) {
+    const settings = join(home, ".config", "testmaster");
+    await mkdir(settings, { recursive: true, mode: 0o700 });
+    if (options.userPolicy !== undefined)
+      await writeFile(join(settings, "policy.json"), JSON.stringify(options.userPolicy), {
+        mode: 0o600,
+      });
+    if (options.profiles !== undefined)
+      await writeFile(join(settings, "profiles.json"), JSON.stringify(options.profiles), {
+        mode: 0o600,
+      });
+  }
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -201,6 +223,7 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
     XDG_DATA_HOME: join(home, ".local/share"),
     TESTMASTER_NO_TELEMETRY: "true",
     CI: "true",
+    ...options.extraEnv,
   };
   for (const name of [
     "TESTMASTER_ENDPOINT",
@@ -355,6 +378,8 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
 
     Object.assign(stack, {
       baseUrl: proxy.origin,
+      cwd,
+      home,
       ca,
       proxy,
       configPath,

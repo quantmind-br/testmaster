@@ -1,4 +1,4 @@
-import { ContractError, type Requirement } from "@testmaster/contracts";
+import { ContractError, type Requirement, type RequirementReview } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
 import type { SourceEvidenceRef } from "@testmaster/planner";
@@ -6,7 +6,18 @@ import { authoringTransaction } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { ModelService } from "./model.js";
 import { normalizeSources } from "./normalization.js";
-import type { SourcesService } from "./sources.js";
+import {
+  appendRequirementLog,
+  describeRequirement,
+  type RequirementLogInput,
+  readRequirementLog,
+  revisionIdsOf,
+} from "./requirement-log.js";
+import type { RevisionLocation, SourcesService } from "./sources.js";
+
+const MAX_ORIGINS = 50;
+const MAX_EXCERPT = 600;
+const MAX_CHANGES = 100;
 
 export interface Conflict {
   id: string;
@@ -23,6 +34,10 @@ export interface RequirementSnapshot {
   fingerprint: string;
 }
 type StoredRequirement = Requirement & EntityDocument;
+/** Stable identity of a requirement across normalizations: the model-assigned key, else its ID. */
+export function requirementKey(value: Requirement): string {
+  return String(value.extensions?.["testmaster:key"] ?? value.id);
+}
 export class RequirementsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -151,6 +166,41 @@ export class RequirementsService {
       };
       this.save(input.projectId, snapshot);
       this.audit("requirements.normalized", input.projectId, before, snapshot);
+      const previousByKey = new Map(
+        current.requirements.map((item) => [requirementKey(item), item]),
+      );
+      const nextKeys = new Set(requirements.map((item) => requirementKey(item)));
+      appendRequirementLog(this.ctx, input.projectId, [
+        {
+          kind: "normalized",
+          note: `${requirements.length} requirement(s) from ${input.sourceRevisionIds.length} source revision(s)`,
+          sourceRevisionIds: input.sourceRevisionIds,
+        },
+        ...requirements.flatMap((item): RequirementLogInput[] => {
+          const previous = previousByKey.get(requirementKey(item));
+          const after = describeRequirement(item);
+          const common = {
+            requirementId: item.id,
+            requirementKey: requirementKey(item),
+            sourceRevisionIds: revisionIdsOf(item.sourceRefs),
+          };
+          if (!previous) return [{ kind: "requirement_added", after, ...common }];
+          const before = describeRequirement(previous);
+          return before === after
+            ? []
+            : [{ kind: "interpretation_changed", before, after, ...common }];
+        }),
+        ...current.requirements
+          .filter((item) => !nextKeys.has(requirementKey(item)))
+          .map(
+            (item): RequirementLogInput => ({
+              kind: "requirement_removed",
+              requirementId: item.id,
+              requirementKey: requirementKey(item),
+              before: describeRequirement(item),
+            }),
+          ),
+      ]);
       return snapshot;
     });
   }
@@ -186,6 +236,20 @@ export class RequirementsService {
       snapshot.fingerprint = semanticHash(snapshot.requirements);
       this.save(projectId, snapshot);
       this.audit("requirement.updated", id, current, next);
+      const textBefore = describeRequirement(current);
+      const textAfter = describeRequirement(next);
+      const identity = { requirementId: id, requirementKey: requirementKey(current) };
+      appendRequirementLog(this.ctx, projectId, [
+        ...(textBefore === textAfter
+          ? []
+          : [{ kind: "edited", before: textBefore, after: textAfter, ...identity } as const]),
+        ...(current.approval && !next.approval
+          ? [{ kind: "approval_reset", note: "Edited after approval", ...identity } as const]
+          : []),
+        ...(!current.approval && next.approval
+          ? [{ kind: "approved", note: next.approval, ...identity } as const]
+          : []),
+      ]);
       return next;
     });
   }
@@ -306,8 +370,86 @@ export class RequirementsService {
       snapshot.version += 1;
       this.save(projectId, snapshot);
       this.audit("requirement.adjudicated", projectId, null, conflict);
+      appendRequirementLog(this.ctx, projectId, [
+        {
+          kind: "conflict_decided",
+          requirementId: input.selectedRequirementId,
+          note: `${conflict.id}: ${input.reason}`,
+          sourceRevisionIds: revisionIdsOf(conflict.sourceRefs),
+        },
+      ]);
       return snapshot;
     });
+  }
+  /** The normalized PRD for review: each statement with the spans it came from, and what changed. */
+  review(projectId: string): RequirementReview {
+    const snapshot = this.snapshot(projectId);
+    const located = new Map<string, RevisionLocation | null>();
+    const originsOf = (
+      refs: Requirement["sourceRefs"],
+    ): RequirementReview["conflicts"][number]["origins"] =>
+      refs.slice(0, MAX_ORIGINS).flatMap((ref) => {
+        if (!ref.sourceRevisionId) return [];
+        if (!located.has(ref.sourceRevisionId))
+          located.set(ref.sourceRevisionId, this.sources.locate(ref.sourceRevisionId, projectId));
+        const where = located.get(ref.sourceRevisionId) ?? null;
+        const chunk = where?.chunks.find((value) => value.contentHash === ref.contentHash);
+        return [
+          {
+            sourceRevisionId: ref.sourceRevisionId,
+            sourceId: where?.sourceId ?? null,
+            sourceName: where?.sourceName ?? null,
+            revisionOrdinal: where?.ordinal ?? null,
+            current: where?.current ?? false,
+            revisionHash: where?.revisionHash ?? null,
+            spanHash: ref.contentHash ?? null,
+            ref: {
+              ...(ref.relativePath ? { relativePath: ref.relativePath } : {}),
+              ...(ref.offset !== undefined ? { offset: ref.offset } : {}),
+              ...(ref.length !== undefined ? { length: ref.length } : {}),
+              ...(ref.page !== undefined ? { page: ref.page } : {}),
+              ...(ref.jsonPointer ? { jsonPointer: ref.jsonPointer } : {}),
+            },
+            excerpt: chunk ? chunk.text.slice(0, MAX_EXCERPT) : null,
+          },
+        ];
+      });
+    return {
+      id: projectId,
+      projectId,
+      version: snapshot.version,
+      fingerprint: snapshot.fingerprint,
+      requirements: snapshot.requirements.map((item) => {
+        const origins = originsOf(item.sourceRefs);
+        const key = item.extensions?.["testmaster:key"];
+        const reason = item.extensions?.["testmaster:reason"];
+        return {
+          id: item.id,
+          version: Number(item.version ?? 1),
+          key: typeof key === "string" ? key : null,
+          text: item.text,
+          acceptanceCriteria: item.acceptanceCriteria,
+          originKind: item.originKind,
+          confidence: item.confidence,
+          approval: item.approval,
+          reason: typeof reason === "string" ? reason : null,
+          origins,
+          conflictIds: snapshot.conflicts
+            .filter((conflict) => conflict.requirementIds.includes(item.id))
+            .map((conflict) => conflict.id),
+          supersededOrigin: origins.some((origin) => !origin.current),
+        };
+      }),
+      conflicts: snapshot.conflicts.map((conflict) => ({
+        id: conflict.id,
+        reason: conflict.reason,
+        requirementIds: conflict.requirementIds,
+        origins: originsOf(conflict.sourceRefs),
+        resolution: conflict.resolution,
+      })),
+      openQuestions: snapshot.openQuestions,
+      changes: readRequirementLog(this.ctx, projectId).slice(-MAX_CHANGES).reverse(),
+    };
   }
   private audit(action: string, resourceId: string, before: unknown, after: unknown): void {
     new AuditRepository(this.ctx.database).append({
