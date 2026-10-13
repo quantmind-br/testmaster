@@ -289,15 +289,18 @@ function ListDetailPage(): ReactNode {
             <dd>{suite.data.version}</dd>
           </dl>
           {receipt ? (
-            <div className="banner tone-success" role="status">
+            <div
+              className={`banner tone-${receipt.notDispatched.length > 0 ? "warning" : "success"}`}
+              role="status"
+            >
               <div>
                 <p className="state-title">
                   Batch <code>{receipt.batchId}</code> admitted
                 </p>
                 <p>
-                  {receipt.accepted} of {receipt.requested} tests were dispatched.
+                  {receipt.accepted} of {receipt.requested} entries were dispatched.
                   {receipt.notDispatched.length > 0
-                    ? ` ${receipt.notDispatched.length} were not dispatched, so the gate stays failed.`
+                    ? ` Not dispatched: ${receipt.notDispatched.length}, so the gate stays failed.`
                     : ""}
                 </p>
                 {receipt.notDispatched.length > 0 ? (
@@ -629,7 +632,7 @@ function ListForm({
         key={attempt}
         issues={failure ? [{ fieldId: "list-name", message: failure }] : issues}
       />
-      <form onSubmit={(event) => void submit(event)} noValidate>
+      <form className="automation" onSubmit={(event) => void submit(event)} noValidate>
         <TextField
           label="Name"
           name="list-name"

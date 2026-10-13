@@ -810,7 +810,7 @@ function ScheduleForm({
         key={attempt}
         issues={failure ? [{ fieldId: "schedule-name", message: failure }] : issues}
       />
-      <form onSubmit={(event) => void submit(event)} noValidate>
+      <form className="automation" onSubmit={(event) => void submit(event)} noValidate>
         <TextField
           label="Name"
           name="schedule-name"

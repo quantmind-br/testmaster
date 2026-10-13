@@ -1,3 +1,4 @@
+import "./automation.css";
 import { type ReactNode, useId } from "react";
 import { ApiError } from "../api";
 import { FormField } from "../components/form";
