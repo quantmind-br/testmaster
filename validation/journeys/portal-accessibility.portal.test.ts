@@ -377,6 +377,7 @@ describe("accessibility checks fail on defective pages", () => {
     await page.setContent(
       `<main><h1>t</h1><div aria-live="assertive">x</div><div aria-live="polite">a</div><div aria-live="polite">b</div><input autofocus></main>`,
     );
+    await page.locator("input").focus();
     const problems = (await checkLiveRegions(page)).join("\n");
     expect(problems).toContain('aria-live="assertive"');
     expect(problems).toContain("2 separate polite live regions");

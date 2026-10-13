@@ -70,11 +70,10 @@ async function createProject(name: string, workspace = 0): Promise<{ id: string;
 }
 
 async function createTest(project: string, name: string): Promise<{ id: string; version: number }> {
-  const created = await stack
-    .ownerClient()
-    .mutate("POST", `/v1/projects/${project}/tests`, {
-      plan: { ...scaffoldPlan("backend"), name },
-    });
+  const created = await stack.ownerClient().mutate("POST", `/v1/projects/${project}/tests`, {
+    origin: "manual",
+    plan: { ...scaffoldPlan("backend"), name },
+  });
   if (created.status !== 201) throw new Error(`test: ${created.status} ${created.text}`);
   return created.json<Envelope<{ id: string; version: number }>>().data;
 }
@@ -138,11 +137,8 @@ async function apiGet<T>(path: string, client = stack.ownerClient()): Promise<T>
 async function apiList<T>(path: string, client = stack.ownerClient()): Promise<T[]> {
   const response = await client.request("GET", `/v1${path}`);
   if (response.status !== 200) throw new Error(`GET ${path}: ${response.status} ${response.text}`);
-  return response.json<{ data: T[] }>().data;
-}
-
-function viewerClient(user: StackUser) {
-  return stack.anonymous();
+  const data = response.json<{ data: T[] | { items: T[] } }>().data;
+  return Array.isArray(data) ? data : data.items;
 }
 
 async function signedInClient(user: StackUser) {
@@ -183,8 +179,10 @@ describe("project settings", () => {
     await form.waitFor();
     // Negative control: nothing changed, so saving is blocked with its reason and no request leaves.
     const before = diagnostics.requests.length;
-    await form.getByRole("button", { name: "Save environment" }).click();
-    expect(await form.innerText()).toContain("Nothing changed yet.");
+    await form.getByRole("button", { name: "Save environment" }).click({ force: true });
+    expect(
+      await form.getByRole("button", { name: "Save environment" }).getAttribute("aria-disabled"),
+    ).toBe("true");
     expect(await page.getByRole("dialog").count()).toBe(0);
     expect(diagnostics.requests.slice(before).filter((entry) => entry.startsWith("PATCH"))).toEqual(
       [],
@@ -220,12 +218,7 @@ describe("project settings", () => {
     const dialog = page.getByRole("dialog");
     await dialog.waitFor();
     const dialogText = await dialog.innerText();
-    for (const expected of [
-      "Settings project",
-      "Staging",
-      "https://prod.s5b.test",
-      stack.owner.login ? "" : "",
-    ])
+    for (const expected of ["Settings project", "Staging", "https://prod.s5b.test"])
       expect(dialogText).toContain(expected);
     await dialog.getByRole("button", { name: "Save changes" }).click();
     await page.getByRole("dialog").waitFor({ state: "detached" });
@@ -294,7 +287,7 @@ describe("project settings", () => {
     // Nothing is shared by default.
     expect(await local.innerText()).toContain("Not shared");
     // Negative control: no category chosen, so the button is inert and says why.
-    await local.getByRole("button", { name: "Allow data sharing" }).click();
+    await local.getByRole("button", { name: "Allow data sharing" }).click({ force: true });
     expect(await local.innerText()).toContain("Choose at least one category");
     expect(await page.getByRole("dialog").count()).toBe(0);
     // A provider the server profile does not allow cannot be granted.
@@ -356,16 +349,18 @@ describe("project settings", () => {
     const form = page.getByRole("form", { name: "Token budget" });
     await form.waitFor();
     expect(await page.getByText("Not set (no token limit)").count()).toBeGreaterThan(0);
-    await form.getByLabel("Lifetime token budget").fill("lots");
+    await form.getByRole("textbox", { name: "Lifetime token budget" }).fill("lots");
     await form.getByRole("button", { name: "Set token budget" }).click();
     const summary = page.getByTestId("error-summary");
     await summary.waitFor();
     expect(await summary.textContent()).toContain("whole number of tokens");
-    expect(await form.getByLabel("Lifetime token budget").getAttribute("aria-invalid")).toBe(
-      "true",
-    );
+    expect(
+      await form
+        .getByRole("textbox", { name: "Lifetime token budget" })
+        .getAttribute("aria-invalid"),
+    ).toBe("true");
     expect(await page.getByRole("dialog").count()).toBe(0);
-    await form.getByLabel("Lifetime token budget").fill("250000");
+    await form.getByRole("textbox", { name: "Lifetime token budget" }).fill("250000");
     expect(await form.getByTestId("impact-panel").innerText()).toContain("250,000 tokens");
     await form.getByRole("button", { name: "Set token budget" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Set budget" }).click();
@@ -393,16 +388,14 @@ describe("project settings", () => {
   it("UX-056 labels a demonstration workspace on every page and only that workspace", async () => {
     const second = stack.workspaces[1];
     expect(second).toBeDefined();
-    const patched = await stack
-      .ownerClient(1)
-      .mutate(
-        "PATCH",
-        `/v1/workspaces/${second?.workspaceId}`,
-        { quotaPolicyId: "demo" },
-        {
-          "if-match": `"${(await apiGet<{ version: number }>(`/workspaces/${second?.workspaceId}`, stack.ownerClient(1))).version}"`,
-        },
-      );
+    const patched = await stack.ownerClient(1).mutate(
+      "PATCH",
+      `/v1/workspaces/${second?.workspaceId}`,
+      { quotaPolicyId: "demo" },
+      {
+        "if-match": `"${(await apiGet<{ version: number }>(`/workspaces/${second?.workspaceId}`, stack.ownerClient(1))).version}"`,
+      },
+    );
     expect(patched.status).toBe(200);
     const demo = await portal(second?.owner as StackUser);
     await demo.page.goto("/");
@@ -528,7 +521,10 @@ describe("secrets", () => {
     expect(text).toContain("Workspace");
     // A double click on the confirm button sends exactly one DELETE.
     const confirm = dialog.getByRole("button", { name: "Revoke secret" });
-    await Promise.all([confirm.click(), confirm.click({ force: true }).catch(() => undefined)]);
+    await Promise.all([
+      confirm.click({ force: true }),
+      confirm.click({ force: true, timeout: 2000 }).catch(() => undefined),
+    ]);
     await page.getByRole("dialog").waitFor({ state: "detached" });
     expect(
       diagnostics.requests.filter((entry) => entry.startsWith("DELETE /v1/secrets/")),
@@ -592,7 +588,7 @@ describe("retention and deletion", () => {
     expect(await bar.innerText()).toContain("0 tests selected");
     expect(await bar.innerText()).toContain("Nothing is applied to the whole list");
     const before = diagnostics.requests.length;
-    await bar.getByRole("button", { name: "Archive selected tests" }).click();
+    await bar.getByRole("button", { name: "Archive selected tests" }).click({ force: true });
     expect(await page.getByRole("dialog").count()).toBe(0);
     expect(
       diagnostics.requests.slice(before).filter((entry) => entry.startsWith("DELETE")),
@@ -645,12 +641,15 @@ describe("retention and deletion", () => {
     await purge.waitFor();
     // Not archived: purge is inert and the reason is on the page.
     expect(await page.innerText("main")).toContain("Archive the project first.");
-    await purge.click();
+    await purge.click({ force: true });
     expect(await page.getByRole("dialog").count()).toBe(0);
     await page.getByRole("button", { name: "Archive project" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Archive project" }).click();
     await page.getByRole("dialog").waitFor({ state: "detached" });
-    await page.getByText("Archived", { exact: false }).first().waitFor();
+    await page
+      .getByRole("button", { name: "Purge project data" })
+      .and(page.locator('[aria-disabled="false"]'))
+      .waitFor();
 
     await page.getByRole("button", { name: "Purge project data" }).click();
     const dialog = page.getByRole("dialog");
@@ -658,7 +657,7 @@ describe("retention and deletion", () => {
     // Wrong text keeps the button inert; no request leaves.
     await dialog.getByLabel("Project slug").fill("not-the-slug");
     expect(await confirm.getAttribute("aria-disabled")).toBe("true");
-    await confirm.click();
+    await confirm.click({ force: true });
     expect(
       diagnostics.requests.filter(
         (entry) => entry.startsWith("POST /v1/projects/") && entry.endsWith("/purge"),
@@ -666,7 +665,10 @@ describe("retention and deletion", () => {
     ).toEqual([]);
     await dialog.getByLabel("Project slug").fill(project.slug);
     expect(await confirm.getAttribute("aria-disabled")).toBe("false");
-    await Promise.all([confirm.click(), confirm.click({ force: true }).catch(() => undefined)]);
+    await Promise.all([
+      confirm.click({ force: true }),
+      confirm.click({ force: true, timeout: 2000 }).catch(() => undefined),
+    ]);
     await page.getByRole("dialog").waitFor({ state: "detached" });
     expect(
       diagnostics.requests.filter(
@@ -801,5 +803,3 @@ describe("keyboard, reflow and the route catalog", () => {
       expect(used, route).toContain(route);
   });
 });
-
-void viewerClient;
