@@ -117,6 +117,8 @@ export interface TlsProxy {
   readonly port: number;
   /** Requests seen, as `METHOD path`, for assertions about what the browser called. */
   readonly requests: string[];
+  /** Drops every open connection (live SSE streams included) while the listener keeps accepting new ones. */
+  severConnections(): void;
   close(): Promise<void>;
 }
 
@@ -176,6 +178,9 @@ export async function startTlsProxy(options: {
     origin: `https://127.0.0.1:${address.port}`,
     port: address.port,
     requests,
+    severConnections() {
+      server.closeAllConnections();
+    },
     async close() {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
