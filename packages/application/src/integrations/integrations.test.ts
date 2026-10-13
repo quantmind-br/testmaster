@@ -601,6 +601,26 @@ describe("INT-002 inbound idempotency is scoped, hashed and durable", () => {
     expect(other.service.list().map((item) => item.id)).toEqual([otherIntegration.id]);
   });
 
+  it("INT-004 a test delivery only resolves the integrations of its own workspace while webhook intake spans all", async () => {
+    const { f, created } = await withIntegration();
+    const other = f.second();
+    const otherIntegration = other.service.create({
+      ...f.input({ name: "other-hook" }),
+      projectIds: [other.projectId],
+      secretRefs: [other.secretId],
+      settings: { installation: "inst-2" },
+    });
+    await f.service.test(created.id);
+    const seenByTest = f.probe.tests[0]?.context.findIntegrations("webhook");
+    expect(seenByTest?.map((item) => item.id)).toEqual([created.id]);
+    // Control: the intake context deliberately sees both, so installations resolve across tenants.
+    await f.service.receiveWebhook(
+      "webhook",
+      delivery(payload({ installation: "inst-2" }), "cross-1"),
+    );
+    expect(other.service.inbound().map((row) => row.integrationId)).toEqual([otherIntegration.id]);
+  });
+
   it("INT-002 a failed handler can be redelivered, an in-flight delivery cannot, and an abandoned one is reclaimed", async () => {
     const { f, created } = await withIntegration();
     const body = payload();
@@ -918,7 +938,7 @@ describe("INT-004 integrations need scope consent and test deliveries are labell
     const f = await fixture();
     const created = f.service.create(f.input());
     for (const scopes of [["R"], ["R", "W", "X"]] as const) {
-      const limited = f.app.withIdentity({
+      const limited = f.app.forIdentity({
         principalId: f.app.context.principalId,
         scopes: [...scopes],
       });
@@ -933,7 +953,7 @@ describe("INT-004 integrations need scope consent and test deliveries are labell
     }
     expect(f.probe.tests).toHaveLength(0);
     expect(f.service.list()).toHaveLength(1);
-    const admin = f.app.withIdentity({
+    const admin = f.app.forIdentity({
       principalId: f.app.context.principalId,
       scopes: ["R", "A"],
     });
