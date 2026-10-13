@@ -904,6 +904,20 @@ export class Application {
         capability: executor,
         milestone: "M5",
       });
+    // The server profile owns admission only (ADR-016): its process has no Docker daemon. It
+    // verifies the image lock file and seccomp profile hash and freezes that lock into the
+    // admission snapshot; the worker host compares the lock with its own image store when it
+    // starts and verifies every container's hardening (seccomp, limits, mounts, image ID) before
+    // each Attempt. A mismatch ends the Run `blocked` with `security_precondition_failed`.
+    if (this.serverConfig) {
+      this.verifiedImages = await verifyImageLock(
+        this.lockPath,
+        async (imageId) => imageId,
+        undefined,
+        revokedImageIds(this.database),
+      );
+      return;
+    }
     const docker = await new DockerExecutor().doctor();
     if (!docker.available)
       throw new ContractError("POLICY_DENIED", "Hardened Docker sandbox is unavailable", {
