@@ -385,7 +385,12 @@ export function createServer(options: ServerOptions): FastifyInstance {
         const params = request.params as Record<string, string>;
         const query = request.query as Record<string, string>;
         const body = request.body ?? {};
-        if (route.method !== "GET" && route.requestSchema !== "Binary")
+        // Signature routes carry raw bytes; their handler parses and validates after authenticating.
+        if (
+          route.method !== "GET" &&
+          route.requestSchema !== "Binary" &&
+          route.auth !== "signature"
+        )
           validate(route.requestSchema, body);
         // Signed webhooks come from third parties that cannot send Idempotency-Key; their dedupe is the delivery ID.
         const mutation = route.auth !== "signature" && !["GET", "HEAD"].includes(route.method);

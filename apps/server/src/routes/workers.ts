@@ -1,10 +1,10 @@
+import type { WorkerHeartbeat } from "@testmaster/application";
 import {
   ContractError,
   parseStrictJson,
   validate,
   type WorkerEnrollmentInput,
 } from "@testmaster/contracts";
-import type { WorkerHeartbeat } from "@testmaster/application";
 import type { RouteContext, RouteModule } from "./types.js";
 
 const id = (context: RouteContext): string => context.params.id as string;

@@ -13,7 +13,7 @@ import type {
   NotificationType,
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
-import { OutboxRepository } from "@testmaster/persistence";
+import { LeaseRepository, OutboxRepository } from "@testmaster/persistence";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
 import { requireEntity } from "../context.js";
@@ -105,6 +105,10 @@ export interface NotificationHarness {
   ): Promise<IntegrationMetadata>;
   /** A terminal Run plus its `run.completed` outbox event, exactly as the worker leaves them. */
   completedRun(options?: RunFixtureOptions): { runId: string; eventId: string };
+  /** Queued Runs with their lease jobs on the local queue, as admission leaves them. */
+  queueRuns(count: number): void;
+  /** One claim as the given pool worker; `null` when the worker is not ready or nothing is queued. */
+  claimAs(workerId: string, owner: string): { jobId: string; runId: string } | null;
   /** An orphaned-resource outbox event against a Run, as the worker records it when cleanup fails. */
   orphanedResource(runId: string): { eventId: string };
   /** A Batch whose member Runs have all finished with the given outcomes; returns the Batch and Run ids. */
@@ -271,6 +275,42 @@ export async function createNotificationHarness(
         }),
       );
       return { runId, eventId: event.id };
+    },
+    queueRuns(count) {
+      const leases = new LeaseRepository(app.database);
+      app.database.withTx(() => {
+        for (let index = 0; index < count; index++) {
+          const runId = uuidV7IdGenerator.next("run");
+          app.context.entities.insert("Run", {
+            id: runId,
+            workspaceId: init.workspaceId,
+            testId: test.id,
+            revisionId: test.activeRevisionId,
+            environmentRevisionId: environmentRevision,
+            batchId: null,
+            matrixCell: { environmentId: init.environmentId },
+            mode: "replay",
+            phase: "queued",
+            status: "queued",
+            outcome: null,
+            origin: "notification-test",
+            gatePolicy: {},
+            gate: "pending",
+            cleanupOutcome: "not_required",
+            analysisStatus: "not_requested",
+          });
+          leases.enqueue(init.workspaceId, runId, "local");
+        }
+      });
+    },
+    claimAs(workerId, owner) {
+      const claim = new LeaseRepository(app.database).claim({
+        workspaceId: init.workspaceId,
+        owner,
+        queue: "local",
+        workerId,
+      });
+      return claim ? { jobId: claim.jobId, runId: claim.runId } : null;
     },
     orphanedResource(runId) {
       const event = app.database.withTx(() =>

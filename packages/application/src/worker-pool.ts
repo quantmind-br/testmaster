@@ -24,6 +24,11 @@ import { insertToken, revokeTokenRow, tokenKind } from "./tokens.js";
 export const fairShareAgingMs = 60_000;
 const defaultSlotsPerWorker = 2;
 
+/** Joins the surrounding transaction (idempotent HTTP handlers run inside one) or opens its own. */
+function inTx<T>(database: PersistenceDatabase, action: () => T): T {
+  return database.inTransaction ? action() : database.withTx(action);
+}
+
 export interface FairShareInput {
   database: PersistenceDatabase;
   workspaceId: string;
@@ -240,7 +245,7 @@ export class WorkerPoolService {
     const { workspaceId } = owner;
     const database = this.ctx.database;
     const at = this.now().toISOString();
-    database.withTx(() => {
+    inTx(database, () => {
       const worker = database.get(
         "SELECT state,version FROM workers WHERE workspace_id=? AND id=?",
         workspaceId,
@@ -305,7 +310,7 @@ export class WorkerPoolService {
     const worker = requireEntity(this.ctx, "Worker", id);
     if (worker.state === "revoked")
       throw new ContractError("PRECONDITION_FAILED", "Worker is revoked", { id });
-    this.ctx.database.withTx(() => {
+    inTx(this.ctx.database, () => {
       this.ctx.database.run(
         "UPDATE workers SET state='draining',version=version+1 WHERE workspace_id=? AND id=? AND state IN ('ready','enrolling')",
         this.ctx.workspaceId,
@@ -321,7 +326,7 @@ export class WorkerPoolService {
     this.ctx.authorize("A");
     const worker = requireEntity(this.ctx, "Worker", id);
     const labels = worker.labels as Record<string, string>;
-    this.ctx.database.withTx(() => {
+    inTx(this.ctx.database, () => {
       this.ctx.database.run(
         "UPDATE workers SET state='revoked',version=version+1 WHERE workspace_id=? AND id=?",
         this.ctx.workspaceId,
@@ -346,7 +351,7 @@ export class WorkerPoolService {
   /** Marks ready workers whose heartbeat stopped as offline and announces each loss once. */
   sweepOffline(): string[] {
     const cutoff = new Date(this.now().getTime() - WORKER_HEARTBEAT_TIMEOUT_MS).toISOString();
-    return this.ctx.database.withTx(() => {
+    return inTx(this.ctx.database, () => {
       const stale = this.ctx.database.all(
         "SELECT id,version FROM workers WHERE workspace_id=? AND state='ready' AND (last_heartbeat_at IS NULL OR last_heartbeat_at<=?)",
         this.ctx.workspaceId,
