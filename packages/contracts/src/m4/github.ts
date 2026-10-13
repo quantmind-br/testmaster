@@ -46,12 +46,19 @@ export const githubEventTypes = [
 
 const Selection = Type.Union([
   P.Obj({ kind: Type.Literal("all") }),
-  P.Obj({ kind: Type.Literal("tests"), testIds: Type.Array(P.id("tst"), { minItems: 1, maxItems: 200 }) }),
+  P.Obj({
+    kind: Type.Literal("tests"),
+    testIds: Type.Array(P.id("tst"), { minItems: 1, maxItems: 200 }),
+  }),
 ]);
 const Preview = P.Obj({
   provider: P.Enum(githubPreviewProviders),
   /** Glob over the deployment `environment` name; `*` matches every environment. */
-  environmentPattern: Type.String({ minLength: 1, maxLength: 100, pattern: "^[A-Za-z0-9*?._/ -]+$" }),
+  environmentPattern: Type.String({
+    minLength: 1,
+    maxLength: 100,
+    pattern: "^[A-Za-z0-9*?._/ -]+$",
+  }),
   timeoutMs: Type.Integer({ minimum: 1000, maximum: 86_400_000 }),
 });
 const NullableId = (prefix: "env" | "prj") => Type.Union([P.id(prefix), Type.Null()]);
@@ -173,6 +180,12 @@ export const githubContracts = {
         granted: Type.Boolean(),
         enabled: Type.Boolean(),
         projectId: NullableId("prj"),
+        includeDrafts: Type.Boolean(),
+        forkPolicy: P.Enum(githubForkPolicies),
+        baseEnvironmentId: NullableId("env"),
+        fixtureEnvironmentId: NullableId("env"),
+        previewEnvironmentPattern: P.Name,
+        previewProvider: P.Enum(githubPreviewProviders),
       }),
     ),
     updatedAt: P.Timestamp,

@@ -1,7 +1,7 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
-import { identityContracts } from "./m4/identity.js";
 import { githubContracts } from "./m4/github.js";
+import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";

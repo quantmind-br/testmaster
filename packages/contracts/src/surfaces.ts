@@ -200,7 +200,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "IntegrationMetadata",
   ],
   ["POST", "/integrations/{id}/test", "integrations:A", "M4", "Empty", "IntegrationTestReceipt"],
-  ["POST", "/integrations/github/manifests", "integrations:A", "M4", "GithubManifestInput", "GithubManifestReceipt"],
+  [
+    "POST",
+    "/integrations/github/manifests",
+    "integrations:A",
+    "M4",
+    "GithubManifestInput",
+    "GithubManifestReceipt",
+  ],
   [
     "POST",
     "/integrations/github/manifests/{state}/conversion",
@@ -209,7 +216,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "GithubManifestConversionInput",
     "IntegrationMetadata",
   ],
-  ["GET", "/integrations/{id}/github/installations", "integrations:A", "M4", "Empty", "GithubInstallation"],
+  [
+    "GET",
+    "/integrations/{id}/github/installations",
+    "integrations:A",
+    "M4",
+    "Empty",
+    "GithubInstallation",
+  ],
   [
     "PATCH",
     "/integrations/{id}/github/repositories/{repositoryId}",
@@ -220,7 +234,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ],
   ["GET", "/integrations/{id}/github/pulls", "integrations:R", "M4", "Empty", "GithubPull"],
   ["GET", "/integrations/{id}/github/checks", "integrations:R", "M4", "Empty", "GithubCheck"],
-  ["POST", "/integrations/{id}/github/checks/{checkId}/retry", "integrations:W", "M4", "Empty", "GithubCheck"],
+  [
+    "POST",
+    "/integrations/{id}/github/checks/{checkId}/retry",
+    "integrations:W",
+    "M4",
+    "Empty",
+    "GithubCheck",
+  ],
   [
     "POST",
     "/integrations/{id}/github/rotate-webhook-secret",

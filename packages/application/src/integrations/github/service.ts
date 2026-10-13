@@ -11,9 +11,9 @@ import {
   type GithubRepository,
   type GithubRepositoryPatch,
   type GithubRepositorySettings,
+  githubEventTypes,
   type IntegrationMetadata,
   type PreviewDeploymentInput,
-  githubEventTypes,
   validate,
 } from "@testmaster/contracts";
 import { OutboxRepository } from "@testmaster/persistence";
@@ -21,7 +21,12 @@ import { EgressPolicy, PolicyDenied } from "@testmaster/sandbox";
 import type { Application } from "../../application.js";
 import { auditAs, auditSecurity } from "../../audit.js";
 import { allEntities, requireEntity } from "../../context.js";
-import { ChecksClient, type CheckPayload, deliveryBackoffMs, deliveryRetryPolicy } from "../../delivery.js";
+import {
+  type CheckPayload,
+  ChecksClient,
+  deliveryBackoffMs,
+  deliveryRetryPolicy,
+} from "../../delivery.js";
 import {
   type InboundOutcome,
   type InboundRequest,
@@ -29,19 +34,15 @@ import {
   type StoredIntegration,
   verifyHmacSha256,
 } from "../provider.js";
-import { GithubApiError, appJwt, classifyProblem, retryAfterOf } from "./api.js";
-import {
-  buildManifest,
-  manifestCreateUrl,
-  manifestPermissions,
-} from "./manifest.js";
+import { appJwt, classifyProblem, GithubApiError, retryAfterOf } from "./api.js";
+import { buildManifest, manifestCreateUrl, manifestPermissions } from "./manifest.js";
 import { type GithubEvent, type PullRequestEvent, parseGithubEvent } from "./payloads.js";
 import {
-  type StoredResult,
   checkExternalId,
   commentMarker,
   renderChecks,
   renderComment,
+  type StoredResult,
 } from "./render.js";
 import { storedResultForBatch } from "./results.js";
 import type { GithubRuntime } from "./runtime.js";
@@ -132,8 +133,12 @@ export class GithubService {
   }
 
   // ---------------------------------------------------------------- integration access
-  private loadIntegration(workspaceId: string, id: string): GithubIntegration | null {
-    const row = this.scope.database.get(
+  private loadIntegration(
+    workspaceId: string,
+    id: string,
+    database = this.scope.database,
+  ): GithubIntegration | null {
+    const row = database.get(
       "SELECT * FROM integrations WHERE workspace_id=? AND id=? AND provider='github'",
       workspaceId,
       id,
@@ -226,7 +231,10 @@ export class GithubService {
     );
   }
   /** The tombstone is authoritative: a restored active row is revoked again the moment it is used. */
-  private usableInstallation(workspaceId: string, installationId: string): InstallationRecord | null {
+  private usableInstallation(
+    workspaceId: string,
+    installationId: string,
+  ): InstallationRecord | null {
     const installation = this.globalStore.installation(workspaceId, installationId);
     if (!installation) return null;
     if (installation.state === "active" && this.revokedTombstone(installationId))
@@ -268,7 +276,9 @@ export class GithubService {
   async receive(context: IntegrationContext, request: InboundRequest): Promise<InboundOutcome> {
     const appId = request.headers["x-github-hook-installation-target-id"];
     let integration: GithubIntegration | null = null;
-    for (const candidate of context.findIntegrations("github").map((stored) => this.fromStored(stored))) {
+    for (const candidate of context
+      .findIntegrations("github")
+      .map((stored) => this.fromStored(stored))) {
       if (candidate.settings.appId !== appId) continue;
       let secrets: string[] = [];
       try {
@@ -302,7 +312,11 @@ export class GithubService {
       deliveryId,
       eventType,
     };
-    const ignore = (reason: string, event: GithubEvent | null, projectId: string | null = null): InboundOutcome => ({
+    const ignore = (
+      reason: string,
+      event: GithubEvent | null,
+      projectId: string | null = null,
+    ): InboundOutcome => ({
       ...base,
       installationKey: event?.installationId ?? null,
       projectId,
@@ -319,31 +333,46 @@ export class GithubService {
     const creating = event.kind === "installation" && event.action === "created";
     if (creating) {
       if (this.revokedTombstone(event.installationId)) return ignore("revoked_installation", event);
-      if (known && (known.workspaceId !== integration.workspaceId || known.integrationId !== integration.id))
+      if (
+        known &&
+        (known.workspaceId !== integration.workspaceId || known.integrationId !== integration.id)
+      )
         return ignore("installation_owned_elsewhere", event);
       return this.accept(base, event, null, () => this.apply(integration, event));
     }
-    if (!known || known.workspaceId !== integration.workspaceId || known.integrationId !== integration.id)
+    if (
+      !known ||
+      known.workspaceId !== integration.workspaceId ||
+      known.integrationId !== integration.id
+    )
       return ignore("unknown_installation", event);
     if (known.state === "revoked" || this.revokedTombstone(known.installationId)) {
-      if (known.state === "active") this.revokeInstallation(known.workspaceId, known.installationId, "revoked_before_restore");
+      if (known.state === "active")
+        this.revokeInstallation(known.workspaceId, known.installationId, "revoked_before_restore");
       return ignore("revoked_installation", event);
     }
-    if (event.kind === "installation") return this.accept(base, event, null, () => this.apply(integration, event));
+    if (event.kind === "installation")
+      return this.accept(base, event, null, () => this.apply(integration, event));
     if (event.kind === "installation_repositories")
       return this.accept(base, event, null, () => this.apply(integration, event));
-    const repository = this.globalStore.repository(known.workspaceId, known.installationId, event.repository.id);
+    const repository = this.globalStore.repository(
+      known.workspaceId,
+      known.installationId,
+      event.repository.id,
+    );
     if (!repository?.granted) return ignore("repository_not_allowed", event);
     const projectId = repository.settings.projectId;
     if (!repository.settings.enabled || !projectId) return ignore("repository_disabled", event);
     if (integration.projectIds.length && !integration.projectIds.includes(projectId))
       return ignore("project_not_in_integration", event, projectId);
     if (event.kind === "pull_request") {
-      if (!handledPullActions.has(event.action)) return ignore("action_not_handled", event, projectId);
+      if (!handledPullActions.has(event.action))
+        return ignore("action_not_handled", event, projectId);
       if (event.draft && !repository.settings.includeDrafts && event.action !== "closed")
         return ignore("draft_pull_request", event, projectId);
     }
-    if (event.kind === "push" || event.kind === "check_run") return ignore("event_not_handled", event, projectId);
+    if (event.kind === "push" || event.kind === "check_run")
+      return ignore("event_not_handled", event, projectId);
     return this.accept(base, event, projectId, () => this.apply(integration, event, repository));
   }
   private accept(
@@ -374,7 +403,11 @@ export class GithubService {
     switch (event.kind) {
       case "installation": {
         if (event.action === "deleted" || event.action === "suspend") {
-          this.revokeInstallation(workspaceId, event.installationId, event.action === "deleted" ? "deleted" : "suspended");
+          this.revokeInstallation(
+            workspaceId,
+            event.installationId,
+            event.action === "deleted" ? "deleted" : "suspended",
+          );
           return { reference: event.installationId };
         }
         this.scope.database.withTx(() => {
@@ -393,7 +426,13 @@ export class GithubService {
           );
           for (const entry of event.repositories)
             store.upsertRepository(
-              { workspaceId, installationId: event.installationId, repositoryId: entry.id, fullName: entry.fullName, private: entry.private },
+              {
+                workspaceId,
+                installationId: event.installationId,
+                repositoryId: entry.id,
+                fullName: entry.fullName,
+                private: entry.private,
+              },
               true,
               now,
             );
@@ -406,7 +445,13 @@ export class GithubService {
           store.setSelection(workspaceId, event.installationId, event.repositorySelection, now);
           for (const entry of event.added)
             store.upsertRepository(
-              { workspaceId, installationId: event.installationId, repositoryId: entry.id, fullName: entry.fullName, private: entry.private },
+              {
+                workspaceId,
+                installationId: event.installationId,
+                repositoryId: entry.id,
+                fullName: entry.fullName,
+                private: entry.private,
+              },
               true,
               now,
             );
@@ -414,7 +459,13 @@ export class GithubService {
             store.setRepositoryGranted(workspaceId, event.installationId, entry.id, false, now);
         });
         for (const entry of event.removed)
-          await this.closePrWork(workspaceId, event.installationId, entry.id, undefined, "repository_removed");
+          await this.closePrWork(
+            workspaceId,
+            event.installationId,
+            entry.id,
+            undefined,
+            "repository_removed",
+          );
         return { reference: event.installationId };
       }
       case "deployment_status": {
@@ -434,7 +485,12 @@ export class GithubService {
           now,
         );
         if (event.state === "success")
-          for (const pull of store.pullsAwaitingDeployment(workspaceId, event.installationId, event.repository.id, event.sha))
+          for (const pull of store.pullsAwaitingDeployment(
+            workspaceId,
+            event.installationId,
+            event.repository.id,
+            event.sha,
+          ))
             await this.advance(pull);
         return { reference: event.deploymentId };
       }
@@ -467,7 +523,13 @@ export class GithubService {
       );
       return null;
     }
-    const existing = store.pullByHead(workspaceId, event.installationId, repository.repositoryId, event.number, event.headSha);
+    const existing = store.pullByHead(
+      workspaceId,
+      event.installationId,
+      repository.repositoryId,
+      event.number,
+      event.headSha,
+    );
     if (existing) {
       await this.advance(existing);
       return existing;
@@ -477,8 +539,16 @@ export class GithubService {
     const older: PullRecord[] = [];
     const created = this.scope.database.withTx(() => {
       const now = this.now();
-      for (const pull of store.pullsOfPr(workspaceId, event.installationId, repository.repositoryId, event.number))
-        if (pull.headSha !== event.headSha && (pull.state === "awaiting_preview" || pull.state === "running")) {
+      for (const pull of store.pullsOfPr(
+        workspaceId,
+        event.installationId,
+        repository.repositoryId,
+        event.number,
+      ))
+        if (
+          pull.headSha !== event.headSha &&
+          (pull.state === "awaiting_preview" || pull.state === "running")
+        ) {
           this.setPull(integration, pull, { state: "superseded", supersededBy: event.headSha });
           older.push(pull);
         }
@@ -540,7 +610,13 @@ export class GithubService {
           fullName: pull.fullName,
           headSha: pull.headSha,
           name: desired.name,
-          externalId: checkExternalId(pull.installationId, pull.repositoryId, pull.prNumber, pull.headSha, desired.name),
+          externalId: checkExternalId(
+            pull.installationId,
+            pull.repositoryId,
+            pull.prNumber,
+            pull.headSha,
+            desired.name,
+          ),
           status: desired.status,
           conclusion: desired.conclusion,
           title: desired.title,
@@ -555,7 +631,8 @@ export class GithubService {
     if (!pull.batchId) return;
     const acting = this.actingApp(integration);
     try {
-      for (const id of acting.batches.get(pull.batchId).memberRuns as string[]) acting.runs.cancel(id);
+      for (const id of acting.batches.get(pull.batchId).memberRuns as string[])
+        acting.runs.cancel(id);
     } catch {
       // A batch that cannot be read has no live Run to cancel; the pull is already terminal.
     }
@@ -576,7 +653,10 @@ export class GithubService {
         repositoryId,
       )
       .map((row) => store.pull(workspaceId, String(row.id)))
-      .filter((pull): pull is PullRecord => pull !== null && (prNumber === undefined || pull.prNumber === prNumber));
+      .filter(
+        (pull): pull is PullRecord =>
+          pull !== null && (prNumber === undefined || pull.prNumber === prNumber),
+      );
     for (const pull of pulls) {
       const integration = this.loadIntegration(workspaceId, pull.integrationId);
       if (!integration) continue;
@@ -615,7 +695,11 @@ export class GithubService {
       const pull = this.globalStore.pull(workspaceId, entry.id);
       const integration = this.loadIntegration(workspaceId, entry.integrationId);
       if (pull && integration) {
-        this.globalStore.updatePull(pull, { state: "closed", reasonCode: "installation_revoked" }, now);
+        this.globalStore.updatePull(
+          pull,
+          { state: "closed", reasonCode: "installation_revoked" },
+          now,
+        );
         void this.cancelWork(integration, pull);
       }
     }
@@ -653,7 +737,11 @@ export class GithubService {
     const id = repository.settings.baseEnvironmentId;
     if (!id) return null;
     const environment = requireEntity(acting.context, "Environment", id);
-    return requireEntity(acting.context, "EnvironmentRevision", String(environment.activeRevisionId));
+    return requireEntity(
+      acting.context,
+      "EnvironmentRevision",
+      String(environment.activeRevisionId),
+    );
   }
 
   /** Moves one pull forward: time out a preview, admit once a matching deployment exists, finish a batch. */
@@ -663,16 +751,24 @@ export class GithubService {
     if (!integration || integration.state === "paused") return pull;
     const installation = this.usableInstallation(pull.workspaceId, pull.installationId);
     if (integration.state === "revoked" || !installation) {
-      const closed = this.setPull(integration ?? this.fallback(pull), pull, { state: "closed", reasonCode: "installation_revoked" });
+      const closed = this.setPull(integration ?? this.fallback(pull), pull, {
+        state: "closed",
+        reasonCode: "installation_revoked",
+      });
       if (integration) await this.cancelWork(integration, pull);
       return closed;
     }
-    const repository = this.globalStore.repository(pull.workspaceId, pull.installationId, pull.repositoryId);
+    const repository = this.globalStore.repository(
+      pull.workspaceId,
+      pull.installationId,
+      pull.repositoryId,
+    );
     if (!repository?.granted || !repository.settings.enabled) {
       await this.cancelWork(integration, pull);
       return this.setPull(integration, pull, { state: "closed", reasonCode: "repository_removed" });
     }
-    if (pull.state === "awaiting_preview") return this.advanceAwaiting(integration, repository, pull);
+    if (pull.state === "awaiting_preview")
+      return this.advanceAwaiting(integration, repository, pull);
     return this.advanceRunning(integration, repository, pull);
   }
   /** A pull whose integration row vanished cannot render links; the checks still close. */
@@ -691,9 +787,14 @@ export class GithubService {
     };
   }
 
-  private async advanceAwaiting(integration: GithubIntegration, repository: RepositoryRecord, pull: PullRecord): Promise<PullRecord> {
+  private async advanceAwaiting(
+    integration: GithubIntegration,
+    repository: RepositoryRecord,
+    pull: PullRecord,
+  ): Promise<PullRecord> {
     const settings = repository.settings;
-    if (pull.fork && settings.forkPolicy === "fixture-only") return this.admitFixture(integration, repository, pull);
+    if (pull.fork && settings.forkPolicy === "fixture-only")
+      return this.admitFixture(integration, repository, pull);
     const deployment = this.globalStore
       .deploymentsForSha(pull.workspaceId, pull.repositoryId, pull.headSha)
       .find((entry) => {
@@ -704,23 +805,47 @@ export class GithubService {
           : !manual && globMatch(settings.preview.environmentPattern, entry.environment);
       });
     if (deployment?.targetUrl)
-      return this.admit(integration, repository, pull, { url: deployment.targetUrl, deploymentId: deployment.deploymentId, fixture: false });
-    if (pull.previewDeadlineAt && Date.parse(pull.previewDeadlineAt) <= this.runtime.now().getTime())
+      return this.admit(integration, repository, pull, {
+        url: deployment.targetUrl,
+        deploymentId: deployment.deploymentId,
+        fixture: false,
+      });
+    if (
+      pull.previewDeadlineAt &&
+      Date.parse(pull.previewDeadlineAt) <= this.runtime.now().getTime()
+    )
       return this.setPull(integration, pull, { state: "timed_out", reasonCode: "preview_timeout" });
     return pull;
   }
-  private async admitFixture(integration: GithubIntegration, repository: RepositoryRecord, pull: PullRecord): Promise<PullRecord> {
+  private async admitFixture(
+    integration: GithubIntegration,
+    repository: RepositoryRecord,
+    pull: PullRecord,
+  ): Promise<PullRecord> {
     const id = repository.settings.fixtureEnvironmentId;
     if (!id) return this.deny(integration, pull, "fixture_environment_missing");
     const acting = this.actingApp(integration);
     const environment = requireEntity(acting.context, "Environment", id);
-    const revision = requireEntity(acting.context, "EnvironmentRevision", String(environment.activeRevisionId));
+    const revision = requireEntity(
+      acting.context,
+      "EnvironmentRevision",
+      String(environment.activeRevisionId),
+    );
     const targets = revision.targetOrigins as string[];
-    if ((revision.authProfileRefs as string[]).length || revision.production === true || !targets[0])
+    if (
+      (revision.authProfileRefs as string[]).length ||
+      revision.production === true ||
+      !targets[0]
+    )
       return this.deny(integration, pull, "fixture_environment_unsafe");
     if (this.planUsesSecrets(acting, repository))
       return this.deny(integration, pull, "fixture_secret_refs");
-    return this.admit(integration, repository, pull, { url: targets[0], deploymentId: null, fixture: true, environmentId: id });
+    return this.admit(integration, repository, pull, {
+      url: targets[0],
+      deploymentId: null,
+      fixture: true,
+      environmentId: id,
+    });
   }
   private planUsesSecrets(acting: Application, repository: RepositoryRecord): boolean {
     const { projectId, selection } = repository.settings;
@@ -755,9 +880,17 @@ export class GithubService {
         production: false,
       }).id;
     }
-    const revision = requireEntity(acting.context, "EnvironmentRevision", String(existing.activeRevisionId));
+    const revision = requireEntity(
+      acting.context,
+      "EnvironmentRevision",
+      String(existing.activeRevisionId),
+    );
     if ((revision.targetOrigins as string[])[0] !== origin || revision.networkProfile !== profile)
-      acting.environments.update(existing.id, { baseUrl: origin, networkProfile: profile as "public" | "local-loopback" }, Number(existing.version));
+      acting.environments.update(
+        existing.id,
+        { baseUrl: origin, networkProfile: profile as "public" | "local-loopback" },
+        Number(existing.version),
+      );
     return existing.id;
   }
 
@@ -780,19 +913,24 @@ export class GithubService {
           : "public";
       await this.authorizePreview(target.url, profile);
     } catch (error) {
-      if (error instanceof PolicyDenied || error instanceof TypeError) return this.deny(integration, pull, "preview_url_denied");
+      if (error instanceof PolicyDenied || error instanceof TypeError)
+        return this.deny(integration, pull, "preview_url_denied");
       return this.deny(integration, pull, "admission_failed:preview");
     }
     try {
       const origin = new URL(target.url).origin;
-      const environmentId = target.environmentId ?? (await this.ensureEnvironment(acting, repository, pull, origin, profile));
+      const environmentId =
+        target.environmentId ??
+        (await this.ensureEnvironment(acting, repository, pull, origin, profile));
       const environment = requireEntity(acting.context, "Environment", environmentId);
       const wait = !acting.worker.live();
       const receipt = await acting.selection.run(
         {
           projectId: String(settings.projectId),
           environmentId,
-          ...(settings.selection.kind === "tests" ? { testIds: [...settings.selection.testIds] } : { all: true }),
+          ...(settings.selection.kind === "tests"
+            ? { testIds: [...settings.selection.testIds] }
+            : { all: true }),
           provenance: {
             repositoryId: `github.com/${pull.fullName}`,
             commitSha: pull.headSha,
@@ -820,20 +958,27 @@ export class GithubService {
           error.code === "FORBIDDEN" || error.code === "UNAUTHENTICATED"
             ? "actor_revoked"
             : `admission_failed:${error.code}`;
-        if (reason === "actor_revoked") this.raiseAlert(pull.workspaceId, pull.projectId, pull.id, "actor_revoked", "high");
+        if (reason === "actor_revoked")
+          this.raiseAlert(pull.workspaceId, pull.projectId, pull.id, "actor_revoked", "high");
         return this.deny(integration, pull, reason);
       }
       throw error;
     }
   }
 
-  private async advanceRunning(integration: GithubIntegration, repository: RepositoryRecord, pull: PullRecord): Promise<PullRecord> {
+  private async advanceRunning(
+    integration: GithubIntegration,
+    repository: RepositoryRecord,
+    pull: PullRecord,
+  ): Promise<PullRecord> {
     if (!pull.batchId) return pull;
     const acting = this.actingApp(integration);
     const members = acting.batches.get(pull.batchId).memberRuns as string[];
     const runs = members.map((id) => acting.runs.get(id));
     if (runs.some((run) => run.phase !== "completed")) {
-      const ephemeral = runs.some((run) => (run.matrixCell as Record<string, unknown>).ownership === "ephemeral");
+      const ephemeral = runs.some(
+        (run) => (run.matrixCell as Record<string, unknown>).ownership === "ephemeral",
+      );
       if (ephemeral && !this.runtime.driving.has(pull.id)) {
         this.runtime.driving.add(pull.id);
         const work = acting.worker
@@ -845,12 +990,17 @@ export class GithubService {
       }
       return pull;
     }
-    const environment = pull.environmentId ? requireEntity(acting.context, "Environment", pull.environmentId) : null;
+    const environment = pull.environmentId
+      ? requireEntity(acting.context, "Environment", pull.environmentId)
+      : null;
     const stored = await storedResultForBatch(acting, {
       batchId: pull.batchId,
       previewUrl: pull.previewUrl,
       environmentName: String(environment?.name ?? "unknown"),
-      selection: repository.settings.selection.kind === "all" ? "all tests" : `${repository.settings.selection.testIds.length} selected tests`,
+      selection:
+        repository.settings.selection.kind === "all"
+          ? "all tests"
+          : `${repository.settings.selection.testIds.length} selected tests`,
     });
     return this.setPull(integration, pull, {
       state: "completed",
@@ -877,7 +1027,9 @@ export class GithubService {
     if (integration.state !== "active") return;
     const now = this.runtime.now();
     try {
-      const token = await this.token(integration, record.installationId, pull.repositoryId, { checks: "write" });
+      const token = await this.token(integration, record.installationId, pull.repositoryId, {
+        checks: "write",
+      });
       const client = new ChecksClient(token, {
         apiUrl: this.runtime.api.apiBaseUrl,
         sleep: this.runtime.sleep,
@@ -901,7 +1053,16 @@ export class GithubService {
   /** INT-023: each failure class is its own state with its own retry rule, and raises an alert once. */
   private recordProblem(record: CheckRecord, pull: PullRecord, error: unknown): void {
     if (error instanceof ContractError && error.details.reasonCode === "installation_revoked") {
-      this.globalStore.markFailed(record, { state: "dead_letter", lastError: "installation_revoked", nextAttemptAt: null, firstFailedAt: record.firstFailedAt ?? this.now() }, this.now());
+      this.globalStore.markFailed(
+        record,
+        {
+          state: "dead_letter",
+          lastError: "installation_revoked",
+          nextAttemptAt: null,
+          firstFailedAt: record.firstFailedAt ?? this.now(),
+        },
+        this.now(),
+      );
       return;
     }
     const kind = classifyProblem(error);
@@ -909,9 +1070,13 @@ export class GithubService {
     const nowMs = this.runtime.now().getTime();
     const firstFailedAt = record.firstFailedAt ?? new Date(nowMs).toISOString();
     const exhausted =
-      attempts >= deliveryRetryPolicy.maxAttempts || nowMs - Date.parse(firstFailedAt) > deliveryRetryPolicy.windowMs;
+      attempts >= deliveryRetryPolicy.maxAttempts ||
+      nowMs - Date.parse(firstFailedAt) > deliveryRetryPolicy.windowMs;
     const state = exhausted || kind === "rejected" ? "dead_letter" : kind;
-    const wait = Math.max(deliveryBackoffMs(attempts, this.runtime.random), retryAfterOf(error) ?? 0);
+    const wait = Math.max(
+      deliveryBackoffMs(attempts, this.runtime.random),
+      retryAfterOf(error) ?? 0,
+    );
     const detail =
       error instanceof GithubApiError || (error instanceof Error && "status" in error)
         ? `${kind}:${String((error as { status: unknown }).status)}`
@@ -968,9 +1133,15 @@ export class GithubService {
     return due.length;
   }
 
-  private async upsertComment(integration: GithubIntegration, pull: PullRecord, body: string): Promise<string> {
+  private async upsertComment(
+    integration: GithubIntegration,
+    pull: PullRecord,
+    body: string,
+  ): Promise<string> {
     const api = this.runtime.api;
-    const token = await this.token(integration, pull.installationId, pull.repositoryId, { pull_requests: "write" });
+    const token = await this.token(integration, pull.installationId, pull.repositoryId, {
+      pull_requests: "write",
+    });
     const issue = `/repos/${pull.fullName}/issues`;
     const known = this.scope.database.get(
       "SELECT comment_id FROM github_pulls WHERE workspace_id=? AND installation_id=? AND repository_id=? AND pr_number=? AND comment_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
@@ -981,7 +1152,9 @@ export class GithubService {
     )?.comment_id;
     if (known) {
       try {
-        const { data } = await api.request(token, "PATCH", `${issue}/comments/${String(known)}`, { body });
+        const { data } = await api.request(token, "PATCH", `${issue}/comments/${String(known)}`, {
+          body,
+        });
         return String((data as { id: number | string }).id);
       } catch (error) {
         if (!(error instanceof GithubApiError) || error.status !== 404) throw error;
@@ -989,8 +1162,16 @@ export class GithubService {
     }
     const marker = commentMarker(pull.installationId, pull.repositoryId, pull.prNumber);
     for (let page = 1; page <= 10; page++) {
-      const { data } = await api.request(token, "GET", `${issue}/${pull.prNumber}/comments?per_page=100&page=${page}`);
-      const comments = data as { id: number | string; body?: string; performed_via_github_app?: { id?: number } | null }[];
+      const { data } = await api.request(
+        token,
+        "GET",
+        `${issue}/${pull.prNumber}/comments?per_page=100&page=${page}`,
+      );
+      const comments = data as {
+        id: number | string;
+        body?: string;
+        performed_via_github_app?: { id?: number } | null;
+      }[];
       const own = comments.find(
         (comment) =>
           comment.body?.startsWith(marker) &&
@@ -1002,7 +1183,9 @@ export class GithubService {
       }
       if (comments.length < 100) break;
     }
-    const { data } = await api.request(token, "POST", `${issue}/${pull.prNumber}/comments`, { body });
+    const { data } = await api.request(token, "POST", `${issue}/${pull.prNumber}/comments`, {
+      body,
+    });
     return String((data as { id: number | string }).id);
   }
   /** Comment failures never touch checks or verdicts; they retry a bounded number of times. */
@@ -1016,11 +1199,20 @@ export class GithubService {
       seen.add(key);
       const integration = this.loadIntegration(dirty.workspaceId, dirty.integrationId);
       if (!integration || integration.state !== "active") continue;
-      const pulls = store.pullsOfPr(dirty.workspaceId, dirty.installationId, dirty.repositoryId, dirty.prNumber);
+      const pulls = store.pullsOfPr(
+        dirty.workspaceId,
+        dirty.installationId,
+        dirty.repositoryId,
+        dirty.prNumber,
+      );
       const at = this.now();
       const update = (fields: Record<string, string | number | null>) =>
         this.scope.database.run(
-          `UPDATE github_pulls SET ${Object.keys(fields).map((column) => `${column}=?`).join(",")},version=version+1 WHERE workspace_id=? AND installation_id=? AND repository_id=? AND pr_number=?`,
+          `UPDATE github_pulls SET ${Object.keys(fields)
+            .map((column) => `${column}=?`)
+            .join(
+              ",",
+            )},version=version+1 WHERE workspace_id=? AND installation_id=? AND repository_id=? AND pr_number=?`,
           ...Object.values(fields),
           dirty.workspaceId,
           dirty.installationId,
@@ -1028,19 +1220,37 @@ export class GithubService {
           dirty.prNumber,
         );
       try {
-        const commentId = await this.upsertComment(integration, dirty, renderComment(pulls, this.publicOrigin(integration)));
-        update({ comment_id: commentId, comment_dirty: 0, comment_attempts: 0, comment_next_at: null, comment_error: null });
+        const commentId = await this.upsertComment(
+          integration,
+          dirty,
+          renderComment(pulls, this.publicOrigin(integration)),
+        );
+        update({
+          comment_id: commentId,
+          comment_dirty: 0,
+          comment_attempts: 0,
+          comment_next_at: null,
+          comment_error: null,
+        });
       } catch (error) {
         const attempts = dirty.commentAttempts + 1;
         const kind = classifyProblem(error);
         update({
           comment_dirty: attempts >= COMMENT_MAX_ATTEMPTS || kind === "rejected" ? 0 : 1,
           comment_attempts: attempts,
-          comment_next_at: new Date(this.runtime.now().getTime() + deliveryBackoffMs(attempts, this.runtime.random)).toISOString(),
+          comment_next_at: new Date(
+            this.runtime.now().getTime() + deliveryBackoffMs(attempts, this.runtime.random),
+          ).toISOString(),
           comment_error: kind,
         });
         if (dirty.commentError !== kind)
-          this.raiseAlert(dirty.workspaceId, dirty.projectId, dirty.id, `github_comment_${kind}`, "medium");
+          this.raiseAlert(
+            dirty.workspaceId,
+            dirty.projectId,
+            dirty.id,
+            `github_comment_${kind}`,
+            "medium",
+          );
       }
       handled++;
     }
@@ -1056,7 +1266,11 @@ export class GithubService {
         await this.advance(pull);
       } catch (error) {
         auditAs(
-          { database: this.scope.database, workspaceId: pull.workspaceId, actor: "integration:github" },
+          {
+            database: this.scope.database,
+            workspaceId: pull.workspaceId,
+            actor: "integration:github",
+          },
           "integrations.github.reconcile",
           pull.id,
           "denied",
@@ -1064,12 +1278,16 @@ export class GithubService {
         if (!(error instanceof ContractError)) throw error;
       }
     }
-    return { pulls: active.length, checks: await this.drainChecks(), comments: await this.drainComments() };
+    return {
+      pulls: active.length,
+      checks: await this.drainChecks(),
+      comments: await this.drainComments(),
+    };
   }
 
   // ---------------------------------------------------------------- authorized surface (HTTP routes)
   private requireIntegration(id: string): GithubIntegration {
-    const integration = this.loadIntegration(this.ctx.workspaceId, id);
+    const integration = this.loadIntegration(this.ctx.workspaceId, id, this.ctx.database);
     if (!integration) throw new ContractError("NOT_FOUND", "Integration does not exist", { id });
     return integration;
   }
@@ -1087,14 +1305,22 @@ export class GithubService {
       state: installation.state,
       revokedReason: installation.revokedReason,
       permissions: installation.permissions,
-      repositories: this.store.repositories(installation.workspaceId, installation.installationId).map((repository) => ({
-        repositoryId: repository.repositoryId,
-        fullName: repository.fullName,
-        private: repository.private,
-        granted: repository.granted,
-        enabled: repository.settings.enabled,
-        projectId: repository.settings.projectId,
-      })),
+      repositories: this.store
+        .repositories(installation.workspaceId, installation.installationId)
+        .map((repository) => ({
+          repositoryId: repository.repositoryId,
+          fullName: repository.fullName,
+          private: repository.private,
+          granted: repository.granted,
+          enabled: repository.settings.enabled,
+          projectId: repository.settings.projectId,
+          includeDrafts: repository.settings.includeDrafts,
+          forkPolicy: repository.settings.forkPolicy,
+          baseEnvironmentId: repository.settings.baseEnvironmentId,
+          fixtureEnvironmentId: repository.settings.fixtureEnvironmentId,
+          previewEnvironmentPattern: repository.settings.preview.environmentPattern,
+          previewProvider: repository.settings.preview.provider,
+        })),
       updatedAt: installation.updatedAt,
     }));
   }
@@ -1115,16 +1341,25 @@ export class GithubService {
     return database.inTransaction ? change() : database.withTx(change);
   }
   /** Per-repository toggles and bindings (INT-018/019/021): nothing runs until enabled and bound. */
-  updateRepository(integrationId: string, repositoryId: string, patch: GithubRepositoryPatch): GithubRepository {
+  updateRepository(
+    integrationId: string,
+    repositoryId: string,
+    patch: GithubRepositoryPatch,
+  ): GithubRepository {
     this.ctx.authorize("A");
     validate("GithubRepositoryPatch", patch);
     this.requireIntegration(integrationId);
     return this.inTx(() => {
       const record = this.store
         .installations(this.ctx.workspaceId, integrationId)
-        .map((installation) => this.store.repository(this.ctx.workspaceId, installation.installationId, repositoryId))
+        .map((installation) =>
+          this.store.repository(this.ctx.workspaceId, installation.installationId, repositoryId),
+        )
         .find((entry): entry is RepositoryRecord => Boolean(entry));
-      if (!record) throw new ContractError("NOT_FOUND", "Repository is not part of this integration", { repositoryId });
+      if (!record)
+        throw new ContractError("NOT_FOUND", "Repository is not part of this integration", {
+          repositoryId,
+        });
       const settings: GithubRepositorySettings = {
         ...record.settings,
         ...(patch.enabled === undefined ? {} : { enabled: patch.enabled }),
@@ -1132,28 +1367,54 @@ export class GithubService {
         ...(patch.includeDrafts === undefined ? {} : { includeDrafts: patch.includeDrafts }),
         ...(patch.forkPolicy === undefined ? {} : { forkPolicy: patch.forkPolicy }),
         ...(patch.selection === undefined ? {} : { selection: patch.selection }),
-        ...(patch.baseEnvironmentId === undefined ? {} : { baseEnvironmentId: patch.baseEnvironmentId }),
-        ...(patch.fixtureEnvironmentId === undefined ? {} : { fixtureEnvironmentId: patch.fixtureEnvironmentId }),
+        ...(patch.baseEnvironmentId === undefined
+          ? {}
+          : { baseEnvironmentId: patch.baseEnvironmentId }),
+        ...(patch.fixtureEnvironmentId === undefined
+          ? {}
+          : { fixtureEnvironmentId: patch.fixtureEnvironmentId }),
         preview: { ...record.settings.preview, ...(patch.preview ?? {}) },
       };
       if (settings.enabled && !settings.projectId)
-        throw new ContractError("INVALID_ARGUMENT", "An enabled repository needs a project", { field: "projectId" });
+        throw new ContractError("INVALID_ARGUMENT", "An enabled repository needs a project", {
+          field: "projectId",
+        });
       if (settings.projectId) {
         this.ctx.authorize("A", settings.projectId);
         const project = this.ctx.entities.get("Project", this.ctx.workspaceId, settings.projectId);
-        if (!project || project.archivedAt) throw new ContractError("NOT_FOUND", "Project does not exist", { id: settings.projectId });
+        if (!project || project.archivedAt)
+          throw new ContractError("NOT_FOUND", "Project does not exist", {
+            id: settings.projectId,
+          });
       }
       for (const id of [settings.baseEnvironmentId, settings.fixtureEnvironmentId]) {
         if (!id) continue;
         const environment = this.ctx.entities.get("Environment", this.ctx.workspaceId, id);
         if (!environment || environment.projectId !== settings.projectId)
-          throw new ContractError("INVALID_ARGUMENT", "Environment does not belong to the bound project", { id });
+          throw new ContractError(
+            "INVALID_ARGUMENT",
+            "Environment does not belong to the bound project",
+            { id },
+          );
       }
       if (settings.forkPolicy === "fixture-only" && !settings.fixtureEnvironmentId)
-        throw new ContractError("INVALID_ARGUMENT", "fixture-only forks need a fixture environment", { field: "fixtureEnvironmentId" });
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "fixture-only forks need a fixture environment",
+          { field: "fixtureEnvironmentId" },
+        );
       this.store.setRepositorySettings(record, settings, this.now());
-      auditSecurity(this.ctx, "integrations.github.repository", `${record.installationId}:${repositoryId}`, "allowed");
-      const fresh = this.store.repository(this.ctx.workspaceId, record.installationId, repositoryId);
+      auditSecurity(
+        this.ctx,
+        "integrations.github.repository",
+        `${record.installationId}:${repositoryId}`,
+        "allowed",
+      );
+      const fresh = this.store.repository(
+        this.ctx.workspaceId,
+        record.installationId,
+        repositoryId,
+      );
       if (!fresh) throw new ContractError("INTERNAL", "Repository vanished");
       return this.repositoryView(fresh);
     });
@@ -1161,7 +1422,9 @@ export class GithubService {
   pulls(integrationId: string, limit = 50): GithubPull[] {
     this.ctx.authorize("R");
     this.requireIntegration(integrationId);
-    return this.store.pullsForIntegration(this.ctx.workspaceId, integrationId, limit).map((pull) => this.pullView(pull));
+    return this.store
+      .pullsForIntegration(this.ctx.workspaceId, integrationId, limit)
+      .map((pull) => this.pullView(pull));
   }
   private pullView(pull: PullRecord): GithubPull {
     return {
@@ -1192,7 +1455,9 @@ export class GithubService {
   checks(integrationId: string, limit = 100): GithubCheck[] {
     this.ctx.authorize("R");
     this.requireIntegration(integrationId);
-    return this.store.checksForIntegration(this.ctx.workspaceId, integrationId, limit).map((check) => this.checkView(check));
+    return this.store
+      .checksForIntegration(this.ctx.workspaceId, integrationId, limit)
+      .map((check) => this.checkView(check));
   }
   private checkView(check: CheckRecord): GithubCheck {
     return {
@@ -1222,7 +1487,11 @@ export class GithubService {
     if (!check || pull?.integrationId !== integrationId)
       throw new ContractError("NOT_FOUND", "Check publication does not exist", { id: checkId });
     if (check.state !== "dead_letter")
-      throw new ContractError("PRECONDITION_FAILED", "Only a dead-lettered publication can be retried", { reasonCode: "not_dead_lettered" });
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Only a dead-lettered publication can be retried",
+        { reasonCode: "not_dead_lettered" },
+      );
     this.store.requeueCheck(check, this.now());
     auditSecurity(this.ctx, "integrations.github.retry", checkId, "allowed");
     return this.checkView(this.store.check(this.ctx.workspaceId, checkId) ?? check);
@@ -1235,17 +1504,33 @@ export class GithubService {
     const integration = this.requireIntegration(input.integrationId);
     const installation = this.store
       .installations(this.ctx.workspaceId, integration.id)
-      .find((entry) => this.store.repository(entry.workspaceId, entry.installationId, input.repositoryId));
+      .find((entry) =>
+        this.store.repository(entry.workspaceId, entry.installationId, input.repositoryId),
+      );
     const repository = installation
       ? this.store.repository(this.ctx.workspaceId, installation.installationId, input.repositoryId)
       : null;
     if (!installation || !repository)
-      throw new ContractError("NOT_FOUND", "Repository is not part of this integration", { repositoryId: input.repositoryId });
+      throw new ContractError("NOT_FOUND", "Repository is not part of this integration", {
+        repositoryId: input.repositoryId,
+      });
     if (repository.settings.preview.provider !== "manual")
-      throw new ContractError("PRECONDITION_FAILED", "Repository uses webhook-reported previews", { reasonCode: "preview_provider_mismatch" });
-    const pull = this.store.pullByHead(this.ctx.workspaceId, installation.installationId, input.repositoryId, input.prNumber, input.headSha);
+      throw new ContractError("PRECONDITION_FAILED", "Repository uses webhook-reported previews", {
+        reasonCode: "preview_provider_mismatch",
+      });
+    const pull = this.store.pullByHead(
+      this.ctx.workspaceId,
+      installation.installationId,
+      input.repositoryId,
+      input.prNumber,
+      input.headSha,
+    );
     if (!pull || pull.state !== "awaiting_preview")
-      throw new ContractError("PRECONDITION_FAILED", "No pull request commit is waiting for a preview", { reasonCode: "no_pull_awaiting_preview" });
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "No pull request commit is waiting for a preview",
+        { reasonCode: "no_pull_awaiting_preview" },
+      );
     let url: URL;
     try {
       url = new URL(input.url);
@@ -1276,21 +1561,33 @@ export class GithubService {
     this.ctx.authorize("A");
     const integration = this.requireIntegration(integrationId);
     if (integration.state === "revoked")
-      throw new ContractError("PRECONDITION_FAILED", "Integration is revoked", { reasonCode: "integration_revoked" });
+      throw new ContractError("PRECONDITION_FAILED", "Integration is revoked", {
+        reasonCode: "integration_revoked",
+      });
     const { credentials } = integration.settings;
     if (secretRef === credentials.webhookSecretRef)
-      throw new ContractError("INVALID_ARGUMENT", "New webhook secret must differ from the current one", { field: "secretRef" });
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "New webhook secret must differ from the current one",
+        { field: "secretRef" },
+      );
     const settings: GithubIntegrationSettings = {
       ...integration.settings,
       credentials: {
         ...credentials,
         webhookSecretRef: secretRef,
         previousWebhookSecretRef: credentials.webhookSecretRef,
-        previousWebhookSecretExpiresAt: new Date(this.runtime.now().getTime() + WEBHOOK_ROTATION_MS).toISOString(),
+        previousWebhookSecretExpiresAt: new Date(
+          this.runtime.now().getTime() + WEBHOOK_ROTATION_MS,
+        ).toISOString(),
       },
     };
     const refs = [...new Set([...integration.secretRefs, secretRef])];
-    return this.app.integrations.update(integrationId, { settings, secretRefs: refs }, integration.version);
+    return this.app.integrations.update(
+      integrationId,
+      { settings, secretRefs: refs },
+      integration.version,
+    );
   }
 
   // ---------------------------------------------------------------- setup (manifest flow)
@@ -1322,7 +1619,10 @@ export class GithubService {
     };
   }
   /** Exchanges the one-time code GitHub sent to the redirect URL and stores the App credentials as secrets. */
-  async convertManifest(state: string, input: GithubManifestConversionInput): Promise<IntegrationMetadata> {
+  async convertManifest(
+    state: string,
+    input: GithubManifestConversionInput,
+  ): Promise<IntegrationMetadata> {
     this.ctx.authorize("A");
     validate("GithubManifestConversionInput", input);
     const key = `github:manifest:${state}`;
@@ -1337,22 +1637,48 @@ export class GithubService {
           expiresAt: string;
         })
       : null;
-    if (!pending || pending.workspaceId !== this.ctx.workspaceId || pending.principalId !== this.ctx.principalId)
-      throw new ContractError("NOT_FOUND", "Manifest state is unknown or belongs to another principal");
+    if (
+      !pending ||
+      pending.workspaceId !== this.ctx.workspaceId ||
+      pending.principalId !== this.ctx.principalId
+    )
+      throw new ContractError(
+        "NOT_FOUND",
+        "Manifest state is unknown or belongs to another principal",
+      );
     // One use: the state is consumed before the code is exchanged, so a replay never reaches GitHub.
     this.ctx.database.run("DELETE FROM operational_state WHERE key=?", key);
     if (Date.parse(pending.expiresAt) < this.runtime.now().getTime())
-      throw new ContractError("PRECONDITION_FAILED", "Manifest state expired", { reasonCode: "manifest_expired" });
-    const { data } = await this.runtime.api.request(null, "POST", `/app-manifests/${encodeURIComponent(input.code)}/conversions`, {});
-    const app = data as { id?: number; slug?: string; pem?: string; webhook_secret?: string; client_secret?: string };
+      throw new ContractError("PRECONDITION_FAILED", "Manifest state expired", {
+        reasonCode: "manifest_expired",
+      });
+    const { data } = await this.runtime.api.request(
+      null,
+      "POST",
+      `/app-manifests/${encodeURIComponent(input.code)}/conversions`,
+      {},
+    );
+    const app = data as {
+      id?: number;
+      slug?: string;
+      pem?: string;
+      webhook_secret?: string;
+      client_secret?: string;
+    };
     if (!app.id || !app.slug || !app.pem || !app.webhook_secret)
       throw new ContractError("UNAVAILABLE", "GitHub manifest conversion response is invalid");
     const origin = this.runtime.api.apiBaseUrl;
     const store = async (suffix: string, value: string) =>
-      (await this.app.secrets.set(`github-${app.slug}-${suffix}`, value, { allowedOrigins: [new URL(origin).origin] })).id;
+      (
+        await this.app.secrets.set(`github-${app.slug}-${suffix}`, value, {
+          allowedOrigins: [new URL(origin).origin],
+        })
+      ).id;
     const privateKeyRef = await store("private-key", app.pem);
     const webhookSecretRef = await store("webhook-secret", app.webhook_secret);
-    const clientSecretRef = app.client_secret ? await store("client-secret", app.client_secret) : null;
+    const clientSecretRef = app.client_secret
+      ? await store("client-secret", app.client_secret)
+      : null;
     const settings: GithubIntegrationSettings = {
       appId: String(app.id),
       appSlug: app.slug,
@@ -1397,35 +1723,82 @@ export class GithubService {
     const integration = this.requireIntegration(integrationId);
     const installation = this.store
       .installations(this.ctx.workspaceId, integrationId)
-      .find((entry) => this.store.repository(entry.workspaceId, entry.installationId, input.repositoryId));
+      .find((entry) =>
+        this.store.repository(entry.workspaceId, entry.installationId, input.repositoryId),
+      );
     const repository = installation
       ? this.store.repository(this.ctx.workspaceId, installation.installationId, input.repositoryId)
       : null;
     if (!installation || !repository?.granted || !repository.settings.projectId)
-      throw new ContractError("NOT_FOUND", "Repository is not part of this integration", { repositoryId: input.repositoryId });
+      throw new ContractError("NOT_FOUND", "Repository is not part of this integration", {
+        repositoryId: input.repositoryId,
+      });
     this.ctx.authorizeNamed("approve", "AgentPullRequest", repository.settings.projectId, null);
     if (!integration.settings.allowAgentPullRequests)
-      throw new ContractError("PRECONDITION_FAILED", "Agent pull requests are not enabled for this integration", { reasonCode: "agent_pull_requests_disabled" });
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Agent pull requests are not enabled for this integration",
+        { reasonCode: "agent_pull_requests_disabled" },
+      );
     if (installation.permissions.contents !== "write")
-      throw new ContractError("PRECONDITION_FAILED", "The installation does not grant contents: write", { reasonCode: "installation_permission_missing" });
-    if (!/^testmaster\/[A-Za-z0-9._/-]{1,100}$/u.test(input.headBranch) || input.headBranch === input.baseBranch || input.headBranch.includes(".."))
-      throw new ContractError("INVALID_ARGUMENT", "Agent branches must be new testmaster/ branches", { field: "headBranch" });
-    if (!input.files.length || input.files.length > 50 || input.files.some((file) => file.path.startsWith("/") || file.path.split("/").includes("..") || file.path.startsWith(".github/")))
-      throw new ContractError("INVALID_ARGUMENT", "Agent changes may not touch workflows or leave the repository", { field: "files" });
-    const token = await this.token(integration, installation.installationId, repository.repositoryId, {
-      contents: "write",
-      pull_requests: "write",
-    });
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "The installation does not grant contents: write",
+        { reasonCode: "installation_permission_missing" },
+      );
+    if (
+      !/^testmaster\/[A-Za-z0-9._/-]{1,100}$/u.test(input.headBranch) ||
+      input.headBranch === input.baseBranch ||
+      input.headBranch.includes("..")
+    )
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Agent branches must be new testmaster/ branches",
+        { field: "headBranch" },
+      );
+    if (
+      !input.files.length ||
+      input.files.length > 50 ||
+      input.files.some(
+        (file) =>
+          file.path.startsWith("/") ||
+          file.path.split("/").includes("..") ||
+          file.path.startsWith(".github/"),
+      )
+    )
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Agent changes may not touch workflows or leave the repository",
+        { field: "files" },
+      );
+    const token = await this.token(
+      integration,
+      installation.installationId,
+      repository.repositoryId,
+      {
+        contents: "write",
+        pull_requests: "write",
+      },
+    );
     const api = this.runtime.api;
     const repo = `/repos/${repository.fullName}`;
-    const base = (await api.request(token, "GET", `${repo}/git/ref/heads/${input.baseBranch}`)).data as { object: { sha: string } };
-    await api.request(token, "POST", `${repo}/git/refs`, { ref: `refs/heads/${input.headBranch}`, sha: base.object.sha });
+    const base = (await api.request(token, "GET", `${repo}/git/ref/heads/${input.baseBranch}`))
+      .data as { object: { sha: string } };
+    await api.request(token, "POST", `${repo}/git/refs`, {
+      ref: `refs/heads/${input.headBranch}`,
+      sha: base.object.sha,
+    });
     for (const file of input.files)
-      await api.request(token, "PUT", `${repo}/contents/${file.path.split("/").map(encodeURIComponent).join("/")}`, {
-        message: input.title,
-        content: Buffer.from(file.content).toString("base64"),
-        branch: input.headBranch,
-      });
+      await api.request(
+        token,
+        "PUT",
+        `${repo}/contents/${file.path.split("/").map(encodeURIComponent).join("/")}`,
+        {
+          message: input.title,
+          content: Buffer.from(file.content).toString("base64"),
+          branch: input.headBranch,
+        },
+      );
     const pr = (
       await api.request(token, "POST", `${repo}/pulls`, {
         title: input.title,
@@ -1435,7 +1808,12 @@ export class GithubService {
         draft: true,
       })
     ).data as { number: number; html_url: string };
-    auditSecurity(this.ctx, "integrations.github.agent_pr", `${repository.fullName}#${pr.number}`, "allowed");
+    auditSecurity(
+      this.ctx,
+      "integrations.github.agent_pr",
+      `${repository.fullName}#${pr.number}`,
+      "allowed",
+    );
     return { number: pr.number, url: pr.html_url };
   }
 
@@ -1443,7 +1821,11 @@ export class GithubService {
   async verifyApp(integration: GithubIntegration): Promise<{ ok: boolean; detail: string }> {
     try {
       const credentials = await this.credentials(integration);
-      const jwt = appJwt(credentials.appId, credentials.privateKeyPem, this.runtime.now().getTime());
+      const jwt = appJwt(
+        credentials.appId,
+        credentials.privateKeyPem,
+        this.runtime.now().getTime(),
+      );
       const { data } = await this.runtime.api.request(jwt, "GET", "/app");
       const app = data as { id?: number } | null;
       return app?.id === Number(credentials.appId)
@@ -1465,4 +1847,5 @@ function requiredScopesFor(allowAgent: boolean): string[] {
     ...(allowAgent ? ["github:contents:write"] : []),
   ];
 }
+
 export { manifestPermissions, requiredScopesFor };

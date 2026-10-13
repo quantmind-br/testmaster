@@ -201,11 +201,7 @@ export class SelectionService {
         : input.runIds
           ? "runs"
           : "tests";
-    const provenance = resolveRunProvenance(
-      this.ctx,
-      this.runs.host.config.cwd,
-      input.provenance,
-    );
+    const provenance = resolveRunProvenance(this.ctx, this.runs.host.config.cwd, input.provenance);
     const preview: SelectionPreview = {
       selectionHash: "",
       mode,

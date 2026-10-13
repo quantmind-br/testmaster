@@ -51006,7 +51006,13 @@
                 "private",
                 "granted",
                 "enabled",
-                "projectId"
+                "projectId",
+                "includeDrafts",
+                "forkPolicy",
+                "baseEnvironmentId",
+                "fixtureEnvironmentId",
+                "previewEnvironmentPattern",
+                "previewProvider"
               ],
               "properties": {
                 "repositoryId": {
@@ -51036,6 +51042,60 @@
                     },
                     {
                       "type": "null"
+                    }
+                  ]
+                },
+                "includeDrafts": {
+                  "type": "boolean"
+                },
+                "forkPolicy": {
+                  "anyOf": [
+                    {
+                      "const": "deny",
+                      "type": "string"
+                    },
+                    {
+                      "const": "fixture-only",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "baseEnvironmentId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fixtureEnvironmentId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "previewEnvironmentPattern": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "previewProvider": {
+                  "anyOf": [
+                    {
+                      "const": "github-deployments",
+                      "type": "string"
+                    },
+                    {
+                      "const": "manual",
+                      "type": "string"
                     }
                   ]
                 }
