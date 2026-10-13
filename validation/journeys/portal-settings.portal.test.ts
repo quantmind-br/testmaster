@@ -534,6 +534,48 @@ describe("secrets", () => {
     allRequests.push(...diagnostics.requests);
   });
 
+  it("UX-052 announces a stored secret once in the polite live region, never assertively, and never moves focus into it", async () => {
+    const { page } = await portal(stack.owner);
+    await page.goto("/secrets");
+    await ready(page);
+    type Announced = { __announced: string[] };
+    await page.evaluate(() => {
+      const target = document.querySelector('[data-testid="live-region"]');
+      const log: string[] = [];
+      (window as unknown as Announced).__announced = log;
+      new MutationObserver(() => log.push(target?.textContent ?? "")).observe(target as Node, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
+    const create = page.getByRole("form", { name: "Add a secret" });
+    await create.getByLabel("Name").fill("announce-token");
+    await create.getByLabel("Value").fill("announce-value-0001");
+    await create.getByRole("button", { name: "Store secret" }).click();
+    await page.waitForFunction(() =>
+      (window as unknown as Announced).__announced.some((entry) => entry.includes("Secret stored")),
+    );
+    const announced = await page.evaluate(() => (window as unknown as Announced).__announced);
+    expect(announced.filter((entry) => entry.includes("Secret stored"))).toHaveLength(1);
+    expect(await page.locator('[aria-live="assertive"]').count()).toBe(0);
+    expect(
+      await page.evaluate(
+        () => document.activeElement?.closest('[data-testid="live-region"]') !== null,
+      ),
+    ).toBe(false);
+    expect(await page.locator('[data-testid="live-region"]').getAttribute("aria-live")).toBe(
+      "polite",
+    );
+    // Negative control: the failure path (empty value) announces nothing about storage.
+    const before = announced.length;
+    await create.getByLabel("Name").fill("announce-second");
+    await create.getByRole("button", { name: "Store secret" }).click();
+    await page.getByTestId("error-summary").waitFor();
+    const after = await page.evaluate(() => (window as unknown as Announced).__announced);
+    expect(after.slice(before).some((entry) => entry.includes("Secret stored"))).toBe(false);
+  });
+
   it("UX-005 VAL-034 a viewer sees the secrets page with the reason controls are off and the server refuses the call", async () => {
     const { page } = await portal(viewer);
     await page.goto("/secrets");
