@@ -445,6 +445,14 @@ describe("INT-020 INT-022 comment and check summary", () => {
     ])
       expect(result?.summary, needle).toContain(needle);
     expect(gate?.detailsUrl).toMatch(/^https:\/\/testmaster\.example\.test\/batches\/bat_/u);
+    const completions = w.fake
+      .requestsMatching("PATCH", /\/check-runs\/\d+$/u)
+      .filter((request) => (request.body as { status?: string }).status === "completed");
+    expect(completions.length).toBeGreaterThanOrEqual(2);
+    for (const completion of completions)
+      expect((completion.body as { details_url?: string }).details_url).toMatch(
+        /^https:\/\/testmaster\.example\.test\/batches\/bat_/u,
+      );
     expect(result?.summary).not.toMatch(/\/var\/|\/tmp\//u);
   });
 

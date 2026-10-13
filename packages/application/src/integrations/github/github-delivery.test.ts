@@ -1,4 +1,6 @@
 import { createHash, createPublicKey, createVerify } from "node:crypto";
+import { createServer as createHttpServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { Application } from "../../application.js";
@@ -67,6 +69,50 @@ describe("INT-023 INT-003 delivery problems have their own state, alert and reco
     expect(checkRows(w).map((row) => row.state)).toEqual(["delivered", "delivered"]);
     // No duplicate alert on repeated failures of the same class, and recovery created one check per name.
     expect(w.fake.checkRuns.filter((check) => check.head_sha === SHA_A)).toHaveLength(2);
+  });
+
+  it("INT-023 SEC-047 a redirect from the GitHub API is never followed and counts as an unavailable host", async () => {
+    const outsider: string[] = [];
+    const server = createHttpServer((request, response) => {
+      outsider.push(`${request.method} ${request.url}`);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end("{}");
+    });
+    const listening = Promise.withResolvers<void>();
+    server.listen(0, "127.0.0.1", () => listening.resolve());
+    await listening.promise;
+    try {
+      const w = await world();
+      const { port } = server.address() as AddressInfo;
+      w.fake.failNext(
+        "POST /repos/acme/shop/check-runs",
+        302,
+        { location: `http://127.0.0.1:${port}/steal` },
+        1000,
+      );
+      w.fake.failNext(
+        "POST /repos/acme/shop/issues/7/comments",
+        302,
+        { location: `http://127.0.0.1:${port}/steal-comment` },
+        1000,
+      );
+      await passingPr(w);
+      await w.app.github.reconcile();
+      expect(outsider).toEqual([]);
+      expect(checkRows(w).map((row) => row.state)).toEqual([
+        "host_unavailable",
+        "host_unavailable",
+      ]);
+      // Positive control: without the redirect the same checks are delivered.
+      w.fake.clearFaults();
+      w.clock.t += 3_600_000;
+      await w.drive();
+      expect(verdict(w, SHA_A)).toEqual(SUCCESS);
+    } finally {
+      const closed = Promise.withResolvers<void>();
+      server.close(() => closed.resolve());
+      await closed.promise;
+    }
   });
 
   it("INT-023 a revoked permission and an unavailable host are distinct states with different retry rules", async () => {
@@ -418,6 +464,27 @@ describe("OPS-037 revocation survives a restore from an older backup", () => {
         String(w.installationId),
       )?.state,
     ).toBe("revoked");
+  });
+
+  it("OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests", async () => {
+    const w = await world();
+    await w.install();
+    await w.openPr(7, SHA_A);
+    expect(w.pull(SHA_A).state).toBe("awaiting_preview");
+    // A restore re-applies the tombstone onto the row its older backup still has as active.
+    w.app.database.run(
+      "INSERT INTO operational_state(key,value) VALUES(?,?)",
+      `integration:revoked:github:${w.installationId}`,
+      new Date(w.clock.t).toISOString(),
+    );
+    await w.app.controllerScope().github.reconcile();
+    expect(
+      w.app.database.get(
+        "SELECT state FROM github_installations WHERE installation_id=?",
+        String(w.installationId),
+      )?.state,
+    ).toBe("revoked");
+    expect(w.pull(SHA_A).state).toBe("closed");
   });
 
   it("OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)", async () => {
