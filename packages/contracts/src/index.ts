@@ -2,6 +2,7 @@ export * from "./catalog.js";
 export * from "./dtos.js";
 export * from "./entities.js";
 export * from "./m4/integrations.js";
+export * from "./m4/runs.js";
 export * from "./metrics.js";
 export * from "./operations.js";
 export * from "./plans.js";

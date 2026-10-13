@@ -1,0 +1,227 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "projectId",
+    "window",
+    "considered",
+    "truncated",
+    "metrics",
+    "quarantined",
+    "limitations"
+  ],
+  "properties": {
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "window": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "since",
+        "until"
+      ],
+      "properties": {
+        "since": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "until": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        }
+      }
+    },
+    "considered": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "metrics": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "counts",
+        "rates",
+        "exclusions",
+        "blockedReasons",
+        "retryPolicy"
+      ],
+      "properties": {
+        "counts": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        },
+        "rates": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "numerator",
+                "denominator",
+                "denominatorState",
+                "state",
+                "value",
+                "definition",
+                "scope"
+              ],
+              "properties": {
+                "numerator": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "denominator": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "denominatorState": {
+                  "anyOf": [
+                    {
+                      "const": "known",
+                      "type": "string"
+                    },
+                    {
+                      "const": "unknown",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "state": {
+                  "anyOf": [
+                    {
+                      "const": "available",
+                      "type": "string"
+                    },
+                    {
+                      "const": "notApplicable",
+                      "type": "string"
+                    },
+                    {
+                      "const": "insufficientData",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "maximum": 1,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "definition": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "exclusions": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        },
+        "blockedReasons": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        },
+        "retryPolicy": {
+          "type": "string"
+        }
+      }
+    },
+    "quarantined": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "owner",
+          "reason",
+          "expiresAt",
+          "active",
+          "runsInWindow",
+          "failedRunsInWindow"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "owner": {
+            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "runsInWindow": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "failedRunsInWindow": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ProjectMetrics",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
