@@ -59,6 +59,8 @@ export interface ApiOptions {
    * starting a competing navigation while the router is still resolving.
    */
   readonly handleUnauthenticated?: boolean;
+  /** Set by the client on its single CSRF retry. */
+  readonly csrfRetried?: boolean;
 }
 
 export interface ApiEnvironment {
@@ -67,6 +69,8 @@ export interface ApiEnvironment {
   readonly apiPrefix?: string;
   /** Called with a 401 so the shell can drop to the login page. */
   readonly onUnauthenticated?: (error: ApiError) => void;
+  /** Returns the session's current CSRF token after a `csrf` denial, or null when signed out. */
+  readonly refreshCsrf?: () => Promise<string | null>;
 }
 
 export type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -111,7 +115,7 @@ export function createApiClient(environment: ApiEnvironment = {}): ApiClient {
   const uuid = environment.uuid ?? (() => crypto.randomUUID());
   let csrf: string | null = null;
 
-  return {
+  const client: ApiClient = {
     setCsrfToken(token) {
       csrf = token;
     },
@@ -160,6 +164,25 @@ export function createApiClient(environment: ApiEnvironment = {}): ApiClient {
         const failure = await parseFailure(response, correlation);
         if (failure.status === 401 && options.handleUnauthenticated !== false)
           environment.onUnauthenticated?.(failure);
+        // The session's CSRF token can rotate (GET /me); recover once, replaying the same
+        // Idempotency-Key so the server deduplicates a request that did execute.
+        if (
+          mutation &&
+          failure.status === 403 &&
+          failure.details.reason === "csrf" &&
+          !options.csrfRetried &&
+          environment.refreshCsrf
+        ) {
+          const fresh = await environment.refreshCsrf();
+          if (fresh !== null) {
+            csrf = fresh;
+            return client.api<T>(method, path, {
+              ...options,
+              idempotencyKey: headers["Idempotency-Key"] ?? uuid(),
+              csrfRetried: true,
+            });
+          }
+        }
         throw failure;
       }
       const envelope = (await response.json()) as {
@@ -175,4 +198,5 @@ export function createApiClient(environment: ApiEnvironment = {}): ApiClient {
       };
     },
   };
+  return client;
 }

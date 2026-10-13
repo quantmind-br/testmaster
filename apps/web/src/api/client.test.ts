@@ -149,6 +149,59 @@ describe("portal API client", () => {
     expect(seen).toEqual(["UNAUTHENTICATED"]);
   });
 
+  it("UX-006 a csrf denial refreshes the token once and replays the same idempotency key", async () => {
+    const csrfDenied = () =>
+      new Response(
+        JSON.stringify({
+          requestId: "r",
+          error: { code: "FORBIDDEN", message: "no", details: { reason: "csrf" } },
+        }),
+        { status: 403 },
+      );
+    const { calls, implementation } = fakeFetch((request) =>
+      request.headers.get("X-CSRF-Token") === "fresh" ? ok({ done: true }) : csrfDenied(),
+    );
+    const client = createApiClient({
+      fetch: implementation,
+      uuid: sequence(),
+      refreshCsrf: async () => "fresh",
+    });
+    client.setCsrfToken("stale");
+    const result = await client.api<{ done: boolean }>("POST", "/identity/logout", { body: {} });
+    expect(result.data).toEqual({ done: true });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.headers.get("Idempotency-Key")).toBe(calls[0]?.headers.get("Idempotency-Key"));
+    expect(client.csrfToken()).toBe("fresh");
+  });
+
+  it("UX-006 a csrf denial that persists is surfaced after one retry, and other 403s never retry", async () => {
+    const denied = (reason: string) => () =>
+      new Response(
+        JSON.stringify({
+          requestId: "r",
+          error: { code: "FORBIDDEN", message: "no", details: { reason } },
+        }),
+        { status: 403 },
+      );
+    const persistent = fakeFetch(denied("csrf"));
+    const first = createApiClient({
+      fetch: persistent.implementation,
+      uuid: sequence(),
+      refreshCsrf: async () => "still-wrong",
+    });
+    const failure = await first.api("POST", "/x", { body: {} }).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ status: 403 });
+    expect(persistent.calls).toHaveLength(2);
+    const other = fakeFetch(denied("origin"));
+    const second = createApiClient({
+      fetch: other.implementation,
+      uuid: sequence(),
+      refreshCsrf: async () => "fresh",
+    });
+    await second.api("POST", "/x", { body: {} }).catch(() => undefined);
+    expect(other.calls).toHaveLength(1);
+  });
+
   it("UX-006 a route loader can handle its own 401 without the global handler firing", async () => {
     const seen: string[] = [];
     const { implementation } = fakeFetch(

@@ -13,6 +13,17 @@ export function setUnauthenticatedHandler(handler: ((error: ApiError) => void) |
 
 export const client: ApiClient = createApiClient({
   onUnauthenticated: (error) => unauthenticated?.(error),
+  // GET /me returns the session's current CSRF token (null for bearer or anonymous callers).
+  refreshCsrf: async () => {
+    try {
+      const me = await client.api<{ csrfToken: string | null }>("GET", "/me", {
+        handleUnauthenticated: false,
+      });
+      return me.data.csrfToken;
+    } catch {
+      return null;
+    }
+  },
 });
 
 export const api: ApiClient["api"] = (method, path, options) => client.api(method, path, options);
