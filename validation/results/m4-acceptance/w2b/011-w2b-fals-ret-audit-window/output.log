@@ -1,0 +1,33 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |postgres| packages/application/src/retention-controller.pg.test.ts (2 tests | 1 failed) 322ms
+   × SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock 201ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/retention-controller.pg.test.ts > SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/application/src/retention-controller.pg.test.ts:80:73
+     78|   expect(present("runs", runs.mineExpired.runId, stack.workspaceId)).t…
+     79|   expect(present("runs", runs.otherExpired.runId, other)).toBe(0);
+     80|   expect(present("audit_events", audit.mineExpired, stack.workspaceId)…
+       |                                                                         ^
+     81|   expect(present("audit_events", audit.otherExpired, other)).toBe(0);
+     82|   // Negative: everything inside the window stays.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  15:45:01
+   Duration  2.86s (import 41%, transform 38%, tests 21%)
+

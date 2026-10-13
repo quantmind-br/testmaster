@@ -1,0 +1,86 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |unit| packages/application/src/integrations/github/github-duplicates.test.ts (4 tests | 3 failed) 2468ms
+   ❯ VAL-033 INT-014 INT-015 a duplicate delivery never creates a second Run (4)
+     × VAL-033 the same deployment_status delivered twice by ID and again under a new ID before the reconcile creates exactly one Run 971ms
+     × VAL-033 a deployment_status or pull_request repeated after the verdict neither starts another Run nor rewrites its checks 447ms
+     × VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA 454ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-duplicates.test.ts > VAL-033 INT-014 INT-015 a duplicate delivery never creates a second Run > VAL-033 the same deployment_status delivered twice by ID and again under a new ID before the reconcile creates exactly one Run
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "TestMaster / required-gate": "success",
+-   "TestMaster / result": "success",
++   "TestMaster / required-gate": "in_progress",
++   "TestMaster / result": "in_progress",
+  }
+
+ ❯ packages/application/src/integrations/github/github-duplicates.test.ts:55:31
+     53|     await w.send("deployment_status", payload, { deliveryId: "dep-1-re…
+     54|     await w.drive();
+     55|     expect(verdict(w, SHA_A)).toEqual(SUCCESS);
+       |                               ^
+     56|     expect(counts(w)).toMatchObject({ runs: 1, batches: 1 });
+     57|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-duplicates.test.ts > VAL-033 INT-014 INT-015 a duplicate delivery never creates a second Run > VAL-033 a deployment_status or pull_request repeated after the verdict neither starts another Run nor rewrites its checks
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "TestMaster / required-gate": "success",
+-   "TestMaster / result": "success",
++   "TestMaster / required-gate": "in_progress",
++   "TestMaster / result": "in_progress",
+  }
+
+ ❯ packages/application/src/integrations/github/github-duplicates.test.ts:68:31
+     66|     await w.deploy(1, SHA_A);
+     67|     await w.drive();
+     68|     expect(verdict(w, SHA_A)).toEqual(SUCCESS);
+       |                               ^
+     69|     const settled = counts(w);
+     70|     expect(settled.runs).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-duplicates.test.ts > VAL-033 INT-014 INT-015 a duplicate delivery never creates a second Run > VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "TestMaster / required-gate": "success",
+-   "TestMaster / result": "success",
++   "TestMaster / required-gate": "in_progress",
++   "TestMaster / result": "in_progress",
+  }
+
+ ❯ packages/application/src/integrations/github/github-duplicates.test.ts:129:31
+    127|     await w.deploy(2, SHA_A);
+    128|     await w.drive();
+    129|     expect(verdict(w, SHA_A)).toEqual(SUCCESS);
+       |                               ^
+    130|     expect(counts(w).runs).toBe(1);
+    131|     expect(w.fake.checkRuns.map((check) => check.head_sha)).not.toCont…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  15:44:44
+   Duration  3.70s (tests 68%, transform 17%, import 16%)
+

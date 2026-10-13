@@ -1,0 +1,26 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |unit| packages/application/src/notifications/webhook-transport.test.ts (2 tests | 1 failed) 323ms
+   × SEC-013 a webhook integration cannot be configured for a plain http URL, and the https one delivers a signed, timestamped request 272ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/webhook-transport.test.ts > SEC-013 a webhook integration cannot be configured for a plain http URL, and the https one delivers a signed, timestamped request
+AssertionError: expected function to throw an error, but it didn't
+ ❯ packages/application/src/notifications/webhook-transport.test.ts:33:5
+     31|       settings: { url: plainUrl, signingSecretRef: signing },
+     32|     }),
+     33|   ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" })…
+       |     ^
+     34|   expect(h.app.integrations.list()).toEqual([]);
+     35|   h.completedRun();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  15:48:17
+   Duration  1.47s (transform 40%, import 37%, tests 23%)
+
