@@ -6,6 +6,7 @@ import { authoringRoutes } from "./authoring.js";
 import { coreRoutes } from "./core.js";
 import { deliveryRoutes } from "./deliveries.js";
 import { eventRoutes } from "./events.js";
+import { githubRoutes } from "./github.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
 import { onboardingRoutes } from "./onboarding.js";
@@ -21,6 +22,7 @@ export const routeModules: RouteModule[] = [
   coreRoutes,
   eventRoutes,
   identityRoutes,
+  githubRoutes,
   integrationRoutes,
   settingsRoutes,
   onboardingRoutes,

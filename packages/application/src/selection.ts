@@ -11,7 +11,7 @@ import { analyzeDiff } from "@testmaster/planner";
 import { planRiskActions } from "./approvals.js";
 import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import { resolveReuse } from "./dependency-reuse.js";
-import { resolveRepositoryProvenance } from "./provenance.js";
+import { resolveRunProvenance } from "./provenance.js";
 import { QuarantineService } from "./quarantine.js";
 import type { AdmissionOptions, BatchesService, ResolvedDependency, RunsService } from "./runs.js";
 
@@ -33,6 +33,8 @@ export interface SelectionInput {
   provenance?: RunRequest["provenance"];
   expectedSelectionHash?: string;
   targetUrl?: string;
+  /** Admission origin recorded on every Run; defaults to the CLI. */
+  origin?: RunRequest["origin"];
 }
 export interface SelectionPreview {
   selectionHash: string;
@@ -114,7 +116,9 @@ export class SelectionService {
     });
   }
   private async resolve(input: SelectionInput, strict = false): Promise<Resolution> {
-    validate("SelectionInput", input);
+    // `origin` is set by trusted callers (the GitHub App) and is never part of the wire schema.
+    const { origin: _origin, ...wire } = input;
+    validate("SelectionInput", wire);
     this.ctx.authorize("R", input.projectId);
     const modes = [
       input.testIds !== undefined,
@@ -197,7 +201,7 @@ export class SelectionService {
         : input.runIds
           ? "runs"
           : "tests";
-    const provenance = resolveRepositoryProvenance(this.runs.host.config.cwd, input.provenance);
+    const provenance = resolveRunProvenance(this.ctx, this.runs.host.config.cwd, input.provenance);
     const preview: SelectionPreview = {
       selectionHash: "",
       mode,
@@ -396,7 +400,7 @@ export class SelectionService {
       seed: input.seed ?? item.seed ?? 0,
       mode: "replay",
       healingPolicy: "off",
-      origin: "cli",
+      origin: input.origin ?? "cli",
       ...(strict ? { limits: { maxAttempts: 1 } } : {}),
       ...(input.provenance ? { provenance: input.provenance } : {}),
       ...(item.dependencyRevisions

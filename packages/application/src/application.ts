@@ -82,7 +82,16 @@ import { DeliveryService } from "./delivery.js";
 import { FeatureMapService } from "./feature-map.js";
 import { FlakeService } from "./flake.js";
 import { IdentityService } from "./identity.js";
-import { type IntegrationSecrets, IntegrationsService } from "./integrations/index.js";
+import {
+  createGithubProvider,
+  GithubRuntime,
+  type GithubRuntimeOptions,
+  GithubService,
+  IntegrationProviderRegistry,
+  type IntegrationSecrets,
+  IntegrationsService,
+  integrationProviders,
+} from "./integrations/index.js";
 import {
   defaultPublicOrigin,
   NotificationsService,
@@ -166,9 +175,13 @@ export interface ApplicationOptions extends ResolveConfigOptions {
    * the migrations of the release being rehearsed.
    */
   migrationsDir?: string;
+  /** Overrides the GitHub API origin and clocks (tests, GitHub Enterprise Server). */
+  github?: GithubRuntimeOptions;
 }
 interface SharedRuntime {
   controllers: ControllerRegistry;
+  /** API client, installation-token cache and clocks of the GitHub App integration. */
+  github: GithubRuntime;
   controllerScope?: Application;
   /** Workspace system scopes handed to controller loops, built once per workspace. */
   systemScopes?: Map<string, Application>;
@@ -199,6 +212,7 @@ export class Application {
   readonly schedules: SchedulesService;
   readonly notifications: NotificationsService;
   readonly workerPool: WorkerPoolService;
+  readonly github: GithubService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
   readonly analysis: AnalysisService;
@@ -252,6 +266,7 @@ export class Application {
     private readonly shared: SharedRuntime = {
       controllers: new ControllerRegistry(),
       ephemeralSecrets: new Map(),
+      github: new GithubRuntime(),
     },
     readonly serverConfig?: ServerConfig,
   ) {
@@ -385,7 +400,10 @@ export class Application {
       this.artifacts,
     );
     this.delivery = new DeliveryService(this.context);
-    this.integrations = new IntegrationsService(this.context);
+    const providers = new IntegrationProviderRegistry(integrationProviders);
+    this.github = new GithubService(this, shared.github);
+    providers.register(createGithubProvider(this.github));
+    this.integrations = new IntegrationsService(this.context, { providers });
     this.suites = new SuitesService(this.context, this.batches);
     this.schedules = new SchedulesService(this.context, this.suites, this.integrations);
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
@@ -506,12 +524,24 @@ export class Application {
       options.imageLockPath,
       options.dockerCommand,
       null,
-      undefined,
+      {
+        controllers: new ControllerRegistry(),
+        ephemeralSecrets: new Map(),
+        github: new GithubRuntime(options.github),
+      },
       options.server,
     );
     application.controllers.register(schedulerController());
     registerNotificationProviders();
     for (const controller of notificationControllers) application.controllers.register(controller);
+    // Server-only (no `local` flag): reconciles pull requests, check publication and comments.
+    application.controllers.register({
+      name: "github-reconciler",
+      intervalMs: 2000,
+      run: async (scope) => {
+        await scope.github.reconcile();
+      },
+    });
     return application;
   }
   close(): void {
@@ -803,7 +833,7 @@ export class Application {
   }
   private authorizeNamed(
     action: "approve" | "delete" | "export",
-    resourceType: "HealingProposal" | "Artifact" | "SecretReference",
+    resourceType: "HealingProposal" | "Artifact" | "SecretReference" | "AgentPullRequest",
     projectId: string,
     environmentId: string | null,
   ): void {
@@ -821,6 +851,7 @@ export class Application {
         HealingProposal: ["HealingProposal", "healing", "*"],
         Artifact: ["Artifact", "artifacts", "*"],
         SecretReference: ["SecretReference", "secrets", "*"],
+        AgentPullRequest: ["AgentPullRequest", "github", "*"],
       };
       const column: RbacColumn =
         action === "approve" ? "write" : action === "export" ? "export" : "admin";
@@ -842,7 +873,7 @@ export class Application {
         : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
-          scope: `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets" }[resourceType]}:${action}`,
+          scope: `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github" }[resourceType]}:${action}`,
         });
       auditSecurity(this.context, "grant", projectId, "allowed");
     } catch (error) {

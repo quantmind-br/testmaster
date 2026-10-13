@@ -105,7 +105,7 @@ export class BackupsService {
           "SELECT workspace_id,id,secret_version,revoked_at FROM secret_references",
         ),
         tombstones: this.ctx.database.all(
-          "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%' OR key LIKE 'image:revoked:%'",
+          "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%' OR key LIKE 'image:revoked:%' OR key LIKE 'integration:revoked:%'",
         ),
         consentRevocations: this.ctx.database.all(
           "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",

@@ -3,6 +3,7 @@ import * as Entities from "./entities.js";
 import { auditContracts } from "./m4/audit.js";
 import { authContracts } from "./m4/auth.js";
 import { authoringContracts } from "./m4/authoring.js";
+import { githubContracts } from "./m4/github.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
 import { listContracts } from "./m4/lists.js";
@@ -474,7 +475,7 @@ const supplemental = {
       checkoutSha: Type.Union([P.Name, Type.Null()]),
       binding: P.Enum(["verified", "unbound"]),
       /** "local-checkout" only for a loopback target served from the verified clean checkout. */
-      targetBinding: P.Enum(["local-checkout", "unbound"]),
+      targetBinding: P.Enum(["local-checkout", "github-deployment", "unbound"]),
     }),
     selection: P.Obj({
       requested: P.Nonnegative,
@@ -645,6 +646,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...notificationContracts,
   ...deliveryContracts,
   ...workerContracts,
+  ...githubContracts,
   ...identityContracts,
   ...settingsContracts,
   ...onboardingContracts,

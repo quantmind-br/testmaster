@@ -563,6 +563,9 @@ export class WorkerService {
           dirtyHash: admitted.repository?.dirtyHash ?? null,
           deploymentId: admitted.repository?.deploymentId ?? null,
           binding: admitted.repository?.binding ?? "unbound",
+          ...(admitted.repository?.bindingSource
+            ? { bindingSource: admitted.repository.bindingSource }
+            : {}),
         },
         runId: run.id,
         revisionId: run.revisionId,

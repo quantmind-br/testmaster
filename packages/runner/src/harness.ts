@@ -32,6 +32,10 @@ export async function runHarness(): Promise<RunnerResult> {
   const input = await readInput();
   const forwarder = await startForwarder(
     process.env.TESTMASTER_EGRESS_SOCKET ?? "/run/testmaster/sockets/egress.sock",
+    // Containers own their network namespace; unsafe-local runs share the host and ask for a free port.
+    process.env.TESTMASTER_FORWARDER_PORT === undefined
+      ? undefined
+      : Number(process.env.TESTMASTER_FORWARDER_PORT),
   );
   process.env.TESTMASTER_EGRESS_PROXY = `http://127.0.0.1:${forwarder.port}`;
   process.env.HTTP_PROXY = process.env.TESTMASTER_EGRESS_PROXY;

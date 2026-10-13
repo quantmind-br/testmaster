@@ -1019,7 +1019,10 @@ describe("INT-004 integrations need scope consent and test deliveries are labell
 
 describe("INT-001 surface catalog", () => {
   it("INT-001 integration routes are declared under /v1 with distinct request and response contracts", () => {
-    const rows = routeCatalog.filter((route) => route.path.startsWith("/integrations"));
+    // The GitHub provider's own routes (`/integrations/github/...`, `/integrations/{id}/github/...`) are proven by github.routes.test.ts.
+    const rows = routeCatalog.filter(
+      (route) => route.path.startsWith("/integrations") && !route.path.includes("github"),
+    );
     expect(rows.map((route) => `${route.method} ${route.path} ${route.scope}`).sort()).toEqual([
       "GET /integrations integrations:A",
       "PATCH /integrations/{id} integrations:A",

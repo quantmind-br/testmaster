@@ -4,6 +4,7 @@ export * from "./entities.js";
 export * from "./m4/audit.js";
 export * from "./m4/auth.js";
 export * from "./m4/authoring.js";
+export * from "./m4/github.js";
 export * from "./m4/integrations.js";
 export * from "./m4/lists.js";
 export * from "./m4/notifications.js";

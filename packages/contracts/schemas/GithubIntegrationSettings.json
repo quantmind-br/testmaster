@@ -1,0 +1,102 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "appId",
+    "appSlug",
+    "publicOrigin",
+    "allowAgentPullRequests",
+    "credentials"
+  ],
+  "properties": {
+    "appId": {
+      "pattern": "^[0-9]{1,20}$",
+      "type": "string"
+    },
+    "appSlug": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "publicOrigin": {
+      "anyOf": [
+        {
+          "minLength": 8,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "allowAgentPullRequests": {
+      "type": "boolean"
+    },
+    "credentials": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "privateKeyRef",
+        "webhookSecretRef",
+        "previousWebhookSecretRef",
+        "previousWebhookSecretExpiresAt",
+        "clientSecretRef"
+      ],
+      "properties": {
+        "privateKeyRef": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "webhookSecretRef": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "previousWebhookSecretRef": {
+          "anyOf": [
+            {
+              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previousWebhookSecretExpiresAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clientSecretRef": {
+          "anyOf": [
+            {
+              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:GithubIntegrationSettings",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

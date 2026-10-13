@@ -1,0 +1,184 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "repositoryId",
+    "installationId",
+    "fullName",
+    "private",
+    "granted",
+    "settings",
+    "version"
+  ],
+  "properties": {
+    "repositoryId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "installationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "fullName": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "private": {
+      "type": "boolean"
+    },
+    "granted": {
+      "type": "boolean"
+    },
+    "settings": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "enabled",
+        "projectId",
+        "includeDrafts",
+        "forkPolicy",
+        "selection",
+        "baseEnvironmentId",
+        "fixtureEnvironmentId",
+        "preview"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "projectId": {
+          "anyOf": [
+            {
+              "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "includeDrafts": {
+          "type": "boolean"
+        },
+        "forkPolicy": {
+          "anyOf": [
+            {
+              "const": "deny",
+              "type": "string"
+            },
+            {
+              "const": "fixture-only",
+              "type": "string"
+            }
+          ]
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "all",
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "kind",
+                "testIds"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "tests",
+                  "type": "string"
+                },
+                "testIds": {
+                  "minItems": 1,
+                  "maxItems": 200,
+                  "type": "array",
+                  "items": {
+                    "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "baseEnvironmentId": {
+          "anyOf": [
+            {
+              "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fixtureEnvironmentId": {
+          "anyOf": [
+            {
+              "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preview": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "provider",
+            "environmentPattern",
+            "timeoutMs"
+          ],
+          "properties": {
+            "provider": {
+              "anyOf": [
+                {
+                  "const": "github-deployments",
+                  "type": "string"
+                },
+                {
+                  "const": "manual",
+                  "type": "string"
+                }
+              ]
+            },
+            "environmentPattern": {
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[A-Za-z0-9*?._/ -]+$",
+              "type": "string"
+            },
+            "timeoutMs": {
+              "minimum": 1000,
+              "maximum": 86400000,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:GithubRepository",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

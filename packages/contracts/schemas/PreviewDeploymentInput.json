@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "integrationId",
+    "repositoryId",
+    "prNumber",
+    "headSha",
+    "url"
+  ],
+  "properties": {
+    "integrationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "repositoryId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "prNumber": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "headSha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "url": {
+      "minLength": 8,
+      "maxLength": 2000,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:PreviewDeploymentInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

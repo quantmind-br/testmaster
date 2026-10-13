@@ -592,6 +592,7 @@ export const ExecutionSnapshot = Obj({
     checkoutSha: Type.Optional(nullable(Name)),
     baseSha: Type.Optional(nullable(Name)),
     binding: Type.Optional(Enum(["verified", "unbound"])),
+    bindingSource: Type.Optional(Type.Literal("github-deployment")),
   }),
   /** Measured from the pinned runner image during dispatch preflight; absent means incomparable. */
   runtimeIdentity: Type.Optional(

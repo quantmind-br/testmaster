@@ -1,0 +1,239 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "integrationId",
+    "installationId",
+    "repositoryId",
+    "repositoryFullName",
+    "prNumber",
+    "headSha",
+    "baseSha",
+    "mergeSha",
+    "fork",
+    "draft",
+    "state",
+    "reasonCode",
+    "projectId",
+    "previewUrl",
+    "deploymentId",
+    "previewDeadlineAt",
+    "batchId",
+    "supersededBy",
+    "gate",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "integrationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "installationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "repositoryId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "repositoryFullName": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "prNumber": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "headSha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "baseSha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "mergeSha": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fork": {
+      "type": "boolean"
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "awaiting_preview",
+          "type": "string"
+        },
+        {
+          "const": "running",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "type": "string"
+        },
+        {
+          "const": "superseded",
+          "type": "string"
+        },
+        {
+          "const": "timed_out",
+          "type": "string"
+        },
+        {
+          "const": "denied",
+          "type": "string"
+        },
+        {
+          "const": "skipped",
+          "type": "string"
+        },
+        {
+          "const": "closed",
+          "type": "string"
+        }
+      ]
+    },
+    "reasonCode": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "projectId": {
+      "anyOf": [
+        {
+          "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "previewUrl": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deploymentId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "previewDeadlineAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "batchId": {
+      "anyOf": [
+        {
+          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "supersededBy": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gate": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "pending",
+              "type": "string"
+            },
+            {
+              "const": "passed",
+              "type": "string"
+            },
+            {
+              "const": "failed",
+              "type": "string"
+            },
+            {
+              "const": "not_applicable",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:GithubPull",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

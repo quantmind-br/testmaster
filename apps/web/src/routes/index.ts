@@ -6,6 +6,7 @@ import { routes as dashboard } from "./dashboard";
 import { routes as discovery } from "./discovery";
 import { routes as featureMap } from "./feature-map";
 import { routes as flaky } from "./flaky";
+import { routes as github } from "./github";
 import { routes as healing } from "./healing";
 import { routes as home } from "./home";
 import { routes as lists } from "./lists";
@@ -50,4 +51,5 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...notifications,
   ...workers,
   ...auth,
+  ...github,
 ];
