@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -217,4 +218,34 @@ it("UX-044 states the fixed exclusion policy and still refuses excluded files", 
   await expect(app.sources.add({ projectId, role: "prd", path: ".env" })).rejects.toMatchObject({
     code: "POLICY_DENIED",
   });
+});
+
+it("UX-011 refuses an upload named like a credential and accepts the same bytes under a plain name", async () => {
+  const { app, projectId } = await fixture();
+  app.config.profilePolicy.allowUpload = true;
+  const content = Buffer.from("API_TOKEN=do-not-upload-0123456789\n");
+  const completed = async () => {
+    const receipt = app.uploads.create({
+      mediaType: "text/plain",
+      sizeBytes: content.length,
+      contentHash: createHash("sha256").update(content).digest("hex"),
+    });
+    await app.uploads.write(receipt.uploadId, [content], receipt.token);
+    await app.uploads.complete(receipt.uploadId);
+    return receipt.uploadId;
+  };
+  const before = (await app.sources.listWithOverview(projectId)).length;
+  for (const name of [".env", "config/.env.production", "deploy\\server.pem", "id_rsa"])
+    await expect(
+      app.sources.add({ projectId, role: "doc", name, uploadId: await completed() }),
+    ).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  expect(await app.sources.listWithOverview(projectId)).toHaveLength(before);
+  // Negative control: the same bytes under an ordinary name become a source.
+  const added = await app.sources.add({
+    projectId,
+    role: "doc",
+    name: "notes.txt",
+    uploadId: await completed(),
+  });
+  expect(added.source.displayName).toContain("notes.txt");
 });

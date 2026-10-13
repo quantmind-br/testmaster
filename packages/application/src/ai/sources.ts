@@ -310,6 +310,19 @@ export class UploadsService {
   }
 }
 
+/** True when any path segment names a credential, key store or excluded directory. */
+function isCredentialPath(path: string): boolean {
+  return path
+    .split(/[\\/]/u)
+    .some(
+      (part) =>
+        /^\.env(?:\.|$)/i.test(part) ||
+        /^(?:\.git|node_modules|\.ssh)$/i.test(part) ||
+        /\.(?:pem|key|p12|pfx|keystore)$/i.test(part) ||
+        /^(?:id_rsa|id_ed25519|credentials)$/i.test(part),
+    );
+}
+
 export interface SourceAddInput {
   projectId: string;
   role: string;
@@ -438,23 +451,18 @@ export class SourcesService {
       if (!absolute.startsWith(`${root}${sep}`))
         throw new ContractError("POLICY_DENIED", "Source escapes project root");
       relativePath = relative(root, absolute).replaceAll("\\", "/");
-      if (
-        relativePath
-          .split("/")
-          .some(
-            (part) =>
-              /^\.env(?:\.|$)/i.test(part) ||
-              /^(?:\.git|node_modules|\.ssh)$/i.test(part) ||
-              /\.(?:pem|key|p12|pfx|keystore)$/i.test(part) ||
-              /^(?:id_rsa|id_ed25519|credentials)$/i.test(part),
-          )
-      )
+      if (isCredentialPath(relativePath))
         throw new ContractError(
           "POLICY_DENIED",
           "Credential and excluded files cannot become model sources",
         );
       bytes = await readConfinedCodeFile(root, relativePath, MAX_SOURCE_BYTES);
     } else {
+      if (input.name && isCredentialPath(input.name))
+        throw new ContractError(
+          "POLICY_DENIED",
+          "Credential and excluded files cannot become model sources",
+        );
       ({ bytes, mediaType } = await this.uploads.bytes(input.uploadId as string));
     }
     const id = uuidV7IdGenerator.next("svr");
