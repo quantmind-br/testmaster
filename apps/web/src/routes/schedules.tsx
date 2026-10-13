@@ -8,7 +8,7 @@ import { ErrorSummary, type FieldIssue } from "../components/form";
 import { useAnnounce } from "../components/live-region";
 import { Icon, type Shape, type Tone } from "../components/status";
 import { UntrustedText } from "../components/untrusted-text";
-import { StatusView, ViewState } from "../components/view-state";
+import { combineStatus, StatusView, ViewState } from "../components/view-state";
 import { usePageTitle } from "../hooks/use-page-title";
 import { usePaged, useResource } from "../hooks/use-resource";
 import {
@@ -705,6 +705,11 @@ function ScheduleEditPage(): ReactNode {
 
 const option = (value: string, label: string) => ({ value, label });
 
+/**
+ * Reads the lists and schedules the form offers before it renders, so a slow, failed or
+ * forbidden lookup shows the shared loading, error or forbidden view instead of a form whose
+ * selects are silently empty.
+ */
 function ScheduleForm({
   existing,
   etag,
@@ -712,12 +717,43 @@ function ScheduleForm({
   readonly existing: ScheduleView | null;
   readonly etag: string | null;
 }): ReactNode {
+  const suites = usePaged<SuiteSummary>("/suites", {}, 100);
+  const others = usePaged<ScheduleView>("/schedules", {}, 100);
+  const lookups = combineStatus([suites, others]);
+  usePageTitle(existing ? "Edit schedule" : "New schedule");
+  return (
+    <>
+      <h1>{existing ? "Edit schedule" : "New schedule"}</h1>
+      <StatusView
+        status={lookups.status}
+        error={lookups.error}
+        onRetry={() => void Promise.all([suites.reload(), others.reload()])}
+      >
+        <ScheduleFormBody
+          existing={existing}
+          etag={etag}
+          suites={suites.items}
+          others={others.items}
+        />
+      </StatusView>
+    </>
+  );
+}
+
+function ScheduleFormBody({
+  existing,
+  etag,
+  suites,
+  others,
+}: {
+  readonly existing: ScheduleView | null;
+  readonly etag: string | null;
+  readonly suites: readonly SuiteSummary[];
+  readonly others: readonly ScheduleView[];
+}): ReactNode {
   const editing = existing !== null;
   const navigate = useNavigate();
   const announce = useAnnounce();
-  usePageTitle(editing ? "Edit schedule" : "New schedule");
-  const suites = usePaged<SuiteSummary>("/suites", {}, 100);
-  const others = usePaged<ScheduleView>("/schedules", {}, 100);
   const [state, setState] = useState<FormState>(() => initialState(existing));
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [failure, setFailure] = useState<string | null>(null);
@@ -786,20 +822,18 @@ function ScheduleForm({
 
   const suiteOptions = [
     option("", "Choose a list"),
-    ...suites.items
-      .filter((item) => item.state === "active")
-      .map((item) => option(item.id, item.name)),
+    ...suites.filter((item) => item.state === "active").map((item) => option(item.id, item.name)),
   ];
   const dependencyOptions = [
     option("", "Choose a schedule"),
-    ...others.items
+    ...others
       .filter((item) => item.id !== existing?.id && item.state !== "archived")
       .map((item) => option(item.id, item.name)),
   ];
 
   return (
     <>
-      <h1>{editing ? "Edit schedule" : "New schedule"}</h1>
+      {/* The heading lives in `ScheduleForm`, so it is there while the lists load. */}
       {editing ? (
         <p className="banner tone-info" role="note">
           Changing the time zone, cron or list saves a new revision. Past firings keep the revision
@@ -1023,8 +1057,7 @@ function ScheduleForm({
                   Wait for{" "}
                   <UntrustedText
                     value={
-                      others.items.find((entry) => entry.id === item.scheduleId)?.name ??
-                      item.scheduleId
+                      others.find((entry) => entry.id === item.scheduleId)?.name ?? item.scheduleId
                     }
                     maxLength={80}
                   />{" "}

@@ -7,7 +7,7 @@ import { ErrorSummary, type FieldIssue, FormField } from "../../components/form"
 import { useAnnounce } from "../../components/live-region";
 import { StatusBadge } from "../../components/status";
 import { UntrustedText } from "../../components/untrusted-text";
-import { StatusView, ViewState } from "../../components/view-state";
+import { combineStatus, StatusView, ViewState } from "../../components/view-state";
 import { usePageTitle } from "../../hooks/use-page-title";
 import { usePaged, useResource } from "../../hooks/use-resource";
 import { NotFoundPage } from "../../routes/not-found";
@@ -364,113 +364,119 @@ export function AuthProfileCreatePage(): ReactNode {
   return (
     <>
       <h1>New authentication profile</h1>
-      <ErrorSummary key={attempt} issues={issues} />
-      <ActionError message={action.error} />
-      <form onSubmit={(event) => void submit(event)} noValidate>
-        <FormField
-          id={ids.project}
-          label="Project"
-          required
-          error={issues.find((issue) => issue.fieldId === ids.project)?.message ?? null}
-        >
-          {(control) => (
-            <select
-              {...control}
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
-            >
-              <option value="">Select a project</option>
-              {projects.items.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </FormField>
-        <FormField
-          id={ids.name}
-          label="Name"
-          required
-          error={issues.find((issue) => issue.fieldId === ids.name)?.message ?? null}
-        >
-          {(control) => (
-            <input {...control} value={name} onChange={(event) => setName(event.target.value)} />
-          )}
-        </FormField>
-        <FormField label="Kind" required>
-          {(control) => (
-            <select
-              {...control}
-              value={kind}
-              onChange={(event) => {
-                setKind(event.target.value);
-                setSecrets({});
-              }}
-            >
-              {kinds.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          )}
-        </FormField>
-        <FormField
-          id={ids.origins}
-          label="Target origins"
-          hint="Space or comma separated. Credentials are only ever sent to these origins."
-          required
-          error={issues.find((issue) => issue.fieldId === ids.origins)?.message ?? null}
-        >
-          {(control) => (
-            <input
-              {...control}
-              value={origins}
-              onChange={(event) => setOrigins(event.target.value)}
-            />
-          )}
-        </FormField>
-        {(staticRoles[kind] ?? []).map((role) => (
+      <StatusView
+        status={combineStatus([projects]).status}
+        error={projects.error}
+        onRetry={() => void projects.reload()}
+      >
+        <ErrorSummary key={attempt} issues={issues} />
+        <ActionError message={action.error} />
+        <form onSubmit={(event) => void submit(event)} noValidate>
           <FormField
-            key={role}
-            label={`Vault secret ID for ${role}`}
-            hint="The ID of a secret in the vault, never the value itself."
+            id={ids.project}
+            label="Project"
+            required
+            error={issues.find((issue) => issue.fieldId === ids.project)?.message ?? null}
+          >
+            {(control) => (
+              <select
+                {...control}
+                value={projectId}
+                onChange={(event) => setProjectId(event.target.value)}
+              >
+                <option value="">Select a project</option>
+                {projects.items.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </FormField>
+          <FormField
+            id={ids.name}
+            label="Name"
+            required
+            error={issues.find((issue) => issue.fieldId === ids.name)?.message ?? null}
+          >
+            {(control) => (
+              <input {...control} value={name} onChange={(event) => setName(event.target.value)} />
+            )}
+          </FormField>
+          <FormField label="Kind" required>
+            {(control) => (
+              <select
+                {...control}
+                value={kind}
+                onChange={(event) => {
+                  setKind(event.target.value);
+                  setSecrets({});
+                }}
+              >
+                {kinds.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            )}
+          </FormField>
+          <FormField
+            id={ids.origins}
+            label="Target origins"
+            hint="Space or comma separated. Credentials are only ever sent to these origins."
+            required
+            error={issues.find((issue) => issue.fieldId === ids.origins)?.message ?? null}
           >
             {(control) => (
               <input
                 {...control}
-                value={secrets[role] ?? ""}
-                onChange={(event) => setSecrets({ ...secrets, [role]: event.target.value })}
+                value={origins}
+                onChange={(event) => setOrigins(event.target.value)}
               />
             )}
           </FormField>
-        ))}
-        <FormField
-          id={ids.config}
-          label="Configuration (JSON)"
-          hint="Login URL, success rules, browser steps, OAuth endpoints. Never put a credential here."
-          error={issues.find((issue) => issue.fieldId === ids.config)?.message ?? null}
-        >
-          {(control) => (
-            <textarea
-              {...control}
-              rows={8}
-              spellCheck={false}
-              value={config}
-              onChange={(event) => setConfig(event.target.value)}
-            />
-          )}
-        </FormField>
-        <div className="actions">
-          <button type="submit" className="button" aria-disabled={action.pending}>
-            {action.pending ? "Creating…" : "Create profile"}
-          </button>
-          <Link className="button secondary" to="/auth-profiles">
-            Cancel
-          </Link>
-        </div>
-      </form>
+          {(staticRoles[kind] ?? []).map((role) => (
+            <FormField
+              key={role}
+              label={`Vault secret ID for ${role}`}
+              hint="The ID of a secret in the vault, never the value itself."
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  value={secrets[role] ?? ""}
+                  onChange={(event) => setSecrets({ ...secrets, [role]: event.target.value })}
+                />
+              )}
+            </FormField>
+          ))}
+          <FormField
+            id={ids.config}
+            label="Configuration (JSON)"
+            hint="Login URL, success rules, browser steps, OAuth endpoints. Never put a credential here."
+            error={issues.find((issue) => issue.fieldId === ids.config)?.message ?? null}
+          >
+            {(control) => (
+              <textarea
+                {...control}
+                rows={8}
+                spellCheck={false}
+                value={config}
+                onChange={(event) => setConfig(event.target.value)}
+              />
+            )}
+          </FormField>
+          <div className="actions">
+            <button type="submit" className="button" aria-disabled={action.pending}>
+              {action.pending ? "Creating…" : "Create profile"}
+            </button>
+            <Link className="button secondary" to="/auth-profiles">
+              Cancel
+            </Link>
+          </div>
+        </form>
+      </StatusView>
     </>
   );
 }
