@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j13-schedule-notify",
+  "class": "deterministic-e2e",
+  "runner": "scheduler-and-notification-controllers-postgres",
+  "externalDependency": "postgres-container-and-local-https-receivers",
+  "observedAt": "2026-10-13T18:45:12.853Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "scenario": "schedule-and-delivery-outage",
+      "check": "schedule-fires-cross-project-list-and-outage-dead-letters-without-moving-a-verdict",
+      "passed": true,
+      "timezone": "America/New_York",
+      "tzdataVersion": "2026a",
+      "firstBatchId": "bat_01a43dcb-7bd0-749b-90ac-7eb10f24db91",
+      "secondBatchId": "bat_01a44d07-a150-7493-8878-4ff82ae96bb1",
+      "runsPerBatch": 4,
+      "eventsAnnounced": 7,
+      "deliveries": 21,
+      "slackAttempts": 77,
+      "deadLettersBeforeRecovery": 14,
+      "forgedCallbackRequests": 0
+    },
+    {
+      "scenario": "healthy-destinations-control",
+      "check": "healthy-destinations-deliver-once-without-dead-letters",
+      "passed": true,
+      "deliveries": 14
+    }
+  ],
+  "limitations": [
+    "Local HTTPS receivers stand in for Slack and the webhook consumer; no Slack, Jira, Linear or SaaS endpoint is contacted.",
+    "The scheduled batches are admitted by the real scheduler and finished with the SQL a worker runs; no sandbox executes them, so verdict content is not the subject.",
+    "The Jira/Linear tracker import, issue preview and link, and ticket prompt-injection handling are M5 and are not covered.",
+    "PostgreSQL 17 on one host; the harness clock is fake, so wall-clock backoff is simulated, not waited."
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j13-schedule-notify",
+  "class": "deterministic-e2e",
+  "runner": "scheduler-and-notification-controllers-postgres",
+  "externalDependency": "postgres-container-and-local-https-receivers",
+  "observedAt": "2026-10-13T18:44:44.801Z",
+  "passed": false,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "error": "Error: J13: the schedule did not record a gap, an overlap and a later batch",
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [],
+  "failureDiagnostics": {
+    "runs": [],
+    "artifacts": []
+  },
+  "limitations": [
+    "Local HTTPS receivers stand in for Slack and the webhook consumer; no Slack, Jira, Linear or SaaS endpoint is contacted.",
+    "The scheduled batches are admitted by the real scheduler and finished with the SQL a worker runs; no sandbox executes them, so verdict content is not the subject.",
+    "The Jira/Linear tracker import, issue preview and link, and ticket prompt-injection handling are M5 and are not covered.",
+    "PostgreSQL 17 on one host; the harness clock is fake, so wall-clock backoff is simulated, not waited."
+  ]
+}

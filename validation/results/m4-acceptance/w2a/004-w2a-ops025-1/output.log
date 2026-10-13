@@ -1,0 +1,29 @@
+$ vitest run --project postgres packages/application/src/restore-isolation.pg.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2a
+
+ ❯ |postgres| packages/application/src/restore-isolation.pg.test.ts (1 test | 1 failed) 707ms
+   × OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it 706ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/restore-isolation.pg.test.ts > OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it
+TypeError: authenticateBearer is not a function
+ ❯ source packages/application/src/restore-isolation.pg.test.ts:177:48
+    175|     expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    176|   });
+    177|   const tokenOwner = world.runtime.forIdentity(authenticateBearer(worl…
+       |                                                ^
+    178|   const tokenSchedule = tokenOwner.schedules.create({
+    179|     name: "token-owned",
+ ❯ packages/application/src/restore-isolation.pg.test.ts:309:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  15:39:27
+   Duration  3.24s (tests 39%, transform 31%, import 30%)
+
+[ELIFECYCLE] Command failed with exit code 1.

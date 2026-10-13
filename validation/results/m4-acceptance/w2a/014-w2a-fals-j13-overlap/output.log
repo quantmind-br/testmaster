@@ -1,0 +1,49 @@
+$ vitest run --project postgres validation/journeys/j13-schedule-notify.pg.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2a
+
+ ❯ |postgres| validation/journeys/j13-schedule-notify.pg.test.ts (2 tests | 2 failed) 1441ms
+   × J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count 934ms
+   × J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter 503ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j13-schedule-notify.pg.test.ts > J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count
+Error: J13: the schedule did not record a gap, an overlap and a later batch
+ ❯ runScheduleJourneyPart validation/journeys/schedule-helpers.ts:132:11
+    130|   const later = dispatched().find((firing) => firing.batchId !== first…
+    131|   if (!gap || !overlap || !later?.batchId)
+    132|     throw new Error("J13: the schedule did not record a gap, an overla…
+       |           ^
+    133|   const secondBatch = batchOf(app, later.batchId);
+    134|   const view = app.schedules.get(schedule.id);
+ ❯ scheduledWorld validation/journeys/j13-schedule-notify.pg.test.ts:122:20
+ ❯ validation/journeys/j13-schedule-notify.pg.test.ts:188:19
+ ❯ recorded validation/journeys/j13-schedule-notify.pg.test.ts:67:48
+ ❯ validation/journeys/j13-schedule-notify.pg.test.ts:183:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| validation/journeys/j13-schedule-notify.pg.test.ts > J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter
+Error: J13: the schedule did not record a gap, an overlap and a later batch
+ ❯ runScheduleJourneyPart validation/journeys/schedule-helpers.ts:132:11
+    130|   const later = dispatched().find((firing) => firing.batchId !== first…
+    131|   if (!gap || !overlap || !later?.batchId)
+    132|     throw new Error("J13: the schedule did not record a gap, an overla…
+       |           ^
+    133|   const secondBatch = batchOf(app, later.batchId);
+    134|   const view = app.schedules.get(schedule.id);
+ ❯ scheduledWorld validation/journeys/j13-schedule-notify.pg.test.ts:122:20
+ ❯ validation/journeys/j13-schedule-notify.pg.test.ts:388:19
+ ❯ recorded validation/journeys/j13-schedule-notify.pg.test.ts:67:48
+ ❯ validation/journeys/j13-schedule-notify.pg.test.ts:385:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  15:44:40
+   Duration  3.82s (tests 56%, transform 22%, import 22%)
+
+[ELIFECYCLE] Command failed with exit code 1.
