@@ -1,0 +1,206 @@
+$ vitest run --project postgres
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b
+
+ ❯ |postgres| validation/journeys/j16-accessibility.portal.test.ts (18 tests | 8 failed) 13880ms
+   ❯ J16 the journey pages come from the route table and the seed registry (fails closed) (10)
+     × J16 UX-006 every step of the journey has its page in apps/web/src/routes/index.ts 3ms
+     × J16 UX-006 every step of the journey is claimed by a seed in validation/journeys/portal-seeds 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 1ms
+     × J16 UX-051 UX-052 UX-053 UX-054 review: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 runDetail: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 comparison: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 healing: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-006 every step of the journey has its page in apps/web/src/routes/index.ts
+AssertionError: journey pages missing from the portal route table: expected [ …(6) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "onboarding: /projects/:projectId/onboarding",
++   "review: /projects/:projectId/proposals",
++   "runDetail: /runs/:runId",
++   "textualArtifact: /runs/:runId",
++   "comparison: /compare",
++   "healing: /healing-proposals/:proposalId",
++ ]
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:325:7
+    323|       missing.map((key) => `${key}: ${requiredRoutes[key]}`),
+    324|       "journey pages missing from the portal route table",
+    325|     ).toEqual([]);
+       |       ^
+    326|   });
+    327|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-006 every step of the journey is claimed by a seed in validation/journeys/portal-seeds
+AssertionError: journey steps no seed provides a page for: expected [ 'onboarding', 'review', …(4) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "onboarding",
++   "review",
++   "runDetail",
++   "textualArtifact",
++   "comparison",
++   "healing",
++ ]
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:330:68
+    328|   it("J16 UX-006 every step of the journey is claimed by a seed in val…
+    329|     const unclaimed = stepKeys.filter((key) => !seeds.journeySteps.has…
+    330|     expect(unclaimed, "journey steps no seed provides a page for").toE…
+       |                                                                    ^
+    331|   });
+    332|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /projects/:projectId/onboarding for step onboarding is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:353:92
+    351|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    352|       const declared = portalRoutes.some((route) => route.path === req…
+    353|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    354|         true,
+    355|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 review: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /projects/:projectId/proposals for step review is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:353:92
+    351|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    352|       const declared = portalRoutes.some((route) => route.path === req…
+    353|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    354|         true,
+    355|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 runDetail: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /runs/:runId for step runDetail is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:353:92
+    351|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    352|       const declared = portalRoutes.some((route) => route.path === req…
+    353|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    354|         true,
+    355|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /runs/:runId for step textualArtifact is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:353:92
+    351|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    352|       const declared = portalRoutes.some((route) => route.path === req…
+    353|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    354|         true,
+    355|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 comparison: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /compare for step comparison is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:353:92
+    351|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    352|       const declared = portalRoutes.some((route) => route.path === req…
+    353|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    354|         true,
+    355|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 healing: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /healing-proposals/:proposalId for step healing is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:353:92
+    351|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    352|       const declared = portalRoutes.some((route) => route.path === req…
+    353|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    354|         true,
+    355|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed | 11 passed (12)
+      Tests  8 failed | 87 passed (95)
+   Start at  13:00:42
+   Duration  125.40s (tests 96%, import 3%, transform 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.
