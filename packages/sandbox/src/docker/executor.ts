@@ -216,6 +216,25 @@ export function inspectFacts(value: DockerInspect): InspectFacts {
     exitCode: value.State.ExitCode,
   };
 }
+/**
+ * A daemon that cannot enforce a cgroup controller (typically a rootless daemon whose systemd user
+ * session does not delegate `cpu`, `memory` and `pids`) accepts the limit flags and silently drops
+ * them, leaving the container unlimited. The created container must carry every limit of its
+ * envelope, and none above it.
+ */
+export function resourceLimitsEnforced(facts: InspectFacts, kind: ExecutorKind): boolean {
+  const resource = executorResources[kind];
+  return (
+    facts.memory > 0 &&
+    facts.memory <= resource.memoryBytes &&
+    facts.memorySwap > 0 &&
+    facts.memorySwap <= resource.memoryBytes &&
+    facts.pidsLimit > 0 &&
+    facts.pidsLimit <= resource.pids &&
+    facts.nanoCpus > 0 &&
+    facts.nanoCpus <= resource.cpu * 1e9
+  );
+}
 export async function prepareSocketsDir(
   attemptId: string,
   runtimeDir = process.env.XDG_RUNTIME_DIR,
@@ -298,7 +317,8 @@ export class DockerExecutor {
         !initialFacts.securityOpt.some((opt) => opt.startsWith("seccomp=")) ||
         !initialFacts.securityOpt.some((opt) => opt.startsWith("no-new-privileges")) ||
         initialFacts.imageId !== options.imageId ||
-        initialFacts.mounts.some((mount) => mount.writable)
+        initialFacts.mounts.some((mount) => mount.writable) ||
+        !resourceLimitsEnforced(initialFacts, options.kind)
       )
         throw new PolicyDenied("security_precondition_failed");
       const result = await this.command(
@@ -385,13 +405,26 @@ export class DockerExecutor {
       const info = JSON.parse(result.stdout.toString()) as {
         SecurityOptions?: string[];
         CgroupVersion?: string;
+        MemoryLimit?: boolean;
+        SwapLimit?: boolean;
+        CpuCfsQuota?: boolean;
+        PidsLimit?: boolean;
       };
       const security = info.SecurityOptions ?? [];
       const seccomp = security.some((value) => value.includes("seccomp"));
       const cgroupVersion = info.CgroupVersion ?? null;
+      // `false` is the daemon saying it cannot enforce the limit (a rootless daemon without
+      // delegated cgroup controllers); a daemon that does not report the field is not penalised.
+      const limitsUnsupported = [
+        info.MemoryLimit,
+        info.SwapLimit,
+        info.CpuCfsQuota,
+        info.PidsLimit,
+      ].includes(false);
       const diagnostics = [
         ...(!seccomp ? ["seccomp_unavailable"] : []),
         ...(cgroupVersion !== "2" ? ["cgroup_v2_required"] : []),
+        ...(limitsUnsupported ? ["resource_limits_unsupported"] : []),
       ];
       if (probe && diagnostics.length === 0) {
         try {

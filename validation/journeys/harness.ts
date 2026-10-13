@@ -178,6 +178,10 @@ export class Journey {
     delete this.env.NODE_OPTIONS;
     delete this.env.DOCKER_HOST;
     delete this.env.DOCKER_CONTEXT;
+    // Journeys never inherit an ambient daemon selection; a run that must use a specific daemon
+    // (the rootless profile) names it explicitly through this harness-only variable.
+    const explicitDaemon = process.env.TESTMASTER_JOURNEY_DOCKER_HOST;
+    if (explicitDaemon) this.env.DOCKER_HOST = explicitDaemon;
   }
   static async create(
     name: string,
