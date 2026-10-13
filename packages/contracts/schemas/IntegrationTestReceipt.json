@@ -1,0 +1,67 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "integrationId",
+    "test",
+    "label",
+    "deliveryId",
+    "state",
+    "detail",
+    "correlationId"
+  ],
+  "properties": {
+    "integrationId": {
+      "pattern": "^int_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "test": {
+      "const": true,
+      "type": "boolean"
+    },
+    "label": {
+      "const": "test notification",
+      "type": "string"
+    },
+    "deliveryId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "delivered",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "rejected",
+          "type": "string"
+        }
+      ]
+    },
+    "detail": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "correlationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:IntegrationTestReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

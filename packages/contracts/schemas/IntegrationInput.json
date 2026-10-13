@@ -3,23 +3,81 @@
   "type": "object",
   "required": [
     "provider",
-    "destinationRef",
-    "enabled",
+    "name",
+    "projectIds",
+    "events",
+    "consent",
+    "secretRefs",
     "settings"
   ],
   "properties": {
     "provider": {
+      "anyOf": [
+        {
+          "const": "github",
+          "type": "string"
+        },
+        {
+          "const": "slack",
+          "type": "string"
+        },
+        {
+          "const": "email",
+          "type": "string"
+        },
+        {
+          "const": "webhook",
+          "type": "string"
+        }
+      ]
+    },
+    "name": {
       "minLength": 1,
       "maxLength": 200,
       "type": "string"
     },
-    "destinationRef": {
-      "minLength": 1,
-      "maxLength": 200,
-      "type": "string"
+    "projectIds": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
     },
-    "enabled": {
-      "type": "boolean"
+    "events": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "consent": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scopes"
+      ],
+      "properties": {
+        "scopes": {
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "secretRefs": {
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
     },
     "settings": {
       "anyOf": [

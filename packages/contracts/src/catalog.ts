@@ -1,6 +1,7 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import { identityContracts } from "./m4/identity.js";
+import { integrationContracts } from "./m4/integrations.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -505,18 +506,6 @@ const supplemental = {
     state: P.Enum(["ready", "draining", "offline"]),
     version: P.Version,
   }),
-  IntegrationInput: P.Obj({
-    provider: P.Name,
-    destinationRef: P.Name,
-    enabled: Type.Boolean(),
-    settings: P.Json,
-  }),
-  IntegrationMetadata: P.Obj({
-    id: P.Name,
-    provider: P.Name,
-    destinationRef: P.Name,
-    enabled: Type.Boolean(),
-  }),
   PortabilityInput: P.Obj({ package: P.Name, version: P.Name, options: P.Json }),
   OperationReceipt: P.Obj({
     jobId: P.id("job"),
@@ -629,6 +618,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   SuccessEnvelope: SuccessEnvelope(P.Json),
   ...supplemental,
   ...httpInputs,
+  ...integrationContracts,
   ...identityContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),

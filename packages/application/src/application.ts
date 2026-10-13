@@ -76,6 +76,7 @@ import { entity, type RunActor, type Scope, type ServiceContext } from "./contex
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
+import { IntegrationsService } from "./integrations/index.js";
 import { IdentityService } from "./identity.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
@@ -160,6 +161,7 @@ export class Application {
   readonly reports: ReportsService;
   readonly ci: CiService;
   readonly delivery: DeliveryService;
+  readonly integrations: IntegrationsService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
   readonly analysis: AnalysisService;
@@ -331,6 +333,7 @@ export class Application {
       this.artifacts,
     );
     this.delivery = new DeliveryService(this.context);
+    this.integrations = new IntegrationsService(this.context);
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
     this.proposals = new ProposalsService(this.context, this.model, this.requirements);
     this.usage = new UsageService(this.context);

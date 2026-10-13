@@ -16,6 +16,7 @@ import {
 import {
   ContractError,
   errorRegistry,
+  INBOUND_WEBHOOK_MAX_BYTES,
   parseStrictJson,
   routeCatalog,
   validate,
@@ -137,12 +138,28 @@ export function createServer(options: ServerOptions): FastifyInstance {
     return budget;
   };
   app.removeContentTypeParser("application/json");
-  app.addContentTypeParser("application/json", { parseAs: "buffer" }, (_request, body, done) => {
+  // Signature routes verify the provider's HMAC over the exact bytes, so the parsers keep the raw
+  // body and leave parsing and content-type policy to the adapter, after the signature check.
+  const rawBodies = new WeakMap<FastifyRequest, Buffer>();
+  app.addContentTypeParser("application/json", { parseAs: "buffer" }, (request, body, done) => {
+    if (routeConfig(request).auth === "signature") {
+      rawBodies.set(request, body as Buffer);
+      done(null, null);
+      return;
+    }
     try {
       done(null, parseStrictJson(body as Buffer, 10 * 1024 * 1024));
     } catch (error) {
       done(error as Error);
     }
+  });
+  app.addContentTypeParser("*", { parseAs: "buffer" }, (request, body, done) => {
+    if (routeConfig(request).auth === "signature") {
+      rawBodies.set(request, body as Buffer);
+      done(null, null);
+      return;
+    }
+    done(Object.assign(new Error("Unsupported media type"), { statusCode: 415 }));
   });
   app.addContentTypeParser("application/octet-stream", (_request, payload, done) => {
     done(null, payload);
@@ -302,6 +319,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
       method: route.method as HTTPMethods,
       url: `/v1${route.path.replace(/\{(\w+)\}/g, ":$1")}`,
       config: { auth: route.auth } satisfies RouteConfig,
+      ...(route.auth === "signature" ? { bodyLimit: INBOUND_WEBHOOK_MAX_BYTES } : {}),
       handler: async (request, reply) => {
         const identity = identities.get(request) ?? null;
         const service = identity
@@ -314,7 +332,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
             "Capability is not implemented in this milestone",
             { capability: route.path, milestone: route.milestone },
           );
-        if (route.scope !== "public") {
+        if (route.scope !== "public" && route.auth !== "signature") {
           const scope = route.scope === "upload token" ? "W" : route.scope.split(":").at(-1);
           // Named resource actions are never implied by W/X; the service evaluates them per resource.
           if (namedActions[scope ?? ""]) {
@@ -330,7 +348,8 @@ export function createServer(options: ServerOptions): FastifyInstance {
         const body = request.body ?? {};
         if (route.method !== "GET" && route.requestSchema !== "Binary")
           validate(route.requestSchema, body);
-        const mutation = !["GET", "HEAD"].includes(route.method);
+        // Signed webhooks come from third parties that cannot send Idempotency-Key; their dedupe is the delivery ID.
+        const mutation = route.auth !== "signature" && !["GET", "HEAD"].includes(route.method);
         const key = request.headers["idempotency-key"];
         if (
           mutation &&
@@ -348,7 +367,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
           params,
           query,
           body,
-          rawBody: null,
+          rawBody: route.auth === "signature" ? (rawBodies.get(request) ?? null) : null,
           idempotencyKey: typeof key === "string" ? key : null,
           ifMatch: () => {
             if (match === undefined)

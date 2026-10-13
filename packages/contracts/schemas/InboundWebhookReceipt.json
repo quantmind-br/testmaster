@@ -1,0 +1,100 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "event",
+    "outcome",
+    "duplicate",
+    "ignoredReason",
+    "reference"
+  ],
+  "properties": {
+    "event": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "eventId",
+        "provider",
+        "payloadHash",
+        "occurredAt",
+        "receiptRef"
+      ],
+      "properties": {
+        "eventId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "provider": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "payloadHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "receiptRef": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "const": "received",
+          "type": "string"
+        },
+        {
+          "const": "accepted",
+          "type": "string"
+        },
+        {
+          "const": "ignored",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
+    },
+    "duplicate": {
+      "type": "boolean"
+    },
+    "ignoredReason": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reference": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:InboundWebhookReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

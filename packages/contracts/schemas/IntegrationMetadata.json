@@ -3,31 +3,334 @@
   "type": "object",
   "required": [
     "id",
+    "workspaceId",
     "provider",
-    "destinationRef",
-    "enabled"
+    "name",
+    "state",
+    "projectIds",
+    "events",
+    "consent",
+    "secretRefs",
+    "settings",
+    "adapter",
+    "adapterStatus",
+    "lastTest",
+    "version",
+    "createdAt",
+    "updatedAt"
   ],
   "properties": {
     "id": {
-      "minLength": 1,
-      "maxLength": 200,
+      "pattern": "^int_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
     },
     "provider": {
+      "anyOf": [
+        {
+          "const": "github",
+          "type": "string"
+        },
+        {
+          "const": "slack",
+          "type": "string"
+        },
+        {
+          "const": "email",
+          "type": "string"
+        },
+        {
+          "const": "webhook",
+          "type": "string"
+        }
+      ]
+    },
+    "name": {
       "minLength": 1,
       "maxLength": 200,
       "type": "string"
     },
-    "destinationRef": {
-      "minLength": 1,
-      "maxLength": 200,
+    "state": {
+      "anyOf": [
+        {
+          "const": "active",
+          "type": "string"
+        },
+        {
+          "const": "paused",
+          "type": "string"
+        },
+        {
+          "const": "revoked",
+          "type": "string"
+        }
+      ]
+    },
+    "projectIds": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "events": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "consent": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scopes",
+        "grantedBy",
+        "grantedAt"
+      ],
+      "properties": {
+        "scopes": {
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "grantedBy": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "grantedAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        }
+      }
+    },
+    "secretRefs": {
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "settings": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "adapter": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "version",
+            "schemaVersion",
+            "capabilities"
+          ],
+          "properties": {
+            "id": {
+              "anyOf": [
+                {
+                  "const": "github",
+                  "type": "string"
+                },
+                {
+                  "const": "slack",
+                  "type": "string"
+                },
+                {
+                  "const": "email",
+                  "type": "string"
+                },
+                {
+                  "const": "webhook",
+                  "type": "string"
+                }
+              ]
+            },
+            "version": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "schemaVersion": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "capabilities": {
+              "maxItems": 64,
+              "type": "array",
+              "items": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "adapterStatus": {
+      "anyOf": [
+        {
+          "const": "compatible",
+          "type": "string"
+        },
+        {
+          "const": "incompatible",
+          "type": "string"
+        },
+        {
+          "const": "unregistered",
+          "type": "string"
+        }
+      ]
+    },
+    "lastTest": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "deliveryId",
+            "state",
+            "at",
+            "detail"
+          ],
+          "properties": {
+            "deliveryId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "state": {
+              "anyOf": [
+                {
+                  "const": "delivered",
+                  "type": "string"
+                },
+                {
+                  "const": "failed",
+                  "type": "string"
+                },
+                {
+                  "const": "rejected",
+                  "type": "string"
+                }
+              ]
+            },
+            "at": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "maxLength": 8000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
       "type": "string"
     },
-    "enabled": {
-      "type": "boolean"
+    "updatedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
     }
   },
-  "$defs": {},
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
   "$id": "urn:testmaster:IntegrationMetadata",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

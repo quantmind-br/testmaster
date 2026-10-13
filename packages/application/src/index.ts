@@ -28,6 +28,7 @@ export * from "./controllers.js";
 export * from "./delivery.js";
 export * from "./flake.js";
 export * from "./http-support.js";
+export * from "./integrations/index.js";
 export * from "./identity.js";
 export * from "./local-auth.js";
 export * from "./observability.js";

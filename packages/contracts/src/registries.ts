@@ -250,7 +250,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   ...features.M1,
   ...features.M2,
   ...features.M3,
-  ...["server", "postgres", "multi-user", "identity"],
+  ...["server", "postgres", "multi-user", "identity", "integrations"],
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(
