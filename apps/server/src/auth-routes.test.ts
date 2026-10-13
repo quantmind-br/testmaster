@@ -152,7 +152,7 @@ async function fixture() {
   return { application, init, site, call, tokenFor, profileBody, environment, username, secret };
 }
 
-it("SEC-023 M4-03 auth profile routes require authentication and the right role", async () => {
+it("REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role", async () => {
   const f = await fixture();
   const anonymous = await f.call("GET", "/v1/auth-profiles", null);
   expect(anonymous.statusCode).toBe(401);

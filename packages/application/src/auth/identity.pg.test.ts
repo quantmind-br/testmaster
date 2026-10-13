@@ -402,7 +402,7 @@ it("SEC-022 exporting a storage state needs the export permission, the caller's 
   expect(viaToken.sha256).toBe(exported.sha256);
 });
 
-it("SEC-023 two server processes sharing one database sign in once and never double-spend a login", async () => {
+it("M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login", async () => {
   const lab = await serverLab();
   const tenant = await firstTenant(lab);
   const second = await lab.open();

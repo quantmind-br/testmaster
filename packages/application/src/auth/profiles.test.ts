@@ -284,6 +284,35 @@ it("M4-03 REQ-018 reports a rejected login and does not hammer the target while 
   });
 });
 
+it("M4-03 SEC-023 a secret that lost its authorization for the login origin is never released to the target", async () => {
+  const current = await lab();
+  const profile = await formProfile(current);
+  const env = current.environment("origin-env", [profile.id]);
+  const password = stored(current, profile.id).secrets.password as string;
+  // Positive control: while the secret is authorized for the target origin the sign-in succeeds.
+  await expect(current.app.authProfiles.testLogin(profile.id, env.id)).resolves.toMatchObject({
+    outcome: "authenticated",
+  });
+  const loginsBefore = current.site.counters.logins;
+  // The secret is re-pointed at another origin after the profile was created.
+  const row = current.app.database.get(
+    "SELECT data_json FROM secret_references WHERE id=?",
+    password,
+  );
+  const data = JSON.parse(String(row?.data_json)) as { allowedOrigins: string[] };
+  data.allowedOrigins = ["http://127.0.0.1:9"];
+  current.app.database.run(
+    "UPDATE secret_references SET data_json=? WHERE id=?",
+    JSON.stringify(data),
+    password,
+  );
+  const receipt = await current.app.authProfiles.testLogin(profile.id, env.id);
+  expect(receipt).toMatchObject({ outcome: "blocked", reasonCode: "security_precondition_failed" });
+  expect(receipt.detail).toContain("origin_denied");
+  // Negative control: the target never saw a second login attempt, so no credential left the host.
+  expect(current.site.counters.logins).toBe(loginsBefore);
+});
+
 it("M4-03 SEC-023 two simultaneous logins of one profile share a single login against the target", async () => {
   const current = await lab();
   const profile = await formProfile(current);

@@ -43,7 +43,7 @@ async function otpLab(otp: Record<string, unknown> = {}, withSeed = true) {
   return { current, profile, env, ensure, seed: defaults.totpSeed };
 }
 
-it("SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed", async () => {
+it("REQ-018 SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed", async () => {
   const { current, profile, env } = await otpLab();
   const receipt = await current.app.authProfiles.testLogin(profile.id, env.id);
   expect(receipt).toMatchObject({ outcome: "authenticated", credentialRoles: ["session"] });
@@ -80,7 +80,7 @@ it("SEC-024 diagnoses a skewed clock instead of trying neighbouring codes", asyn
   await expect(ensure()).resolves.toMatchObject({ roles: ["session"] });
 });
 
-it("SEC-024 an expired code is rejected once, counted, and the profile locks instead of brute forcing", async () => {
+it("M4-03 SEC-024 an expired code is rejected once, counted, and the profile locks instead of brute forcing", async () => {
   const { current, profile, ensure } = await otpLab({ maxFailures: 2, windowSeconds: 600 });
   // The target's code window is one step behind ours but its clock looks right, so it is not skew.
   current.site.control.otpWindow = 0;

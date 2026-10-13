@@ -123,7 +123,7 @@ async function pendingCheckpoint(lab: { current: AuthLab }): Promise<string> {
   );
 }
 
-it("M4-03 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret", async () => {
+it("M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret", async () => {
   const lab = await runLab();
   await lab.run();
   expect(lab.site.counters.logins).toBe(1);
@@ -159,7 +159,7 @@ it("M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and 
   expect(lab.site.counters.loginFailures).toBe(1);
 });
 
-it("SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks before any dependent action", async () => {
+it("M4-03 SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks before any dependent action", async () => {
   const lab = await runLab();
   lab.site.control.captcha = true;
   const blocked = await lab.run();
@@ -181,7 +181,7 @@ it("SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks b
   expect(lab.executions).toHaveLength(1);
 });
 
-it("SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes", async () => {
+it("REQ-018 SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes", async () => {
   process.env.CI = "";
   const lab = await runLab();
   lab.site.control.captcha = true;
@@ -215,6 +215,34 @@ it("SEC-024 an expired checkpoint ends the Run as blocked and cannot be resumed 
     lab.current.app.authCheckpoints.continue(String(checkpoint?.id)),
   ).rejects.toMatchObject({ details: { reasonCode: "auth_checkpoint_expired" } });
   expect(lab.executions).toHaveLength(0);
+  expect(lab.site.counters.logins).toBe(0);
+});
+
+it("SEC-024 a pending checkpoint past its deadline reads as expired and cannot be continued", async () => {
+  const lab = await runLab();
+  lab.site.control.captcha = true;
+  const blocked = await lab.run();
+  const [pending] = lab.current.app.authCheckpoints.list({ runId: blocked.id });
+  expect(pending?.state).toBe("pending");
+  lab.site.control.captcha = false;
+  // Nobody is waiting on this checkpoint; its deadline passes while it sits in the queue.
+  const past = new Date(Date.now() - 1000).toISOString();
+  const row = lab.current.app.database.get(
+    "SELECT data_json FROM auth_checkpoints WHERE id=?",
+    pending?.id,
+  );
+  const data = JSON.parse(String(row?.data_json)) as { expiresAt: string };
+  data.expiresAt = past;
+  lab.current.app.database.run(
+    "UPDATE auth_checkpoints SET expires_at=?,data_json=? WHERE id=?",
+    past,
+    JSON.stringify(data),
+    pending?.id,
+  );
+  expect(lab.current.app.authCheckpoints.get(String(pending?.id)).state).toBe("expired");
+  await expect(lab.current.app.authCheckpoints.continue(String(pending?.id))).rejects.toMatchObject(
+    { details: { reasonCode: "auth_checkpoint_expired" } },
+  );
   expect(lab.site.counters.logins).toBe(0);
 });
 

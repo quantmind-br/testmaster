@@ -68,7 +68,7 @@ async function authorizeAs(
 }
 const refused = (authFailure: string) => ({ details: { authFailure } });
 
-it("SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault", async () => {
+it("REQ-018 SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault", async () => {
   const current = await lab();
   const { profile, env } = await oidc(current);
   const complete = await authorizeAs(current, profile.id, env.id);
@@ -219,7 +219,7 @@ it("SEC-023 M4-03 refuses endpoints on another origin and never contacts that or
   }
 });
 
-it("SEC-023 refreshes once for simultaneous executions and does not corrupt a rotating refresh token", async () => {
+it("M4-03 SEC-023 refreshes once for simultaneous executions and does not corrupt a rotating refresh token", async () => {
   const current = await lab();
   current.site.control.accessTokenTtlSeconds = 30; // inside the 60 s skew: every use needs a refresh
   const { profile, env } = await oidc(current);
@@ -298,7 +298,7 @@ it("SEC-023 revoking an OAuth session revokes the refresh token at the provider 
   expect(response.status).toBeGreaterThanOrEqual(400);
 });
 
-it("SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request", async () => {
+it("REQ-018 SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request", async () => {
   const current = await lab();
   const username = await current.secret("cog-user", defaults.username);
   const password = await current.secret("cog-pass", defaults.password);

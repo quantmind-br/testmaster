@@ -74,7 +74,7 @@ async function stateLab() {
   };
 }
 
-it("SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL", async () => {
+it("REQ-018 SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL", async () => {
   const lab = await stateLab();
   const inputRef = await lab.supply(lab.state());
   const view = await lab.service.importState(lab.profile.id, { inputRef, ttlSeconds: 600 });
@@ -184,6 +184,10 @@ it("SEC-022 exporting a storage state needs the step-up password, is audited, an
   await expect(remote.exportState(lab.profile.id, { password: "wrong" })).rejects.toThrow(
     /Invalid credentials/u,
   );
+  // The export lifetime is bounded: one second past the cap is refused before any password check.
+  await expect(
+    remote.exportState(lab.profile.id, { password: "step-up-password", ttlSeconds: 901 }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   const exported = await remote.exportState(lab.profile.id, {
     password: "step-up-password",
     ttlSeconds: 120,

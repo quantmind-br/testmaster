@@ -92,7 +92,7 @@ async function workspace() {
   return { root, url, base };
 }
 
-it("SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential", async () => {
+it("REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential", async () => {
   const { root, url, base } = await workspace();
   vi.stubEnv("TM_TEST_USER", "alice");
   vi.stubEnv("TM_TEST_PASS", targetPassword);
