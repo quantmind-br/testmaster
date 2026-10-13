@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { type Runtime, required } from "./runtime.js";
+import { serverBackupCommands, serverBackupCreate, serverBackupRestore } from "./operations.js";
+import { modeOption, type Runtime, required } from "./runtime.js";
 
 export function backupCommands(program: Command, runtime: Runtime): void {
   const group = program.command("backup");
@@ -29,25 +30,43 @@ export function backupCommands(program: Command, runtime: Runtime): void {
     }),
   );
   runtime.bind(
-    group.command("create").requiredOption("--out <path>"),
-    async (rt, _args, options) => ({
-      data: await (await rt.app()).backups.create(rt.path(required(options, "out"))),
-    }),
+    group
+      .command("create")
+      .addOption(modeOption())
+      .option("--out <path>", "Backup directory (local profile)")
+      .description(
+        "Back up the local profile to --out, or the PostgreSQL server profile to backup.destination (--mode server --config)",
+      ),
+    async (rt, _args, options) => {
+      if (options.mode === "server") return serverBackupCreate(rt);
+      return {
+        data: await (await rt.app()).backups.create(rt.path(required(options, "out"))),
+      };
+    },
   );
   runtime.bind(
     group
       .command("restore <path>")
-      .requiredOption("--out <path>")
+      .addOption(modeOption())
+      .option("--out <path>", "Restored data directory (local profile)")
       .option(
         "--keep-schema",
         "Keep the backup's schema version (restore point for an older release) instead of migrating forward",
+      )
+      .description(
+        "Restore the local profile to --out, or restore into the empty PostgreSQL target of --config (--mode server); the server restores in isolation until reviewed",
       ),
-    async (rt, args, options) => ({
-      data: await (await rt.app()).backups.restore(
-        rt.path(String(args[0])),
-        rt.path(required(options, "out")),
-        { keepSchema: options.keepSchema === true },
-      ),
-    }),
+    async (rt, args, options) => {
+      if (options.mode === "server")
+        return serverBackupRestore(rt, rt.path(String(args[0])), options.keepSchema === true);
+      return {
+        data: await (await rt.app()).backups.restore(
+          rt.path(String(args[0])),
+          rt.path(required(options, "out")),
+          { keepSchema: options.keepSchema === true },
+        ),
+      };
+    },
   );
+  serverBackupCommands(group, runtime);
 }

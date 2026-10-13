@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   type Application,
+  assertBackupSeparation,
   issueLocalToken,
   readServerConfig,
   runControllers,
@@ -50,6 +51,7 @@ async function startServerProfile(
   application: Application,
   server: ServerConfig,
 ): Promise<{ data: unknown }> {
+  await assertBackupSeparation(server);
   const { host, port } = server.server.listen;
   const app = createServer({ application, mode: "server", server });
   const controller = new AbortController();
