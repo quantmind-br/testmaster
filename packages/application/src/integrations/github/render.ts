@@ -40,7 +40,8 @@ export function mdEscape(input: string, max = 200): string {
 /** Inline code span that cannot be closed from inside. */
 export function mdCode(input: string, max = 200): string {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters never belong in rendered text.
-  const flat = input.replace(/[\u0000-\u001f\u007f\u2028\u2029`]+/gu, " ").trim().slice(0, max);
+  const controls = /[\u0000-\u001f\u007f\u2028\u2029`]+/gu;
+  const flat = input.replace(controls, " ").trim().slice(0, max);
   return `\`${flat}\``;
 }
 const short = (sha: string): string => sha.slice(0, 12);
@@ -152,7 +153,12 @@ export function renderChecks(pull: PullRecord, origin: string | null): DesiredCh
     case "completed": {
       const stored = pull.resultJson ? (JSON.parse(pull.resultJson) as StoredResult) : null;
       if (!stored)
-        return closed("failure", "No result recorded", "The run finished without a recorded verdict.", true);
+        return closed(
+          "failure",
+          "No result recorded",
+          "The run finished without a recorded verdict.",
+          true,
+        );
       return checkNames.map((name) => {
         const computed = checkConclusion(stored.ci, name);
         // A fork ran fixtures only: its verdict is informative and can never satisfy the required gate.
@@ -169,7 +175,9 @@ export function renderChecks(pull: PullRecord, origin: string | null): DesiredCh
           ...base(
             conclusion === null ? "in_progress" : "completed",
             conclusion,
-            forkLimited ? `Fork fixture run: ${stored.ci.gate}` : `TestMaster gate: ${stored.ci.gate}`,
+            forkLimited
+              ? `Fork fixture run: ${stored.ci.gate}`
+              : `TestMaster gate: ${stored.ci.gate}`,
             `${forkLimited ? "A pull request from a fork ran against fixtures only and cannot satisfy the required gate.\n" : ""}${resultSummary(pull, stored, origin)}`,
             origin && stored.ci.batchId ? `${origin}/batches/${stored.ci.batchId}` : null,
           ),
@@ -219,7 +227,11 @@ export function checkExternalId(
   return semanticHash({ installationId, repositoryId, prNumber, sha, name });
 }
 
-export function commentMarker(installationId: string, repositoryId: string, prNumber: number): string {
+export function commentMarker(
+  installationId: string,
+  repositoryId: string,
+  prNumber: number,
+): string {
   return `<!-- testmaster:pr installation=${installationId} repo=${repositoryId} pr=${prNumber} -->`;
 }
 const stateText: Record<PullRecord["state"], string> = {

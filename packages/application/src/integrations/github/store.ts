@@ -263,7 +263,10 @@ export class GithubStore {
     return row ? installation(row) : null;
   }
   upsertInstallation(
-    input: Omit<InstallationRecord, "createdAt" | "updatedAt" | "version" | "revokedReason" | "state">,
+    input: Omit<
+      InstallationRecord,
+      "createdAt" | "updatedAt" | "version" | "revokedReason" | "state"
+    >,
     now: string,
   ): void {
     this.db.run(
@@ -327,7 +330,13 @@ export class GithubStore {
   }
   /** New repositories are granted but disabled and unbound until an administrator configures them. */
   upsertRepository(
-    input: { workspaceId: string; installationId: string; repositoryId: string; fullName: string; private: boolean },
+    input: {
+      workspaceId: string;
+      installationId: string;
+      repositoryId: string;
+      fullName: string;
+      private: boolean;
+    },
     granted: boolean,
     now: string,
   ): void {
@@ -377,7 +386,11 @@ export class GithubStore {
       repositoryId,
     );
   }
-  repositoryByName(workspaceId: string, installationId: string, fullName: string): RepositoryRecord | null {
+  repositoryByName(
+    workspaceId: string,
+    installationId: string,
+    fullName: string,
+  ): RepositoryRecord | null {
     const row = this.db.get(
       "SELECT * FROM github_repositories WHERE workspace_id=? AND installation_id=? AND full_name=?",
       workspaceId,
@@ -388,7 +401,11 @@ export class GithubStore {
   }
 
   pull(workspaceId: string, id: string): PullRecord | null {
-    const row = this.db.get("SELECT * FROM github_pulls WHERE workspace_id=? AND id=?", workspaceId, id);
+    const row = this.db.get(
+      "SELECT * FROM github_pulls WHERE workspace_id=? AND id=?",
+      workspaceId,
+      id,
+    );
     return row ? pull(row) : null;
   }
   pullByHead(
@@ -576,7 +593,11 @@ export class GithubStore {
     return fresh;
   }
 
-  deployment(workspaceId: string, repositoryId: string, deploymentId: string): DeploymentRecord | null {
+  deployment(
+    workspaceId: string,
+    repositoryId: string,
+    deploymentId: string,
+  ): DeploymentRecord | null {
     const row = this.db.get(
       "SELECT * FROM github_deployments WHERE workspace_id=? AND repository_id=? AND deployment_id=?",
       workspaceId,
@@ -614,7 +635,11 @@ export class GithubStore {
   }
 
   check(workspaceId: string, id: string): CheckRecord | null {
-    const row = this.db.get("SELECT * FROM github_checks WHERE workspace_id=? AND id=?", workspaceId, id);
+    const row = this.db.get(
+      "SELECT * FROM github_checks WHERE workspace_id=? AND id=?",
+      workspaceId,
+      id,
+    );
     return row ? check(row) : null;
   }
   checksOfPull(workspaceId: string, pullId: string): CheckRecord[] {
@@ -746,7 +771,12 @@ export class GithubStore {
   }
   markFailed(
     record: CheckRecord,
-    patch: { state: CheckState; lastError: string; nextAttemptAt: string | null; firstFailedAt: string },
+    patch: {
+      state: CheckState;
+      lastError: string;
+      nextAttemptAt: string | null;
+      firstFailedAt: string;
+    },
     now: string,
   ): void {
     this.db.run(

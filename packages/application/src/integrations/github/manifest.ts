@@ -1,5 +1,4 @@
-import { type GithubManifestInput, githubEventTypes } from "@testmaster/contracts";
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, type GithubManifestInput, githubEventTypes } from "@testmaster/contracts";
 
 /** Minimal repository permissions (ADR-020); `contents: write` only for agent pull requests. */
 export function manifestPermissions(allowAgentPullRequests: boolean): Record<string, string> {

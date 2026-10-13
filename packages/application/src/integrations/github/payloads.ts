@@ -42,7 +42,8 @@ function repository(value: unknown, field: string): RepositoryRef {
     private: input.private === undefined ? false : bool(input.private, `${field}.private`),
   };
 }
-const installationId = (root: Obj): string => id(obj(root.installation, "installation").id, "installation.id");
+const installationId = (root: Obj): string =>
+  id(obj(root.installation, "installation").id, "installation.id");
 
 export interface InstallationEvent {
   kind: "installation";
@@ -207,7 +208,9 @@ export function parseGithubEvent(eventType: string, body: unknown): GithubEvent 
         sha: hash(deployment.sha, "deployment.sha"),
         environment: text(deployment.environment ?? status.environment, "environment", 100),
         state: text(status.state, "deployment_status.state", 40),
-        url: optText(status.environment_url, "environment_url") ?? optText(status.target_url, "target_url"),
+        url:
+          optText(status.environment_url, "environment_url") ??
+          optText(status.target_url, "target_url"),
       };
     }
     case "push":

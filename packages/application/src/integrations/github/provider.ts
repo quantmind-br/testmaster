@@ -1,4 +1,9 @@
-import { type GithubIntegrationSettings, SCHEMA_VERSION, githubEventTypes, validate } from "@testmaster/contracts";
+import {
+  type GithubIntegrationSettings,
+  githubEventTypes,
+  SCHEMA_VERSION,
+  validate,
+} from "@testmaster/contracts";
 import type {
   DeliveryOutcome,
   InboundOutcome,
@@ -8,21 +13,25 @@ import type {
   StoredIntegration,
   TestDeliveryContext,
 } from "../provider.js";
-import { requiredScopesFor } from "./service.js";
 import type { GithubService } from "./service.js";
+import { requiredScopesFor } from "./service.js";
 
 export const githubProviderVersion = "1.0.0";
 
 /** The GitHub adapter (INT-014): versioned, declares its capabilities, and delegates to the service. */
-export function createGithubProvider(service: GithubService): IntegrationProvider<GithubIntegrationSettings> {
+export function createGithubProvider(
+  service: GithubService,
+): IntegrationProvider<GithubIntegrationSettings> {
   return {
     id: "github",
     version: githubProviderVersion,
     schemaVersion: SCHEMA_VERSION,
     capabilities: ["checks", "comments", "previews", "webhooks", "deployments"],
     supportedEvents: githubEventTypes,
-    parseSettings: (input: unknown) => validate("GithubIntegrationSettings", input) as GithubIntegrationSettings,
-    requiredScopes: (settings: GithubIntegrationSettings) => requiredScopesFor(settings.allowAgentPullRequests),
+    parseSettings: (input: unknown) =>
+      validate("GithubIntegrationSettings", input) as GithubIntegrationSettings,
+    requiredScopes: (settings: GithubIntegrationSettings) =>
+      requiredScopesFor(settings.allowAgentPullRequests),
     async sendTest(
       _context: TestDeliveryContext,
       integration: StoredIntegration<GithubIntegrationSettings>,

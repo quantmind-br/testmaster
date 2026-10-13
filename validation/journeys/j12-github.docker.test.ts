@@ -35,7 +35,8 @@ const worlds: GithubWorld[] = [];
 const servers: Server[] = [];
 afterEach(async () => {
   for (const world of worlds.splice(0)) await world.stop();
-  for (const server of servers.splice(0)) await new Promise<void>((resolve) => server.close(() => resolve()));
+  for (const server of servers.splice(0))
+    await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 async function world(): Promise<GithubWorld> {
   const created = await startGithubWorld({ executor: "docker" });
@@ -69,10 +70,17 @@ it("J12 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request
     await w.openPr(7, SHA_B, { action: "synchronize" });
     await w.deploy(2, SHA_B);
     await w.drive(30);
-    expect(verdict(w, SHA_B)).toEqual({ "TestMaster / result": "failure", "TestMaster / required-gate": "failure" });
+    expect(verdict(w, SHA_B)).toEqual({
+      "TestMaster / result": "failure",
+      "TestMaster / required-gate": "failure",
+    });
     expect(verdict(w, SHA_A)).toEqual(SUCCESS);
     expect(w.app.runs.list()).toHaveLength(2);
-    return { runs: w.app.runs.list().map((entry) => ({ id: entry.id, phase: entry.phase })), a: verdict(w, SHA_A), b: verdict(w, SHA_B) };
+    return {
+      runs: w.app.runs.list().map((entry) => ({ id: entry.id, phase: entry.phase })),
+      a: verdict(w, SHA_A),
+      b: verdict(w, SHA_B),
+    };
   });
 }, 900_000);
 
@@ -103,6 +111,10 @@ it("J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by
     await w.drive(30);
     expect(verdict(w, SHA_C)).toEqual(SUCCESS);
     expect(foreign.hits).toEqual([]);
-    return { redirected: verdict(w, SHA_A), healthy: verdict(w, SHA_C), foreignHits: foreign.hits.length };
+    return {
+      redirected: verdict(w, SHA_A),
+      healthy: verdict(w, SHA_C),
+      foreignHits: foreign.hits.length,
+    };
   });
 }, 900_000);

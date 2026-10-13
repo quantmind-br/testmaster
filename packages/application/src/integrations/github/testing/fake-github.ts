@@ -1,4 +1,10 @@
-import { createHmac, createVerify, generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
+import {
+  createHmac,
+  createVerify,
+  generateKeyPairSync,
+  randomBytes,
+  randomUUID,
+} from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -102,7 +108,13 @@ export class FakeGithub {
   readonly comments: FakeComment[] = [];
   readonly createdRefs: { repository: string; ref: string; sha: string }[] = [];
   readonly writtenFiles: { repository: string; path: string; branch: string }[] = [];
-  readonly createdPulls: { repository: string; number: number; head: string; base: string; draft: boolean }[] = [];
+  readonly createdPulls: {
+    repository: string;
+    number: number;
+    head: string;
+    base: string;
+    draft: boolean;
+  }[] = [];
   readonly appId: number;
   readonly slug: string;
   readonly privateKeyPem: string;
@@ -184,7 +196,10 @@ export class FakeGithub {
     times = 1,
   ): void {
     this.faults.push({
-      match: typeof match === "string" ? (request) => `${request.method} ${request.path}`.includes(match) : match,
+      match:
+        typeof match === "string"
+          ? (request) => `${request.method} ${request.path}`.includes(match)
+          : match,
       status,
       headers,
       times,
@@ -200,7 +215,13 @@ export class FakeGithub {
   registerManifestCode(code: string): void {
     this.manifestCodes.set(code, true);
   }
-  addComment(input: { repository: string; issue: number; body: string; appId?: number | null; login?: string }): FakeComment {
+  addComment(input: {
+    repository: string;
+    issue: number;
+    body: string;
+    appId?: number | null;
+    login?: string;
+  }): FakeComment {
     const comment = {
       id: ++this.nextId,
       repository: input.repository,
@@ -213,14 +234,23 @@ export class FakeGithub {
     return comment;
   }
   checksFor(repository: string, sha: string): FakeCheckRun[] {
-    return this.checkRuns.filter((check) => check.repository === repository && check.head_sha === sha);
+    return this.checkRuns.filter(
+      (check) => check.repository === repository && check.head_sha === sha,
+    );
   }
   requestsMatching(method: string, pattern: RegExp): RecordedRequest[] {
-    return this.requests.filter((request) => request.method === method && pattern.test(request.path));
+    return this.requests.filter(
+      (request) => request.method === method && pattern.test(request.path),
+    );
   }
   /** Writes that were authenticated by the App JWT instead of an installation token (there must be none). */
   jwtWrites(): RecordedRequest[] {
-    return this.requests.filter((request) => request.auth === "app-jwt" && request.method !== "GET" && !/\/access_tokens$/u.test(request.path));
+    return this.requests.filter(
+      (request) =>
+        request.auth === "app-jwt" &&
+        request.method !== "GET" &&
+        !/\/access_tokens$/u.test(request.path),
+    );
   }
 
   // ------------------------------------------------------------------ webhooks
@@ -242,17 +272,27 @@ export class FakeGithub {
         "x-github-delivery": deliveryId,
         "x-hub-signature-256":
           options.signature ??
-          `sha256=${createHmac("sha256", options.secret ?? this.webhookSecret).update(signed).digest("hex")}`,
+          `sha256=${createHmac("sha256", options.secret ?? this.webhookSecret)
+            .update(signed)
+            .digest("hex")}`,
         "x-github-hook-installation-target-id": String(options.appId ?? this.appId),
       },
     };
   }
   /** Signs `payload` like GitHub and posts it to a TestMaster webhook endpoint. */
-  async deliver(url: string, event: string, payload: unknown, options: DeliverOptions = {}): Promise<DeliveryResult> {
+  async deliver(
+    url: string,
+    event: string,
+    payload: unknown,
+    options: DeliverOptions = {},
+  ): Promise<DeliveryResult> {
     const deliveryId = options.deliveryId ?? randomUUID();
     const raw = JSON.stringify(payload);
     const signature =
-      options.signature ?? `sha256=${createHmac("sha256", options.secret ?? this.webhookSecret).update(raw).digest("hex")}`;
+      options.signature ??
+      `sha256=${createHmac("sha256", options.secret ?? this.webhookSecret)
+        .update(raw)
+        .digest("hex")}`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -273,7 +313,11 @@ export class FakeGithub {
     return { status: response.status, body, deliveryId };
   }
   repositoryPayload(repository: FakeRepository): Record<string, unknown> {
-    return { id: repository.id, full_name: repository.fullName, private: repository.private ?? false };
+    return {
+      id: repository.id,
+      full_name: repository.fullName,
+      private: repository.private ?? false,
+    };
   }
   installationPayload(
     action: "created" | "deleted" | "suspend" | "unsuspend",
@@ -332,7 +376,11 @@ export class FakeGithub {
         title: input.title ?? `Pull request ${input.number}`,
         merge_commit_sha: input.mergeSha ?? null,
         head: { sha: input.headSha, ref: input.headRef ?? "feature", repo: headRepository },
-        base: { sha: input.baseSha ?? "b".repeat(40), ref: "main", repo: this.repositoryPayload(input.repository) },
+        base: {
+          sha: input.baseSha ?? "b".repeat(40),
+          ref: "main",
+          repo: this.repositoryPayload(input.repository),
+        },
       },
     };
   }
@@ -349,11 +397,17 @@ export class FakeGithub {
       action: "created",
       installation: { id: input.installationId },
       repository: this.repositoryPayload(input.repository),
-      deployment: { id: input.deploymentId, sha: input.sha, environment: input.environment ?? "Preview" },
+      deployment: {
+        id: input.deploymentId,
+        sha: input.sha,
+        environment: input.environment ?? "Preview",
+      },
       deployment_status: {
         state: input.state ?? "success",
         environment: input.environment ?? "Preview",
-        ...(input.url === null ? {} : { environment_url: input.url ?? "https://preview.example.test" }),
+        ...(input.url === null
+          ? {}
+          : { environment_url: input.url ?? "https://preview.example.test" }),
       },
     };
   }
@@ -366,9 +420,12 @@ export class FakeGithub {
     const url = new URL(request.url ?? "/", "http://fake");
     const method = request.method ?? "GET";
     const headers = Object.fromEntries(
-      Object.entries(request.headers).map(([key, value]) => [key, Array.isArray(value) ? value.join(", ") : String(value ?? "")]),
+      Object.entries(request.headers).map(([key, value]) => [
+        key,
+        Array.isArray(value) ? value.join(", ") : String(value ?? ""),
+      ]),
     );
-    let body: unknown = undefined;
+    let body: unknown;
     try {
       body = text ? JSON.parse(text) : undefined;
     } catch {
@@ -385,10 +442,15 @@ export class FakeGithub {
       status: 0,
     };
     this.requests.push(record);
-    const reply = (status: number, payload: unknown, extra: Record<string, string> = {}): void => {
+    const reply = (
+      status: number,
+      payload: unknown,
+      extra: Record<string, string> = {},
+    ): undefined => {
       record.status = status;
       response.writeHead(status, { "content-type": "application/json", ...extra });
       response.end(payload === undefined ? "" : JSON.stringify(payload));
+      return undefined;
     };
     const fault = this.faults.find((candidate) => candidate.times > 0 && candidate.match(record));
     if (fault) {
@@ -412,11 +474,23 @@ export class FakeGithub {
     const verifier = createVerify("RSA-SHA256");
     verifier.update(`${header}.${payload}`);
     if (!verifier.verify(this.publicKeyPem, Buffer.from(signature, "base64url"))) return false;
-    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { iat: number; exp: number; iss: string };
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      iat: number;
+      exp: number;
+      iss: string;
+    };
     const nowSeconds = Math.floor(this.clock() / 1000);
-    return claims.iss === String(this.appId) && claims.iat <= nowSeconds && claims.exp > nowSeconds && claims.exp - claims.iat <= 600;
+    return (
+      claims.iss === String(this.appId) &&
+      claims.iat <= nowSeconds &&
+      claims.exp > nowSeconds &&
+      claims.exp - claims.iat <= 600
+    );
   }
-  private route(record: RecordedRequest, reply: (status: number, payload: unknown, headers?: Record<string, string>) => void): void {
+  private route(
+    record: RecordedRequest,
+    reply: (status: number, payload: unknown, headers?: Record<string, string>) => undefined,
+  ): undefined {
     const { method, path } = record;
     const token = this.bearer(record);
     const body = (record.body ?? {}) as Record<string, unknown>;
@@ -448,17 +522,28 @@ export class FakeGithub {
       const installation = this.installations.get(Number(match[1]));
       record.installationId = match[1] ?? null;
       if (!installation || installation.deleted) return reply(404, { message: "Not Found" });
-      const repositoryIds = (Array.isArray(body.repository_ids) ? body.repository_ids : installation.repositories.map((entry) => entry.id)) as number[];
+      const repositoryIds = (
+        Array.isArray(body.repository_ids)
+          ? body.repository_ids
+          : installation.repositories.map((entry) => entry.id)
+      ) as number[];
       if (repositoryIds.some((id) => !installation.repositories.some((entry) => entry.id === id)))
         return reply(422, { message: "repository not accessible" });
       const requested = (body.permissions ?? installation.permissions) as Record<string, string>;
       const order = ["read", "write"];
       for (const [name, level] of Object.entries(requested))
         if (order.indexOf(installation.permissions[name] ?? "none") < order.indexOf(level))
-          return reply(422, { message: `permission ${name}:${level} not granted to the installation` });
+          return reply(422, {
+            message: `permission ${name}:${level} not granted to the installation`,
+          });
       const value = `ghs_${randomBytes(20).toString("hex")}`;
       const expiresAt = this.clock() + this.tokenTtlMs;
-      this.tokens.set(value, { installationId: installation.id, repositoryIds, permissions: requested, expiresAt });
+      this.tokens.set(value, {
+        installationId: installation.id,
+        repositoryIds,
+        permissions: requested,
+        expiresAt,
+      });
       return reply(201, {
         token: value,
         expires_at: new Date(expiresAt).toISOString(),
@@ -470,7 +555,8 @@ export class FakeGithub {
     match = /^\/repos\/([^/]+\/[^/]+)\/(.+)$/u.exec(path);
     if (!match) return reply(404, { message: "Not Found" });
     const issued = token ? this.tokens.get(token) : undefined;
-    if (!issued || issued.expiresAt <= this.clock()) return reply(401, { message: "Bad credentials" });
+    if (!issued || issued.expiresAt <= this.clock())
+      return reply(401, { message: "Bad credentials" });
     record.auth = "installation-token";
     record.installationId = String(issued.installationId);
     const installation = this.installations.get(issued.installationId);
@@ -478,7 +564,8 @@ export class FakeGithub {
     const fullName = match[1] ?? "";
     const rest = `/${match[2] ?? ""}`;
     const repository = installation.repositories.find((entry) => entry.fullName === fullName);
-    if (!repository || !issued.repositoryIds.includes(repository.id)) return reply(404, { message: "Not Found" });
+    if (!repository || !issued.repositoryIds.includes(repository.id))
+      return reply(404, { message: "Not Found" });
     const needed = permissionByRoute(method, rest);
     if (needed) {
       const have = issued.permissions[needed[0]];
@@ -489,22 +576,30 @@ export class FakeGithub {
   }
   private repositoryRoute(
     record: RecordedRequest,
-    reply: (status: number, payload: unknown, headers?: Record<string, string>) => void,
+    reply: (status: number, payload: unknown, headers?: Record<string, string>) => undefined,
     fullName: string,
     rest: string,
     body: Record<string, unknown>,
-  ): void {
+  ): undefined {
     const { method } = record;
     let match = /^\/commits\/([0-9a-f]{40})\/check-runs$/u.exec(rest);
     if (method === "GET" && match) {
       const name = record.query.check_name;
-      const runs = this.checksFor(fullName, match[1] ?? "").filter((check) => !name || check.name === name);
-      return reply(200, { total_count: runs.length, check_runs: runs.map((run) => this.checkView(run)) });
+      const runs = this.checksFor(fullName, match[1] ?? "").filter(
+        (check) => !name || check.name === name,
+      );
+      return reply(200, {
+        total_count: runs.length,
+        check_runs: runs.map((run) => this.checkView(run)),
+      });
     }
     if (method === "POST" && rest === "/check-runs") {
       const status = String(body.status ?? "queued");
       const conclusion = (body.conclusion as string | undefined) ?? null;
-      if (!["queued", "in_progress", "completed"].includes(status) || (status === "completed" && !conclusion))
+      if (
+        !["queued", "in_progress", "completed"].includes(status) ||
+        (status === "completed" && !conclusion)
+      )
         return reply(422, { message: "Invalid check run" });
       const run: FakeCheckRun = {
         id: ++this.nextId,
@@ -523,11 +618,14 @@ export class FakeGithub {
     }
     match = /^\/check-runs\/(\d+)$/u.exec(rest);
     if (method === "PATCH" && match) {
-      const run = this.checkRuns.find((candidate) => candidate.id === Number(match?.[1]) && candidate.repository === fullName);
+      const run = this.checkRuns.find(
+        (candidate) => candidate.id === Number(match?.[1]) && candidate.repository === fullName,
+      );
       if (!run) return reply(404, { message: "Not Found" });
       const status = String(body.status ?? run.status);
       const conclusion = (body.conclusion as string | undefined) ?? run.conclusion;
-      if (status === "completed" && !conclusion) return reply(422, { message: "Invalid check run" });
+      if (status === "completed" && !conclusion)
+        return reply(422, { message: "Invalid check run" });
       run.status = status;
       run.conclusion = conclusion;
       if (body.output) run.output = body.output as FakeCheckRun["output"];
@@ -541,43 +639,72 @@ export class FakeGithub {
       if (method === "GET") {
         const page = Number(record.query.page ?? 1);
         const perPage = Number(record.query.per_page ?? 30);
-        const all = this.comments.filter((comment) => comment.repository === fullName && comment.issue === issue);
-        return reply(200, all.slice((page - 1) * perPage, page * perPage).map((comment) => this.commentView(comment)));
+        const all = this.comments.filter(
+          (comment) => comment.repository === fullName && comment.issue === issue,
+        );
+        return reply(
+          200,
+          all
+            .slice((page - 1) * perPage, page * perPage)
+            .map((comment) => this.commentView(comment)),
+        );
       }
       if (method === "POST") {
-        const comment = this.addComment({ repository: fullName, issue, body: String(body.body), appId: this.appId, login: `${this.slug}[bot]` });
+        const comment = this.addComment({
+          repository: fullName,
+          issue,
+          body: String(body.body),
+          appId: this.appId,
+          login: `${this.slug}[bot]`,
+        });
         return reply(201, this.commentView(comment));
       }
     }
     match = /^\/issues\/comments\/(\d+)$/u.exec(rest);
     if (method === "PATCH" && match) {
-      const comment = this.comments.find((candidate) => candidate.id === Number(match?.[1]) && candidate.repository === fullName);
+      const comment = this.comments.find(
+        (candidate) => candidate.id === Number(match?.[1]) && candidate.repository === fullName,
+      );
       if (!comment) return reply(404, { message: "Not Found" });
-      if (comment.appId !== this.appId) return reply(403, { message: "Resource not accessible by integration" });
+      if (comment.appId !== this.appId)
+        return reply(403, { message: "Resource not accessible by integration" });
       comment.body = String(body.body);
       return reply(200, this.commentView(comment));
     }
     match = /^\/git\/ref\/heads\/(.+)$/u.exec(rest);
     if (method === "GET" && match) {
       const sha = this.branchHeads.get(`${fullName}:${match[1]}`);
-      return sha ? reply(200, { ref: `refs/heads/${match[1]}`, object: { sha } }) : reply(404, { message: "Not Found" });
+      return sha
+        ? reply(200, { ref: `refs/heads/${match[1]}`, object: { sha } })
+        : reply(404, { message: "Not Found" });
     }
     if (method === "POST" && rest === "/git/refs") {
       const ref = String(body.ref);
       const branch = ref.replace(/^refs\/heads\//u, "");
-      if (this.branchHeads.has(`${fullName}:${branch}`)) return reply(422, { message: "Reference already exists" });
+      if (this.branchHeads.has(`${fullName}:${branch}`))
+        return reply(422, { message: "Reference already exists" });
       this.branchHeads.set(`${fullName}:${branch}`, String(body.sha));
       this.createdRefs.push({ repository: fullName, ref, sha: String(body.sha) });
       return reply(201, { ref, object: { sha: body.sha } });
     }
     match = /^\/contents\/(.+)$/u.exec(rest);
     if (method === "PUT" && match) {
-      this.writtenFiles.push({ repository: fullName, path: decodeURIComponent(match[1] ?? ""), branch: String(body.branch) });
+      this.writtenFiles.push({
+        repository: fullName,
+        path: decodeURIComponent(match[1] ?? ""),
+        branch: String(body.branch),
+      });
       return reply(201, { content: { path: match[1] } });
     }
     if (method === "POST" && rest === "/pulls") {
       const number = this.createdPulls.length + 100;
-      this.createdPulls.push({ repository: fullName, number, head: String(body.head), base: String(body.base), draft: body.draft === true });
+      this.createdPulls.push({
+        repository: fullName,
+        number,
+        head: String(body.head),
+        base: String(body.base),
+        draft: body.draft === true,
+      });
       return reply(201, { number, html_url: `https://github.example/${fullName}/pull/${number}` });
     }
     return reply(404, { message: "Not Found" });

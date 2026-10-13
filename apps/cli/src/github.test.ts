@@ -14,7 +14,10 @@ afterEach(async () => {
 });
 
 const decode = (value: string): string =>
-  value.replace(/&(amp|lt|gt|quot|#39);/gu, (_, name: string) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[name] ?? "");
+  value.replace(
+    /&(amp|lt|gt|quot|#39);/gu,
+    (_, name: string) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[name] ?? "",
+  );
 
 async function setup(options: { timeoutMs?: number } = {}) {
   const world = await startGithubWorld();
@@ -59,15 +62,21 @@ it("INT-014 SEC-047 the setup helper serves the manifest on loopback, posts noth
   const html = await page.text();
   const action = decode(html.match(/<form method="post" action="([^"]+)"/u)?.[1] ?? "");
   expect(action).toMatch(/^https:\/\/github\.com\/settings\/apps\/new\?state=[A-Za-z0-9_-]+$/u);
-  const manifest = JSON.parse(decode(html.match(/name="manifest" value="([^"]+)"/u)?.[1] ?? "")) as {
+  const manifest = JSON.parse(
+    decode(html.match(/name="manifest" value="([^"]+)"/u)?.[1] ?? ""),
+  ) as {
     redirect_url: string;
     hook_attributes: { url: string };
     default_permissions: Record<string, string>;
   };
   expect(manifest.redirect_url).toBe(`${new URL(url).origin}/callback`);
-  expect(manifest.hook_attributes.url).toBe("https://testmaster.example.test/v1/integrations/github/webhooks");
+  expect(manifest.hook_attributes.url).toBe(
+    "https://testmaster.example.test/v1/integrations/github/webhooks",
+  );
   expect(manifest.default_permissions.contents).toBe("read");
-  expect(world.app.integrations.list().filter((entry) => entry.provider === "github")).toHaveLength(1);
+  expect(world.app.integrations.list().filter((entry) => entry.provider === "github")).toHaveLength(
+    1,
+  );
   // GitHub redirects the browser back with the one-time code and the original state.
   const state = new URL(action).searchParams.get("state") ?? "";
   world.fake.registerManifestCode("cli-code-1");
@@ -83,7 +92,9 @@ it("INT-014 SEC-047 the setup helper serves the manifest on loopback, posts noth
   const created = world.app.integrations.get(result.integrationId);
   expect(created.projectIds).toEqual([world.projectId]);
   for (const suffix of ["private-key", "webhook-secret"])
-    expect(world.app.secrets.get(`github-${world.fake.slug}-${suffix}`).allowedOrigins).toEqual([new URL(world.fake.url).origin]);
+    expect(world.app.secrets.get(`github-${world.fake.slug}-${suffix}`).allowedOrigins).toEqual([
+      new URL(world.fake.url).origin,
+    ]);
   // Credentials never come back in the stored integration: only references.
   expect(JSON.stringify(created)).not.toContain(world.fake.privateKeyPem);
 }, 60_000);
@@ -96,7 +107,9 @@ it("INT-014 SEC-047 the setup helper refuses a wrong state, a foreign Host heade
   expect((await fetch(`${origin}/elsewhere`)).status).toBe(404);
   const rebound = await rawGet(`${origin}/`, "attacker.example:80");
   expect(rebound).toBe(421);
-  expect(world.app.integrations.list().filter((entry) => entry.provider === "github")).toHaveLength(1);
+  expect(world.app.integrations.list().filter((entry) => entry.provider === "github")).toHaveLength(
+    1,
+  );
   expect(world.fake.requestsMatching("POST", /app-manifests/u)).toEqual([]);
   // The unfinished flow ends at its deadline instead of waiting forever.
   await expect(done).rejects.toMatchObject({ code: "UNAVAILABLE" });
@@ -124,11 +137,27 @@ async function invoke(args: string[]) {
 }
 
 it("INT-014 the setup command validates its arguments before it opens anything", async () => {
-  const valid = await invoke(["integrations", "github", "setup", "--public-origin", "https://tm.example", "--dry-run"]);
+  const valid = await invoke([
+    "integrations",
+    "github",
+    "setup",
+    "--public-origin",
+    "https://tm.example",
+    "--dry-run",
+  ]);
   expect(valid.exit).toBe(0);
   expect(valid.document.error).toBeUndefined();
   process.exitCode = originalExitCode;
-  const server = await invoke(["integrations", "github", "setup", "--public-origin", "https://tm.example", "--mode", "server", "--dry-run"]);
+  const server = await invoke([
+    "integrations",
+    "github",
+    "setup",
+    "--public-origin",
+    "https://tm.example",
+    "--mode",
+    "server",
+    "--dry-run",
+  ]);
   expect(server.exit).toBe(5);
   expect(server.document.error?.code).toBe("INVALID_ARGUMENT");
 });

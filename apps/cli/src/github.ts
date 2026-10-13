@@ -1,11 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import {
-  type Application,
-  authenticateBearer,
-  manifestFormHtml,
-} from "@testmaster/application";
+import { type Application, authenticateBearer, manifestFormHtml } from "@testmaster/application";
 import {
   ContractError,
   type GithubManifestInput,
@@ -72,7 +68,11 @@ export async function runGithubSetup(
 ): Promise<GithubSetupResult> {
   let origin = "";
   let receipt: GithubManifestReceipt | undefined;
-  const { promise: done, resolve: finish, reject: fail } = Promise.withResolvers<GithubSetupResult>();
+  const {
+    promise: done,
+    resolve: finish,
+    reject: fail,
+  } = Promise.withResolvers<GithubSetupResult>();
   let converting = false;
   const loopbackHosts = (port: number) => new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
   const handle = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
@@ -84,7 +84,11 @@ export async function runGithubSetup(
     }
     const url = new URL(request.url ?? "/", origin);
     if (request.method === "GET" && url.pathname === "/" && receipt) {
-      send(response, 200, manifestFormHtml(receipt.createUrl, receipt.manifest as Record<string, unknown>));
+      send(
+        response,
+        200,
+        manifestFormHtml(receipt.createUrl, receipt.manifest as Record<string, unknown>),
+      );
       return;
     }
     if (request.method === "GET" && url.pathname === "/callback" && receipt) {
@@ -117,7 +121,11 @@ export async function runGithubSetup(
           scopes: [...integration.consent.scopes],
         });
       } catch (error) {
-        send(response, 502, page("GitHub App was not created", "<p>See the terminal for the reason.</p>"));
+        send(
+          response,
+          502,
+          page("GitHub App was not created", "<p>See the terminal for the reason.</p>"),
+        );
         fail(error);
       }
       return;
@@ -137,9 +145,13 @@ export async function runGithubSetup(
   const timer = setTimeout(
     () =>
       fail(
-        new ContractError("UNAVAILABLE", "GitHub App setup timed out before GitHub redirected back", {
-          reasonCode: "manifest_expired",
-        }),
+        new ContractError(
+          "UNAVAILABLE",
+          "GitHub App setup timed out before GitHub redirected back",
+          {
+            reasonCode: "manifest_expired",
+          },
+        ),
       ),
     input.timeoutMs,
   );
@@ -186,7 +198,10 @@ export function githubCommands(program: Command, runtime: Runtime): void {
       .option("--port <port>", "Loopback port for the helper page", "0")
       .option("--timeout <seconds>", "Seconds to wait for GitHub's redirect", "900")
       .option("--mode <mode>", "local (default) or server")
-      .option("--token-env <variable>", "Environment variable holding an administrator token (server mode)"),
+      .option(
+        "--token-env <variable>",
+        "Environment variable holding an administrator token (server mode)",
+      ),
     async (rt, _args, options) => {
       const app = await actingApplication(rt, options);
       const explicitProject = string(options, "project");

@@ -1,7 +1,7 @@
+import type { BatchReceipt } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { type ReportSnapshot, reportGate } from "@testmaster/reporting";
 import type { Application } from "../../application.js";
-import type { BatchReceipt } from "@testmaster/contracts";
 import type { CiResult } from "../../ci.js";
 import type { SelectionPreview } from "../../selection.js";
 import type { StoredResult } from "./render.js";
