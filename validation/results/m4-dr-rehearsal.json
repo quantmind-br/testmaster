@@ -2,8 +2,8 @@
   "schemaVersion": "1.0.0",
   "name": "m4-dr-rehearsal",
   "requirement": "OPS-024",
-  "startedAt": "2026-10-13T15:46:00.708Z",
-  "finishedAt": "2026-10-13T15:46:16.362Z",
+  "startedAt": "2026-10-13T17:25:34.496Z",
+  "finishedAt": "2026-10-13T17:25:55.669Z",
   "passed": true,
   "host": {
     "platform": "linux",
@@ -29,35 +29,35 @@
     "milestone": "M5"
   },
   "timestamps": {
-    "started": "2026-10-13T15:46:00.708Z",
-    "backupStarted": "2026-10-13T15:46:05.999Z",
-    "backupFinished": "2026-10-13T15:46:06.850Z",
-    "postBackupWrite": "2026-10-13T15:46:07.816Z",
-    "lossAt": "2026-10-13T15:46:08.349Z",
-    "restoreStarted": "2026-10-13T15:46:10.517Z",
-    "restoreFinished": "2026-10-13T15:46:12.009Z",
-    "restoredVerified": "2026-10-13T15:46:15.169Z"
+    "started": "2026-10-13T17:25:34.496Z",
+    "backupStarted": "2026-10-13T17:25:41.090Z",
+    "backupFinished": "2026-10-13T17:25:42.240Z",
+    "postBackupWrite": "2026-10-13T17:25:43.751Z",
+    "lossAt": "2026-10-13T17:25:44.860Z",
+    "restoreStarted": "2026-10-13T17:25:46.999Z",
+    "restoreFinished": "2026-10-13T17:25:48.847Z",
+    "restoredVerified": "2026-10-13T17:25:53.748Z"
   },
-  "rpoSeconds": 1.499,
-  "backupAgeAtLossSeconds": 1.995,
-  "rtoSeconds": 6.82,
+  "rpoSeconds": 2.62,
+  "backupAgeAtLossSeconds": 3.141,
+  "rtoSeconds": 8.888,
   "rtoBreakdownSeconds": {
-    "provisionTarget": 2.168,
-    "restoreCommand": 1.492,
-    "verification": 3.16
+    "provisionTarget": 2.139,
+    "restoreCommand": 1.848,
+    "verification": 4.901
   },
   "backup": {
-    "backupId": "4b571c2c-32e1-4516-96d4-d7c4d3b4ec30",
-    "directoryName": "20261013T154606Z-4b571c2c-32e1-4516-96d4-d7c4d3b4ec30",
-    "createdAt": "2026-10-13T15:46:06.354Z",
+    "backupId": "5930a4ca-14bc-4e14-b088-eab51437112d",
+    "directoryName": "20261013T172541Z-5930a4ca-14bc-4e14-b088-eab51437112d",
+    "createdAt": "2026-10-13T17:25:41.719Z",
     "engine": "postgres",
-    "databaseVersion": 13,
-    "keyId": "f9ae5549d8205d69500be3fadffa7a4c0967d42843b2267cbe543a31f6c9a774",
+    "databaseVersion": 18,
+    "keyId": "e2dc70a473b05eec8154722d738d71e691e5bc17ddb8e52ebbc4eceb39ac8f76",
     "secretIncluded": false,
     "evidenceComplete": true,
     "missingObjects": 0,
     "fileCount": 5,
-    "totalBytes": 321944,
+    "totalBytes": 400233,
     "evidenceObjects": 2
   },
   "sourceStability": {
@@ -70,148 +70,148 @@
     "wipedInterruptedRestore": false,
     "postBackupLedger": "unavailable",
     "requiresOperatorReview": true,
-    "backupId": "4b571c2c-32e1-4516-96d4-d7c4d3b4ec30",
-    "databaseVersion": 13
+    "backupId": "5930a4ca-14bc-4e14-b088-eab51437112d",
+    "databaseVersion": 18
   },
   "steps": [
     {
       "name": "preflight",
-      "startedAt": "2026-10-13T15:46:00.708Z",
-      "finishedAt": "2026-10-13T15:46:00.790Z",
-      "durationSeconds": 0.082,
+      "startedAt": "2026-10-13T17:25:34.497Z",
+      "finishedAt": "2026-10-13T17:25:34.571Z",
+      "durationSeconds": 0.074,
       "exitCode": 0
     },
     {
       "name": "source-up",
-      "startedAt": "2026-10-13T15:46:00.791Z",
-      "finishedAt": "2026-10-13T15:46:02.737Z",
-      "durationSeconds": 1.946,
+      "startedAt": "2026-10-13T17:25:34.572Z",
+      "finishedAt": "2026-10-13T17:25:36.534Z",
+      "durationSeconds": 1.962,
       "exitCode": 0
     },
     {
       "name": "tool-versions",
-      "startedAt": "2026-10-13T15:46:02.737Z",
-      "finishedAt": "2026-10-13T15:46:03.724Z",
-      "durationSeconds": 0.987,
+      "startedAt": "2026-10-13T17:25:36.534Z",
+      "finishedAt": "2026-10-13T17:25:37.630Z",
+      "durationSeconds": 1.096,
       "exitCode": 0
     },
     {
       "name": "source-migrate",
-      "startedAt": "2026-10-13T15:46:03.725Z",
-      "finishedAt": "2026-10-13T15:46:04.602Z",
-      "durationSeconds": 0.877,
+      "startedAt": "2026-10-13T17:25:37.630Z",
+      "finishedAt": "2026-10-13T17:25:38.596Z",
+      "durationSeconds": 0.966,
       "exitCode": 0
     },
     {
       "name": "source-bootstrap",
-      "startedAt": "2026-10-13T15:46:04.603Z",
-      "finishedAt": "2026-10-13T15:46:05.394Z",
-      "durationSeconds": 0.791,
+      "startedAt": "2026-10-13T17:25:38.596Z",
+      "finishedAt": "2026-10-13T17:25:39.958Z",
+      "durationSeconds": 1.362,
       "exitCode": 0
     },
     {
       "name": "source-seed",
-      "startedAt": "2026-10-13T15:46:05.395Z",
-      "finishedAt": "2026-10-13T15:46:05.712Z",
-      "durationSeconds": 0.317,
+      "startedAt": "2026-10-13T17:25:39.959Z",
+      "finishedAt": "2026-10-13T17:25:40.572Z",
+      "durationSeconds": 0.613,
       "exitCode": 0
     },
     {
       "name": "source-baseline-snapshot",
-      "startedAt": "2026-10-13T15:46:05.713Z",
-      "finishedAt": "2026-10-13T15:46:05.997Z",
-      "durationSeconds": 0.284,
+      "startedAt": "2026-10-13T17:25:40.573Z",
+      "finishedAt": "2026-10-13T17:25:41.088Z",
+      "durationSeconds": 0.515,
       "exitCode": 0
     },
     {
       "name": "backup-create",
-      "startedAt": "2026-10-13T15:46:05.997Z",
-      "finishedAt": "2026-10-13T15:46:06.887Z",
-      "durationSeconds": 0.89,
+      "startedAt": "2026-10-13T17:25:41.089Z",
+      "finishedAt": "2026-10-13T17:25:42.278Z",
+      "durationSeconds": 1.189,
       "exitCode": 0
     },
     {
       "name": "backup-verify",
-      "startedAt": "2026-10-13T15:46:06.888Z",
-      "finishedAt": "2026-10-13T15:46:07.477Z",
-      "durationSeconds": 0.589,
+      "startedAt": "2026-10-13T17:25:42.279Z",
+      "finishedAt": "2026-10-13T17:25:43.143Z",
+      "durationSeconds": 0.864,
       "exitCode": 0
     },
     {
       "name": "source-post-backup-snapshot",
-      "startedAt": "2026-10-13T15:46:07.478Z",
-      "finishedAt": "2026-10-13T15:46:07.814Z",
-      "durationSeconds": 0.336,
+      "startedAt": "2026-10-13T17:25:43.144Z",
+      "finishedAt": "2026-10-13T17:25:43.749Z",
+      "durationSeconds": 0.605,
       "exitCode": 0
     },
     {
       "name": "post-backup-write",
-      "startedAt": "2026-10-13T15:46:07.814Z",
-      "finishedAt": "2026-10-13T15:46:08.347Z",
-      "durationSeconds": 0.533,
+      "startedAt": "2026-10-13T17:25:43.750Z",
+      "finishedAt": "2026-10-13T17:25:44.859Z",
+      "durationSeconds": 1.109,
       "exitCode": 0
     },
     {
       "name": "simulate-total-loss",
-      "startedAt": "2026-10-13T15:46:08.348Z",
-      "finishedAt": "2026-10-13T15:46:08.599Z",
-      "durationSeconds": 0.251,
+      "startedAt": "2026-10-13T17:25:44.859Z",
+      "finishedAt": "2026-10-13T17:25:45.099Z",
+      "durationSeconds": 0.24,
       "exitCode": 0
     },
     {
       "name": "restore-target-up",
-      "startedAt": "2026-10-13T15:46:08.600Z",
-      "finishedAt": "2026-10-13T15:46:10.515Z",
-      "durationSeconds": 1.915,
+      "startedAt": "2026-10-13T17:25:45.100Z",
+      "finishedAt": "2026-10-13T17:25:46.998Z",
+      "durationSeconds": 1.898,
       "exitCode": 0
     },
     {
       "name": "restore",
-      "startedAt": "2026-10-13T15:46:10.516Z",
-      "finishedAt": "2026-10-13T15:46:12.010Z",
-      "durationSeconds": 1.494,
+      "startedAt": "2026-10-13T17:25:46.998Z",
+      "finishedAt": "2026-10-13T17:25:48.848Z",
+      "durationSeconds": 1.85,
       "exitCode": 0
     },
     {
       "name": "restored-compare",
-      "startedAt": "2026-10-13T15:46:12.011Z",
-      "finishedAt": "2026-10-13T15:46:12.289Z",
-      "durationSeconds": 0.278,
+      "startedAt": "2026-10-13T17:25:48.848Z",
+      "finishedAt": "2026-10-13T17:25:49.371Z",
+      "durationSeconds": 0.523,
       "exitCode": 0
     },
     {
       "name": "ops-status",
-      "startedAt": "2026-10-13T15:46:12.290Z",
-      "finishedAt": "2026-10-13T15:46:12.711Z",
-      "durationSeconds": 0.421,
+      "startedAt": "2026-10-13T17:25:49.372Z",
+      "finishedAt": "2026-10-13T17:25:50.022Z",
+      "durationSeconds": 0.65,
       "exitCode": 0
     },
     {
       "name": "isolation-gates",
-      "startedAt": "2026-10-13T15:46:12.712Z",
-      "finishedAt": "2026-10-13T15:46:13.399Z",
-      "durationSeconds": 0.687,
+      "startedAt": "2026-10-13T17:25:50.022Z",
+      "finishedAt": "2026-10-13T17:25:51.112Z",
+      "durationSeconds": 1.09,
       "exitCode": 0
     },
     {
       "name": "access-checks",
-      "startedAt": "2026-10-13T15:46:13.400Z",
-      "finishedAt": "2026-10-13T15:46:14.821Z",
-      "durationSeconds": 1.421,
+      "startedAt": "2026-10-13T17:25:51.112Z",
+      "finishedAt": "2026-10-13T17:25:53.193Z",
+      "durationSeconds": 2.081,
       "exitCode": 0
     },
     {
       "name": "isolation-after-access",
-      "startedAt": "2026-10-13T15:46:14.821Z",
-      "finishedAt": "2026-10-13T15:46:15.168Z",
-      "durationSeconds": 0.347,
+      "startedAt": "2026-10-13T17:25:53.193Z",
+      "finishedAt": "2026-10-13T17:25:53.747Z",
+      "durationSeconds": 0.554,
       "exitCode": 0
     },
     {
       "name": "review-and-release",
-      "startedAt": "2026-10-13T15:46:15.170Z",
-      "finishedAt": "2026-10-13T15:46:16.343Z",
-      "durationSeconds": 1.173,
+      "startedAt": "2026-10-13T17:25:53.748Z",
+      "finishedAt": "2026-10-13T17:25:55.650Z",
+      "durationSeconds": 1.902,
       "exitCode": 0
     }
   ],
@@ -221,18 +221,18 @@
       {
         "name": "schemaVersion",
         "kind": "preserved",
-        "source": 13,
-        "restored": 13,
+        "source": 18,
+        "restored": 18,
         "equal": true
       },
       {
         "name": "workspaceIds",
         "kind": "preserved",
         "source": [
-          "ws_01a135f1-3e30-758c-a73c-cd6ff63984b0"
+          "ws_01a1364c-673c-76f2-b562-9ed78c9d1220"
         ],
         "restored": [
-          "ws_01a135f1-3e30-758c-a73c-cd6ff63984b0"
+          "ws_01a1364c-673c-76f2-b562-9ed78c9d1220"
         ],
         "equal": true
       },
@@ -241,19 +241,19 @@
         "kind": "preserved",
         "source": [
           {
-            "id": "svc_01a135f1-3e31-7443-8929-07355ade90e8",
+            "id": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
             "kind": "service",
             "displayName": "TestMaster controller",
             "disabledAt": null
           },
           {
-            "id": "svc_01a135f1-3fba-7386-b8ec-2a9d3a958f69",
+            "id": "svc_01a1364c-69d4-754c-958c-06d1a11f32f5",
             "kind": "service",
             "displayName": "Host operator",
             "disabledAt": null
           },
           {
-            "id": "usr_01a135f1-3e31-7443-8929-02dfb4244450",
+            "id": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
             "kind": "human",
             "displayName": "dr-owner",
             "disabledAt": null
@@ -261,19 +261,19 @@
         ],
         "restored": [
           {
-            "id": "svc_01a135f1-3e31-7443-8929-07355ade90e8",
+            "id": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
             "kind": "service",
             "displayName": "TestMaster controller",
             "disabledAt": null
           },
           {
-            "id": "svc_01a135f1-3fba-7386-b8ec-2a9d3a958f69",
+            "id": "svc_01a1364c-69d4-754c-958c-06d1a11f32f5",
             "kind": "service",
             "displayName": "Host operator",
             "disabledAt": null
           },
           {
-            "id": "usr_01a135f1-3e31-7443-8929-02dfb4244450",
+            "id": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
             "kind": "human",
             "displayName": "dr-owner",
             "disabledAt": null
@@ -286,25 +286,25 @@
         "kind": "preserved",
         "source": [
           {
-            "id": "mem_01a135f1-3e3b-70f4-a2c2-6ad56e34f345",
-            "principalId": "usr_01a135f1-3e31-7443-8929-02dfb4244450",
+            "id": "mem_01a1364c-6748-7286-8464-b881d777c2c3",
+            "principalId": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
             "role": "org_owner"
           },
           {
-            "id": "mem_01a135f1-3e41-7314-a8ba-05dd0874e4bd",
-            "principalId": "svc_01a135f1-3e31-7443-8929-07355ade90e8",
+            "id": "mem_01a1364c-674f-745e-a465-250773f5e42d",
+            "principalId": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
             "role": "org_owner"
           }
         ],
         "restored": [
           {
-            "id": "mem_01a135f1-3e3b-70f4-a2c2-6ad56e34f345",
-            "principalId": "usr_01a135f1-3e31-7443-8929-02dfb4244450",
+            "id": "mem_01a1364c-6748-7286-8464-b881d777c2c3",
+            "principalId": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
             "role": "org_owner"
           },
           {
-            "id": "mem_01a135f1-3e41-7314-a8ba-05dd0874e4bd",
-            "principalId": "svc_01a135f1-3e31-7443-8929-07355ade90e8",
+            "id": "mem_01a1364c-674f-745e-a465-250773f5e42d",
+            "principalId": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
             "role": "org_owner"
           }
         ],
@@ -314,10 +314,10 @@
         "name": "projectIds",
         "kind": "preserved",
         "source": [
-          "prj_01a135f1-40ed-73e7-9d67-3acf89c483b2"
+          "prj_01a1364c-6c30-76dc-be92-518d22eef348"
         ],
         "restored": [
-          "prj_01a135f1-40ed-73e7-9d67-3acf89c483b2"
+          "prj_01a1364c-6c30-76dc-be92-518d22eef348"
         ],
         "equal": true
       },
@@ -326,28 +326,28 @@
         "kind": "preserved",
         "source": [
           {
-            "id": "art_01a135f1-40f4-7203-aa27-a0d706b0eb6e",
-            "storageKey": "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+            "id": "art_01a1364c-6c38-7787-a37a-bd23af3df008",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
             "contentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
             "bytes": 56
           },
           {
-            "id": "art_01a135f1-40fd-71a0-a9a3-a7f503048878",
-            "storageKey": "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+            "id": "art_01a1364c-6c42-77b7-a57d-974a825c4e5a",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
             "contentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
             "bytes": 4929
           }
         ],
         "restored": [
           {
-            "id": "art_01a135f1-40f4-7203-aa27-a0d706b0eb6e",
-            "storageKey": "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+            "id": "art_01a1364c-6c38-7787-a37a-bd23af3df008",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
             "contentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
             "bytes": 56
           },
           {
-            "id": "art_01a135f1-40fd-71a0-a9a3-a7f503048878",
-            "storageKey": "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+            "id": "art_01a1364c-6c42-77b7-a57d-974a825c4e5a",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
             "contentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
             "bytes": 4929
           }
@@ -365,12 +365,12 @@
         "name": "evidenceFiles(path->sha256)",
         "kind": "preserved",
         "source": {
-          "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
-          "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b"
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b"
         },
         "restored": {
-          "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
-          "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b"
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b"
         },
         "equal": true
       },
@@ -384,8 +384,8 @@
       {
         "name": "auditEvents.digest",
         "kind": "preserved",
-        "source": "7a554b128d7e5437dd988ab07ea4fa8ada17fd21f6061b556635afce953360c5",
-        "restored": "7a554b128d7e5437dd988ab07ea4fa8ada17fd21f6061b556635afce953360c5",
+        "source": "3ffebf702f0b281aed5fafb07c55a7d9bd688b3cc97c1e75e3977e5736f8010d",
+        "restored": "3ffebf702f0b281aed5fafb07c55a7d9bd688b3cc97c1e75e3977e5736f8010d",
         "equal": true
       },
       {
@@ -505,13 +505,13 @@
         "kind": "tightened",
         "source": [
           {
-            "id": "int_88bf522b-451c-402d-ad11-684318d7a9fd",
+            "id": "int_ebc5c3cb-a17f-45dd-a2b4-4b4b957b1228",
             "state": "paused"
           }
         ],
         "restored": [
           {
-            "id": "int_88bf522b-451c-402d-ad11-684318d7a9fd",
+            "id": "int_ebc5c3cb-a17f-45dd-a2b4-4b4b957b1228",
             "state": "paused"
           }
         ],
@@ -542,7 +542,7 @@
         "name": "postBackupWriteAbsent",
         "kind": "rpo",
         "source": [
-          "prj_01a135f1-4a59-72ac-bb9c-b096f0f7ca21"
+          "prj_01a1364c-7b00-71e4-9f34-9eea9a1a0afa"
         ],
         "restored": [],
         "equal": true
@@ -552,13 +552,13 @@
   "hashTable": {
     "evidenceFiles": [
       {
-        "path": "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "path": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
         "source": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
         "restored": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
         "equal": true
       },
       {
-        "path": "fixture-inputs/ws_01a135f1-3e30-758c-a73c-cd6ff63984b0/prj_01a135f1-40ed-73e7-9d67-3acf89c483b2/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "path": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
         "source": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
         "restored": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
         "equal": true
@@ -566,7 +566,7 @@
     ],
     "fixtureInputs": [
       {
-        "id": "art_01a135f1-40f4-7203-aa27-a0d706b0eb6e",
+        "id": "art_01a1364c-6c38-7787-a37a-bd23af3df008",
         "name": "profile",
         "originalSha256": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
         "sourceContentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
@@ -575,7 +575,7 @@
         "equal": true
       },
       {
-        "id": "art_01a135f1-40fd-71a0-a9a3-a7f503048878",
+        "id": "art_01a1364c-6c42-77b7-a57d-974a825c4e5a",
         "name": "catalog",
         "originalSha256": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
         "sourceContentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
@@ -593,7 +593,7 @@
         "ok": true,
         "detail": {
           "exit": 0,
-          "principalId": "usr_01a135f1-3e31-7443-8929-02dfb4244450"
+          "principalId": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093"
         }
       },
       {
@@ -700,7 +700,7 @@
       "command": "testmaster backup review --apply --revocations-confirmed --ledger-loss-accepted --mode server",
       "exitCode": 0,
       "available": true,
-      "output": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_98f4f7a6-c6fb-4591-92f1-b0183d558db9\",\"data\":{\"dryRun\":false,\"activeRunsRequireDecision\":[],\"missingArtifacts\":[],\"postBackupLedger\":\"unavailable\",\"admission\":\"enabled\"},\"warnings\":[]}"
+      "output": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_95312310-9130-4867-b549-1a77ae586dcc\",\"data\":{\"dryRun\":false,\"activeRunsRequireDecision\":[],\"missingArtifacts\":[],\"postBackupLedger\":\"unavailable\",\"admission\":\"enabled\"},\"warnings\":[]}"
     },
     "dryRunThroughApplicationApi": {
       "dryRun": true,
@@ -725,8 +725,8 @@
     "pgRestore": "pg_restore (PostgreSQL) 17.11",
     "postgresServer": "postgres (PostgreSQL) 17.11",
     "testmasterCli": "0.1.0",
-    "sourceCommit": "9cb27b0bcd2ebff8c1a41095b351c91ff4d2036b",
-    "sourceDirtyFiles": 36
+    "sourceCommit": "71f7e4f2e7b6c9bc55b7209d99016764267f3642",
+    "sourceDirtyFiles": 1
   },
   "notes": [
     "RPO is measured from the instant `backup create` returned until the loss; the data written in between is gone and the rehearsal proves it is absent after restore.",

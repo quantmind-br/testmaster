@@ -14,8 +14,8 @@ storage configuration; there is no S3 recovery procedure to follow.
 
 | Item | Proposed objective (`specs/08-operations.md` §8.1) | Measured |
 |---|---|---|
-| RPO, server profile with daily backup | 24 h (the backup interval) | `rpoSeconds` of `validation/results/m4-dr-rehearsal.json`: 1.5 s between the end of `backup create` and the loss (the rehearsal takes the backup right before the loss, so this number says nothing about a daily cadence) |
-| RTO, reference installation | 4 h | `rtoSeconds`: 6.8 s from the loss to a restored, compared and access-checked database (provision 2.2 s, `backup restore` 1.5 s, verification 3.2 s) on a 322 KB backup with two evidence objects |
+| RPO, server profile with daily backup | 24 h (the backup interval) | `rpoSeconds` of `validation/results/m4-dr-rehearsal.json`: 2.6 s between the end of `backup create` and the loss (the rehearsal takes the backup right before the loss, so this number says nothing about a daily cadence) |
+| RTO, reference installation | 4 h | `rtoSeconds`: 8.9 s from the loss to a restored, compared and access-checked database (provision 2.1 s, `backup restore` 1.8 s, verification 4.9 s) on a 400 KB backup with two evidence objects |
 | Point-in-time recovery | none claimed | not applicable |
 
 The rehearsal ran on one Linux x64 host with PostgreSQL in a local container: a backup of five files
