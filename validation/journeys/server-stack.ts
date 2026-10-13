@@ -385,7 +385,6 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
 
     Object.assign(stack, {
       baseUrl: proxy.origin,
-      cwd,
       home,
       ca,
       proxy,
