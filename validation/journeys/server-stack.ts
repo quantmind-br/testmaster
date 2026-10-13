@@ -2,7 +2,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Application, type ServerConfig } from "@testmaster/application";
 import { createTestDatabase } from "@testmaster/persistence/testing";
 import { cli, eventually } from "./harness.js";
@@ -41,6 +41,8 @@ export interface ServerStackOptions {
   /** Also run `worker start --mode server`. */
   readonly worker?: boolean;
   readonly config?: DeepPartial<ServerConfig>;
+  /** Files written under the stack's HOME before anything starts (for example `.config/testmaster/profiles.json`). */
+  readonly homeFiles?: Readonly<Record<string, string>>;
 }
 
 export interface ServerStack {
@@ -152,6 +154,11 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
   await Promise.all(
     [home, cwd, evidenceRoot, keys].map((path) => mkdir(path, { recursive: true, mode: 0o700 })),
   );
+  for (const [relative, content] of Object.entries(options.homeFiles ?? {})) {
+    const target = join(home, relative);
+    await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+    await writeFile(target, content, { mode: 0o600 });
+  }
   const masterKeyFile = join(keys, "master.key");
   const backupKeyFile = join(keys, "backup.key");
   for (const file of [masterKeyFile, backupKeyFile]) {
