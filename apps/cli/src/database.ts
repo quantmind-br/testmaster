@@ -1,15 +1,60 @@
 import { assessRelease, resolveConfig, upgradeLocalProfile } from "@testmaster/application";
+import { PersistenceDatabase, type PostgresConfig } from "@testmaster/persistence";
 import type { Command } from "commander";
-import { type Runtime, required, string } from "./runtime.js";
+import { type Options, type Runtime, required, string } from "./runtime.js";
+
+/** PostgreSQL connection options shared by `db status` and `db migrate`. */
+function withPostgresOptions(command: Command): Command {
+  return command
+    .option(
+      "--database-url <url>",
+      "Operate on a PostgreSQL database (postgres://user@host:port/db)",
+    )
+    .option("--password-file <path>", "File with the database password (mode 0600)")
+    .option("--ca-file <path>", "CA bundle for sslmode=verify-full");
+}
+
+/** Host-operator access to a PostgreSQL database; credentials, not an Application identity, authorize it. */
+function postgresTarget(options: Options): PostgresConfig | null {
+  const url = string(options, "databaseUrl");
+  if (!url) return null;
+  const passwordFile = string(options, "passwordFile");
+  const caFile = string(options, "caFile");
+  return {
+    url,
+    ...(passwordFile ? { passwordFile } : {}),
+    ...(caFile ? { caFile } : {}),
+    applicationName: "testmaster-db",
+  };
+}
 
 export function databaseCommands(program: Command, runtime: Runtime): void {
   const group = program.command("db");
-  runtime.bind(group.command("status"), async (rt) => {
+  runtime.bind(withPostgresOptions(group.command("status")), async (rt) => {
+    const target = postgresTarget(rt.options);
+    if (target) {
+      const database = PersistenceDatabase.openPostgres(target);
+      try {
+        return { data: { engine: "postgres", ...database.status() } };
+      } finally {
+        database.close();
+      }
+    }
     const app = await rt.app();
     app.context.authorize("R");
     return { data: app.database.status() };
   });
-  runtime.bind(group.command("migrate"), async (rt) => {
+  runtime.bind(withPostgresOptions(group.command("migrate")), async (rt) => {
+    const target = postgresTarget(rt.options);
+    if (target) {
+      const database = PersistenceDatabase.openPostgres(target);
+      try {
+        await database.migrate();
+        return { data: { engine: "postgres", ...database.status() } };
+      } finally {
+        database.close();
+      }
+    }
     const app = await rt.app();
     app.context.authorize("A");
     await app.database.migrate();
