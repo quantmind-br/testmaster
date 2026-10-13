@@ -48,8 +48,8 @@ describe("onboarding helpers", () => {
 
   it("UX-011 computes the sha256 digest the upload contract expects", async () => {
     const digest = await digestOf(new TextEncoder().encode("abc"));
-    expect(digest).toBe("sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-    expect(shortHash(digest)).toBe("sha256:ba7816bf8f01");
+    expect(digest).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    expect(shortHash(digest)).toBe("ba7816bf8f01");
     expect(shortHash(null)).toBe("—");
     expect(formatBytes(2048)).toBe("2.0 KiB");
   });

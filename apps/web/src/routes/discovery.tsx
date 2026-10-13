@@ -68,7 +68,7 @@ function NewDiscovery({ projectId }: { projectId: string }): ReactNode {
         `/projects/${encodeURIComponent(projectId)}/sources`,
         { query: { limit: 100 } },
       );
-      const created = await api<{ id: string }>(
+      const created = await api<{ job: { id: string } }>(
         "POST",
         `/projects/${encodeURIComponent(projectId)}/discovery`,
         {
@@ -83,7 +83,7 @@ function NewDiscovery({ projectId }: { projectId: string }): ReactNode {
         },
       );
       navigate(
-        `/projects/${encodeURIComponent(projectId)}/discovery/${encodeURIComponent(created.data.id)}`,
+        `/projects/${encodeURIComponent(projectId)}/discovery/${encodeURIComponent(created.data.job.id)}`,
       );
     } catch (error) {
       setFailure(toFailure(error));

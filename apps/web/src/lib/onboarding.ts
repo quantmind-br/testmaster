@@ -92,11 +92,10 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
 }
 
-/** `sha256:<hex>`, the digest form the upload contract expects. */
+/** Lowercase hex SHA-256, the digest form the upload contract (and stored hashes) use. */
 export async function digestOf(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const hash = await crypto.subtle.digest("SHA-256", bytes);
-  const hex = [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `sha256:${hex}`;
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function shortHash(value: string | null | undefined): string {
