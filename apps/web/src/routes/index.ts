@@ -12,6 +12,7 @@ import { routes as home } from "./home";
 import { routes as lists } from "./lists";
 import { routes as notifications } from "./notifications";
 import { routes as onboarding } from "./onboarding";
+import { routes as operations } from "./operations";
 import { routes as project } from "./project";
 import { routes as quarantine } from "./quarantine";
 import { routes as requirements } from "./requirements";
@@ -52,4 +53,5 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...workers,
   ...auth,
   ...github,
+  ...operations,
 ];

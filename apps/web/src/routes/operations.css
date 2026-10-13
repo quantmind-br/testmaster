@@ -1,0 +1,100 @@
+/* Operations pages. Uses only the portal theme tokens (apps/web/src/theme/theme.css). */
+.ops-panel {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.ops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ops-reason {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+}
+
+.ops-reason svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.ops-box {
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.ops-box.proposal {
+  border-style: dashed;
+}
+
+.ops-box h3 {
+  font-size: 1rem;
+}
+
+.ops-value {
+  margin: var(--space-2) 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.ops-refusal {
+  align-items: flex-start;
+}
+
+.ops-refusal p {
+  margin: 0 0 var(--space-1);
+}
+
+.ops-refusal .ops-refusal-title {
+  font-weight: 700;
+}
+
+.ops-timeline {
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+}
+
+.ops-timeline > li {
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+  border-left: 3px solid var(--border);
+  margin-bottom: var(--space-2);
+}
+
+.ops-timeline .ops-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.ops-filter {
+  max-width: 16rem;
+}
+
+.ops-inline-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
