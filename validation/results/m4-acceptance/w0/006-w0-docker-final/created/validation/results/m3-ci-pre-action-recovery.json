@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-pre-action-recovery",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:37:25.707Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-pre-action-recovery",
+        "--base-url",
+        "http://127.0.0.1:42719",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f40b120e-1464-4081-9dcb-922a7ca078ea",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b2-593b-7720-93f3-a94c30a2468c",
+    "run_01a135b2-6016-7125-b044-eaafe2bc8898"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "safePreActionRecoveryOutsideStrict",
+      "recoveredRunId": "run_01a135b2-593b-7720-93f3-a94c30a2468c",
+      "recoveryAttempts": 2,
+      "strictRunId": "run_01a135b2-6016-7125-b044-eaafe2bc8898",
+      "strictAttempts": 1,
+      "strictTargetRequests": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

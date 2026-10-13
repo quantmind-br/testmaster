@@ -1,0 +1,188 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-first-failure-diagnostic-pass",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:37:20.527Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-first-failure-diagnostic-pass",
+        "--base-url",
+        "http://127.0.0.1:33659",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_23f31413-e704-4e72-9fb7-00b0025b73c4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-7i5JjQ/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_787d1200-3fe5-4701-990f-30f9495302ec",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a135b2-2906-76c5-9a67-5098c1259eac",
+        "--env",
+        "env_01a135b2-26be-7576-9bd9-c2a0368e0609",
+        "--output-dir",
+        "/tmp/tm-m1-7i5JjQ/healthy-ci",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3f131a05-ad7c-4fca-951e-f0cea027b88d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a135b2-2906-76c5-9a67-5098c1259eac",
+        "--env",
+        "env_01a135b2-26be-7576-9bd9-c2a0368e0609",
+        "--output-dir",
+        "/tmp/tm-m1-7i5JjQ/failed-ci",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_e2031b3d-f593-4961-b12a-83cb3665d0f4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135b2-3f10-74e3-afb4-3b97279dd22f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_deb069ba-1d59-4d9c-a231-7e7b55fc89e5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135b2-2906-76c5-9a67-5098c1259eac",
+        "--wait",
+        "--env",
+        "env_01a135b2-26be-7576-9bd9-c2a0368e0609",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_844b51e2-5a74-47b1-aecb-6173b830eb96",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135b2-3f10-74e3-afb4-3b97279dd22f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_381f1d3a-12ce-4e5d-830f-e307242b2179",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a135b2-2906-76c5-9a67-5098c1259eac",
+        "--max-attempts",
+        "2",
+        "--env",
+        "env_01a135b2-26be-7576-9bd9-c2a0368e0609",
+        "--output-dir",
+        "/tmp/tm-m1-7i5JjQ/retry-denied",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_9c2a6b9b-7c0c-4ec5-9088-ef1643f02ab7",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b2-3324-7263-85de-9afb56918f9c",
+    "run_01a135b2-3f10-74e3-afb4-3b97279dd22f",
+    "run_01a135b2-48d8-7325-bf80-42ae6e18ba26"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "strictFirstFailureOutsideDiagnostic",
+      "strictFailedRunId": "run_01a135b2-3f10-74e3-afb4-3b97279dd22f",
+      "diagnosticRunId": "run_01a135b2-48d8-7325-bf80-42ae6e18ba26",
+      "strictAttempts": 1,
+      "diagnosticIncludedInStrictGate": false,
+      "statuses": [
+        "ok",
+        "degraded",
+        "ok"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
