@@ -55,3 +55,6 @@ and rollback means restoring a backup taken before the upgrade.
 | 7 | `m3_contract_constraints` | `b8a0f05372b8` | Generated M3 contract CHECK constraints |
 | 8 | `fixture_inputs` | `aa12ad5eb6f9` | Fixture input objects (`fixture_inputs`) included in backups and retention |
 | 9 | `delivery_requeue` | `041fd69b1c99` | Lets a dead-lettered check delivery reopen to `pending`; the frozen delivery subject and delivered rows stay immutable |
+| 10 | `team_identity` | `1c4f549e5c6d` | Password credentials and sessions; local tokens move from `operational_state` to `server_tokens` (ADR-017) |
+| 11 | `tenant_rls` | `42c4a2931448` | PostgreSQL: forced row-level security on every `workspace_id` table. SQLite: comment-only (ADR-015) |
+| 12 | `integrations` | `aebfadc8a1b7` | `integrations` and `inbound_webhook_deliveries` with webhook dedupe and tamper records (ADR-020) |
