@@ -18,6 +18,7 @@ import { healingCommands } from "./heal.js";
 import { imageCommands } from "./images.js";
 import { suiteCommands } from "./lists.js";
 import { mcpCommands } from "./mcp.js";
+import { operationsCommands } from "./operations.js";
 import { planCommands } from "./plans.js";
 import { projectCommands } from "./projects.js";
 import { remoteCommands } from "./remote.js";
@@ -83,6 +84,7 @@ export function createCli(runtime: Runtime): Command {
   serverCommands(program, runtime);
   identityCommands(program, runtime);
   resourceCommands(program, runtime);
+  operationsCommands(program, runtime);
   ciCommands(program, runtime);
   suiteCommands(program, runtime);
   scheduleCommands(program, runtime);

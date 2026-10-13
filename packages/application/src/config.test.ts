@@ -263,10 +263,9 @@ it("exports the normative local defaults and labels future operational controls 
     telemetryEnabled: false,
   });
   expect(result.unavailable.schedule).toBe("M4");
-  expect(result.unavailable).toMatchObject({
-    metadataRetentionPurge: "M4",
-    auditRetentionPurge: "M4",
-  });
+  expect(result.unavailable).not.toHaveProperty("metadataRetentionPurge");
+  expect(result.unavailable).not.toHaveProperty("auditRetentionPurge");
+  expect(result.unavailable).not.toHaveProperty("automatedServerBackup");
   expect(result.config.telemetry?.enabled).toBe(false);
 });
 

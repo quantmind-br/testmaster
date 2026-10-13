@@ -24,6 +24,8 @@ import {
   type PostgresConfig,
 } from "./postgres/bridge.js";
 import { isReadStatement, splitStatements, translateSql } from "./postgres/dialect.js";
+import { restorePendingMessage, restorePendingTable } from "./postgres/restore.js";
+import { applyRestoreTightening } from "./restore-tightening.js";
 
 export type SqlRow = Record<string, unknown>;
 export interface MigrationStatus {
@@ -196,11 +198,12 @@ export class PersistenceDatabase {
    * Opens a PostgreSQL database through the synchronous bridge (ADR-015). The returned instance has
    * the controller scope (`"*"`); request handlers narrow it with `forWorkspace`. Opening verifies
    * the connecting role cannot bypass row-level security, the byte-order collation and the
-   * compatibility of the applied schema, but never migrates: run `testmaster db migrate`.
+   * compatibility of the applied schema, but never migrates: run `testmaster db migrate`. A database
+   * with an unfinished restore refuses to open unless `restore` is set (only the restore tool does).
    */
   static openPostgres(
     config: PostgresConfig,
-    options: { migrationsDir?: string } = {},
+    options: { migrationsDir?: string; restore?: boolean } = {},
   ): PersistenceDatabase {
     const bridge = PostgresBridge.open(config);
     const core: PostgresCore = {
@@ -230,6 +233,10 @@ export class PersistenceDatabase {
           "Database collation must be a byte-order collation (C) so ordering matches SQLite",
           { reasonCode: "database_collation", collation },
         );
+      if (!options.restore && instance.tableExists(restorePendingTable))
+        throw new ContractError("PRECONDITION_FAILED", restorePendingMessage, {
+          reasonCode: "restore_incomplete",
+        });
       instance.verifyCompatibility(loadMigrationsSync("postgres", options.migrationsDir));
       return instance;
     } catch (error) {
@@ -395,7 +402,7 @@ export class PersistenceDatabase {
       else this.pgQuery(statement, []);
     }
   }
-  private tableExists(name: string): boolean {
+  tableExists(name: string): boolean {
     return Boolean(
       this.core.engine === "sqlite"
         ? this.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?", name)
@@ -831,106 +838,9 @@ export class PersistenceDatabase {
         throw new Error("Backup database schema version mismatch");
       if (!options.keepSchema) await restored.migrate();
       const ledgerAvailable = options.ledgerAvailable !== false;
-      restored.withTx(() => {
-        for (const current of options.revocations ?? []) {
-          const row = restored.get(
-            "SELECT data_json FROM secret_references WHERE workspace_id=? AND id=?",
-            current.workspace_id,
-            current.id,
-          );
-          if (!row) continue;
-          const reference = JSON.parse(String(row.data_json)) as Record<string, unknown>;
-          if (
-            !current.revoked_at &&
-            Number(current.secret_version) <= Number(reference.secretVersion)
-          )
-            continue;
-          const revokedAt = current.revoked_at ?? new Date().toISOString();
-          reference.revokedAt = revokedAt;
-          reference.version = Number(reference.version ?? 1) + 1;
-          restored.run(
-            "UPDATE secret_references SET revoked_at=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=?",
-            revokedAt,
-            JSON.stringify(reference),
-            current.workspace_id,
-            current.id,
-          );
-        }
-        const revokedNow = new Date().toISOString();
-        for (const current of options.consentRevocations ?? []) {
-          // Consents carry their state in columns; a restore only ever tightens them.
-          restored.run(
-            "UPDATE consents SET revoked_at=?,version=version+1 WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
-            current.revoked_at ?? revokedNow,
-            current.workspace_id,
-            current.id,
-          );
-        }
-        for (const current of options.approvalRevocations ?? []) {
-          const row = restored.get(
-            "SELECT data_json FROM approvals WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
-            current.workspace_id,
-            current.id,
-          );
-          if (!row) continue;
-          const approval = JSON.parse(String(row.data_json)) as Record<string, unknown>;
-          const revokedAt = current.revoked_at ?? revokedNow;
-          approval.revokedAt = revokedAt;
-          approval.version = Number(approval.version ?? 1) + 1;
-          restored.run(
-            "UPDATE approvals SET revoked_at=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
-            revokedAt,
-            JSON.stringify(approval),
-            current.workspace_id,
-            current.id,
-          );
-        }
-        for (const tombstone of options.tombstones ?? []) {
-          restored.run(
-            "INSERT OR REPLACE INTO operational_state(key,value) VALUES(?,?)",
-            tombstone.key,
-            tombstone.value,
-          );
-          const match = /^retention:artifact:(ws_[0-9a-f-]+):(art_[0-9a-f-]+)$/.exec(
-            String(tombstone.key),
-          );
-          if (match) {
-            const retention = JSON.parse(String(tombstone.value)) as { stage?: string };
-            if (["marked", "tombstoned", "deleted"].includes(retention.stage ?? ""))
-              restored.run(
-                "UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND state<>'expired'",
-                match[1],
-                match[2],
-              );
-          }
-        }
-        restored.run(
-          "UPDATE workers SET state='offline',last_heartbeat_at=?",
-          new Date(0).toISOString(),
-        );
-        restored.run(
-          "UPDATE operational_state SET value='suspended_restore' WHERE key='admission'",
-        );
-        restored.run(
-          "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore_review',?)",
-          ledgerAvailable
-            ? "post_backup_revocations_and_tombstones_unverified"
-            : "post_backup_ledger_unavailable",
-        );
-        restored.run(
-          "INSERT OR REPLACE INTO operational_state(key,value) VALUES('restore:evidence-complete',?)",
-          String(index.complete),
-        );
-        restored.run(
-          "UPDATE job_leases SET dispatchable=0,state=CASE WHEN state IN ('leased','queued') THEN 'reconciliation_required' ELSE state END,lease_owner=NULL,lease_expires_at=NULL,fence=fence+1",
-        );
-        restored.run("UPDATE outbox SET dispatchable=0");
-        restored.run("DELETE FROM server_tokens");
-        // Backups taken before migration 10 have no session table.
-        if (restored.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'"))
-          restored.run("DELETE FROM sessions");
-        restored.run("UPDATE cursor_signing_keys SET revoked_at=?", new Date().toISOString());
-      });
+      restored.withTx(() =>
+        applyRestoreTightening(restored, { ...options, evidenceComplete: index.complete }),
+      );
       return {
         database: restored,
         manifest,
@@ -960,6 +870,11 @@ export interface BackupManifest {
   keyIds?: string[];
   configDigests?: string[];
   missingObjects?: string[];
+  /** Server-profile (ADR-019) backups: engine, id, encryption parameters and manifest MAC. */
+  engine?: "sqlite" | "postgres";
+  backupId?: string;
+  encryption?: { algorithm: "aes-256-gcm-chunked"; keyId: string; chunkBytes: number };
+  mac?: string;
 }
 export interface BackupOptions {
   evidenceRoot?: string;

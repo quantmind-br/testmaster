@@ -55,6 +55,7 @@ import { RefinementService } from "./ai/refinement.js";
 import { RequirementsService } from "./ai/requirements.js";
 import { SourcesService, UploadsService } from "./ai/sources.js";
 import { UsageService } from "./ai/usage.js";
+import { AlertsService } from "./alerts.js";
 import { ApprovalsService } from "./approvals.js";
 import { ArtifactLinksService } from "./artifact-links.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
@@ -82,6 +83,7 @@ import { DeliveryService } from "./delivery.js";
 import { FeatureMapService } from "./feature-map.js";
 import { FlakeService } from "./flake.js";
 import { IdentityService } from "./identity.js";
+import { IncidentsService } from "./incidents.js";
 import {
   createGithubProvider,
   GithubRuntime,
@@ -100,11 +102,14 @@ import {
 } from "./notifications/index.js";
 import { correlationId } from "./observability.js";
 import { OnboardingService } from "./onboarding.js";
+import { OperationsService } from "./operations.js";
+import { registerOperationsControllers } from "./operations-controllers.js";
 import { PlanValidationService } from "./plan-validation.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
+import { RetentionPurgeService } from "./retention-purge.js";
 import { RevisionHistoryService } from "./revision-history.js";
 import { RunViewsService } from "./run-views.js";
 import { BatchesService, RunsService } from "./runs.js";
@@ -126,6 +131,7 @@ import {
   TokensService,
   WorkspacesService,
 } from "./team.js";
+import { ApiMetrics, TelemetryService } from "./telemetry.js";
 import { TestDraftsService } from "./test-drafts.js";
 import type { TokenData, TokenKind } from "./tokens.js";
 import { WorkerService } from "./worker.js";
@@ -182,6 +188,7 @@ interface SharedRuntime {
   controllers: ControllerRegistry;
   /** API client, installation-token cache and clocks of the GitHub App integration. */
   github: GithubRuntime;
+  apiMetrics: ApiMetrics;
   controllerScope?: Application;
   /** Workspace system scopes handed to controller loops, built once per workspace. */
   systemScopes?: Map<string, Application>;
@@ -236,6 +243,13 @@ export class Application {
   readonly codeGeneration: CodeGenerationService;
   readonly resources: ResourcesService;
   readonly audit: AuditService;
+  readonly operations: OperationsService;
+  readonly alerts: AlertsService;
+  readonly telemetry: TelemetryService;
+  readonly incidents: IncidentsService;
+  readonly retentionPurge: RetentionPurgeService;
+  /** API counters since start; the server records into it, telemetry reads it. */
+  readonly apiMetrics: ApiMetrics;
   readonly selection: SelectionService;
   readonly database: PersistenceDatabase;
   readonly identityService: IdentityService;
@@ -267,12 +281,14 @@ export class Application {
       controllers: new ControllerRegistry(),
       ephemeralSecrets: new Map(),
       github: new GithubRuntime(),
+      apiMetrics: new ApiMetrics(),
     },
     readonly serverConfig?: ServerConfig,
   ) {
     const database = root.forWorkspace(bound ?? "*");
     this.database = database;
     this.controllers = shared.controllers;
+    this.apiMetrics = shared.apiMetrics;
     // Only the local profile (no deployment configuration) may infer its workspace and principal.
     const implicit = bound === null && !serverConfig;
     const workspaceId =
@@ -327,6 +343,27 @@ export class Application {
         this.authorizeNamed(action, resourceType, projectId, environmentId ?? null),
     };
     this.audit = new AuditService(this.context, config.cwd);
+    this.operations = new OperationsService(this.context, {
+      ...(serverConfig ? { server: serverConfig } : {}),
+      reconcile: (options) => this.worker.reconcile(options),
+      deliveries: () => this.delivery,
+    });
+    this.alerts = new AlertsService(this.context, {
+      ...(serverConfig ? { server: serverConfig } : {}),
+      dataDir: config.dataDir,
+      operations: () => this.operations,
+      liveWorker: () => this.worker.live(),
+    });
+    this.telemetry = new TelemetryService(this.context, {
+      metrics: shared.apiMetrics,
+      ...(serverConfig ? { server: serverConfig } : {}),
+      operations: () => this.operations,
+      alerts: () => this.alerts,
+    });
+    this.incidents = new IncidentsService(this.context);
+    this.retentionPurge = new RetentionPurgeService(this.context, {
+      ...(serverConfig ? { server: serverConfig } : {}),
+    });
     this.projects = new ProjectsService(this.context);
     this.environments = new EnvironmentsService(this.context);
     this.tests = new TestsService(this.context);
@@ -528,6 +565,7 @@ export class Application {
         controllers: new ControllerRegistry(),
         ephemeralSecrets: new Map(),
         github: new GithubRuntime(options.github),
+        apiMetrics: new ApiMetrics(),
       },
       options.server,
     );
@@ -542,6 +580,7 @@ export class Application {
         await scope.github.reconcile();
       },
     });
+    registerOperationsControllers(application.controllers);
     return application;
   }
   close(): void {
@@ -1008,6 +1047,7 @@ export class Application {
         "PRECONDITION_FAILED",
         "Database admission is suspended pending restore review",
       );
+    this.operations.assertAdmitting();
     try {
       await access(this.config.dataDir, constants.W_OK);
     } catch {

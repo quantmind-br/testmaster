@@ -1,0 +1,117 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "title",
+    "severity",
+    "category",
+    "summary",
+    "versions",
+    "resources"
+  ],
+  "properties": {
+    "title": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "severity": {
+      "anyOf": [
+        {
+          "const": "critical",
+          "type": "string"
+        },
+        {
+          "const": "high",
+          "type": "string"
+        },
+        {
+          "const": "medium",
+          "type": "string"
+        },
+        {
+          "const": "low",
+          "type": "string"
+        }
+      ]
+    },
+    "category": {
+      "anyOf": [
+        {
+          "const": "isolation_loss",
+          "type": "string"
+        },
+        {
+          "const": "secret_exposure",
+          "type": "string"
+        },
+        {
+          "const": "tenant_exposure",
+          "type": "string"
+        },
+        {
+          "const": "outage",
+          "type": "string"
+        },
+        {
+          "const": "artifact_loss",
+          "type": "string"
+        },
+        {
+          "const": "ai_degradation",
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "type": "string"
+        }
+      ]
+    },
+    "summary": {
+      "minLength": 1,
+      "maxLength": 4000,
+      "type": "string"
+    },
+    "detectedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "versions": {
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "resources": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:IncidentInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

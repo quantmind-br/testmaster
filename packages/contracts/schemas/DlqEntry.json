@@ -1,0 +1,58 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "source",
+    "id",
+    "state",
+    "attempts",
+    "lastError",
+    "createdAt",
+    "subject"
+  ],
+  "properties": {
+    "source": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "state": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "attempts": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "lastError": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "subject": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:DlqEntry",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

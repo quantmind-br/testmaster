@@ -1,0 +1,207 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "workspaceId",
+    "rule",
+    "subject",
+    "severity",
+    "state",
+    "summary",
+    "detail",
+    "owner",
+    "runbook",
+    "firstSeenAt",
+    "lastSeenAt",
+    "resolvedAt",
+    "acknowledgedBy",
+    "acknowledgedAt",
+    "createdAt",
+    "version"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^alr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "rule": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "subject": {
+      "maxLength": 200,
+      "type": "string"
+    },
+    "severity": {
+      "anyOf": [
+        {
+          "const": "critical",
+          "type": "string"
+        },
+        {
+          "const": "high",
+          "type": "string"
+        },
+        {
+          "const": "medium",
+          "type": "string"
+        }
+      ]
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "firing",
+          "type": "string"
+        },
+        {
+          "const": "acknowledged",
+          "type": "string"
+        },
+        {
+          "const": "resolved",
+          "type": "string"
+        }
+      ]
+    },
+    "summary": {
+      "maxLength": 8000,
+      "type": "string"
+    },
+    "detail": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "owner": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "runbook": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "firstSeenAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "lastSeenAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "resolvedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "acknowledgedBy": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "acknowledgedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:Alert",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

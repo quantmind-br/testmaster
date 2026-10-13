@@ -37,6 +37,24 @@ async function restoredFrom(w: GithubWorld, backup: string): Promise<Application
   return restored;
 }
 
+/**
+ * A restore starts isolated and pauses every integration (OPS-025). The operator confirms the
+ * review, lifts the isolation and re-enables the integration; only then may an event act again.
+ */
+function reviewedAndReenabled(restored: Application, integrationId: string): void {
+  const scope = restored.controllerScope();
+  scope.backups.review({
+    apply: true,
+    revocationsConfirmed: true,
+    ledgerLossAccepted: true,
+    incompleteEvidenceAccepted: true,
+  });
+  scope.operations.releaseIsolation("restore reviewed");
+  const paused = scope.integrations.get(integrationId);
+  expect(paused.state).toBe("paused");
+  scope.integrations.update(integrationId, { state: "active" }, paused.version);
+}
+
 describe("OPS-037 revocation survives a restore from an older backup", () => {
   it("OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active", async () => {
     const w = await world();
@@ -61,6 +79,7 @@ describe("OPS-037 revocation survives a restore from an older backup", () => {
       `integration:revoked:github:${w.installationId}`,
     );
     expect(tombstone).toBeDefined();
+    reviewedAndReenabled(restored, w.integration.id);
     const tokens = w.fake.requestsMatching("POST", /access_tokens$/u).length;
     const receipt = await restored.controllerScope().integrations.receiveWebhook(
       "github",
@@ -95,6 +114,7 @@ describe("OPS-037 revocation survives a restore from an older backup", () => {
     const backup = join(w.app.config.cwd, "backup");
     await w.app.backups.create(backup);
     const restored = await restoredFrom(w, backup);
+    reviewedAndReenabled(restored, w.integration.id);
     const receipt = await restored.controllerScope().integrations.receiveWebhook(
       "github",
       w.fake.signedRequest(

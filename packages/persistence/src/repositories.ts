@@ -97,20 +97,37 @@ export class EntityRepository {
     );
     return row ? this.decode<T>(kind, row) : null;
   }
+  /**
+   * Newest-first page. `where` filters by entity fields that are stored as columns (equality) and
+   * `notBefore` by creation time, so listings read only the rows they return.
+   */
   page<T extends EntityDocument = EntityDocument>(
     kind: EntityKind,
     workspaceId: string,
-    options: { limit?: number; cursor?: PageCursor; cutoff?: string } = {},
+    options: {
+      limit?: number;
+      cursor?: PageCursor;
+      cutoff?: string;
+      where?: Readonly<Record<string, string>>;
+      notBefore?: string;
+    } = {},
   ): { items: T[]; next: PageCursor | null } {
     const limit = options.limit ?? 50;
     if (!Number.isInteger(limit) || limit < 1 || limit > 100)
       throw new ContractError("INVALID_ARGUMENT", "Page size must be 1–100");
     const cutoff = options.cursor?.cutoff ?? options.cutoff ?? new Date().toISOString();
     const cursor = options.cursor;
+    const filters = Object.entries(options.where ?? {});
+    const columnFields: readonly string[] = tableCatalog[kind].fields;
+    for (const [field] of filters)
+      if (!columnFields.includes(field))
+        throw new ContractError("INTERNAL", `${kind} has no column-backed field ${field}`);
     const rows = this.database.all(
-      `SELECT * FROM ${tableCatalog[kind].table} WHERE workspace_id=? AND created_at<=? ${cursor ? "AND (created_at<? OR (created_at=? AND id<?))" : ""} ORDER BY created_at DESC,id DESC LIMIT ?`,
+      `SELECT * FROM ${tableCatalog[kind].table} WHERE workspace_id=? AND created_at<=?${options.notBefore === undefined ? "" : " AND created_at>=?"}${filters.map(([field]) => ` AND ${columnName(field)}=?`).join("")}${cursor ? " AND (created_at<? OR (created_at=? AND id<?))" : ""} ORDER BY created_at DESC,id DESC LIMIT ?`,
       workspaceId,
       cutoff,
+      ...(options.notBefore === undefined ? [] : [options.notBefore]),
+      ...filters.map(([, value]) => value),
       ...(cursor ? [cursor.createdAt, cursor.createdAt, cursor.id] : []),
       limit + 1,
     );

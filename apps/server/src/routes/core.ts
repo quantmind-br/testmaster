@@ -148,18 +148,18 @@ const handlers: Record<string, RouteHandler> = {
   "POST /runs": h(({ app, body, key }) =>
     app.runs.admit({ ...body, origin: "api" } as RunRequest, { idempotencyKey: key }),
   ),
-  "GET /runs": h(({ app, query, page }) =>
-    page(
-      app.runs
-        .list()
-        .filter(
-          (run) =>
-            (!query.testId || run.testId === query.testId) &&
-            (!query.batchId || run.batchId === query.batchId) &&
-            (!query.status || run.status === query.status) &&
-            (!query.since || String(run.createdAt) >= query.since) &&
-            (!query.projectId || app.tests.get(run.testId).projectId === query.projectId),
-        ),
+  "GET /runs": h(({ app, query, pageFrom }) =>
+    pageFrom((position) =>
+      app.runs.stream(
+        {
+          ...(query.testId ? { testId: query.testId } : {}),
+          ...(query.batchId ? { batchId: query.batchId } : {}),
+          ...(query.status ? { status: query.status } : {}),
+          ...(query.since ? { since: query.since } : {}),
+          ...(query.projectId ? { projectId: query.projectId } : {}),
+        },
+        position,
+      ),
     ),
   ),
   "GET /runs/{id}": h(({ app, id }) => app.runs.get(id)),

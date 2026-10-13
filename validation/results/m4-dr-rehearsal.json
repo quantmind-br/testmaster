@@ -1,0 +1,736 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "m4-dr-rehearsal",
+  "requirement": "OPS-024",
+  "startedAt": "2026-10-13T17:25:34.496Z",
+  "finishedAt": "2026-10-13T17:25:55.669Z",
+  "passed": true,
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "kernel": "Linux 7.2.9-arch1-1"
+  },
+  "lossDefinition": {
+    "scenario": "total loss of the source stack",
+    "destroyed": [
+      "source PostgreSQL container and its data volume",
+      "source evidence directory",
+      "source server configuration and tokens"
+    ],
+    "retained": [
+      "encrypted backup directory (the off-stack backup destination)",
+      "backup key file (operator-held, mode 0600)",
+      "master key file (operator-held, mode 0600)"
+    ],
+    "s3Note": "evidence on the filesystem profile only; S3 evidence loss is not exercised"
+  },
+  "s3Loss": {
+    "status": "deferred",
+    "milestone": "M5"
+  },
+  "timestamps": {
+    "started": "2026-10-13T17:25:34.496Z",
+    "backupStarted": "2026-10-13T17:25:41.090Z",
+    "backupFinished": "2026-10-13T17:25:42.240Z",
+    "postBackupWrite": "2026-10-13T17:25:43.751Z",
+    "lossAt": "2026-10-13T17:25:44.860Z",
+    "restoreStarted": "2026-10-13T17:25:46.999Z",
+    "restoreFinished": "2026-10-13T17:25:48.847Z",
+    "restoredVerified": "2026-10-13T17:25:53.748Z"
+  },
+  "rpoSeconds": 2.62,
+  "backupAgeAtLossSeconds": 3.141,
+  "rtoSeconds": 8.888,
+  "rtoBreakdownSeconds": {
+    "provisionTarget": 2.139,
+    "restoreCommand": 1.848,
+    "verification": 4.901
+  },
+  "backup": {
+    "backupId": "5930a4ca-14bc-4e14-b088-eab51437112d",
+    "directoryName": "20261013T172541Z-5930a4ca-14bc-4e14-b088-eab51437112d",
+    "createdAt": "2026-10-13T17:25:41.719Z",
+    "engine": "postgres",
+    "databaseVersion": 18,
+    "keyId": "e2dc70a473b05eec8154722d738d71e691e5bc17ddb8e52ebbc4eceb39ac8f76",
+    "secretIncluded": false,
+    "evidenceComplete": true,
+    "missingObjects": 0,
+    "fileCount": 5,
+    "totalBytes": 400233,
+    "evidenceObjects": 2
+  },
+  "sourceStability": {
+    "auditDigestUnchangedByBackup": true,
+    "evidenceUnchangedByBackup": true
+  },
+  "restore": {
+    "evidenceComplete": true,
+    "evidenceRestored": 2,
+    "wipedInterruptedRestore": false,
+    "postBackupLedger": "unavailable",
+    "requiresOperatorReview": true,
+    "backupId": "5930a4ca-14bc-4e14-b088-eab51437112d",
+    "databaseVersion": 18
+  },
+  "steps": [
+    {
+      "name": "preflight",
+      "startedAt": "2026-10-13T17:25:34.497Z",
+      "finishedAt": "2026-10-13T17:25:34.571Z",
+      "durationSeconds": 0.074,
+      "exitCode": 0
+    },
+    {
+      "name": "source-up",
+      "startedAt": "2026-10-13T17:25:34.572Z",
+      "finishedAt": "2026-10-13T17:25:36.534Z",
+      "durationSeconds": 1.962,
+      "exitCode": 0
+    },
+    {
+      "name": "tool-versions",
+      "startedAt": "2026-10-13T17:25:36.534Z",
+      "finishedAt": "2026-10-13T17:25:37.630Z",
+      "durationSeconds": 1.096,
+      "exitCode": 0
+    },
+    {
+      "name": "source-migrate",
+      "startedAt": "2026-10-13T17:25:37.630Z",
+      "finishedAt": "2026-10-13T17:25:38.596Z",
+      "durationSeconds": 0.966,
+      "exitCode": 0
+    },
+    {
+      "name": "source-bootstrap",
+      "startedAt": "2026-10-13T17:25:38.596Z",
+      "finishedAt": "2026-10-13T17:25:39.958Z",
+      "durationSeconds": 1.362,
+      "exitCode": 0
+    },
+    {
+      "name": "source-seed",
+      "startedAt": "2026-10-13T17:25:39.959Z",
+      "finishedAt": "2026-10-13T17:25:40.572Z",
+      "durationSeconds": 0.613,
+      "exitCode": 0
+    },
+    {
+      "name": "source-baseline-snapshot",
+      "startedAt": "2026-10-13T17:25:40.573Z",
+      "finishedAt": "2026-10-13T17:25:41.088Z",
+      "durationSeconds": 0.515,
+      "exitCode": 0
+    },
+    {
+      "name": "backup-create",
+      "startedAt": "2026-10-13T17:25:41.089Z",
+      "finishedAt": "2026-10-13T17:25:42.278Z",
+      "durationSeconds": 1.189,
+      "exitCode": 0
+    },
+    {
+      "name": "backup-verify",
+      "startedAt": "2026-10-13T17:25:42.279Z",
+      "finishedAt": "2026-10-13T17:25:43.143Z",
+      "durationSeconds": 0.864,
+      "exitCode": 0
+    },
+    {
+      "name": "source-post-backup-snapshot",
+      "startedAt": "2026-10-13T17:25:43.144Z",
+      "finishedAt": "2026-10-13T17:25:43.749Z",
+      "durationSeconds": 0.605,
+      "exitCode": 0
+    },
+    {
+      "name": "post-backup-write",
+      "startedAt": "2026-10-13T17:25:43.750Z",
+      "finishedAt": "2026-10-13T17:25:44.859Z",
+      "durationSeconds": 1.109,
+      "exitCode": 0
+    },
+    {
+      "name": "simulate-total-loss",
+      "startedAt": "2026-10-13T17:25:44.859Z",
+      "finishedAt": "2026-10-13T17:25:45.099Z",
+      "durationSeconds": 0.24,
+      "exitCode": 0
+    },
+    {
+      "name": "restore-target-up",
+      "startedAt": "2026-10-13T17:25:45.100Z",
+      "finishedAt": "2026-10-13T17:25:46.998Z",
+      "durationSeconds": 1.898,
+      "exitCode": 0
+    },
+    {
+      "name": "restore",
+      "startedAt": "2026-10-13T17:25:46.998Z",
+      "finishedAt": "2026-10-13T17:25:48.848Z",
+      "durationSeconds": 1.85,
+      "exitCode": 0
+    },
+    {
+      "name": "restored-compare",
+      "startedAt": "2026-10-13T17:25:48.848Z",
+      "finishedAt": "2026-10-13T17:25:49.371Z",
+      "durationSeconds": 0.523,
+      "exitCode": 0
+    },
+    {
+      "name": "ops-status",
+      "startedAt": "2026-10-13T17:25:49.372Z",
+      "finishedAt": "2026-10-13T17:25:50.022Z",
+      "durationSeconds": 0.65,
+      "exitCode": 0
+    },
+    {
+      "name": "isolation-gates",
+      "startedAt": "2026-10-13T17:25:50.022Z",
+      "finishedAt": "2026-10-13T17:25:51.112Z",
+      "durationSeconds": 1.09,
+      "exitCode": 0
+    },
+    {
+      "name": "access-checks",
+      "startedAt": "2026-10-13T17:25:51.112Z",
+      "finishedAt": "2026-10-13T17:25:53.193Z",
+      "durationSeconds": 2.081,
+      "exitCode": 0
+    },
+    {
+      "name": "isolation-after-access",
+      "startedAt": "2026-10-13T17:25:53.193Z",
+      "finishedAt": "2026-10-13T17:25:53.747Z",
+      "durationSeconds": 0.554,
+      "exitCode": 0
+    },
+    {
+      "name": "review-and-release",
+      "startedAt": "2026-10-13T17:25:53.748Z",
+      "finishedAt": "2026-10-13T17:25:55.650Z",
+      "durationSeconds": 1.902,
+      "exitCode": 0
+    }
+  ],
+  "comparison": {
+    "passed": true,
+    "rows": [
+      {
+        "name": "schemaVersion",
+        "kind": "preserved",
+        "source": 18,
+        "restored": 18,
+        "equal": true
+      },
+      {
+        "name": "workspaceIds",
+        "kind": "preserved",
+        "source": [
+          "ws_01a1364c-673c-76f2-b562-9ed78c9d1220"
+        ],
+        "restored": [
+          "ws_01a1364c-673c-76f2-b562-9ed78c9d1220"
+        ],
+        "equal": true
+      },
+      {
+        "name": "principals",
+        "kind": "preserved",
+        "source": [
+          {
+            "id": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
+            "kind": "service",
+            "displayName": "TestMaster controller",
+            "disabledAt": null
+          },
+          {
+            "id": "svc_01a1364c-69d4-754c-958c-06d1a11f32f5",
+            "kind": "service",
+            "displayName": "Host operator",
+            "disabledAt": null
+          },
+          {
+            "id": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
+            "kind": "human",
+            "displayName": "dr-owner",
+            "disabledAt": null
+          }
+        ],
+        "restored": [
+          {
+            "id": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
+            "kind": "service",
+            "displayName": "TestMaster controller",
+            "disabledAt": null
+          },
+          {
+            "id": "svc_01a1364c-69d4-754c-958c-06d1a11f32f5",
+            "kind": "service",
+            "displayName": "Host operator",
+            "disabledAt": null
+          },
+          {
+            "id": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
+            "kind": "human",
+            "displayName": "dr-owner",
+            "disabledAt": null
+          }
+        ],
+        "equal": true
+      },
+      {
+        "name": "memberships(principal,role)",
+        "kind": "preserved",
+        "source": [
+          {
+            "id": "mem_01a1364c-6748-7286-8464-b881d777c2c3",
+            "principalId": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
+            "role": "org_owner"
+          },
+          {
+            "id": "mem_01a1364c-674f-745e-a465-250773f5e42d",
+            "principalId": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
+            "role": "org_owner"
+          }
+        ],
+        "restored": [
+          {
+            "id": "mem_01a1364c-6748-7286-8464-b881d777c2c3",
+            "principalId": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093",
+            "role": "org_owner"
+          },
+          {
+            "id": "mem_01a1364c-674f-745e-a465-250773f5e42d",
+            "principalId": "svc_01a1364c-673d-7195-8fc4-4fea84c7500c",
+            "role": "org_owner"
+          }
+        ],
+        "equal": true
+      },
+      {
+        "name": "projectIds",
+        "kind": "preserved",
+        "source": [
+          "prj_01a1364c-6c30-76dc-be92-518d22eef348"
+        ],
+        "restored": [
+          "prj_01a1364c-6c30-76dc-be92-518d22eef348"
+        ],
+        "equal": true
+      },
+      {
+        "name": "fixtureInputs(id,hash,bytes)",
+        "kind": "preserved",
+        "source": [
+          {
+            "id": "art_01a1364c-6c38-7787-a37a-bd23af3df008",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+            "contentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+            "bytes": 56
+          },
+          {
+            "id": "art_01a1364c-6c42-77b7-a57d-974a825c4e5a",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+            "contentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+            "bytes": 4929
+          }
+        ],
+        "restored": [
+          {
+            "id": "art_01a1364c-6c38-7787-a37a-bd23af3df008",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+            "contentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+            "bytes": 56
+          },
+          {
+            "id": "art_01a1364c-6c42-77b7-a57d-974a825c4e5a",
+            "storageKey": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+            "contentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+            "bytes": 4929
+          }
+        ],
+        "equal": true
+      },
+      {
+        "name": "artifacts(id,hash,state)",
+        "kind": "preserved",
+        "source": [],
+        "restored": [],
+        "equal": true
+      },
+      {
+        "name": "evidenceFiles(path->sha256)",
+        "kind": "preserved",
+        "source": {
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b"
+        },
+        "restored": {
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+          "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b"
+        },
+        "equal": true
+      },
+      {
+        "name": "auditEvents.count",
+        "kind": "preserved",
+        "source": 5,
+        "restored": 5,
+        "equal": true
+      },
+      {
+        "name": "auditEvents.digest",
+        "kind": "preserved",
+        "source": "3ffebf702f0b281aed5fafb07c55a7d9bd688b3cc97c1e75e3977e5736f8010d",
+        "restored": "3ffebf702f0b281aed5fafb07c55a7d9bd688b3cc97c1e75e3977e5736f8010d",
+        "equal": true
+      },
+      {
+        "name": "rowCount.workspaces",
+        "kind": "preserved",
+        "source": 1,
+        "restored": 1,
+        "equal": true
+      },
+      {
+        "name": "rowCount.principals",
+        "kind": "preserved",
+        "source": 3,
+        "restored": 3,
+        "equal": true
+      },
+      {
+        "name": "rowCount.memberships",
+        "kind": "preserved",
+        "source": 2,
+        "restored": 2,
+        "equal": true
+      },
+      {
+        "name": "rowCount.projects",
+        "kind": "preserved",
+        "source": 1,
+        "restored": 1,
+        "equal": true
+      },
+      {
+        "name": "rowCount.fixture_inputs",
+        "kind": "preserved",
+        "source": 2,
+        "restored": 2,
+        "equal": true
+      },
+      {
+        "name": "rowCount.artifacts",
+        "kind": "preserved",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "rowCount.audit_events",
+        "kind": "preserved",
+        "source": 5,
+        "restored": 5,
+        "equal": true
+      },
+      {
+        "name": "rowCount.integrations",
+        "kind": "preserved",
+        "source": 1,
+        "restored": 1,
+        "equal": true
+      },
+      {
+        "name": "rowCount.consents",
+        "kind": "preserved",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "rowCount.idempotency_receipts",
+        "kind": "preserved",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "rowCount.runs",
+        "kind": "preserved",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "rowCount.snapshots",
+        "kind": "preserved",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "restore:isolated",
+        "kind": "tightened",
+        "source": "true",
+        "restored": "true",
+        "equal": true
+      },
+      {
+        "name": "admission",
+        "kind": "tightened",
+        "source": "suspended_restore",
+        "restored": "suspended_restore",
+        "equal": true
+      },
+      {
+        "name": "restore_review",
+        "kind": "tightened",
+        "source": "post_backup_ledger_unavailable",
+        "restored": "post_backup_ledger_unavailable",
+        "equal": true
+      },
+      {
+        "name": "restore:evidence-complete",
+        "kind": "tightened",
+        "source": "true",
+        "restored": "true",
+        "equal": true
+      },
+      {
+        "name": "integrations.allPaused",
+        "kind": "tightened",
+        "source": [
+          {
+            "id": "int_ebc5c3cb-a17f-45dd-a2b4-4b4b957b1228",
+            "state": "paused"
+          }
+        ],
+        "restored": [
+          {
+            "id": "int_ebc5c3cb-a17f-45dd-a2b4-4b4b957b1228",
+            "state": "paused"
+          }
+        ],
+        "equal": true
+      },
+      {
+        "name": "server_tokens.cleared",
+        "kind": "tightened",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "sessions.cleared",
+        "kind": "tightened",
+        "source": 0,
+        "restored": 0,
+        "equal": true
+      },
+      {
+        "name": "tm_restore_pending.absent",
+        "kind": "tightened",
+        "source": false,
+        "restored": false,
+        "equal": true
+      },
+      {
+        "name": "postBackupWriteAbsent",
+        "kind": "rpo",
+        "source": [
+          "prj_01a1364c-7b00-71e4-9f34-9eea9a1a0afa"
+        ],
+        "restored": [],
+        "equal": true
+      }
+    ]
+  },
+  "hashTable": {
+    "evidenceFiles": [
+      {
+        "path": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "source": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "restored": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "equal": true
+      },
+      {
+        "path": "fixture-inputs/ws_01a1364c-673c-76f2-b562-9ed78c9d1220/prj_01a1364c-6c30-76dc-be92-518d22eef348/b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "source": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "restored": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "equal": true
+      }
+    ],
+    "fixtureInputs": [
+      {
+        "id": "art_01a1364c-6c38-7787-a37a-bd23af3df008",
+        "name": "profile",
+        "originalSha256": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "sourceContentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "restoredContentHash": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "restoredEvidenceFileSha256": "b60a89eb4778efe126bba247f9a7f8f8bdf2eaf252cb005bdc843bfc0930d08b",
+        "equal": true
+      },
+      {
+        "id": "art_01a1364c-6c42-77b7-a57d-974a825c4e5a",
+        "name": "catalog",
+        "originalSha256": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "sourceContentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "restoredContentHash": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "restoredEvidenceFileSha256": "585cea6ee147014568310e0b729235282f93b110b57f191ed2fad33ebbd02665",
+        "equal": true
+      }
+    ]
+  },
+  "access": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "recovery token issued on restored database",
+        "ok": true,
+        "detail": {
+          "exit": 0,
+          "principalId": "usr_01a1364c-673d-7195-8fc4-4bc8ce115093"
+        }
+      },
+      {
+        "name": "operator token issued on restored database",
+        "ok": true,
+        "detail": {
+          "exit": 0
+        }
+      },
+      {
+        "name": "pre-backup bearer token is rejected after restore",
+        "ok": true,
+        "detail": {
+          "status": 401
+        }
+      },
+      {
+        "name": "operator bearer token issued after restore lists the restored workspace",
+        "ok": true,
+        "detail": {
+          "status": 200
+        }
+      },
+      {
+        "name": "owner recovers the account on the restored database",
+        "ok": true,
+        "detail": {
+          "status": 200
+        }
+      },
+      {
+        "name": "owner signs in after recovery",
+        "ok": true,
+        "detail": {
+          "status": 200
+        }
+      },
+      {
+        "name": "owner keeps the org_owner membership and original principal id",
+        "ok": true,
+        "detail": {
+          "status": 200,
+          "role": "org_owner"
+        }
+      },
+      {
+        "name": "owner reads the restored project",
+        "ok": true,
+        "detail": {
+          "status": 200
+        }
+      },
+      {
+        "name": "anonymous request is still rejected",
+        "ok": true,
+        "detail": {
+          "status": 401
+        }
+      }
+    ]
+  },
+  "isolation": {
+    "checks": [
+      {
+        "name": "ops status reports the restored workspace isolated",
+        "ok": true,
+        "detail": {
+          "isolated": true,
+          "review": "post_backup_ledger_unavailable"
+        }
+      },
+      {
+        "name": "isolation release is refused before the restore review is confirmed",
+        "ok": true,
+        "detail": {
+          "exitCode": 6
+        }
+      },
+      {
+        "name": "isolation and admission suspension survive a started server and owner sign-in",
+        "ok": true,
+        "detail": {
+          "restore:isolated": "true",
+          "admission": "suspended_restore",
+          "restore_review": "post_backup_ledger_unavailable",
+          "restore:evidence-complete": "true"
+        }
+      },
+      {
+        "name": "the server-mode restore review confirms and the release then clears isolation",
+        "ok": true,
+        "detail": {
+          "restore:isolated": null,
+          "admission": "enabled",
+          "restore_review": "operator_confirmed",
+          "restore:evidence-complete": "true"
+        }
+      }
+    ],
+    "passed": true
+  },
+  "restoreReview": {
+    "serverModeCliReview": {
+      "command": "testmaster backup review --apply --revocations-confirmed --ledger-loss-accepted --mode server",
+      "exitCode": 0,
+      "available": true,
+      "output": "{\"schemaVersion\":\"1.0.0\",\"requestId\":\"cli_95312310-9130-4867-b549-1a77ae586dcc\",\"data\":{\"dryRun\":false,\"activeRunsRequireDecision\":[],\"missingArtifacts\":[],\"postBackupLedger\":\"unavailable\",\"admission\":\"enabled\"},\"warnings\":[]}"
+    },
+    "dryRunThroughApplicationApi": {
+      "dryRun": true,
+      "activeRunsRequireDecision": [],
+      "missingArtifacts": [],
+      "postBackupLedger": "unavailable",
+      "admission": "suspended_restore"
+    },
+    "isolationReleased": true,
+    "conclusion": "The operator confirmed the restore review with `backup review --mode server` and released isolation with `ops isolation release`. --ledger-loss-accepted is required because the CLI restore does not carry the live revocation ledger."
+  },
+  "tools": {
+    "host": {
+      "platform": "linux",
+      "arch": "x64",
+      "kernel": "Linux 7.2.9-arch1-1"
+    },
+    "node": "v24.21.0",
+    "docker": "29.9.0",
+    "postgresImage": "postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24",
+    "pgDump": "pg_dump (PostgreSQL) 17.11",
+    "pgRestore": "pg_restore (PostgreSQL) 17.11",
+    "postgresServer": "postgres (PostgreSQL) 17.11",
+    "testmasterCli": "0.1.0",
+    "sourceCommit": "71f7e4f2e7b6c9bc55b7209d99016764267f3642",
+    "sourceDirtyFiles": 1
+  },
+  "notes": [
+    "RPO is measured from the instant `backup create` returned until the loss; the data written in between is gone and the rehearsal proves it is absent after restore.",
+    "RTO runs from the loss until the restored database was compared and the owner access checks passed; it includes provisioning a fresh PostgreSQL container.",
+    "Single host user: backup.allowSharedAccess is true, so backup agent separation (ADR-019) is not part of this rehearsal."
+  ]
+}

@@ -203,6 +203,11 @@ export function createServer(options: ServerOptions): FastifyInstance {
     join(options.application.config.dataDir, "logs", "api"),
     options.application.config.logRetentionDays,
     options.now ?? Date.now,
+    server?.telemetry?.logExport === "stdout-json"
+      ? (line) => {
+          process.stdout.write(line);
+        }
+      : undefined,
   );
   app.addHook("onClose", async () => logs.flush());
   app.addHook("onResponse", async (request, reply) => {
@@ -212,6 +217,15 @@ export function createServer(options: ServerOptions): FastifyInstance {
       correlationId: request.id,
       statusCode: reply.statusCode,
     });
+    const identity = identities.get(request);
+    if (identity)
+      options.application.apiMetrics.record({
+        workspaceId: identity.workspaceId,
+        method: request.method,
+        route: request.routeOptions.url ?? "unmatched",
+        status: reply.statusCode,
+        seconds: reply.elapsedTime / 1000,
+      });
   });
   app.addHook("onRequest", async (request, reply) => {
     request.id = correlationId();
@@ -423,6 +437,45 @@ export function createServer(options: ServerOptions): FastifyInstance {
             "Idempotency-Key must contain 16–128 characters",
           );
         const match = request.headers["if-match"];
+        const pageWindow = () => {
+          const limit = query.limit === undefined ? 50 : Number(query.limit);
+          if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+            throw new ContractError("INVALID_ARGUMENT", "Page size must be 1–100");
+          const binding = JSON.stringify([
+            service.context.workspaceId,
+            identity?.principalId,
+            route.path,
+            params,
+            Object.fromEntries(
+              Object.entries(query)
+                .filter(([name]) => name !== "cursor" && name !== "limit")
+                .sort(),
+            ),
+          ]);
+          const cursor = query.cursor ? codec.decode(query.cursor, binding) : null;
+          return { limit, binding, cursor, cutoff: cursor?.cutoff ?? new Date().toISOString() };
+        };
+        const pageResult = <T extends { id: string; createdAt?: string }>(
+          items: T[],
+          hasMore: boolean,
+          binding: string,
+          cutoff: string,
+        ) => {
+          const last = items.at(-1);
+          return {
+            items,
+            hasMore,
+            nextCursor:
+              hasMore && last
+                ? codec.encode({
+                    binding,
+                    cutoff,
+                    createdAt: String(last.createdAt ?? ""),
+                    id: String(last.id),
+                  })
+                : null,
+          };
+        };
         const context: RouteContext = {
           service,
           identity,
@@ -439,22 +492,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
             return Number(match.slice(1, -1));
           },
           page: (rows) => {
-            const limit = query.limit === undefined ? 50 : Number(query.limit);
-            if (!Number.isInteger(limit) || limit < 1 || limit > 100)
-              throw new ContractError("INVALID_ARGUMENT", "Page size must be 1–100");
-            const binding = JSON.stringify([
-              service.context.workspaceId,
-              identity?.principalId,
-              route.path,
-              params,
-              Object.fromEntries(
-                Object.entries(query)
-                  .filter(([name]) => name !== "cursor" && name !== "limit")
-                  .sort(),
-              ),
-            ]);
-            const cursor = query.cursor ? codec.decode(query.cursor, binding) : null;
-            const cutoff = cursor?.cutoff ?? new Date().toISOString();
+            const { limit, binding, cursor, cutoff } = pageWindow();
             const selected = rows
               .filter(
                 (row) =>
@@ -468,22 +506,18 @@ export function createServer(options: ServerOptions): FastifyInstance {
                   String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")) ||
                   String(b.id).localeCompare(String(a.id)),
               );
-            const items = selected.slice(0, limit);
-            const last = items.at(-1);
-            const hasMore = selected.length > limit;
-            return {
-              items,
-              hasMore,
-              nextCursor:
-                hasMore && last
-                  ? codec.encode({
-                      binding,
-                      cutoff,
-                      createdAt: String(last.createdAt ?? ""),
-                      id: String(last.id),
-                    })
-                  : null,
-            };
+            return pageResult(selected.slice(0, limit), selected.length > limit, binding, cutoff);
+          },
+          pageFrom: (source) => {
+            const { limit, binding, cursor, cutoff } = pageWindow();
+            const { items, hasMore } = takeWindow(
+              source({
+                cutoff,
+                after: cursor ? { createdAt: cursor.createdAt, id: cursor.id } : null,
+              }),
+              limit,
+            );
+            return pageResult(items, hasMore, binding, cutoff);
           },
           cursors: codec,
           reauthenticate: () => {
@@ -536,5 +570,13 @@ export function createServer(options: ServerOptions): FastifyInstance {
     }) as FastifyInstance["listen"];
   }
   return app;
+}
+function takeWindow<T>(rows: Iterable<T>, limit: number): { items: T[]; hasMore: boolean } {
+  const items: T[] = [];
+  for (const row of rows) {
+    if (items.length === limit) return { items, hasMore: true };
+    items.push(row);
+  }
+  return { items, hasMore: false };
 }
 const namedActions: Record<string, true> = { approve: true, delete: true };

@@ -81,6 +81,50 @@
           "items": {
             "type": "string"
           }
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "const": "sqlite",
+              "type": "string"
+            },
+            {
+              "const": "postgres",
+              "type": "string"
+            }
+          ]
+        },
+        "backupId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "encryption": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "algorithm",
+            "keyId",
+            "chunkBytes"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "aes-256-gcm-chunked",
+              "type": "string"
+            },
+            "keyId": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "chunkBytes": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "mac": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
         }
       }
     },
