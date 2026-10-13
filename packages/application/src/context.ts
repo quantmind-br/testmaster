@@ -8,6 +8,12 @@ import type {
 } from "@testmaster/persistence";
 
 export type Scope = "R" | "W" | "X" | "A";
+/** Who admitted a Run; the worker re-authorizes this actor before it claims the job (ADR-017). */
+export interface RunActor {
+  principalId: string;
+  credentialKind: string | null;
+  credentialId: string | null;
+}
 export interface ServiceContext {
   database: PersistenceDatabase;
   entities: EntityRepository;
@@ -15,6 +21,12 @@ export interface ServiceContext {
   principalId: string;
   correlationId?: string;
   authorize(scope: Scope, projectId?: string): void;
+  /** RBAC `secret` (write, rotate) and `export` columns, applied on top of the W and R scopes. */
+  authorizeColumn(column: "secret" | "export", projectId?: string): void;
+  /** The credential the caller authenticated with; null for the in-process local CLI. */
+  readonly actor: RunActor;
+  /** True while the actor may still execute in the project; false once access was revoked. */
+  reauthorizeActor(actor: RunActor, projectId: string): boolean;
   authorizeRaw?(projectId: string, environmentId: string): void;
   /**
    * Named resource authority (`healing:approve`, `artifacts:delete`) evaluated against role

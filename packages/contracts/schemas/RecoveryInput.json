@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "principal",
+    "recoveryToken",
+    "newPassword"
+  ],
+  "properties": {
+    "principal": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "recoveryToken": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "newPassword": {
+      "minLength": 12,
+      "maxLength": 256,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RecoveryInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

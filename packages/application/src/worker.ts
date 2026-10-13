@@ -53,7 +53,7 @@ import { CodeImportService } from "./ai/code-import.js";
 import { auditSecurity } from "./audit.js";
 import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
-import { entity, requireEntity, type ServiceContext } from "./context.js";
+import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import { fixtureRevoked, planRunnerPolicy, stageFixtureInputs } from "./input-fixtures.js";
 import { correlationId, OperationalLogger } from "./observability.js";
@@ -1784,6 +1784,16 @@ export class WorkerService {
                     (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
                   )),
             );
+          // A Run whose admitting actor lost execute access ends blocked before any Attempt starts.
+          for (const id of [...candidates]) {
+            const run = this.host.runs.get(id);
+            const actor = runMatrixCell(run).actor as RunActor | undefined;
+            if (!actor || this.cancelled(id)) continue;
+            const project = requireEntity(this.ctx, "TestCase", run.testId).projectId;
+            if (this.ctx.reauthorizeActor(actor, String(project))) continue;
+            this.host.runs.blockActorRevoked(id);
+            candidates.splice(candidates.indexOf(id), 1);
+          }
           // The transaction makes resource reservation and lease claim indivisible across local owners.
           const fence = database.withTx(() => {
             if (this.isQuarantined()) return null;

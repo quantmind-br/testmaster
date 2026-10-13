@@ -1,4 +1,3 @@
-import { createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
@@ -6,48 +5,27 @@ import { ContractError, validate } from "@testmaster/contracts";
 import type { Application, AuthorizationIdentity, PermissionGrant } from "./application.js";
 import { auditSecurity } from "./audit.js";
 import type { Scope } from "./context.js";
+import { sha256Hex } from "./passwords.js";
 import { privateDirectory } from "./secrets.js";
+import { authenticateBearer, insertToken, mintToken } from "./tokens.js";
 
-interface TokenRecord {
-  workspaceId: string;
-  audience: "testmaster-local";
-  identity: AuthorizationIdentity;
+export interface TokenIssuance {
+  scopes?: Scope[];
+  expiresAt?: string;
+  grants?: PermissionGrant[];
+}
+export interface ResolvedIssuance {
+  scopes: Scope[];
   expiresAt: string;
-  revoked: boolean;
+  grants: PermissionGrant[];
+  /** True when the caller supplied grants, even an empty list. */
+  explicitGrants: boolean;
 }
-export function authenticateLocalToken(app: Application, token: string): AuthorizationIdentity {
-  if (!/^tm_local_[A-Za-z0-9_-]{43}$/.test(token))
-    throw new ContractError("UNAUTHENTICATED", "A valid local capability token is required");
-  const hash = createHash("sha256").update(token).digest("hex");
-  const row = app.database.get(
-    "SELECT value FROM operational_state WHERE key=?",
-    `local-token:${hash}`,
-  );
-  const record = row ? (JSON.parse(String(row.value)) as TokenRecord) : null;
-  if (
-    !record ||
-    record.revoked ||
-    record.workspaceId !== app.context.workspaceId ||
-    record.audience !== "testmaster-local" ||
-    !Number.isFinite(Date.parse(record.expiresAt)) ||
-    Date.parse(record.expiresAt) <= Date.now()
-  )
-    throw new ContractError("UNAUTHENTICATED", "Local capability token is invalid or expired");
-  const view = app.withIdentity(record.identity);
-  view.context.authorize("R");
-  return { ...record.identity, expiresAt: record.expiresAt };
-}
-export async function issueLocalToken(
-  app: Application,
-  options: {
-    scopes?: Scope[];
-    tokenPath?: string;
-    expiresAt?: string;
-    grants?: PermissionGrant[];
-  } = {},
-) {
-  app.context.authorize("A");
-  auditSecurity(app.context, "auth.token.issue", "local-api", "requested");
+/**
+ * Validates scopes, lifetime and grants a caller wants to delegate and rejects anything beyond the
+ * issuer's own authority. Shared by host-issued local tokens and `tokens.create`.
+ */
+export function resolveIssuance(app: Application, options: TokenIssuance): ResolvedIssuance {
   const scopes = options.scopes ?? ["R", "W", "X", "A"];
   if (scopes.some((scope) => !["R", "W", "X", "A"].includes(scope)) || !scopes.includes("R"))
     throw new ContractError("INVALID_ARGUMENT", "Local token scopes must include read");
@@ -135,6 +113,15 @@ export async function issueLocalToken(
       }
     }
   }
+  return { scopes, expiresAt, grants, explicitGrants: options.grants !== undefined };
+}
+export async function issueLocalToken(
+  app: Application,
+  options: TokenIssuance & { tokenPath?: string } = {},
+) {
+  app.context.authorize("A");
+  auditSecurity(app.context, "auth.token.issue", "local-api", "requested");
+  const { scopes, expiresAt, grants, explicitGrants } = resolveIssuance(app, options);
   const tokenPath =
     options.tokenPath ?? join(app.config.home, ".local", "share", "testmaster", "server.token");
   const directory = await privateDirectory(dirname(tokenPath));
@@ -156,7 +143,15 @@ export async function issueLocalToken(
         )
           throw new ContractError("POLICY_DENIED", "Token file must be a private regular file");
         const token = (await file.readFile("utf8")).trim();
-        const identity = authenticateLocalToken(app, token);
+        const identity = authenticateBearer(app, token);
+        if (
+          identity.workspaceId !== app.context.workspaceId ||
+          identity.credential.kind !== "local"
+        )
+          throw new ContractError(
+            "UNAUTHENTICATED",
+            "Local capability token is invalid or expired",
+          );
         if (JSON.stringify(identity.scopes) !== JSON.stringify(scopes))
           throw new ContractError(
             "PRECONDITION_FAILED",
@@ -174,13 +169,12 @@ export async function issueLocalToken(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
-    const token = `tm_local_${randomBytes(32).toString("base64url")}`;
-    const hash = createHash("sha256").update(token).digest("hex");
+    const token = mintToken("local");
     const identity: AuthorizationIdentity = {
       principalId: app.context.principalId,
       scopes,
       expiresAt,
-      ...(options.grants !== undefined || grants.length ? { grants } : {}),
+      ...(explicitGrants || grants.length ? { grants } : {}),
     };
     // The validated lifetime above also bounds every delegated grant.
     const file = await open(
@@ -192,17 +186,16 @@ export async function issueLocalToken(
       await file.writeFile(`${token}\n`);
       await file.sync();
       app.database.withTx(() => {
-        app.database.run(
-          "INSERT INTO operational_state(key,value) VALUES(?,?)",
-          `local-token:${hash}`,
-          JSON.stringify({
-            workspaceId: app.context.workspaceId,
-            audience: "testmaster-local",
-            identity,
-            expiresAt,
-            revoked: false,
-          } satisfies TokenRecord),
-        );
+        insertToken(app.database, {
+          workspaceId: app.context.workspaceId,
+          principalId: app.context.principalId,
+          kind: "local",
+          name: "local",
+          scopes,
+          grants,
+          expiresAt,
+          token,
+        });
         auditSecurity(app.context, "auth.token.issue", "local-api", "allowed");
       });
       await directory.sync();
@@ -216,15 +209,13 @@ export async function issueLocalToken(
 }
 export function revokeLocalToken(app: Application, token: string): void {
   app.context.authorize("A");
-  const key = `local-token:${createHash("sha256").update(token).digest("hex")}`;
-  const row = app.database.get("SELECT value FROM operational_state WHERE key=?", key);
   app.database.withTx(() => {
     auditSecurity(app.context, "auth.token.revoke", "local-api", "allowed");
-    if (row)
-      app.database.run(
-        "UPDATE operational_state SET value=? WHERE key=?",
-        JSON.stringify({ ...JSON.parse(String(row.value)), revoked: true }),
-        key,
-      );
+    app.database.run(
+      "UPDATE server_tokens SET revoked_at=? WHERE workspace_id=? AND token_hash=? AND revoked_at IS NULL",
+      new Date().toISOString(),
+      app.context.workspaceId,
+      sha256Hex(token),
+    );
   });
 }

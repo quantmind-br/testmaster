@@ -1,0 +1,893 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "roles",
+    "columns",
+    "values",
+    "matrix",
+    "rules"
+  ],
+  "properties": {
+    "roles": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "org_owner",
+            "type": "string"
+          },
+          {
+            "const": "org_admin",
+            "type": "string"
+          },
+          {
+            "const": "maintainer",
+            "type": "string"
+          },
+          {
+            "const": "runner",
+            "type": "string"
+          },
+          {
+            "const": "reviewer",
+            "type": "string"
+          },
+          {
+            "const": "viewer",
+            "type": "string"
+          },
+          {
+            "const": "service_account",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "read",
+            "type": "string"
+          },
+          {
+            "const": "write",
+            "type": "string"
+          },
+          {
+            "const": "execute",
+            "type": "string"
+          },
+          {
+            "const": "secret",
+            "type": "string"
+          },
+          {
+            "const": "export",
+            "type": "string"
+          },
+          {
+            "const": "admin",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "values": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "allow",
+            "type": "string"
+          },
+          {
+            "const": "deny",
+            "type": "string"
+          },
+          {
+            "const": "grant-only",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "matrix": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "org_owner",
+        "org_admin",
+        "maintainer",
+        "runner",
+        "reviewer",
+        "viewer",
+        "service_account"
+      ],
+      "properties": {
+        "org_owner": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "org_admin": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "maintainer": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "runner": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "reviewer": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "viewer": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "service_account": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "read",
+            "write",
+            "execute",
+            "secret",
+            "export",
+            "admin"
+          ],
+          "properties": {
+            "read": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "write": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "execute": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "export": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            },
+            "admin": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RbacMatrix",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -148,7 +148,7 @@ it("SEC-025: quarantines worker upon cleanup failure, persists incident and outb
       await restartedWorker;
 
       // 5. Unauthorized clear denied (with actual principal and scopes R/W, yielding FORBIDDEN)
-      const unauthorizedApp = app.withIdentity({
+      const unauthorizedApp = app.forIdentity({
         principalId: text(init.principalId),
         scopes: ["R", "W"],
       });

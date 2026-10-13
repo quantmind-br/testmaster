@@ -50,6 +50,9 @@ async function fixture(): Promise<{
     principalId: "local",
     authorize: vi.fn(),
     authorizeNamed: vi.fn(),
+    authorizeColumn: vi.fn(),
+    actor: { principalId: "local", credentialKind: null, credentialId: null },
+    reauthorizeActor: vi.fn(() => true),
   };
   return { service: new SecretsService(ctx, config), ctx, home, config };
 }

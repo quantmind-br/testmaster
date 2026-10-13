@@ -278,7 +278,64 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Principal"
+                      "$ref": "#/components/schemas/MeResponse"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rbac/matrix": {
+      "get": {
+        "operationId": "get__rbac_matrix",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [],
+        "x-scope": "identity:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RbacMatrix"
                     },
                     "warnings": {
                       "type": "array",
@@ -390,7 +447,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Workspace"
+                      "$ref": "#/components/schemas/WorkspaceCreated"
                     },
                     "warnings": {
                       "type": "array",
@@ -606,7 +663,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Membership"
+                      "$ref": "#/components/schemas/MemberView"
                     },
                     "warnings": {
                       "type": "array",
@@ -670,7 +727,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Membership"
+                      "$ref": "#/components/schemas/MemberCreated"
                     },
                     "warnings": {
                       "type": "array",
@@ -700,7 +757,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MembershipInput"
+                "$ref": "#/components/schemas/MemberInput"
               }
             }
           }
@@ -754,7 +811,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Membership"
+                      "$ref": "#/components/schemas/MemberView"
                     },
                     "warnings": {
                       "type": "array",
@@ -836,7 +893,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Membership"
+                      "$ref": "#/components/schemas/MemberView"
                     },
                     "warnings": {
                       "type": "array",
@@ -948,7 +1005,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/TokenMetadata"
+                      "$ref": "#/components/schemas/TokenCreated"
                     },
                     "warnings": {
                       "type": "array",
@@ -8202,7 +8259,7 @@
           "M4"
         ],
         "parameters": [],
-        "x-scope": "identity",
+        "x-scope": "public",
         "x-milestone": "M4",
         "responses": {
           "200": {
@@ -8255,7 +8312,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IdentityInput"
+                "$ref": "#/components/schemas/LoginInput"
               }
             }
           }
@@ -8269,7 +8326,7 @@
           "M4"
         ],
         "parameters": [],
-        "x-scope": "identity",
+        "x-scope": "identity:R",
         "x-milestone": "M4",
         "responses": {
           "200": {
@@ -8313,16 +8370,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/IdentityInput"
               }
             }
           }
@@ -8336,7 +8383,7 @@
           "M4"
         ],
         "parameters": [],
-        "x-scope": "identity",
+        "x-scope": "public",
         "x-milestone": "M4",
         "responses": {
           "200": {
@@ -8389,7 +8436,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IdentityInput"
+                "$ref": "#/components/schemas/RecoveryInput"
               }
             }
           }
@@ -8469,7 +8516,7 @@
             }
           }
         ],
-        "x-scope": "identity:W",
+        "x-scope": "identity:R",
         "x-milestone": "M4",
         "responses": {
           "200": {
@@ -8513,6 +8560,73 @@
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/password": {
+      "post": {
+        "operationId": "post__identity_password",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [],
+        "x-scope": "identity:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/IdentityReceipt"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeInput"
               }
             }
           }
@@ -27467,6 +27581,10 @@
                       "type": "string"
                     },
                     {
+                      "const": "actor_revoked",
+                      "type": "string"
+                    },
+                    {
                       "const": "credential_revoked",
                       "type": "string"
                     },
@@ -28341,6 +28459,10 @@
                       "type": "string"
                     },
                     {
+                      "const": "actor_revoked",
+                      "type": "string"
+                    },
+                    {
                       "const": "credential_revoked",
                       "type": "string"
                     },
@@ -28883,6 +29005,10 @@
                     },
                     {
                       "const": "missing_secret",
+                      "type": "string"
+                    },
+                    {
+                      "const": "actor_revoked",
                       "type": "string"
                     },
                     {
@@ -49473,6 +49599,10 @@
                       "type": "string"
                     },
                     {
+                      "const": "actor_revoked",
+                      "type": "string"
+                    },
+                    {
                       "const": "credential_revoked",
                       "type": "string"
                     },
@@ -51177,11 +51307,16 @@
         "type": "object",
         "required": [
           "principalId",
-          "state"
+          "state",
+          "workspaceId",
+          "sessionId",
+          "csrfToken",
+          "expiresAt"
         ],
         "properties": {
           "principalId": {
-            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "minLength": 1,
+            "maxLength": 200,
             "type": "string"
           },
           "state": {
@@ -51197,6 +51332,52 @@
               {
                 "const": "pending",
                 "type": "string"
+              }
+            ]
+          },
+          "workspaceId": {
+            "anyOf": [
+              {
+                "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sessionId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "csrfToken": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -51936,6 +52117,27 @@
             ]
           }
         }
+      },
+      "LoginInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "principal",
+          "password"
+        ],
+        "properties": {
+          "principal": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "maxLength": 1024,
+            "type": "string"
+          }
+        },
+        "$defs": {}
       },
       "Mcp_testmaster_analyze_code": {
         "additionalProperties": false,
@@ -52769,6 +52971,794 @@
           }
         }
       },
+      "MeResponse": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "principal",
+          "workspace",
+          "membership",
+          "permissions",
+          "csrfToken"
+        ],
+        "properties": {
+          "principal": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "kind",
+                  "displayName",
+                  "disabledAt"
+                ],
+                "properties": {
+                  "id": {
+                    "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  "version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "const": "human",
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "disabledAt": {
+                    "anyOf": [
+                      {
+                        "format": "date-time",
+                        "pattern": "Z$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extensions": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "kind",
+                  "displayName",
+                  "disabledAt"
+                ],
+                "properties": {
+                  "id": {
+                    "pattern": "^svc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  "version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "const": "service",
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "disabledAt": {
+                    "anyOf": [
+                      {
+                        "format": "date-time",
+                        "pattern": "Z$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extensions": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "workspace": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "mode",
+              "settingsVersion",
+              "quotaPolicyId"
+            ],
+            "properties": {
+              "id": {
+                "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "workspaceId": {
+                "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "createdAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "version": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "name": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "mode": {
+                "anyOf": [
+                  {
+                    "const": "single-user",
+                    "type": "string"
+                  },
+                  {
+                    "const": "server",
+                    "type": "string"
+                  },
+                  {
+                    "const": "distributed",
+                    "type": "string"
+                  }
+                ]
+              },
+              "settingsVersion": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quotaPolicyId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object",
+                "patternProperties": {
+                  "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "patternProperties": {
+                          "^(.*)$": {
+                            "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "membership": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "workspaceId",
+              "principalId",
+              "role",
+              "projectRestrictions"
+            ],
+            "properties": {
+              "id": {
+                "pattern": "^mem_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "workspaceId": {
+                "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "createdAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "version": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "principalId": {
+                "anyOf": [
+                  {
+                    "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^svc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "role": {
+                "anyOf": [
+                  {
+                    "const": "org_owner",
+                    "type": "string"
+                  },
+                  {
+                    "const": "org_admin",
+                    "type": "string"
+                  },
+                  {
+                    "const": "maintainer",
+                    "type": "string"
+                  },
+                  {
+                    "const": "runner",
+                    "type": "string"
+                  },
+                  {
+                    "const": "reviewer",
+                    "type": "string"
+                  },
+                  {
+                    "const": "viewer",
+                    "type": "string"
+                  },
+                  {
+                    "const": "service_account",
+                    "type": "string"
+                  }
+                ]
+              },
+              "projectRestrictions": {
+                "type": "array",
+                "items": {
+                  "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              },
+              "extensions": {
+                "type": "object",
+                "patternProperties": {
+                  "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "patternProperties": {
+                          "^(.*)$": {
+                            "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "permissions": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "read",
+              "write",
+              "execute",
+              "secret",
+              "export",
+              "admin"
+            ],
+            "properties": {
+              "read": {
+                "type": "boolean"
+              },
+              "write": {
+                "type": "boolean"
+              },
+              "execute": {
+                "type": "boolean"
+              },
+              "secret": {
+                "type": "boolean"
+              },
+              "export": {
+                "type": "boolean"
+              },
+              "admin": {
+                "type": "boolean"
+              }
+            }
+          },
+          "csrfToken": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/MeResponse/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "MemberCreated": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "member",
+          "recoveryToken",
+          "recoveryExpiresAt"
+        ],
+        "properties": {
+          "member": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "principalId",
+              "login",
+              "displayName",
+              "role",
+              "projectRestrictions",
+              "disabledAt",
+              "createdAt",
+              "version"
+            ],
+            "properties": {
+              "id": {
+                "pattern": "^mem_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "principalId": {
+                "anyOf": [
+                  {
+                    "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^svc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "login": {
+                "anyOf": [
+                  {
+                    "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "displayName": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "role": {
+                "anyOf": [
+                  {
+                    "const": "org_owner",
+                    "type": "string"
+                  },
+                  {
+                    "const": "org_admin",
+                    "type": "string"
+                  },
+                  {
+                    "const": "maintainer",
+                    "type": "string"
+                  },
+                  {
+                    "const": "runner",
+                    "type": "string"
+                  },
+                  {
+                    "const": "reviewer",
+                    "type": "string"
+                  },
+                  {
+                    "const": "viewer",
+                    "type": "string"
+                  },
+                  {
+                    "const": "service_account",
+                    "type": "string"
+                  }
+                ]
+              },
+              "projectRestrictions": {
+                "type": "array",
+                "items": {
+                  "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              },
+              "disabledAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "version": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            }
+          },
+          "recoveryToken": {
+            "anyOf": [
+              {
+                "pattern": "^tm_rec_[A-Za-z0-9_-]{43}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recoveryExpiresAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {}
+      },
+      "MemberInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "login",
+          "displayName",
+          "role",
+          "projectRestrictions"
+        ],
+        "properties": {
+          "login": {
+            "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+            "type": "string"
+          },
+          "displayName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "const": "org_owner",
+                "type": "string"
+              },
+              {
+                "const": "org_admin",
+                "type": "string"
+              },
+              {
+                "const": "maintainer",
+                "type": "string"
+              },
+              {
+                "const": "runner",
+                "type": "string"
+              },
+              {
+                "const": "reviewer",
+                "type": "string"
+              },
+              {
+                "const": "viewer",
+                "type": "string"
+              },
+              {
+                "const": "service_account",
+                "type": "string"
+              }
+            ]
+          },
+          "projectRestrictions": {
+            "type": "array",
+            "items": {
+              "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "MemberView": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "principalId",
+          "login",
+          "displayName",
+          "role",
+          "projectRestrictions",
+          "disabledAt",
+          "createdAt",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^mem_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "principalId": {
+            "anyOf": [
+              {
+                "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "pattern": "^svc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              }
+            ]
+          },
+          "login": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "displayName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "const": "org_owner",
+                "type": "string"
+              },
+              {
+                "const": "org_admin",
+                "type": "string"
+              },
+              {
+                "const": "maintainer",
+                "type": "string"
+              },
+              {
+                "const": "runner",
+                "type": "string"
+              },
+              {
+                "const": "reviewer",
+                "type": "string"
+              },
+              {
+                "const": "viewer",
+                "type": "string"
+              },
+              {
+                "const": "service_account",
+                "type": "string"
+              }
+            ]
+          },
+          "projectRestrictions": {
+            "type": "array",
+            "items": {
+              "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          "disabledAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "$defs": {}
+      },
       "Membership": {
         "additionalProperties": false,
         "type": "object",
@@ -52920,16 +53910,7 @@
       "MembershipInput": {
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "principalId",
-          "role",
-          "projectRestrictions"
-        ],
         "properties": {
-          "principalId": {
-            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-            "type": "string"
-          },
           "role": {
             "anyOf": [
               {
@@ -52968,6 +53949,9 @@
               "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "type": "string"
             }
+          },
+          "disabled": {
+            "type": "boolean"
           }
         },
         "$defs": {}
@@ -54034,6 +55018,27 @@
           },
           "cursor": {
             "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "PasswordChangeInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "minLength": 1,
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "newPassword": {
+            "minLength": 12,
+            "maxLength": 256,
             "type": "string"
           }
         },
@@ -69004,6 +70009,897 @@
         },
         "$defs": {}
       },
+      "RbacMatrix": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "roles",
+          "columns",
+          "values",
+          "matrix",
+          "rules"
+        ],
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "org_owner",
+                  "type": "string"
+                },
+                {
+                  "const": "org_admin",
+                  "type": "string"
+                },
+                {
+                  "const": "maintainer",
+                  "type": "string"
+                },
+                {
+                  "const": "runner",
+                  "type": "string"
+                },
+                {
+                  "const": "reviewer",
+                  "type": "string"
+                },
+                {
+                  "const": "viewer",
+                  "type": "string"
+                },
+                {
+                  "const": "service_account",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "read",
+                  "type": "string"
+                },
+                {
+                  "const": "write",
+                  "type": "string"
+                },
+                {
+                  "const": "execute",
+                  "type": "string"
+                },
+                {
+                  "const": "secret",
+                  "type": "string"
+                },
+                {
+                  "const": "export",
+                  "type": "string"
+                },
+                {
+                  "const": "admin",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "allow",
+                  "type": "string"
+                },
+                {
+                  "const": "deny",
+                  "type": "string"
+                },
+                {
+                  "const": "grant-only",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "matrix": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "org_owner",
+              "org_admin",
+              "maintainer",
+              "runner",
+              "reviewer",
+              "viewer",
+              "service_account"
+            ],
+            "properties": {
+              "org_owner": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              },
+              "org_admin": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              },
+              "maintainer": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              },
+              "runner": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              },
+              "reviewer": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              },
+              "viewer": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              },
+              "service_account": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "read",
+                  "write",
+                  "execute",
+                  "secret",
+                  "export",
+                  "admin"
+                ],
+                "properties": {
+                  "read": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "write": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "execute": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "secret": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "export": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "admin": {
+                    "anyOf": [
+                      {
+                        "const": "allow",
+                        "type": "string"
+                      },
+                      {
+                        "const": "deny",
+                        "type": "string"
+                      },
+                      {
+                        "const": "grant-only",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        },
+        "$defs": {}
+      },
       "ReconcileInput": {
         "additionalProperties": false,
         "type": "object",
@@ -69025,6 +70921,33 @@
           },
           "approval": {
             "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "RecoveryInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "principal",
+          "recoveryToken",
+          "newPassword"
+        ],
+        "properties": {
+          "principal": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "recoveryToken": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "newPassword": {
+            "minLength": 12,
+            "maxLength": 256,
             "type": "string"
           }
         },
@@ -71376,6 +73299,10 @@
                 "type": "string"
               },
               {
+                "const": "actor_revoked",
+                "type": "string"
+              },
+              {
                 "const": "credential_revoked",
                 "type": "string"
               },
@@ -71772,6 +73699,10 @@
                       },
                       {
                         "const": "missing_secret",
+                        "type": "string"
+                      },
+                      {
+                        "const": "actor_revoked",
                         "type": "string"
                       },
                       {
@@ -73009,6 +74940,10 @@
                         "type": "string"
                       },
                       {
+                        "const": "actor_revoked",
+                        "type": "string"
+                      },
+                      {
                         "const": "credential_revoked",
                         "type": "string"
                       },
@@ -73766,6 +75701,10 @@
               },
               {
                 "const": "missing_secret",
+                "type": "string"
+              },
+              {
+                "const": "actor_revoked",
                 "type": "string"
               },
               {
@@ -74748,7 +76687,12 @@
         "required": [
           "id",
           "principalId",
-          "expiresAt"
+          "createdAt",
+          "lastSeenAt",
+          "expiresAt",
+          "idleExpiresAt",
+          "revokedAt",
+          "current"
         ],
         "properties": {
           "id": {
@@ -74757,13 +76701,44 @@
             "type": "string"
           },
           "principalId": {
-            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "format": "date-time",
+            "pattern": "Z$",
             "type": "string"
           },
           "expiresAt": {
             "format": "date-time",
             "pattern": "Z$",
             "type": "string"
+          },
+          "idleExpiresAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "type": "boolean"
           }
         },
         "$defs": {}
@@ -86702,6 +88677,10 @@
                 "type": "string"
               },
               {
+                "const": "actor_revoked",
+                "type": "string"
+              },
+              {
                 "const": "credential_revoked",
                 "type": "string"
               },
@@ -87378,6 +89357,10 @@
                       },
                       {
                         "const": "missing_secret",
+                        "type": "string"
+                      },
+                      {
+                        "const": "actor_revoked",
                         "type": "string"
                       },
                       {
@@ -126167,6 +128150,215 @@
         },
         "$defs": {}
       },
+      "TokenCreated": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "metadata"
+        ],
+        "properties": {
+          "token": {
+            "pattern": "^tm_(api|local|wrk|op)_[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "kind",
+              "principalId",
+              "scopes",
+              "grants",
+              "createdAt",
+              "expiresAt",
+              "revokedAt"
+            ],
+            "properties": {
+              "id": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "name": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "local",
+                    "type": "string"
+                  },
+                  {
+                    "const": "api",
+                    "type": "string"
+                  },
+                  {
+                    "const": "worker",
+                    "type": "string"
+                  },
+                  {
+                    "const": "operator",
+                    "type": "string"
+                  }
+                ]
+              },
+              "principalId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "scopes": {
+                "minItems": 1,
+                "maxItems": 4,
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "const": "R",
+                      "type": "string"
+                    },
+                    {
+                      "const": "W",
+                      "type": "string"
+                    },
+                    {
+                      "const": "X",
+                      "type": "string"
+                    },
+                    {
+                      "const": "A",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "grants": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "resourceType",
+                    "actions",
+                    "projectIds",
+                    "environmentIds",
+                    "expiresAt",
+                    "grantedBy"
+                  ],
+                  "properties": {
+                    "resourceType": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "actions": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "const": "read",
+                            "type": "string"
+                          },
+                          {
+                            "const": "write",
+                            "type": "string"
+                          },
+                          {
+                            "const": "execute",
+                            "type": "string"
+                          },
+                          {
+                            "const": "admin",
+                            "type": "string"
+                          },
+                          {
+                            "const": "approve",
+                            "type": "string"
+                          },
+                          {
+                            "const": "raw",
+                            "type": "string"
+                          },
+                          {
+                            "const": "export",
+                            "type": "string"
+                          },
+                          {
+                            "const": "delete",
+                            "type": "string"
+                          }
+                        ]
+                      }
+                    },
+                    "projectIds": {
+                      "type": "array",
+                      "items": {
+                        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      }
+                    },
+                    "environmentIds": {
+                      "type": "array",
+                      "items": {
+                        "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      }
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "pattern": "Z$",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "grantedBy": {
+                      "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "deny": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "createdAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "expiresAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "revokedAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "$defs": {}
+      },
       "TokenInput": {
         "additionalProperties": false,
         "type": "object",
@@ -126182,16 +128374,134 @@
             "type": "string"
           },
           "scopes": {
+            "minItems": 1,
+            "maxItems": 4,
+            "uniqueItems": true,
             "type": "array",
             "items": {
-              "minLength": 1,
-              "maxLength": 200,
-              "type": "string"
+              "anyOf": [
+                {
+                  "const": "R",
+                  "type": "string"
+                },
+                {
+                  "const": "W",
+                  "type": "string"
+                },
+                {
+                  "const": "X",
+                  "type": "string"
+                },
+                {
+                  "const": "A",
+                  "type": "string"
+                }
+              ]
             }
           },
           "expiresAt": {
             "format": "date-time",
             "pattern": "Z$",
+            "type": "string"
+          },
+          "grants": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "resourceType",
+                "actions",
+                "projectIds",
+                "environmentIds",
+                "expiresAt",
+                "grantedBy"
+              ],
+              "properties": {
+                "resourceType": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "const": "read",
+                        "type": "string"
+                      },
+                      {
+                        "const": "write",
+                        "type": "string"
+                      },
+                      {
+                        "const": "execute",
+                        "type": "string"
+                      },
+                      {
+                        "const": "admin",
+                        "type": "string"
+                      },
+                      {
+                        "const": "approve",
+                        "type": "string"
+                      },
+                      {
+                        "const": "raw",
+                        "type": "string"
+                      },
+                      {
+                        "const": "export",
+                        "type": "string"
+                      },
+                      {
+                        "const": "delete",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "projectIds": {
+                  "type": "array",
+                  "items": {
+                    "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "environmentIds": {
+                  "type": "array",
+                  "items": {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "expiresAt": {
+                  "anyOf": [
+                    {
+                      "format": "date-time",
+                      "pattern": "Z$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "grantedBy": {
+                  "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "deny": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "principalId": {
+            "minLength": 1,
+            "maxLength": 200,
             "type": "string"
           }
         },
@@ -126203,8 +128513,13 @@
         "required": [
           "id",
           "name",
+          "kind",
+          "principalId",
           "scopes",
-          "expiresAt"
+          "grants",
+          "createdAt",
+          "expiresAt",
+          "revokedAt"
         ],
         "properties": {
           "id": {
@@ -126217,18 +128532,172 @@
             "maxLength": 200,
             "type": "string"
           },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "local",
+                "type": "string"
+              },
+              {
+                "const": "api",
+                "type": "string"
+              },
+              {
+                "const": "worker",
+                "type": "string"
+              },
+              {
+                "const": "operator",
+                "type": "string"
+              }
+            ]
+          },
+          "principalId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
           "scopes": {
+            "minItems": 1,
+            "maxItems": 4,
+            "uniqueItems": true,
             "type": "array",
             "items": {
-              "minLength": 1,
-              "maxLength": 200,
-              "type": "string"
+              "anyOf": [
+                {
+                  "const": "R",
+                  "type": "string"
+                },
+                {
+                  "const": "W",
+                  "type": "string"
+                },
+                {
+                  "const": "X",
+                  "type": "string"
+                },
+                {
+                  "const": "A",
+                  "type": "string"
+                }
+              ]
             }
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "resourceType",
+                "actions",
+                "projectIds",
+                "environmentIds",
+                "expiresAt",
+                "grantedBy"
+              ],
+              "properties": {
+                "resourceType": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "const": "read",
+                        "type": "string"
+                      },
+                      {
+                        "const": "write",
+                        "type": "string"
+                      },
+                      {
+                        "const": "execute",
+                        "type": "string"
+                      },
+                      {
+                        "const": "admin",
+                        "type": "string"
+                      },
+                      {
+                        "const": "approve",
+                        "type": "string"
+                      },
+                      {
+                        "const": "raw",
+                        "type": "string"
+                      },
+                      {
+                        "const": "export",
+                        "type": "string"
+                      },
+                      {
+                        "const": "delete",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "projectIds": {
+                  "type": "array",
+                  "items": {
+                    "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "environmentIds": {
+                  "type": "array",
+                  "items": {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                },
+                "expiresAt": {
+                  "anyOf": [
+                    {
+                      "format": "date-time",
+                      "pattern": "Z$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "grantedBy": {
+                  "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "deny": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
           },
           "expiresAt": {
             "format": "date-time",
             "pattern": "Z$",
             "type": "string"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -127295,6 +129764,163 @@
           }
         }
       },
+      "WorkspaceCreated": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workspace",
+          "ownerPrincipalId",
+          "ownerLogin",
+          "ownerRecoveryToken",
+          "ownerRecoveryExpiresAt"
+        ],
+        "properties": {
+          "workspace": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "mode",
+              "settingsVersion",
+              "quotaPolicyId"
+            ],
+            "properties": {
+              "id": {
+                "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "workspaceId": {
+                "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "createdAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "version": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "name": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "mode": {
+                "anyOf": [
+                  {
+                    "const": "single-user",
+                    "type": "string"
+                  },
+                  {
+                    "const": "server",
+                    "type": "string"
+                  },
+                  {
+                    "const": "distributed",
+                    "type": "string"
+                  }
+                ]
+              },
+              "settingsVersion": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quotaPolicyId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "extensions": {
+                "type": "object",
+                "patternProperties": {
+                  "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/WorkspaceCreated/$defs/T0"
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "patternProperties": {
+                          "^(.*)$": {
+                            "$ref": "#/components/schemas/WorkspaceCreated/$defs/T0"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "ownerPrincipalId": {
+            "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "ownerLogin": {
+            "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+            "type": "string"
+          },
+          "ownerRecoveryToken": {
+            "pattern": "^tm_rec_[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          },
+          "ownerRecoveryExpiresAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/WorkspaceCreated/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/WorkspaceCreated/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
       "WorkspaceInput": {
         "additionalProperties": false,
         "type": "object",
@@ -127309,6 +129935,15 @@
             "type": "integer"
           },
           "quotaPolicyId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "ownerLogin": {
+            "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+            "type": "string"
+          },
+          "ownerDisplayName": {
             "minLength": 1,
             "maxLength": 200,
             "type": "string"

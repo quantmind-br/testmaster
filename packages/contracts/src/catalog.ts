@@ -1,5 +1,6 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
+import { identityContracts } from "./m4/identity.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -97,18 +98,6 @@ const supplemental = {
     workspaceId: Type.Optional(P.id("ws")),
     defaultEnvironmentId: Type.Optional(P.id("env")),
   }),
-  WorkspaceInput: P.Obj({
-    name: Type.Optional(P.Name),
-    settingsVersion: Type.Optional(P.Version),
-    quotaPolicyId: Type.Optional(P.Name),
-  }),
-  MembershipInput: P.Obj({
-    principalId: P.EntityId,
-    role: P.Enum(P.roles),
-    projectRestrictions: Type.Array(P.id("prj")),
-  }),
-  TokenInput: P.Obj({ name: P.Name, scopes: names, expiresAt: P.Timestamp }),
-  TokenMetadata: P.Obj({ id: P.Name, name: P.Name, scopes: names, expiresAt: P.Timestamp }),
   EnvironmentInput: P.Obj({
     name: P.Name,
     baseUrl: Type.String({ format: "uri" }),
@@ -535,11 +524,6 @@ const supplemental = {
     progress: Type.Number({ minimum: 0, maximum: 1 }),
   }),
   IdentityInput: P.Obj({ principal: P.Name, credentialRef: Type.Optional(P.id("sec")) }),
-  IdentityReceipt: P.Obj({
-    principalId: P.EntityId,
-    state: P.Enum(["authenticated", "revoked", "pending"]),
-  }),
-  SessionMetadata: P.Obj({ id: P.Name, principalId: P.EntityId, expiresAt: P.Timestamp }),
   AuthContinueInput: P.Obj({ inputRef: Type.Optional(P.id("sec")) }),
   AdmissionInput: P.Obj({ action: P.Enum(["pause", "resume"]), reason: P.Description }),
   ReconcileInput: P.Obj({
@@ -645,6 +629,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   SuccessEnvelope: SuccessEnvelope(P.Json),
   ...supplemental,
   ...httpInputs,
+  ...identityContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

@@ -30,7 +30,7 @@ it("disconnect detaches waits, explicit negotiated cancellation requests durable
         app.runs.insert(prepared, `cancel-test-key-${explicit}`),
       );
       const mcp = createMcpServer({
-        application: app.withIdentity({ principalId: identity.principalId, scopes: ["R", "X"] }),
+        application: app.forIdentity({ principalId: identity.principalId, scopes: ["R", "X"] }),
         roots: [cwd],
       });
       const [left, right] = InMemoryTransport.createLinkedPair();

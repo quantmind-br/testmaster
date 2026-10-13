@@ -23,7 +23,7 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
   try {
     const initialized = await app.init();
     const mcp = createMcpServer({
-      application: app.withIdentity({
+      application: app.forIdentity({
         principalId: initialized.principalId,
         scopes: ["R", "W", "X"],
       }),
@@ -87,7 +87,7 @@ it("MCP enforces token scopes, configured/client roots and symlink confinement b
     const identity = await app.init();
     const [left, right] = InMemoryTransport.createLinkedPair();
     const mcp = createMcpServer({
-      application: app.withIdentity({ principalId: identity.principalId, scopes: ["R"] }),
+      application: app.forIdentity({ principalId: identity.principalId, scopes: ["R"] }),
       roots: [cwd],
     });
     await mcp.connect(right);
@@ -126,7 +126,7 @@ it("MCP enforces token scopes, configured/client roots and symlink confinement b
     await client.close();
     await mcp.close();
     const elevated = createMcpServer({
-      application: app.withIdentity({ principalId: identity.principalId, scopes: ["R", "W", "X"] }),
+      application: app.forIdentity({ principalId: identity.principalId, scopes: ["R", "W", "X"] }),
       roots: [cwd],
     });
     const [a, b] = InMemoryTransport.createLinkedPair();
@@ -177,7 +177,7 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     app.context.entities.insert("Run", run);
     const connect = async (scopes: ("R" | "W" | "X")[]) => {
       const server = createMcpServer({
-        application: app.withIdentity({ principalId: init.principalId, scopes }),
+        application: app.forIdentity({ principalId: init.principalId, scopes }),
         roots: [cwd],
       });
       servers.push(server);

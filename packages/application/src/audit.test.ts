@@ -25,19 +25,19 @@ async function fixture() {
 }
 it("records identified grant, secret and export denials alongside authorized operations without secret payloads", async () => {
   const { app, init, cwd } = await fixture();
-  const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const reader = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   await expect(
     reader.secrets.set("denied", "CANARY-secret", { ephemeral: true }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(reader.audit.export(join(cwd, "denied.json"))).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  const deny = app.withIdentity({
+  const deny = app.forIdentity({
     principalId: init.principalId,
     scopes: ["R", "W", "X", "A"],
     grants: [
       {
-        resourceType: "project",
+        resourceType: "*",
         actions: ["write"],
         projectIds: [init.projectId],
         environmentIds: [],
@@ -50,12 +50,12 @@ it("records identified grant, secret and export denials alongside authorized ope
   expect(() =>
     deny.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") }),
   ).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
-  const granted = app.withIdentity({
+  const granted = app.forIdentity({
     principalId: init.principalId,
     scopes: ["R", "W"],
     grants: [
       {
-        resourceType: "project",
+        resourceType: "*",
         actions: ["write"],
         projectIds: [init.projectId],
         environmentIds: [],
@@ -102,7 +102,7 @@ it("stores audit actors and denials without the contact data that a caller suppl
   const { app, init } = await fixture();
   const contact = "buyer@example.test";
   const plan = { ...scaffoldPlan("backend"), name: `Checkout for ${contact}` };
-  const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const reader = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   expect(() => reader.tests.create({ projectId: init.projectId, plan })).toThrowError(
     expect.objectContaining({ code: "FORBIDDEN" }),
   );

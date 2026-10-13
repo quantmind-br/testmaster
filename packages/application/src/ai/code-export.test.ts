@@ -46,7 +46,10 @@ async function setup() {
     workspaceId,
     principalId,
     authorize() {},
+    authorizeColumn() {},
     authorizeNamed() {},
+    actor: { principalId, credentialKind: null, credentialId: null },
+    reauthorizeActor: () => true,
   };
   new ProjectsService(ctx).create({ name: "Shop" });
   const tests = new TestsService(ctx);

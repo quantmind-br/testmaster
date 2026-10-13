@@ -171,7 +171,7 @@ it("permits HTTP artifact bodies including cleanup and traverses typed nested re
 });
 it("enforces project writer authorization and size before persisting input", async () => {
   const { app, init } = await fixture();
-  const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const reader = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   const input = {
     projectId: init.projectId,
     name: "profile",

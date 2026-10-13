@@ -267,7 +267,7 @@ it("audits raw evidence denials and authorized exports with scoped grants and pr
         state: entry.state,
         storageKey: `runs/${ids.workspaceId}/${ids.runId}/${ids.attemptId}/${entry.relativePath}`,
       });
-      const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+      const reader = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
       await expect(reader.artifacts.read(ids.runId, "restricted.bin")).rejects.toMatchObject({
         code: "FORBIDDEN",
       });
@@ -280,7 +280,7 @@ it("audits raw evidence denials and authorized exports with scoped grants and pr
       await expect(
         app.artifacts.get(ids.runId, { out: join(root, `${ids.runId}-implicit`) }),
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
-      const raw = app.withIdentity({
+      const raw = app.forIdentity({
         principalId: init.principalId,
         scopes: ["R"],
         grants: [
@@ -294,7 +294,7 @@ it("audits raw evidence denials and authorized exports with scoped grants and pr
           },
         ],
       });
-      const deniedGrant = app.withIdentity({
+      const deniedGrant = app.forIdentity({
         principalId: init.principalId,
         scopes: ["R"],
         grants: [
@@ -356,7 +356,7 @@ it("audits raw evidence denials and authorized exports with scoped grants and pr
         retentionDays: 30,
       };
       const request = { testId: test.id, environmentId: environment.id };
-      const noCaptureGrant = app.withIdentity({
+      const noCaptureGrant = app.forIdentity({
         principalId: init.principalId,
         scopes: ["R", "X"],
       });
