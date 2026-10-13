@@ -1,0 +1,120 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b
+
+ ❯ |postgres| validation/journeys/portal-settings.portal.test.ts (16 tests | 5 failed) 111268ms
+   ❯ project settings (6)
+     × UX-047 UX-054 UX-007 M4-05 shows the impact of an environment change before saving, binds errors to fields and records a new revision 1150ms
+     × UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit 30350ms
+   ❯ secrets (3)
+     × UX-046 UX-055 revokes a secret reference after a contextual confirmation that sends one request 30417ms
+   ❯ retention and deletion (4)
+     × UX-048 SEC-030 purges a project only after archiving it and typing its slug, and lists the deletion 30397ms
+   ❯ keyboard, reflow and the route catalog (3)
+     × M4-05 REQ-036 every request the settings, secrets and retention pages made is a catalog /v1 route 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/portal-settings.portal.test.ts > project settings > UX-047 UX-054 UX-007 M4-05 shows the impact of an environment change before saving, binds errors to fields and records a new revision
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ validation/journeys/portal-settings.portal.test.ts:184:52
+    182|     await form.getByRole("button", { name: "Save environment" }).click…
+    183|     expect(await page.getByText("Nothing changed yet.").count()).toBeG…
+    184|     expect(await page.getByRole("dialog").count()).toBe(0);
+       |                                                    ^
+    185|     expect(diagnostics.requests.slice(before).filter((entry) => entry.…
+    186|       [],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |postgres| validation/journeys/portal-settings.portal.test.ts > project settings > UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit
+TimeoutError: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('form', { name: 'Token budget' }).getByRole('button', { name: 'Set token budget' })
+    - locator resolved to <button type="button" class="button" aria-disabled="true" aria-describedby="_r_m_">Set token budget</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is not enabled
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is not enabled
+    - retrying click action
+      - waiting 100ms
+    58 × waiting for element to be visible, enabled and stable
+       - element is not enabled
+     - retrying click action
+       - waiting 500ms
+
+ ❯ validation/journeys/portal-settings.portal.test.ts:351:66
+    349|     expect(await page.getByText("Not set (no token limit)").count()).t…
+    350|     await form.getByRole("textbox", { name: "Lifetime token budget" })…
+    351|     await form.getByRole("button", { name: "Set token budget" }).click…
+       |                                                                  ^
+    352|     const summary = page.getByTestId("error-summary");
+    353|     await summary.waitFor();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |postgres| validation/journeys/portal-settings.portal.test.ts > secrets > UX-046 UX-055 revokes a secret reference after a contextual confirmation that sends one request
+TimeoutError: locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('dialog').getByRole('button', { name: 'Revoke secret' })
+    - locator resolved to <button type="button" class="button danger" aria-disabled="false">Revoke secret</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is not enabled
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+  - element was detached from the DOM, retrying
+
+ ❯ validation/journeys/portal-settings.portal.test.ts:522:32
+    520|     // A double click on the confirm button sends exactly one DELETE.
+    521|     const confirm = dialog.getByRole("button", { name: "Revoke secret"…
+    522|     await Promise.all([confirm.click(), confirm.click({ force: true })…
+       |                                ^
+    523|     await page.getByRole("dialog").waitFor({ state: "detached" });
+    524|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |postgres| validation/journeys/portal-settings.portal.test.ts > retention and deletion > UX-048 SEC-030 purges a project only after archiving it and typing its slug, and lists the deletion
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByText('Archived').first() to be visible
+    64 × locator resolved to hidden <p id="_r_2_">Each selected test leaves active lists. Revisions…</p>
+
+ ❯ validation/journeys/portal-settings.portal.test.ts:644:64
+    642|     await page.getByRole("dialog").getByRole("button", { name: "Archiv…
+    643|     await page.getByRole("dialog").waitFor({ state: "detached" });
+    644|     await page.getByText("Archived", { exact: false }).first().waitFor…
+       |                                                                ^
+    645|
+    646|     await page.getByRole("button", { name: "Purge project data" }).cli…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  |postgres| validation/journeys/portal-settings.portal.test.ts > keyboard, reflow and the route catalog > M4-05 REQ-036 every request the settings, secrets and retention pages made is a catalog /v1 route
+AssertionError: POST /projects/{id}/budget: expected [ …(19) ] to include 'POST /projects/{id}/budget'
+ ❯ validation/journeys/portal-settings.portal.test.ts:792:27
+    790|       "GET /deletion-operations",
+    791|     ])
+    792|       expect(used, route).toContain(route);
+       |                           ^
+    793|   });
+    794| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 11 passed (16)
+   Start at  12:07:34
+   Duration  113.51s (tests 99%)
+

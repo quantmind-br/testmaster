@@ -1,0 +1,35 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b
+
+ ❯ |postgres| validation/journeys/portal-accessibility.portal.test.ts (7 tests | 1 failed) 28138ms
+   ❯ accessibility checks fail on defective pages (4)
+     × UX-052 reports assertive regions, several polite regions and focus moved on load 125ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/portal-accessibility.portal.test.ts > accessibility checks fail on defective pages > UX-052 reports assertive regions, several polite regions and focus moved on load
+AssertionError: expected '1 aria-live="assertive" region(s)\n2 …' to contain 'moved focus to <input>'
+
+- Expected
++ Received
+
+- moved focus to <input>
++ 1 aria-live="assertive" region(s)
++ 2 separate polite live regions (expected one shared announcer)
+
+ ❯ validation/journeys/portal-accessibility.portal.test.ts:383:22
+    381|     expect(problems).toContain('aria-live="assertive"');
+    382|     expect(problems).toContain("2 separate polite live regions");
+    383|     expect(problems).toContain("moved focus to <input>");
+       |                      ^
+    384|     await page.setContent(`<main><h1>t</h1><div aria-live="polite"></d…
+    385|     expect(await checkLiveRegions(page)).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  12:10:49
+   Duration  30.33s (tests 97%, transform 2%, import 2%)
+
