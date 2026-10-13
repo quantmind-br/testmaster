@@ -33,7 +33,13 @@ export function resolveIssuance(app: Application, options: TokenIssuance): Resol
   const expiresAt = options.expiresAt ?? new Date(Date.now() + 30 * 86400000).toISOString();
   if (!Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now())
     throw new ContractError("INVALID_ARGUMENT", "Token expiry must be in the future");
-  if (app.identity?.expiresAt && Date.parse(expiresAt) > Date.parse(app.identity.expiresAt))
+  // A bearer token caps what it delegates (lifetime and grants). A browser session carries the
+  // member's role instead: it delegates like the in-process owner, and its 12 h login does not
+  // cap the token, or the portal could never mint a token that outlives its own session.
+  const issuer = app.identity;
+  const issuedBySession =
+    issuer !== undefined && "credential" in issuer && issuer.credential.kind === "session";
+  if (!issuedBySession && issuer?.expiresAt && Date.parse(expiresAt) > Date.parse(issuer.expiresAt))
     throw new ContractError("FORBIDDEN", "Delegated token cannot outlive issuer token");
   const membership = app.database.get(
     "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
@@ -59,7 +65,6 @@ export function resolveIssuance(app: Application, options: TokenIssuance): Resol
     validate("PermissionGrant", grant);
     if (
       grant.grantedBy !== app.context.principalId ||
-      grant.deny ||
       (grant.expiresAt !== null &&
         (!Number.isFinite(Date.parse(grant.expiresAt)) ||
           Date.parse(grant.expiresAt) <= Date.now() ||
@@ -69,7 +74,9 @@ export function resolveIssuance(app: Application, options: TokenIssuance): Resol
         "FORBIDDEN",
         "Requested grant exceeds token lifetime or issuer authority",
       );
-    if (app.identity) {
+    // A deny grant only narrows the token it rides on, so it needs no issuer authority.
+    if (grant.deny) continue;
+    if (app.identity && !issuedBySession) {
       const issuerGrants = app.identity.grants ?? [];
       const contains = (outer: string[], inner: string[]) =>
         !outer.length || (inner.length > 0 && inner.every((id) => outer.includes(id)));

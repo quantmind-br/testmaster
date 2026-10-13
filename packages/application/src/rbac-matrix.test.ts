@@ -12,6 +12,7 @@ import {
 } from "@testmaster/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { Application, type PermissionGrant } from "./application.js";
+import { authenticateBearer } from "./tokens.js";
 
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -127,5 +128,47 @@ describe("RBAC matrix enforcement", () => {
     );
     const denied = app.audit.list({ operation: "authorization.denied", limit: 10 });
     expect(denied.items.some((entry) => entry.outcome === "denied")).toBe(true);
+  });
+
+  it("SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it", async () => {
+    const { app, as, grant, members } = await fixture();
+    const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
+    const issuer = members.get("org_admin") as string;
+    const own = (action: PermissionGrant["actions"][number], deny = false): PermissionGrant => ({
+      ...grant(action, deny),
+      grantedBy: issuer,
+    });
+    // Without any grant of its own, the admin identity cannot hand out an allow grant.
+    expect(() =>
+      as("org_admin").tokens.create({
+        name: "beyond issuer",
+        scopes: ["R"],
+        expiresAt,
+        grants: [own("write")],
+      }),
+    ).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
+    // A scope the issuer's token lacks is refused as well.
+    const readOnly = app.forIdentity({ principalId: issuer, scopes: ["R", "A"], grants: [] });
+    expect(() =>
+      readOnly.tokens.create({ name: "beyond scope", scopes: ["R", "W"], expiresAt }),
+    ).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
+    // Positive control: the same issuer may delegate a scope it holds.
+    expect(
+      readOnly.tokens.create({ name: "within scope", scopes: ["R"], expiresAt }).token,
+    ).toMatch(/^tm_api_/);
+    // A deny grant needs no issuer authority; the token it rides on loses that action.
+    const issued = as("org_admin").tokens.create({
+      name: "narrowed",
+      scopes: ["R", "W"],
+      expiresAt,
+      grants: [own("write", true)],
+    });
+    const narrowed = app.forIdentity(authenticateBearer(app, issued.token));
+    expect(() => narrowed.context.authorize("W")).toThrowError(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+    expect(() => narrowed.context.authorize("R")).not.toThrow();
+    // The issuer's own role is untouched.
+    expect(() => as("org_admin").context.authorize("W")).not.toThrow();
   });
 });
