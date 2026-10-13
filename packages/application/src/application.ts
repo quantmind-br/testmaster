@@ -406,11 +406,10 @@ export class Application {
     this.shared.systemScopes ??= new Map();
     let scope = this.shared.systemScopes.get(workspaceId);
     if (!scope) {
-      // The single local workspace has no controller principal: its owner scope runs the loops.
-      scope =
-        this.root.engine === "sqlite" && !hasSystemPrincipal(this.root, workspaceId)
-          ? this.controllerScope()
-          : this.forWorkspaceSystem(workspaceId, correlationId());
+      // A workspace made by init (the local workspace, on either engine) has no controller principal: its owner scope runs the loops.
+      scope = !hasSystemPrincipal(this.root, workspaceId)
+        ? this.controllerScope()
+        : this.forWorkspaceSystem(workspaceId, correlationId());
       this.shared.systemScopes.set(workspaceId, scope);
     }
     return scope;
