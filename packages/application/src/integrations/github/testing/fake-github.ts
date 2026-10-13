@@ -384,6 +384,25 @@ export class FakeGithub {
       },
     };
   }
+  /** A real GitHub `push` payload: it carries no `action` field (found by the hosted proof). */
+  pushPayload(input: {
+    installationId: number;
+    repository: FakeRepository;
+    after: string;
+    before?: string;
+    ref?: string;
+  }): Record<string, unknown> {
+    return {
+      ref: input.ref ?? "refs/heads/feature",
+      before: input.before ?? "0".repeat(40),
+      after: input.after,
+      created: false,
+      deleted: false,
+      forced: false,
+      installation: { id: input.installationId },
+      repository: this.repositoryPayload(input.repository),
+    };
+  }
   deploymentStatusPayload(input: {
     installationId: number;
     repository: FakeRepository;

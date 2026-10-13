@@ -38,6 +38,24 @@ describe("INT-014 REQ-033 webhook intake", () => {
     ).toEqual(["TestMaster / required-gate=queued", "TestMaster / result=queued"]);
   });
 
+  it("INT-014 REQ-033 a real push delivery has no action field and is ignored as not handled instead of failing the webhook", async () => {
+    const w = await world();
+    await w.install();
+    const push = w.fake.pushPayload({
+      installationId: w.installationId,
+      repository: w.repository,
+      after: SHA_A,
+    });
+    expect(push).not.toHaveProperty("action");
+    const receipt = await w.send("push", push);
+    expect(receipt).toMatchObject({ outcome: "ignored", ignoredReason: "event_not_handled" });
+    expect(pullCount(w)).toBe(0);
+    expect(runCount(w)).toBe(0);
+    // Positive control: the pull_request that follows the push is still accepted.
+    await expect(w.openPr(7, SHA_A)).resolves.toMatchObject({ outcome: "accepted" });
+    expect(pullCount(w)).toBe(1);
+  });
+
   it("INT-014 refuses a wrong secret, an altered payload and a missing signature without creating a pull or Run", async () => {
     const w = await world();
     await w.install();

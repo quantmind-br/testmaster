@@ -318,7 +318,7 @@ export class GithubService {
       ...base,
       installationKey: event?.installationId ?? null,
       projectId,
-      action: event?.action ?? null,
+      action: event?.action || null,
       disposition: "ignored",
       ignoredReason: reason,
     });
