@@ -1,0 +1,42 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |unit| packages/persistence/src/postgres/dialect.test.ts (15 tests | 2 failed) 5ms
+   ❯ PostgreSQL dialect translation (15)
+     × OPS-005 refuses unsupported SQL loudly: SELECT name FROM sqlite_master 1ms
+     × OPS-005 refuses unsupported SQL loudly: SELECT rowid FROM t 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/persistence/src/postgres/dialect.test.ts > PostgreSQL dialect translation > OPS-005 refuses unsupported SQL loudly: SELECT name FROM sqlite_master
+Error: expected a refusal for: SELECT name FROM sqlite_master
+ ❯ refusal packages/persistence/src/postgres/dialect.test.ts:12:9
+     10|     throw error;
+     11|   }
+     12|   throw new Error(`expected a refusal for: ${sql}`);
+       |         ^
+     13| }
+     14|
+ ❯ packages/persistence/src/postgres/dialect.test.ts:60:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |unit| packages/persistence/src/postgres/dialect.test.ts > PostgreSQL dialect translation > OPS-005 refuses unsupported SQL loudly: SELECT rowid FROM t
+Error: expected a refusal for: SELECT rowid FROM t
+ ❯ refusal packages/persistence/src/postgres/dialect.test.ts:12:9
+     10|     throw error;
+     11|   }
+     12|   throw new Error(`expected a refusal for: ${sql}`);
+       |         ^
+     13| }
+     14|
+ ❯ packages/persistence/src/postgres/dialect.test.ts:60:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 13 passed (15)
+   Start at  10:41:51
+   Duration  211ms (transform 57%, import 38%, tests 4%, worker 2%)
+

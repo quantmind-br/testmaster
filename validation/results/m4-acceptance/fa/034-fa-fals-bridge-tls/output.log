@@ -1,0 +1,31 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |unit| packages/persistence/src/postgres/bridge.test.ts (6 tests | 1 failed) 8ms
+   ❯ PostgreSQL connection configuration (6)
+     × OPS-005 refuses plaintext connections to non-loopback hosts and accepts loopback and sockets 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/persistence/src/postgres/bridge.test.ts > PostgreSQL connection configuration > OPS-005 refuses plaintext connections to non-loopback hosts and accepts loopback and sockets
+AssertionError: expected [Function] to throw error including 'require sslmode=verify-full' but got 'Unsupported sslmode '
+
+Expected: "require sslmode=verify-full"
+Received: "Unsupported sslmode "
+
+ ❯ packages/persistence/src/postgres/bridge.test.ts:30:86
+     28|
+     29|   it("OPS-005 refuses plaintext connections to non-loopback hosts and …
+     30|     expect(() => resolveConnection({ url: "postgres://owner@db.interna…
+       |                                                                                      ^
+     31|       "require sslmode=verify-full",
+     32|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  10:41:53
+   Duration  224ms (transform 58%, import 36%, tests 5%, worker 1%)
+

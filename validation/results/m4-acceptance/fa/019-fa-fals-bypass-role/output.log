@@ -1,0 +1,27 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 224ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 refuses superuser and BYPASSRLS roles because they would ignore tenant isolation 223ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 refuses superuser and BYPASSRLS roles because they would ignore tenant isolation
+AssertionError: expected function to throw an error, but it didn't
+ ❯ packages/persistence/src/database.pg.test.ts:339:23
+    337|           passwordFile,
+    338|         });
+    339|       expect(attempt).toThrowError(
+       |                       ^
+    340|         expect.objectContaining({
+    341|           code: "PRECONDITION_FAILED",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:40:11
+   Duration  1.63s (tests 53%, transform 28%, import 18%, worker 1%)
+
