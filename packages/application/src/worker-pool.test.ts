@@ -163,6 +163,110 @@ describe("REQ-038 M4-08 enrollment, drain and revoke of pool workers", () => {
   });
 });
 
+describe("REQ-038 an enrolled worker heartbeats its lease with its own credential", () => {
+  async function leased() {
+    const fixture = await open();
+    const { app, workspaceId } = fixture;
+    const created = app.workerPool.createEnrollment({ name: "beating" });
+    const controller = app.controllerScope().workerPool;
+    controller.enroll(created.enrollmentToken);
+    markReady(app, created.worker.id);
+    enqueue(fixture, 1);
+    const claim = new LeaseRepository(app.database).claim({
+      workspaceId,
+      owner: "beating",
+      queue: "local",
+      workerId: created.worker.id,
+    });
+    if (!claim) throw new Error("Expected a claim");
+    return { ...fixture, created, controller, claim };
+  }
+
+  it("REQ-038 a heartbeat renews the held lease, records liveness and answers the worker document", async () => {
+    const { app, workspaceId, created, controller, claim } = await leased();
+    const before = app.database.get(
+      "SELECT lease_expires_at FROM job_leases WHERE workspace_id=? AND id=?",
+      workspaceId,
+      claim.jobId,
+    );
+    const worker = controller.heartbeat(created.enrollmentToken, created.worker.id, {
+      leaseId: claim.jobId,
+      state: "ready",
+      version: app.workerPool.get(created.worker.id).version as number,
+    });
+    expect(worker).toMatchObject({ id: created.worker.id, state: "ready" });
+    const beat = app.database.get(
+      "SELECT last_heartbeat_at FROM workers WHERE workspace_id=? AND id=?",
+      workspaceId,
+      created.worker.id,
+    );
+    expect(typeof beat?.last_heartbeat_at).toBe("string");
+    const after = app.database.get(
+      "SELECT lease_expires_at FROM job_leases WHERE workspace_id=? AND id=?",
+      workspaceId,
+      claim.jobId,
+    );
+    expect(String(after?.lease_expires_at) >= String(before?.lease_expires_at)).toBe(true);
+  });
+
+  it("REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential", async () => {
+    const { app, workspaceId, created, controller, claim } = await leased();
+    const version = () => app.workerPool.get(created.worker.id).version as number;
+    const beat = (state: "ready" | "draining", leaseId = claim.jobId, at = version()) =>
+      controller.heartbeat(created.enrollmentToken, created.worker.id, {
+        leaseId,
+        state,
+        version: at,
+      });
+
+    // Negative controls first: wrong lease, stale version.
+    expect(codeOf(() => beat("ready", `job_${randomUUID()}`))).toBe("PRECONDITION_FAILED");
+    expect(codeOf(() => beat("ready", claim.jobId, version() + 5))).toBe("REVISION_CONFLICT");
+
+    // A lease that already expired was reclaimable, so the worker is told to stop rather than renew it.
+    app.database.run(
+      "UPDATE job_leases SET lease_expires_at=? WHERE workspace_id=? AND id=?",
+      new Date(Date.now() - 1_000).toISOString(),
+      workspaceId,
+      claim.jobId,
+    );
+    expect(codeOf(() => beat("ready"))).toBe("PRECONDITION_FAILED");
+    app.database.run(
+      "UPDATE job_leases SET lease_expires_at=? WHERE workspace_id=? AND id=?",
+      new Date(Date.now() + 60_000).toISOString(),
+      workspaceId,
+      claim.jobId,
+    );
+
+    // A worker reporting ready never undoes an administrator's drain.
+    app.workerPool.drain(created.worker.id);
+    expect(beat("ready")).toMatchObject({ state: "draining" });
+
+    // Another worker's credential, an unenrolled token and a revoked worker are all refused.
+    const stranger = app.workerPool.createEnrollment({ name: "stranger" });
+    expect(
+      codeOf(() =>
+        controller.heartbeat(stranger.enrollmentToken, created.worker.id, {
+          leaseId: claim.jobId,
+          state: "ready",
+          version: version(),
+        }),
+      ),
+    ).toBe("UNAUTHENTICATED");
+    expect(
+      codeOf(() =>
+        controller.heartbeat(stranger.enrollmentToken, stranger.worker.id, {
+          leaseId: claim.jobId,
+          state: "ready",
+          version: 1,
+        }),
+      ),
+    ).toBe("UNAUTHENTICATED");
+    app.workerPool.revoke(created.worker.id);
+    expect(codeOf(() => beat("ready"))).toBe("UNAUTHENTICATED");
+  });
+});
+
 describe("OPS-033 a tenant with thousands of queued jobs cannot starve another tenant", () => {
   it("OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes", async () => {
     const fixture = await open();

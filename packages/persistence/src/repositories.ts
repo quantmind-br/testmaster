@@ -431,7 +431,7 @@ export class LeaseRepository {
     if (!current) throw new StaleFenceError();
   }
   heartbeat(fence: Fence, leaseMs = 30000, now = new Date().toISOString()): string {
-    return this.database.withTx(() => {
+    const renew = () => {
       this.assertCurrent(fence, now);
       const expires = new Date(Date.parse(now) + leaseMs).toISOString();
       this.database.run(
@@ -441,7 +441,8 @@ export class LeaseRepository {
         fence.jobId,
       );
       return expires;
-    });
+    };
+    return this.database.inTransaction ? renew() : this.database.withTx(renew);
   }
   release(fence: Fence, retry: boolean, now = new Date().toISOString()): void {
     this.database.withTx(() => {

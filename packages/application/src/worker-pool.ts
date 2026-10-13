@@ -13,6 +13,7 @@ import {
   LeaseRepository,
   OutboxRepository,
   type PersistenceDatabase,
+  StaleFenceError,
 } from "@testmaster/persistence";
 import { auditSecurity } from "./audit.js";
 import { entity, requireEntity, type ServiceContext } from "./context.js";
@@ -262,17 +263,27 @@ export class WorkerPoolService {
           reasonCode: "lease_lost",
           leaseId: input.leaseId,
         });
-      new LeaseRepository(database).heartbeat(
-        {
-          workspaceId,
-          jobId: input.leaseId,
-          owner: String(held.lease_owner),
-          fence: Number(held.fence),
-          attemptId: String(held.attempt_id),
-        },
-        undefined,
-        at,
-      );
+      try {
+        new LeaseRepository(database).heartbeat(
+          {
+            workspaceId,
+            jobId: input.leaseId,
+            owner: String(held.lease_owner),
+            fence: Number(held.fence),
+            attemptId: String(held.attempt_id),
+          },
+          undefined,
+          at,
+        );
+      } catch (error) {
+        // An expired lease was already reclaimable: the worker must stop, not retry.
+        if (error instanceof StaleFenceError)
+          throw new ContractError("PRECONDITION_FAILED", "The worker does not hold this lease", {
+            reasonCode: "lease_lost",
+            leaseId: input.leaseId,
+          });
+        throw error;
+      }
       // Draining is an administrator's decision: a worker reporting ready never undoes it.
       const next =
         worker.state === "draining" && input.state === "ready" ? "draining" : input.state;
