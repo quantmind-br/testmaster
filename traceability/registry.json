@@ -4396,7 +4396,7 @@
       "ownerRole": "Integrations",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
         "packages/application/src/agent-skills/installer.test.ts::preserves foreign bytes, mode and backup through install and removal",
         "packages/application/src/agent-skills/installer.test.ts::upgrades an intact old block and skill without changing surrounding bytes",
         "packages/application/src/agent-skills/installer.test.ts::refuses duplicate and unbalanced markers"
@@ -4414,7 +4414,7 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All eight configured targets exercised on Linux; vendor application execution is not claimed.",
+      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
       "coverage": {
         "positive": [
           "packages/application/src/agent-skills/installer.test.ts::upgrades an intact old block and skill without changing surrounding bytes"
@@ -4442,7 +4442,7 @@
       "ownerRole": "Integrations",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
         "packages/application/src/agent-skills/installer.test.ts::preserves foreign bytes, mode and backup through install and removal",
         "packages/application/src/agent-skills/installer.test.ts::refuses stale previews and rollback over subsequent human edits",
         "packages/application/src/agent-skills/installer.test.ts::rolls back applied bytes and preserves the original mode"
@@ -4460,10 +4460,10 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All eight configured targets exercised on Linux; vendor application execution is not claimed.",
+      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
       "coverage": {
         "positive": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "negative": [
           "packages/application/src/agent-skills/installer.test.ts::refuses stale previews and rollback over subsequent human edits",
@@ -4609,7 +4609,7 @@
       "ownerRole": "Integrations",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
         "packages/application/src/agent-skills/installer.test.ts::uses an exclusive real lock for concurrent applies",
         "packages/application/src/agent-skills/installer.test.ts::refuses hardlinked shared files without altering either link"
       ],
@@ -4626,13 +4626,13 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All eight configured targets exercised on Linux; vendor application execution is not claimed.",
+      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
       "coverage": {
         "positive": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "negative": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "criticalAssertions": [
           {
@@ -4658,7 +4658,7 @@
       "ownerRole": "Integrations",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
         "packages/application/src/agent-skills/installer.test.ts::does not remove a skill with foreign bytes appended outside its marker"
       ],
       "oracle": [
@@ -4674,10 +4674,10 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All eight configured targets exercised on Linux; vendor application execution is not claimed.",
+      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
       "coverage": {
         "positive": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "negative": [
           "packages/application/src/agent-skills/installer.test.ts::does not remove a skill with foreign bytes appended outside its marker"
@@ -7181,11 +7181,11 @@
       "ownerRole": "Quality",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
         "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services"
       ],
       "oracle": [
-        "All eight targets preserve foreign bytes, backup modes, old blocks; symlinks/duplicate markers/drift/concurrency refused; unauthorized MCP write refused."
+        "All configured targets preserve foreign bytes, backup modes, old blocks; symlinks/duplicate markers/drift/concurrency refused; unauthorized MCP write refused."
       ],
       "evidence": [
         "validation/results/m2-round4-qwen38-medium/unit/j14-agent-skills.json",
@@ -7203,7 +7203,7 @@
       "note": "Built CLI on validated Linux local workspace.",
       "coverage": {
         "positive": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "negative": [
           "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services"
@@ -8774,7 +8774,7 @@
       "ownerRole": "Integrations",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
         "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth",
         "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests",
         "tools/src/evals/m3.test.ts::writes the registered provider as a profile the product configuration accepts",
@@ -8827,13 +8827,13 @@
       "note": "Claim limit: generation quality is not established. Round 3 (qwen3.8-flash, provider HTTP 500) and Rounds 4-6 scored primary 0/8 each (Wilson95% [0,0.3244]); the M2 generation claim is claim-only per ROADMAP.md Gate M2 and these rounds stay recorded unchanged. The endpoint guard is lexical (no DNS resolution): a public-looking name that resolves to a private address is not detected. Reports written before the providerHost field was added classify as non-live under benchmarkEvidenceClass.",
       "coverage": {
         "positive": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
           "tools/src/evals/scoring.test.ts::credits only paired identical revisions with independent confirmed ground truth",
           "tools/src/evals/m3.test.ts::writes the registered provider as a profile the product configuration accepts",
           "tools/src/evals/evidence.test.ts::refuses simulated and controlled benchmark reports as release evidence"
         ],
         "negative": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls",
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls",
           "tools/src/evals/scoring.test.ts::does not credit timeouts, missing runs, failed baseline or no tests",
           "tools/src/evals/freeze.test.ts::refuses changed thresholds, removed cases and changed budgets before round execution",
           "tools/src/evals/evidence.test.ts::refuses loopback, private, link-local and non-public provider endpoints",
@@ -16915,7 +16915,7 @@
       "ownerRole": "Core",
       "status": "verified",
       "scenario": [
-        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+        "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
       ],
       "oracle": [
         "Every named target is installed/updated/removed with foreign-byte preservation and hostile workspace controls."
@@ -16933,10 +16933,10 @@
       "note": "Validated local Linux installer only; vendor agent runtime compatibility beyond documented paths is not claimed.",
       "coverage": {
         "positive": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "negative": [
-          "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+          "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
         ],
         "criticalAssertions": [
           {

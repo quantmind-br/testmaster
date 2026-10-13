@@ -7,6 +7,8 @@ export const AGENT_TARGETS = [
   "copilot",
   "kiro",
   "antigravity",
+  "pi",
+  "omp",
 ] as const;
 export type AgentTarget = (typeof AGENT_TARGETS)[number];
 export interface AgentTargetAdapter {
@@ -24,6 +26,7 @@ const adapter = (
   skillPath: string,
   sources: string[],
   instructionsPrefix = "",
+  accessedAt = "2026-10-05",
 ): AgentTargetAdapter => ({
   target,
   verified: true,
@@ -31,7 +34,7 @@ const adapter = (
   instructionsPrefix,
   skillPath,
   sources,
-  accessedAt: "2026-10-05",
+  accessedAt,
 });
 export const AGENT_TARGET_ADAPTERS: Readonly<Record<AgentTarget, AgentTargetAdapter>> = {
   claude: adapter("claude", "CLAUDE.md", ".claude/skills/testmaster/SKILL.md", [
@@ -83,6 +86,26 @@ export const AGENT_TARGET_ADAPTERS: Readonly<Record<AgentTarget, AgentTargetAdap
     "https://antigravity.google/docs/rules",
     "https://antigravity.google/docs/skills",
   ]),
+  pi: adapter(
+    "pi",
+    ".pi/APPEND_SYSTEM.md",
+    ".pi/skills/testmaster/SKILL.md",
+    [
+      "https://pi.dev/docs/latest/configuration",
+      "https://pi.dev/docs/latest/skills",
+      "https://pi.dev/docs/latest/security",
+    ],
+    "",
+    "2026-10-13",
+  ),
+  omp: adapter(
+    "omp",
+    ".omp/RULES.md",
+    ".omp/skills/testmaster/SKILL.md",
+    ["https://omp.sh/docs/context-files", "https://omp.sh/docs/skills"],
+    "",
+    "2026-10-13",
+  ),
 };
 export function listAgentTargets(): readonly AgentTargetAdapter[] {
   return AGENT_TARGETS.map((target) => AGENT_TARGET_ADAPTERS[target]);

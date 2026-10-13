@@ -10,14 +10,25 @@ import {
 import { expect, it } from "vitest";
 import { Journey, object, root, text } from "./harness.js";
 
-it("J14: all eight targets through the built CLI, with ownership and hostile-workspace controls", async () => {
+it("J14: every configured target through the built CLI, with ownership and hostile-workspace controls", async () => {
   const session = await Journey.create("j14-agent-skills");
   const evidence: Record<string, unknown>[] = [];
   let error: unknown;
   try {
     await session.command(["init", "--mode", "local"]);
     const listing = await session.command(["agent", "list"]);
-    expect(listing.items as unknown[]).toHaveLength(8);
+    expect((listing.items as { target: string }[]).map((item) => item.target)).toEqual([
+      "claude",
+      "codex",
+      "cursor",
+      "cline",
+      "windsurf",
+      "copilot",
+      "kiro",
+      "antigravity",
+      "pi",
+      "omp",
+    ]);
     for (const target of AGENT_TARGETS) {
       const adapter = AGENT_TARGET_ADAPTERS[target];
       const path = join(session.cwd, adapter.instructionsPath);

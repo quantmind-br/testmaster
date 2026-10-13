@@ -250,3 +250,18 @@ it("does not remove a skill with foreign bytes appended outside its marker", asy
   });
   expect(await readFile(path)).toEqual(changed);
 });
+
+it("keeps each target's files independent when every target is installed in one workspace", async () => {
+  const root = await workspace();
+  for (const target of AGENT_TARGETS) await install(root, target);
+  for (const [index, target] of AGENT_TARGETS.entries()) {
+    const removal = await planAgentSkills({ root, target, operation: "remove" });
+    if (!removal.ok) throw new Error(JSON.stringify(removal));
+    expect(await applyAgentSkills(removal.plan)).toMatchObject({ ok: true, reasonCode: "removed" });
+    expect(await getAgentSkillStatus({ root, target })).toMatchObject({ status: "not_installed" });
+    for (const remaining of AGENT_TARGETS.slice(index + 1))
+      expect(await getAgentSkillStatus({ root, target: remaining })).toMatchObject({
+        status: "installed",
+      });
+  }
+});
