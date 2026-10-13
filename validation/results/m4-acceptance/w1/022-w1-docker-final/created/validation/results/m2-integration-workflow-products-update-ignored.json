@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m2-integration-workflow-products-update-ignored",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:03:20.280Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m2-integration-workflow-products-update-ignored",
+        "--base-url",
+        "http://127.0.0.1:39039",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_dd41ae5c-8079-4f36-b8e6-d9307f4278bc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "workflow-auth",
+        "--from-env",
+        "WORKFLOW_AUTH",
+        "--allowed-origin",
+        "http://127.0.0.1:39039",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ea6b0066-6f76-4ab4-93c0-a049a1aa3923",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-lDPKB4/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bb3b5b4e-be96-4c07-ac3c-4a0420b78033",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a5-c4af-7103-814c-67bdbcb5af68",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_64e12fbb-43f4-4c23-8501-2dfb60054538",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a136a5-ca80-7689-b6d1-1519171c400f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b9f4b5c0-ca35-4b6b-b9f4-6204ce9f1c05",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a136a5-ca80-7689-b6d1-1519171c400f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_09aff06d-d4b8-47e4-9ad5-fe15b3edada0",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a5-ca80-7689-b6d1-1519171c400f"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "independentSqliteAndRawHttpPersistence",
+      "mutant": "products-update-ignored",
+      "runId": "run_01a136a5-ca80-7689-b6d1-1519171c400f",
+      "row": {
+        "id": "52a024af-ad87-4f09-9ff3-ff793c68764b",
+        "name": "Workflow original",
+        "price_cents": 123
+      },
+      "capturedValueFlow": {
+        "create": {
+          "request": {
+            "method": "POST",
+            "url": "http://127.0.0.1:39039/api/products",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "bodyMetadata": {
+              "sha256": "d1ab7c2ad358546d63972415d0c6bf62e57bd35be1f83c928b39a6e164adb115",
+              "sizeBytes": 45,
+              "contentType": "application/json"
+            },
+            "bindings": []
+          },
+          "captures": [
+            {
+              "name": "product_id",
+              "variableRef": "create.product_id",
+              "valueType": "string",
+              "sensitive": true,
+              "resolved": "[REDACTED]"
+            }
+          ],
+          "response": {
+            "status": 201,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "6fd71f1323957eda334cc184ce1fde41604724d6e9020cfcbc19bafc7ef1c058",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 590.204293
+          }
+        },
+        "read": {
+          "request": {
+            "method": "GET",
+            "url": "http://127.0.0.1:39039/api/products/[REDACTED]",
+            "headers": {},
+            "bodyMetadata": {
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "contentType": null
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "6fd71f1323957eda334cc184ce1fde41604724d6e9020cfcbc19bafc7ef1c058",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 256.30022999999994
+          }
+        },
+        "update": {
+          "request": {
+            "method": "PUT",
+            "url": "http://127.0.0.1:39039/api/products/[REDACTED]",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "bodyMetadata": {
+              "sha256": "3b3d4f52af44024bb0bdd4d47972c00305bd6becad1aa001bd7e1cde58b05400",
+              "sizeBytes": 44,
+              "contentType": "application/json"
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "6fd71f1323957eda334cc184ce1fde41604724d6e9020cfcbc19bafc7ef1c058",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 60.697885999999926
+          }
+        }
+      },
+      "failingStep": "update_value"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-toast-without-persist",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:52:54.171Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-toast-without-persist",
+        "--base-url",
+        "http://127.0.0.1:34145",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_62a31785-47fe-4dbe-bf62-2ce1606d0e0e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a1369b-c685-76c4-9ab2-1eb4a89db5f8",
+        "--env",
+        "local",
+        "--target-url",
+        "http://127.0.0.1:34145",
+        "--output-dir",
+        "/tmp/tm-m1-JkrvPo/ci-output",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_e6f474b6-2c46-4857-9e0e-405c1b001b84",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1369b-cb6d-757f-bf8f-5372ca29fc75"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "strictCiSemanticOracle",
+      "mutant": "toast-without-persist",
+      "gate": "failed",
+      "modelCalls": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

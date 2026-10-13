@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-pools-cancel",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:00:03.047Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-pools-cancel",
+        "--base-url",
+        "http://127.0.0.1:37103",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2730b329-6fb7-4175-b408-7524ccaaea39",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a2-ccda-7744-905b-beafd2da4558",
+    "run_01a136a2-cd27-740d-8ae4-49f22b90ba3c",
+    "run_01a136a2-cd6c-70bf-9266-d514d8c3e52d"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "resourceAdmissionAndCancelChildren",
+      "healthy": true,
+      "queuedRun": "run_01a136a2-cd27-740d-8ae4-49f22b90ba3c",
+      "browserRun": "run_01a136a2-ccda-7744-905b-beafd2da4558",
+      "httpRun": "run_01a136a2-cd6c-70bf-9266-d514d8c3e52d",
+      "remainingContainers": "",
+      "imageDigests": [
+        "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+        "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

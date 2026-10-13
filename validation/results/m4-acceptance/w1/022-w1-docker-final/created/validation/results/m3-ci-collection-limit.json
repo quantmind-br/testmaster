@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-collection-limit",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:53:05.473Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-collection-limit",
+        "--base-url",
+        "http://127.0.0.1:36681",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a45068b8-2dad-4123-80c5-23bdbe075dad",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "collectionLimit",
+      "runId": "run_01a1369c-7148-7536-8113-57f6317c0531",
+      "gate": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

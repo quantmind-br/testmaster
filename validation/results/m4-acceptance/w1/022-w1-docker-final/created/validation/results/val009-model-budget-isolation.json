@@ -1,0 +1,350 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "val009-model-budget-isolation",
+  "class": "budget-accounting-e2e",
+  "runner": "real-cli-docker-and-local-provider",
+  "externalDependency": "local-reference-shop-and-openai-compatible-http-double",
+  "observedAt": "2026-10-13T19:04:32.815Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "val009-model-budget-isolation",
+        "--base-url",
+        "http://127.0.0.1:40507",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_75ad7c9c-5928-4181-80d6-335885c700cd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "accounting",
+        "--data-class",
+        "documents",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b68a18d4-4673-41ae-aac5-7ad9ce838112",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "source",
+        "add",
+        "PRD.md",
+        "--role",
+        "prd",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e81acea5-c19f-45e2-b849-9ba7562ea6eb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a136a6-d00a-71e6-965a-b91eafab5e12",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_3d2da7ed-f4f1-4ee4-8352-669557d80a2f",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "Unknown model cost requires recorded explicit consent",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "consent",
+        "grant",
+        "--provider",
+        "accounting",
+        "--allow-unknown-cost",
+        "--data-class",
+        "documents",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7f917a25-9d65-42a6-87a7-116dd3ba541e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "100000",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3d4d0d01-3e92-4e48-bfa4-428d5be676ab",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-OtvjR1/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bfb3718d-b9a8-4987-93ce-18f12b20990b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7436b7f5-ce8c-44ee-b868-7ecc1df561a9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "worker",
+        "status",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9cc565cb-c2d6-4ac6-8c5d-e56566d8e771",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a6-d942-7407-a784-a063869fef49",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fcc15654-4bf8-4854-a612-a53dd49ba889",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "budget",
+        "set",
+        "--tokens",
+        "30",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3039b32f-15dc-4032-b34c-79f1b37cae3b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "requirement",
+        "normalize",
+        "--source-revision",
+        "svr_01a136a6-d00a-71e6-965a-b91eafab5e12",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 12,
+      "signal": null,
+      "requestId": "cli_75b1cddb-41ed-4dc2-a58a-7f3185558034",
+      "error": {
+        "code": "QUOTA_EXCEEDED",
+        "message": "Model budget exceeded",
+        "details": {
+          "reasonCode": "budget_exhausted",
+          "remaining": "unknown"
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "requirement",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4a945287-2d56-4d6e-a5dc-5fb23cec5882",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a136a6-e39e-75a8-8c4a-eff14aef4faa",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a5185e63-7670-4bb0-92d7-f2f0991ce5cd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a136a6-e39e-75a8-8c4a-eff14aef4faa",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ebae9855-9ac6-4652-82a9-ef90fba8c415",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "usage",
+        "--project",
+        "prj_01a136a6-cb62-72d9-861a-b1a47405438e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_32a7a2ca-a5f3-4a2d-9eea-e09b856880b9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "worker",
+        "start",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 143,
+      "signal": null,
+      "requestId": "cli_0e0bc0d9-650d-4150-91ef-cf0e51cee1f8",
+      "error": {
+        "code": "UNAVAILABLE",
+        "message": "Command interrupted",
+        "details": {
+          "signal": "SIGTERM",
+          "receipts": []
+        },
+        "retryable": true,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a6-e39e-75a8-8c4a-eff14aef4faa"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "modelQuotaDoesNotCancelDeterministicRun",
+      "runId": "run_01a136a6-e39e-75a8-8c4a-eff14aef4faa",
+      "outcome": "passed",
+      "modelCalls": 1,
+      "tokenBudget": {
+        "limit": 30,
+        "used": 30,
+        "remaining": 0
+      },
+      "runtimeMs": 577,
+      "storageBytes": 12326,
+      "integrity": "verified-by-bundle-reader"
+    }
+  ],
+  "limitations": [
+    "HTTP double exercises accounting and exhaustion only, not model quality; deterministic target and sandbox are real."
+  ]
+}

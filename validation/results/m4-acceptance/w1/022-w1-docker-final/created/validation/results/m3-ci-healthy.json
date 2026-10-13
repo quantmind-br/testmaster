@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-healthy",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:52:20.388Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-healthy",
+        "--base-url",
+        "http://127.0.0.1:40005",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a78d5b9f-3089-4a37-8a80-380b76d047ea",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a1369b-b656-701a-9d78-2f0a9ee61d18",
+        "--env",
+        "local",
+        "--target-url",
+        "http://127.0.0.1:40005",
+        "--output-dir",
+        "/tmp/tm-m1-asNFr0/ci-output",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a94afcc7-0852-436a-9ada-d7576fd15788",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1369b-bc1c-7108-839d-8954a3dad989"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "strictCiSemanticOracle",
+      "mutant": "healthy",
+      "gate": "passed",
+      "modelCalls": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

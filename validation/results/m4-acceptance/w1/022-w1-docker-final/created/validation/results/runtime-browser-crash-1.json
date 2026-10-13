@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-browser-crash-1",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:03:37.298Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-browser-crash-1",
+        "--base-url",
+        "http://127.0.0.1:36339",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bfb91d17-b3f8-40cf-8a3b-14679e65fa25",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a6-1213-76e2-8ffd-551eb9d3f1b2"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "preActionCrashRetryEvidence",
+      "healthy": true,
+      "crashes": 1,
+      "attempts": [
+        "att_01a136a6-1255-7550-8aef-9dd48366b923",
+        "att_01a136a6-1524-7241-afcd-6d8da274fd70"
+      ],
+      "outcome": "passed",
+      "targetHits": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

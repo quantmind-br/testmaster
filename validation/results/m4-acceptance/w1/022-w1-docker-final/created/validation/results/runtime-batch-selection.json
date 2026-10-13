@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-batch-selection",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:00:24.927Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-batch-selection",
+        "--base-url",
+        "http://127.0.0.1:36927",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a8cf7106-0098-40de-bcd5-677da5f3a73a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a3-233a-728b-9eea-5000ddd94265",
+    "run_01a136a3-233d-738a-aa80-29c94cc72195"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "admittedSuiteSelection",
+      "healthy": true,
+      "batchId": "bat_01a136a3-2338-765d-bc6a-f7e2af1f616c",
+      "admittedTests": [
+        "tst_01a136a3-2260-7474-bb01-8febeefe95ec",
+        "tst_01a136a3-2262-7540-9845-a092ba8099fc"
+      ],
+      "excludedLater": "tst_01a136a3-2262-7540-9845-a092ba8099fc",
+      "addedLater": "tst_01a136a3-25ae-76fd-918b-ed462bec5b7c"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

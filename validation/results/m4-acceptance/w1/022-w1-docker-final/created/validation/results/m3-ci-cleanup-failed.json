@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-ci-cleanup-failed",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:53:00.431Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-ci-cleanup-failed",
+        "--base-url",
+        "http://127.0.0.1:43837",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_26b04317-3270-4f04-96f0-284aa49c070d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "ci",
+        "run",
+        "tst_01a1369c-5773-74a0-a861-475b9e9f849b",
+        "--env",
+        "local",
+        "--output-dir",
+        "/tmp/tm-m1-4qhwZy/cleanup-output",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_3c72c4d1-eefb-4420-91df-4139035eb9fb",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1369c-5c5e-7366-904f-380dd92b0e32"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "requiredCleanupFailure",
+      "businessCreated": true,
+      "cleanupRequests": 1,
+      "gate": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

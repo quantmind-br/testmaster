@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "surface-execution",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:03:07.276Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "surface-execution",
+        "--base-url",
+        "http://127.0.0.1:43679",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_12c49136-2fbb-4dec-8ad9-1f61e4fc47df",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-m8IOoZ/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_45b0f9f7-8413-42a8-8904-4ecdadc7cfa5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a5-821a-7625-b29a-ad04530207e2",
+        "--revision",
+        "rev_01a136a5-821e-7488-824e-2e71c5d2caad",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b6ee4a0f-09b4-4319-847e-7532147be196",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-m8IOoZ/repo/playwright.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_93a003e1-92b4-4792-ad0a-da3e40b7f27e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a5-9299-7612-866e-7de7de28cd33",
+        "--revision",
+        "rev_01a136a5-929d-7735-986f-a178c226ac07",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bc888b08-3376-43e0-8d3e-494285438776",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "worker",
+        "reconcile",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2c0845cb-fbb1-4d2f-859e-ad541d679b24",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "server",
+        "start",
+        "--port",
+        "38781",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_65c61342-c77f-4eb8-bef3-aba3c465829a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a5-8793-7779-bc06-f3e9cd67849d",
+    "run_01a136a5-8d80-703b-8396-c6fc5ece3aee",
+    "run_01a136a5-9832-7232-9c6a-1601085a409c",
+    "run_01a136a5-9c0f-734f-96b1-5eed7ac44588"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "sameRevisionCliApi",
+      "runner": "http",
+      "revisionId": "rev_01a136a5-821e-7488-824e-2e71c5d2caad",
+      "runId": "run_01a136a5-8d80-703b-8396-c6fc5ece3aee",
+      "cliRunId": "run_01a136a5-8793-7779-bc06-f3e9cd67849d",
+      "receiptLostBeforeDelivery": true
+    },
+    {
+      "check": "sameRevisionCliApi",
+      "runner": "playwright",
+      "revisionId": "rev_01a136a5-929d-7735-986f-a178c226ac07",
+      "runId": "run_01a136a5-9c0f-734f-96b1-5eed7ac44588",
+      "cliRunId": "run_01a136a5-9832-7232-9c6a-1601085a409c",
+      "receiptLostBeforeDelivery": false
+    },
+    {
+      "check": "scopeDenialsCasAndEvidenceState",
+      "httpRace": [
+        200,
+        412
+      ],
+      "staleEligible": false,
+      "partialEligible": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

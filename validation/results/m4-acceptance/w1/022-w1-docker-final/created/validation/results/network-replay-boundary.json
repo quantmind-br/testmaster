@@ -1,0 +1,320 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "network-replay-boundary",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:01:32.720Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--base-url",
+        "http://127.0.0.1:38487",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_996ab51f-3263-45da-aa13-15695a79f596",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "doctor",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a622581e-8964-4e41-bdbc-7927024163f3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "lint",
+        "--plan",
+        "/tmp/tm-m1-75wz8L/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_eccdfb4a-98de-47e7-93d4-0fefddfff884",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-75wz8L/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_610e3a24-2e40-4c2e-aa59-746f5f26dffc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a3-f492-7157-8d84-9a9fd677cecf",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_16981aa4-6c8c-4d07-890f-8adb1f1196ce",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a136a3-fb27-72fc-83af-a16bc14d47dc",
+        "--out",
+        "/tmp/tm-m1-75wz8L/repo/http-evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_723512b5-ee18-49ea-b212-49d1cd262fef",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a136a3-fb27-72fc-83af-a16bc14d47dc",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-75wz8L/repo/http-report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2301c5a8-76a7-4245-a493-7fbca97c681c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a136a3-fb27-72fc-83af-a16bc14d47dc",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_02ca3d19-0007-4373-921a-e6d88287c613",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "lint",
+        "--plan",
+        "/tmp/tm-m1-75wz8L/repo/browser.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3eddb971-af8b-4e87-b6fa-c7560af4483d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-75wz8L/repo/browser.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9537d054-f1b5-4a1e-b2a0-d75d4ab5af83",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a4-12b1-706c-900f-eb14a18051e1",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_aba59add-7443-4e7f-a1dd-a30a96886d91",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a136a4-192d-71bf-a220-ed1f6f29b911",
+        "--out",
+        "/tmp/tm-m1-75wz8L/repo/browser-evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cfa6a0f2-7cdf-4957-872d-f039425a888c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a136a4-192d-71bf-a220-ed1f6f29b911",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-75wz8L/repo/browser-report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a37e7da9-84da-4808-b2e8-482867fb33e3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "run_01a136a4-192d-71bf-a220-ed1f6f29b911",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3b65a309-4350-42c3-bc73-2fcaf28bab2e",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a3-fb27-72fc-83af-a16bc14d47dc",
+    "run_01a136a4-09b5-71f0-b1a8-a21b8b52e075",
+    "run_01a136a4-192d-71bf-a220-ed1f6f29b911",
+    "run_01a136a4-2d2e-758a-8a51-12c95537fd31"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "containerEgressOnlyAuthorizedTarget",
+      "healthy": true,
+      "runId": "run_01a136a3-fb27-72fc-83af-a16bc14d47dc",
+      "decisions": [
+        {
+          "origin": "http://127.0.0.1:38487",
+          "decision": "allow",
+          "reason": "allowed",
+          "pinnedIp": "127.0.0.1"
+        }
+      ]
+    },
+    {
+      "check": "containerEgressOnlyAuthorizedTarget",
+      "healthy": true,
+      "runId": "run_01a136a4-192d-71bf-a220-ed1f6f29b911",
+      "decisions": [
+        {
+          "origin": "http://127.0.0.1:38487",
+          "decision": "allow",
+          "reason": "allowed",
+          "pinnedIp": "127.0.0.1"
+        },
+        {
+          "origin": "http://127.0.0.1:38487",
+          "decision": "allow",
+          "reason": "allowed",
+          "pinnedIp": "127.0.0.1"
+        }
+      ]
+    },
+    {
+      "check": "replayControllerProcessTreeBoundary",
+      "healthy": true,
+      "targetConnections": 6,
+      "unauthorizedConnections": 0,
+      "analyticsUpdateModelTestSpriteRequests": 0,
+      "evidence": "validation/results/network-replay-boundary-replay-network.json",
+      "commands": 14
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

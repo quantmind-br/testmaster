@@ -1,0 +1,523 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m4-auth-failure-classes",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-auth",
+  "observedAt": "2026-10-13T18:48:35.102Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m4-auth-failure-classes",
+        "--base-url",
+        "http://127.0.0.1:37253",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_309291cb-160e-49bb-9495-5c80f56d78d9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "site-user",
+        "--from-env",
+        "TM_SITE_USER",
+        "--allowed-origin",
+        "http://127.0.0.1:37253",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5c13d8bc-5070-49dd-b5b2-27d213b6f055",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "site-pass",
+        "--from-env",
+        "TM_SITE_PASS",
+        "--allowed-origin",
+        "http://127.0.0.1:37253",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9292dfe5-3e0f-4d07-9422-b92ff18bf638",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "auth-profile",
+        "create",
+        "--file",
+        "/tmp/tm-m1-CwF1DF/repo/auth-profile.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_30933643-d904-403e-8e2e-4f2e977daf9a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "env",
+        "create",
+        "--name",
+        "authenticated",
+        "--base-url",
+        "http://127.0.0.1:37253",
+        "--network-profile",
+        "local-loopback",
+        "--auth-ref",
+        "aup_01a13697-f3bc-76b0-9d78-221549931f94",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f74a6d22-e34e-4280-989b-09f82240d6e9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-CwF1DF/repo/wrong-user.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_890001ff-2196-4aac-97ac-69b3495c5fb0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a13697-f8dd-764a-a20e-433d2a3b47ad",
+        "--env",
+        "authenticated",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_ae55052b-ab6f-45c8-a637-c7e6ccc903a7",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a13697-fede-7335-8f3b-a27b3a687c19",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_efc72024-e2c2-4e82-ac4b-4cf06f69ef95",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a13697-fede-7335-8f3b-a27b3a687c19",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8f273c7b-8e40-4d1a-8c3f-ce06958dcee2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a13697-fede-7335-8f3b-a27b3a687c19",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2cde1335-52d8-4177-88b7-24869b7eb7db",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "rotate",
+        "sec_01a13697-f0e0-734d-8946-7a9aea364fd6",
+        "--from-env",
+        "TM_SITE_PASS",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_503429b2-d9c0-4591-96fb-d99bdfcc7882",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-CwF1DF/repo/good-user.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1177a734-76c2-422f-9e43-4e075cf097c7",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a13698-12f8-7131-8e4a-931a6a99cffd",
+        "--env",
+        "authenticated",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_61f33005-05c8-4779-a355-16d2358c8ac9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a13698-1917-76c8-accd-28f856c83c40",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f132aad1-f3f5-4458-badc-c04b0d6ff09f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a13698-1917-76c8-accd-28f856c83c40",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_167f59b7-f0af-41e0-96f9-cef5bc787ae1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a13698-12f8-7131-8e4a-931a6a99cffd",
+        "--env",
+        "authenticated",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_40f550d6-fbfa-4d60-a3eb-98eb33baf20f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a13698-29a7-77f8-b9a0-35982283483b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8b41faa3-eecf-4b53-b12c-06e20246b703",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a13698-29a7-77f8-b9a0-35982283483b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f0f24a0e-422f-4f49-aa79-5e90d5bba45c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a13698-12f8-7131-8e4a-931a6a99cffd",
+        "--env",
+        "authenticated",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_c59f06ca-c5c7-4827-b1ec-9cb9e33adbfc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a13698-3566-740a-9197-e29d36b8f3ac",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_70d83ba7-9b78-40c6-8a51-13dd22d714d4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a13698-3566-740a-9197-e29d36b8f3ac",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d9071f84-aaa6-4708-a4a0-5ee2f776a1a3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "rotate",
+        "sec_01a13697-f0e0-734d-8946-7a9aea364fd6",
+        "--from-env",
+        "TM_SITE_PASS",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f2445c76-ac24-4e3a-af67-d08cbd7342e0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "env",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9285902c-dc14-4ffd-9789-8bb89ee92935",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "auth-profile",
+        "test-login",
+        "aup_01a13697-f3bc-76b0-9d78-221549931f94",
+        "--environment",
+        "env_01a13697-f6ac-76da-87b1-a77bb0a9031c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_323f1992-9fe6-41e5-b4a6-02593014b627",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a13698-12f8-7131-8e4a-931a6a99cffd",
+        "--env",
+        "authenticated",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b760ca4c-7438-411d-b72c-a4c2052ce20f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a13698-4980-7636-88f6-f66093b3182c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_121d9ba9-450a-4c58-bb38-2d963a4dcf53",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a13698-4980-7636-88f6-f66093b3182c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a3e4b24b-d75c-4378-9a90-c3f9401e935d",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a13697-fede-7335-8f3b-a27b3a687c19",
+    "run_01a13698-1917-76c8-accd-28f856c83c40",
+    "run_01a13698-29a7-77f8-b9a0-35982283483b",
+    "run_01a13698-3566-740a-9197-e29d36b8f3ac",
+    "run_01a13698-4980-7636-88f6-f66093b3182c"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "authFailureDistinctFromAssertionFailure",
+      "healthy": true,
+      "observed": {
+        "failed": "failed",
+        "inconclusive": "inconclusive",
+        "blocked": "blocked",
+        "recovered": "passed"
+      }
+    }
+  ],
+  "limitations": [
+    "Reference identity provider and target on loopback; no real SaaS IdP, WebAuthn or push approval.",
+    "Automated oracle only; CAPTCHA is a recorded checkpoint, never solved."
+  ]
+}

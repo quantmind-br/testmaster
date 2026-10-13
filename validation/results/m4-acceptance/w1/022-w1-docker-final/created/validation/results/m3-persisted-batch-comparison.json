@@ -1,0 +1,268 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-persisted-batch-comparison",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:59:28.215Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-persisted-batch-comparison",
+        "--base-url",
+        "http://127.0.0.1:41095",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_dacfc4cc-b632-4c6a-ba52-49ca2a92506f",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a2-3299-71e2-805d-67620f8171fc",
+    "run_01a136a2-32a5-714f-8148-66e350acf09d",
+    "run_01a136a2-38e5-756b-8b00-7e21d2d3c002",
+    "run_01a136a2-38f4-70b3-a626-0f6e39f77c2c",
+    "run_01a136a2-3f2a-70c1-8f79-e636cd5427c5",
+    "run_01a136a2-3f38-7767-89bf-2a3fbc6a6e3b",
+    "run_01a136a2-4577-7638-9fa5-1214017aecc6",
+    "run_01a136a2-4583-7728-93de-94b72f0114ba"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "persistedLogicalBatchMatching",
+      "batches": [
+        "bat_01a136a2-328b-724d-b6db-41b6f64ea06f",
+        "bat_01a136a2-38d6-77f7-a07a-3a46c4831407",
+        "bat_01a136a2-3f1c-77f7-bb54-b2b6ec63fad3",
+        "bat_01a136a2-4568-7173-9c86-f71883087261"
+      ],
+      "diff": {
+        "comparability": "partially_comparable",
+        "reasons": [
+          "member-added-or-removed"
+        ],
+        "differences": [
+          {
+            "field": "2c8b3ecd94e8912ece64fcbc3e170c95546f4511af5bf6d8c595a2ec02f74b45-steps",
+            "left": [
+              {
+                "createdAt": "2026-10-13T18:59:22.555Z",
+                "durationMs": 55,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a136a2-32e4-7727-82f0-5b04859acebd"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a2-31de-72dd-b37a-5cec9b18064b"
+              },
+              {
+                "createdAt": "2026-10-13T18:59:22.557Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a2-31de-72dd-b37a-5cec9b18064b"
+              },
+              {
+                "createdAt": "2026-10-13T18:59:22.558Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a2-31de-72dd-b37a-5cec9b18064b"
+              }
+            ],
+            "right": [
+              {
+                "createdAt": "2026-10-13T18:59:26.484Z",
+                "durationMs": 42,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a136a2-423a-776e-be56-ba979015edc5"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a2-31de-72dd-b37a-5cec9b18064b"
+              },
+              {
+                "createdAt": "2026-10-13T18:59:26.485Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a2-31de-72dd-b37a-5cec9b18064b"
+              },
+              {
+                "createdAt": "2026-10-13T18:59:26.486Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a2-31de-72dd-b37a-5cec9b18064b"
+              }
+            ]
+          },
+          {
+            "field": "2c8b3ecd94e8912ece64fcbc3e170c95546f4511af5bf6d8c595a2ec02f74b45-artifacts",
+            "left": [
+              {
+                "kind": "http",
+                "hash": "3fc894c6e0b6911b6013c261aa91e3eec821a95d183ec99defb24eb7fb979863",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "066441c30ac884d28a2bc642cff518c3a41edaa2e3608a205be7a7c8625b2f8a",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "6abb8446ab9754c9d8a3523e7063d4d2f2189dc42b3357529abb694151a6dcb7",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ],
+            "right": [
+              {
+                "kind": "http",
+                "hash": "860ddfc420a100c153b4010baf019e6ef7fa9904a6328fa99cb459b7a5592b99",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "066441c30ac884d28a2bc642cff518c3a41edaa2e3608a205be7a7c8625b2f8a",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "42ec117d4ae68a15cc8c8d715ea745677725e638acb85a551e6339b5df9210d7",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ]
+          },
+          {
+            "field": "member-3061471d14df9b5d39af00363d83372247ebfb5bd420b8e7b98e4b4da639afbb",
+            "left": null,
+            "right": "run_01a136a2-3f2a-70c1-8f79-e636cd5427c5"
+          },
+          {
+            "field": "member-4c3ecf9e1b6ad359462b968d01ef0a9bd123da61ebf56f7ca4801e71147df0e4",
+            "left": "run_01a136a2-32a5-714f-8148-66e350acf09d",
+            "right": null
+          }
+        ],
+        "comparisonIdentity": "32ef07e5c06fb860d03e34f26afed4bc5eaa9e6a2e8c950784f2278e3ec5a344",
+        "nextCursor": null
+      },
+      "duplicate": {
+        "comparability": "incomparable",
+        "reasons": [
+          "ambiguous-logical-member-key",
+          "member-added-or-removed"
+        ],
+        "differences": [
+          {
+            "field": "ambiguous-2c8b3ecd94e8912ece64fcbc3e170c95546f4511af5bf6d8c595a2ec02f74b45",
+            "left": [
+              "run_01a136a2-4577-7638-9fa5-1214017aecc6",
+              "run_01a136a2-4583-7728-93de-94b72f0114ba"
+            ],
+            "right": [
+              "run_01a136a2-38f4-70b3-a626-0f6e39f77c2c"
+            ]
+          },
+          {
+            "field": "member-4c3ecf9e1b6ad359462b968d01ef0a9bd123da61ebf56f7ca4801e71147df0e4",
+            "left": null,
+            "right": "run_01a136a2-38e5-756b-8b00-7e21d2d3c002"
+          }
+        ],
+        "comparisonIdentity": "a2137713afe6216ea0c3fe6ef28fbb3922afb7fde41f41f0612fb5fed94030b7",
+        "nextCursor": null
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

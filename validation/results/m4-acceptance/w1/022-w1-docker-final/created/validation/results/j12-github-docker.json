@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j12-github-docker",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-fake-github",
+  "observedAt": "2026-10-13T19:05:37.808Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "scenario": "docker-preview-run",
+      "runs": [
+        {
+          "id": "run_01a136a7-e2bb-729b-ac72-b6d2363e17f2",
+          "phase": "completed"
+        },
+        {
+          "id": "run_01a136a7-de79-71d5-940b-0f72e4e45923",
+          "phase": "completed"
+        }
+      ],
+      "a": {
+        "TestMaster / required-gate": "success",
+        "TestMaster / result": "success"
+      },
+      "b": {
+        "TestMaster / result": "failure",
+        "TestMaster / required-gate": "failure"
+      }
+    },
+    {
+      "scenario": "docker-redirect-egress",
+      "redirected": {
+        "TestMaster / required-gate": "failure",
+        "TestMaster / result": "failure"
+      },
+      "healthy": {
+        "TestMaster / result": "success",
+        "TestMaster / required-gate": "success"
+      },
+      "foreignHits": 0
+    }
+  ],
+  "limitations": [
+    "Local fake GitHub API and webhook sender; the real GitHub App installation is the hosted Wave 2 proof.",
+    "The preview origin is a local HTTP fixture on the Docker host, not a vendor preview deployment."
+  ]
+}

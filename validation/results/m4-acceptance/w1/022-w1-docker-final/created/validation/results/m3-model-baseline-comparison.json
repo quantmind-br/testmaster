@@ -1,0 +1,548 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-model-baseline-comparison",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:04:18.156Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-model-baseline-comparison",
+        "--base-url",
+        "http://127.0.0.1:33913",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f092c1e7-ea7c-41b4-9d37-78acb3019483",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a6-b041-72e1-825e-0a658d3dcf0c",
+    "run_01a136a6-b476-72fb-bed0-28d51a32ed3f"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "persistedModelProvenance",
+      "modelCalls": 2,
+      "modelDiff": {
+        "comparability": "partially_comparable",
+        "reasons": [
+          "revision-changed",
+          "modelConfigHash-changed",
+          "generationModel-changed"
+        ],
+        "differences": [
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-revisionId",
+            "left": "rev_01a136a6-ac99-70ab-bb71-93c991e25885",
+            "right": "rev_01a136a6-b42d-775d-84cd-8149742b6180"
+          },
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-revisionOrigin",
+            "left": "generated",
+            "right": "manual"
+          },
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-generationModelCallId",
+            "left": "mdl_01a136a6-aad2-77a9-8bd8-fb9826f42450",
+            "right": null
+          },
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-admission",
+            "left": {
+              "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+              "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+              "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+              "configuredModelHash": "2a247bc6a740da253e509667125fcb9a4552d949836ddbcd3ca87a7b99827680",
+              "dependenciesLockHash": null,
+              "environmentHash": "7da0c60f4c648c3b70a06d880c4d2692f1da806d0eb8e6493e19f39ebf87c12b",
+              "generationModel": {
+                "cost": "unknown",
+                "id": "mdl_01a136a6-aad2-77a9-8bd8-fb9826f42450",
+                "model": "model",
+                "modelConfigHash": "3dfd0683b6067c2f819d5c12a2727a438dddfdddbcd3791da9d1547d1c76f2a3",
+                "promptHash": "57bcf3af1e369a7feb3426ad561c768810a40fb87a3d52b61d91d57c26a4cf4e",
+                "provider": "fake",
+                "responseHash": "80e44cb9af9dcd36b7d4905e75b2692b895de6cb4edc835927d85a4766db5351",
+                "sourceRevisionIds": [
+                  "svr_01a136a6-aa60-75b6-a400-8229d0b460a7"
+                ],
+                "usage": {
+                  "inputTokens": 20,
+                  "outputTokens": 10,
+                  "reasoningTokens": 3
+                }
+              },
+              "generationModelCallId": "mdl_01a136a6-aad2-77a9-8bd8-fb9826f42450",
+              "images": {
+                "testmaster-runner": {
+                  "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                  "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                  "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                  "seccomp": {
+                    "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                    "engineVersion": "29.8.1",
+                    "inputs": {
+                      "engineDefault": {
+                        "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                        "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                      },
+                      "originalDefault": {
+                        "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                        "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                      },
+                      "playwright": {
+                        "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                        "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                      }
+                    },
+                    "profileModuleVersion": "v0.2.3",
+                    "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                  }
+                },
+                "testmaster-runner-python": {
+                  "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                  "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                  "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                  "seccomp": {
+                    "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                    "engineVersion": "29.8.1",
+                    "inputs": {
+                      "engineDefault": {
+                        "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                        "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                      },
+                      "originalDefault": {
+                        "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                        "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                      },
+                      "playwright": {
+                        "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                        "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                      }
+                    },
+                    "profileModuleVersion": "v0.2.3",
+                    "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                  }
+                }
+              },
+              "inputFixtureHashes": {},
+              "inputHash": "22c2c3be9872709d303a3051865bb72f95c14e67596808094d7482b421de627c",
+              "limitations": [
+                "mutable-external-target",
+                "mutable-external-payload",
+                "browser-platform-rendering",
+                "remote-model-snapshot-unavailable",
+                "source-dependency-lock-unavailable"
+              ],
+              "modelConfigHash": "3dfd0683b6067c2f819d5c12a2727a438dddfdddbcd3791da9d1547d1c76f2a3",
+              "modelProviders": [
+                {
+                  "apiKeyEnv": "FAKE_KEY",
+                  "baseUrl": "http://127.0.0.1:40671/v1",
+                  "id": "fake",
+                  "kind": "openai-compatible",
+                  "models": [
+                    {
+                      "capabilities": {
+                        "maxOutputTokens": 1024,
+                        "structuredJson": true,
+                        "toolCalls": true
+                      },
+                      "id": "model"
+                    }
+                  ]
+                }
+              ],
+              "policyHash": "ac90a7928409b59a37d7537efea2d2646b48e9153887b41b1a428a976b4ed3d4",
+              "profilePolicy": {
+                "allowCiHealing": false,
+                "allowUpload": false,
+                "allowedModelProviders": [
+                  "fake"
+                ],
+                "limits": {
+                  "attemptTimeoutMs": 900000,
+                  "executionTimeoutMs": 7200000,
+                  "maxAttempts": 2
+                },
+                "offline": false,
+                "projectId": "prj_01a136a6-aa1b-7590-aa21-ca7fa9f9d454",
+                "security": {
+                  "allowUnsafeProcessExecution": false
+                }
+              },
+              "repository": {
+                "baseSha": null,
+                "binding": "verified",
+                "checkoutSha": "62268728bfef7882ede198c5c1dba9d345ef4c0a",
+                "commitSha": "62268728bfef7882ede198c5c1dba9d345ef4c0a",
+                "deploymentId": null,
+                "dirtyHash": null,
+                "limitations": [],
+                "repositoryId": "local:9d73f075af9e9b1d7ed34f3e6abe82c839d65cbd55a0e21f907eea5ec70dfecd"
+              },
+              "requiredCapabilities": [
+                "http"
+              ],
+              "revisionHash": "0f7c453e8fb764c214e1346a6c9260d15a8f331f728e96b371397c338fbd97dd",
+              "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "runtimeIdentity": {
+                "browserName": "chromium",
+                "browserVersion": "153.0.8010.12",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "nodeVersion": "v24.20.0",
+                "playwrightVersion": "1.63.0"
+              },
+              "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+              "seed": 0,
+              "sourceRevisions": [
+                {
+                  "contentHash": "08035a04b7a0a98d4408a29d019fefd92e58dcf4bb1a9e6715322304a68d8cb7",
+                  "id": "svr_01a136a6-aa60-75b6-a400-8229d0b460a7"
+                }
+              ]
+            },
+            "right": {
+              "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+              "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+              "capabilityManifestHash": "c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57",
+              "configuredModelHash": "2a247bc6a740da253e509667125fcb9a4552d949836ddbcd3ca87a7b99827680",
+              "dependenciesLockHash": null,
+              "environmentHash": "7da0c60f4c648c3b70a06d880c4d2692f1da806d0eb8e6493e19f39ebf87c12b",
+              "generationModel": null,
+              "generationModelCallId": null,
+              "images": {
+                "testmaster-runner": {
+                  "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                  "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                  "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                  "seccomp": {
+                    "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                    "engineVersion": "29.8.1",
+                    "inputs": {
+                      "engineDefault": {
+                        "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                        "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                      },
+                      "originalDefault": {
+                        "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                        "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                      },
+                      "playwright": {
+                        "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                        "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                      }
+                    },
+                    "profileModuleVersion": "v0.2.3",
+                    "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                  }
+                },
+                "testmaster-runner-python": {
+                  "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                  "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                  "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                  "seccomp": {
+                    "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                    "engineVersion": "29.8.1",
+                    "inputs": {
+                      "engineDefault": {
+                        "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                        "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                      },
+                      "originalDefault": {
+                        "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                        "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                      },
+                      "playwright": {
+                        "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                        "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                      }
+                    },
+                    "profileModuleVersion": "v0.2.3",
+                    "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                  }
+                }
+              },
+              "inputFixtureHashes": {},
+              "inputHash": "22c2c3be9872709d303a3051865bb72f95c14e67596808094d7482b421de627c",
+              "limitations": [
+                "mutable-external-target",
+                "mutable-external-payload",
+                "browser-platform-rendering",
+                "source-dependency-lock-unavailable"
+              ],
+              "modelConfigHash": null,
+              "modelProviders": [
+                {
+                  "apiKeyEnv": "FAKE_KEY",
+                  "baseUrl": "http://127.0.0.1:40671/v1",
+                  "id": "fake",
+                  "kind": "openai-compatible",
+                  "models": [
+                    {
+                      "capabilities": {
+                        "maxOutputTokens": 1024,
+                        "structuredJson": true,
+                        "toolCalls": true
+                      },
+                      "id": "model"
+                    }
+                  ]
+                }
+              ],
+              "policyHash": "ac90a7928409b59a37d7537efea2d2646b48e9153887b41b1a428a976b4ed3d4",
+              "profilePolicy": {
+                "allowCiHealing": false,
+                "allowUpload": false,
+                "allowedModelProviders": [
+                  "fake"
+                ],
+                "limits": {
+                  "attemptTimeoutMs": 900000,
+                  "executionTimeoutMs": 7200000,
+                  "maxAttempts": 2
+                },
+                "offline": false,
+                "projectId": "prj_01a136a6-aa1b-7590-aa21-ca7fa9f9d454",
+                "security": {
+                  "allowUnsafeProcessExecution": false
+                }
+              },
+              "repository": {
+                "baseSha": null,
+                "binding": "verified",
+                "checkoutSha": "62268728bfef7882ede198c5c1dba9d345ef4c0a",
+                "commitSha": "62268728bfef7882ede198c5c1dba9d345ef4c0a",
+                "deploymentId": null,
+                "dirtyHash": null,
+                "limitations": [],
+                "repositoryId": "local:9d73f075af9e9b1d7ed34f3e6abe82c839d65cbd55a0e21f907eea5ec70dfecd"
+              },
+              "requiredCapabilities": [
+                "http"
+              ],
+              "revisionHash": "0f7c453e8fb764c214e1346a6c9260d15a8f331f728e96b371397c338fbd97dd",
+              "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "runtimeIdentity": {
+                "browserName": "chromium",
+                "browserVersion": "153.0.8010.12",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "nodeVersion": "v24.20.0",
+                "playwrightVersion": "1.63.0"
+              },
+              "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+              "seed": 0,
+              "sourceRevisions": [
+                {
+                  "contentHash": "08035a04b7a0a98d4408a29d019fefd92e58dcf4bb1a9e6715322304a68d8cb7",
+                  "id": "svr_01a136a6-aa60-75b6-a400-8229d0b460a7"
+                }
+              ]
+            }
+          },
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-steps",
+            "left": [
+              {
+                "createdAt": "2026-10-13T19:04:17.002Z",
+                "durationMs": 43,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a136a6-b0a1-7775-8d61-7f21f7ddf028"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a6-aa10-73a3-85e9-af0a0088bdf0"
+              },
+              {
+                "createdAt": "2026-10-13T19:04:17.011Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a6-aa10-73a3-85e9-af0a0088bdf0"
+              },
+              {
+                "createdAt": "2026-10-13T19:04:17.013Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a6-aa10-73a3-85e9-af0a0088bdf0"
+              }
+            ],
+            "right": [
+              {
+                "createdAt": "2026-10-13T19:04:17.958Z",
+                "durationMs": 14,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a136a6-b4b3-76b8-8722-85f907965c84"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a6-aa10-73a3-85e9-af0a0088bdf0"
+              },
+              {
+                "createdAt": "2026-10-13T19:04:18.002Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a6-aa10-73a3-85e9-af0a0088bdf0"
+              },
+              {
+                "createdAt": "2026-10-13T19:04:18.004Z",
+                "durationMs": 2,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a136a6-aa10-73a3-85e9-af0a0088bdf0"
+              }
+            ]
+          },
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-artifacts",
+            "left": [
+              {
+                "kind": "http",
+                "hash": "9c51cf6ae303baadd5d8a40ba6597ea02dff5fce93c0fa2b7cf3df7e4882a32c",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "493aecca41fdf1bfbeb3f52a06cfd3c7b03e202b2c47d0f85a0cd66ffbf3899e",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "10dc3e2258e92f71f1cdb86203ef9119d2e8348278b9f279ae422383dce134e7",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ],
+            "right": [
+              {
+                "kind": "http",
+                "hash": "94398e4d87ca685ca202e8092f5de01af0f413e28a4f9aee219a664db1172363",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "493aecca41fdf1bfbeb3f52a06cfd3c7b03e202b2c47d0f85a0cd66ffbf3899e",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "8f056d70063c07b7b4a25d3294fa2472ab07203669500b6c81e8d113b93634ea",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ]
+          },
+          {
+            "field": "b4673d718fa5fe02c65edf1fbbc9df24f6b3267919c4decb05f52533995b08ae-durations",
+            "left": [
+              {
+                "number": 1,
+                "durationMs": 855
+              }
+            ],
+            "right": [
+              {
+                "number": 1,
+                "durationMs": 764
+              }
+            ]
+          }
+        ],
+        "comparisonIdentity": "bf546ca46f85a61d2238b49fcb364c225c0d1b6d16d89597f49ae855152eb23c",
+        "nextCursor": null
+      },
+      "limitation": "Visual baseline comparison acceptance remains M5: even optional visualMatches is rejected before persistence."
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

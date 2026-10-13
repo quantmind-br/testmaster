@@ -1,0 +1,2979 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-assisted-review-surface-20261010",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:47:26.617Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-assisted-review-surface-20261010",
+        "--base-url",
+        "http://127.0.0.1:40505",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8b0e6b3e-3ebd-4708-a2cf-0ef356c80767",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "heal",
+        "review",
+        "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ed77430f-87c7-4aa6-82dd-3839898454e1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "heal",
+        "approve",
+        "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_df596372-f4d7-4b34-863d-ae01a117f96d",
+      "error": {
+        "code": "REVISION_CONFLICT",
+        "message": "Healing proposal or base changed",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "heal",
+        "review",
+        "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 3,
+      "signal": null,
+      "requestId": "cli_fcebe293-495f-4e45-9a8d-3b882772d0dd",
+      "error": {
+        "code": "FORBIDDEN",
+        "message": "Project is outside membership restrictions",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "heal",
+        "approve",
+        "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+        "--expected-version",
+        "1",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0fd83caa-48f6-40f9-8582-a374ccadae51",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "heal",
+        "review",
+        "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f7100995-096e-44c5-a455-50adb768965e",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a13696-a62b-7570-8f10-bc88f01ae07e",
+    "run_01a13696-aa21-7500-a16b-8b167d137802",
+    "run_01a13696-be06-77ef-a9d5-ead2c3efd635",
+    "run_01a13696-c1ff-7342-be19-8bcd15ed5b85",
+    "run_01a13697-40e1-758d-8a8d-607ca98e8414"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "automatedAssistedReviewAcceptance",
+      "proposalId": "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+      "baselineRunId": "run_01a13696-a62b-7570-8f10-bc88f01ae07e",
+      "failedRunId": "run_01a13696-aa21-7500-a16b-8b167d137802",
+      "positiveRunId": "run_01a13696-be06-77ef-a9d5-ead2c3efd635",
+      "semanticNegativeRunId": "run_01a13696-c1ff-7342-be19-8bcd15ed5b85",
+      "verificationRunId": "run_01a13697-40e1-758d-8a8d-607ca98e8414",
+      "beforeReview": {
+        "changes": [
+          {
+            "stepId": "quote",
+            "path": "/input/locator",
+            "before": {
+              "by": "testId",
+              "value": "quote"
+            },
+            "after": {
+              "by": "testId",
+              "value": "quote-new"
+            }
+          }
+        ],
+        "identity": [
+          {
+            "stepId": "quote",
+            "previous": {
+              "by": "testId",
+              "value": "quote"
+            },
+            "candidates": [
+              {
+                "role": null,
+                "name": null,
+                "tag": "html",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "head",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": false
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "body",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "form",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": "button",
+                "name": "Check price",
+                "tag": "button",
+                "type": "button",
+                "label": "Check price",
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "output",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "script",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": false
+              }
+            ],
+            "equivalence": {
+              "equivalent": true,
+              "reasons": [
+                "Unique recorded semantic identity and replacement locator match"
+              ]
+            }
+          }
+        ],
+        "automation": {
+          "decision": "manual_review_required",
+          "reasons": [
+            "Project policy has not explicitly authorized automatic healing"
+          ]
+        },
+        "preservedAssertions": {
+          "hash": "23ff374439b467b7d859ca0a759ab2730c707085ca4da3920084726437be93de",
+          "intact": true,
+          "stepIds": [
+            "exact-price"
+          ]
+        },
+        "risk": "write",
+        "verification": null,
+        "approval": {
+          "expectedVersion": 1,
+          "proposalId": "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+          "candidateRevisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3"
+        },
+        "evidenceRefs": [
+          {
+            "contentHash": "4bc69c4978c514b51d906713b526a5530e7656110a08c953e63f1fd85117fdb5",
+            "runId": "run_01a13696-aa21-7500-a16b-8b167d137802"
+          }
+        ],
+        "limitations": [
+          "Project policy has not explicitly authorized automatic healing",
+          "Candidate label unavailable for step quote",
+          "Candidate form unavailable for step quote"
+        ]
+      },
+      "afterReview": {
+        "changes": [
+          {
+            "stepId": "quote",
+            "path": "/input/locator",
+            "before": {
+              "by": "testId",
+              "value": "quote"
+            },
+            "after": {
+              "by": "testId",
+              "value": "quote-new"
+            }
+          }
+        ],
+        "identity": [
+          {
+            "stepId": "quote",
+            "previous": {
+              "by": "testId",
+              "value": "quote"
+            },
+            "candidates": [
+              {
+                "role": null,
+                "name": null,
+                "tag": "html",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "head",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": false
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "body",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "form",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": "button",
+                "name": "Check price",
+                "tag": "button",
+                "type": "button",
+                "label": "Check price",
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "output",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": true
+              },
+              {
+                "role": null,
+                "name": null,
+                "tag": "script",
+                "type": null,
+                "label": null,
+                "form": null,
+                "matched": false,
+                "visible": false
+              }
+            ],
+            "equivalence": {
+              "equivalent": true,
+              "reasons": [
+                "Unique recorded semantic identity and replacement locator match"
+              ]
+            }
+          }
+        ],
+        "automation": {
+          "decision": "not_eligible",
+          "reasons": [
+            "Project policy has not explicitly authorized automatic healing"
+          ]
+        },
+        "preservedAssertions": {
+          "hash": "23ff374439b467b7d859ca0a759ab2730c707085ca4da3920084726437be93de",
+          "intact": true,
+          "stepIds": [
+            "exact-price"
+          ]
+        },
+        "risk": "write",
+        "verification": {
+          "runId": "run_01a13697-40e1-758d-8a8d-607ca98e8414",
+          "outcome": "passed",
+          "gate": "passed"
+        },
+        "approval": {
+          "expectedVersion": 4,
+          "proposalId": "hea_01a13696-b1e9-7731-829f-fa322a22e9ce",
+          "candidateRevisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3"
+        },
+        "evidenceRefs": [
+          {
+            "contentHash": "4bc69c4978c514b51d906713b526a5530e7656110a08c953e63f1fd85117fdb5",
+            "runId": "run_01a13696-aa21-7500-a16b-8b167d137802"
+          }
+        ],
+        "limitations": [
+          "Project policy has not explicitly authorized automatic healing",
+          "Candidate label unavailable for step quote",
+          "Candidate form unavailable for step quote"
+        ]
+      },
+      "reviewLoad": {
+        "proposals": 1,
+        "changes": 1,
+        "changesPerProposal": 1
+      },
+      "surfaces": [
+        "built-cli-json",
+        "built-cli-text",
+        "built-rest-loopback",
+        "built-mcp-stdio"
+      ],
+      "staleApprovalRefused": true,
+      "crossProjectDenied": true,
+      "originalEvidenceUnchanged": true,
+      "evaluatedCommit": "d95c2801dfa3883fed11c2614f79f7355cb6f137",
+      "runtimeHashes": {
+        "apps/cli/dist/main.js": "accf98bbaf86471f33f70f18c8ec4d044dcd8397b04e26632d5778c3c2dfc64a",
+        "apps/cli/dist/heal.js": "fc303ee931e78671e6118ea669bb38ac6973ba848c239078d77c77c5f2106ae2",
+        "apps/server/dist/server.js": "dc61a128a0adfe4e81d700216c6835142d6f705a63222f8ae4e966eef2b6e95b",
+        "apps/mcp/dist/server.js": "4ba6c63fcb65eca57db333421b3a3a888e52321e438a6a869164a01cf89ce672",
+        "packages/application/dist/ai/healing.js": "3b362cd6ef4fc65cc8ab3519496013d8a5e647c7ab1bdde2077aae3cf5fe7eb2",
+        "containers/images.lock.json": "d10e4274c26b2cfc0ce7424e8202b2a477a678fb1ebb45113650f6414eb9943a",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts": "a5a4ab44f0b7ef5744dd1080e604b184624ec3077587885bde421ef0cce92620"
+      },
+      "runs": [
+        {
+          "id": "run_01a13696-a62b-7570-8f10-bc88f01ae07e",
+          "revisionId": "rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c",
+          "outcome": "passed",
+          "gate": "passed",
+          "records": [
+            {
+              "data_json": "{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-13T18:46:45.035Z\",\"environmentRevisionId\":\"evr_01a13696-a5c7-75bd-8bd0-7e512cd63990\",\"gate\":\"passed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a13696-a62b-7570-8f10-bc88f01ae07e\",\"matrixCell\":{\"actor\":{\"credentialId\":null,\"credentialKind\":null,\"principalId\":\"usr_01a13696-a5b9-76ae-9648-10fd71b2b163\"},\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"capabilityManifestHash\":\"5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9\",\"configuredModelHash\":\"18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38\",\"dependenciesLockHash\":null,\"environmentHash\":\"7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c\",\"imageId\":\"sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[{\"apiKeyEnv\":\"FAKE_KEY\",\"baseUrl\":\"http://127.0.0.1:41813/v1\",\"id\":\"fake\",\"kind\":\"openai-compatible\",\"models\":[{\"capabilities\":{\"maxOutputTokens\":1024,\"structuredJson\":true,\"toolCalls\":true},\"id\":\"model\"}]}],\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[\"fake\"],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"playwright\"],\"revisionHash\":\"fd845401ecb494833c1bc7743f0660dfb2aedb289517a0a987e7ea6eadcadbf6\",\"runnerImageDigest\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"eb5ac4a6ce488182725f10651d528cc54c6896371f2ae97cf05c2241185f5b45\",\"baseUrl\":\"http://127.0.0.1:40505\",\"correlationId\":\"83767664-bdbc-427c-96af-4d8823f56ed6\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"on\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":1,\"executionTimeoutMs\":150000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":1,\"mode\":\"replay\",\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"healing\":{\"mode\":\"apply\"},\"project\":{\"id\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"name\":\"m3-assisted-review-surface-20261010\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"default\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"project\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"environment\"},\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\"},\"environmentId\":\"env_01a13696-a5c7-75bd-8bd0-8234fe777643\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"apply\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":150000,\"logBytes\":10485760,\"maxAttempts\":1,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"maxConcurrency\":1,\"ownership\":\"ephemeral\",\"planHash\":\"fd845401ecb494833c1bc7743f0660dfb2aedb289517a0a987e7ea6eadcadbf6\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"passed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c\",\"status\":\"passed\",\"testId\":\"tst_01a13696-a5ee-73f6-a7e3-e67bf8fcc535\",\"version\":1,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            },
+            {
+              "data_json": "{\"endedAt\":null,\"id\":\"att_01a13696-a65c-74e6-8d3b-d44818a7576b\",\"number\":1,\"outcome\":null,\"phase\":\"preparing\",\"runId\":\"run_01a13696-a62b-7570-8f10-bc88f01ae07e\",\"seed\":0,\"startedAt\":\"2026-10-13T18:46:45.084Z\",\"workerId\":null,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            }
+          ]
+        },
+        {
+          "id": "run_01a13696-aa21-7500-a16b-8b167d137802",
+          "revisionId": "rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c",
+          "outcome": "failed",
+          "gate": "failed",
+          "records": [
+            {
+              "data_json": "{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-13T18:46:46.049Z\",\"environmentRevisionId\":\"evr_01a13696-a5c7-75bd-8bd0-7e512cd63990\",\"gate\":\"failed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a13696-aa21-7500-a16b-8b167d137802\",\"matrixCell\":{\"actor\":{\"credentialId\":null,\"credentialKind\":null,\"principalId\":\"usr_01a13696-a5b9-76ae-9648-10fd71b2b163\"},\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"capabilityManifestHash\":\"5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9\",\"configuredModelHash\":\"18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38\",\"dependenciesLockHash\":null,\"environmentHash\":\"7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c\",\"imageId\":\"sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[{\"apiKeyEnv\":\"FAKE_KEY\",\"baseUrl\":\"http://127.0.0.1:41813/v1\",\"id\":\"fake\",\"kind\":\"openai-compatible\",\"models\":[{\"capabilities\":{\"maxOutputTokens\":1024,\"structuredJson\":true,\"toolCalls\":true},\"id\":\"model\"}]}],\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[\"fake\"],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"playwright\"],\"revisionHash\":\"fd845401ecb494833c1bc7743f0660dfb2aedb289517a0a987e7ea6eadcadbf6\",\"runnerImageDigest\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"eb5ac4a6ce488182725f10651d528cc54c6896371f2ae97cf05c2241185f5b45\",\"baseUrl\":\"http://127.0.0.1:40505\",\"correlationId\":\"83767664-bdbc-427c-96af-4d8823f56ed6\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"on\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":1,\"executionTimeoutMs\":150000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":1,\"mode\":\"replay\",\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"healing\":{\"mode\":\"apply\"},\"project\":{\"id\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"name\":\"m3-assisted-review-surface-20261010\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"default\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"project\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"environment\"},\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\"},\"environmentId\":\"env_01a13696-a5c7-75bd-8bd0-8234fe777643\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"apply\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":150000,\"logBytes\":10485760,\"maxAttempts\":1,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"maxConcurrency\":1,\"ownership\":\"ephemeral\",\"planHash\":\"fd845401ecb494833c1bc7743f0660dfb2aedb289517a0a987e7ea6eadcadbf6\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"failed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c\",\"status\":\"failed\",\"testId\":\"tst_01a13696-a5ee-73f6-a7e3-e67bf8fcc535\",\"version\":1,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            },
+            {
+              "data_json": "{\"endedAt\":null,\"id\":\"att_01a13696-aa56-7478-b6d5-163f58755f6f\",\"number\":1,\"outcome\":null,\"phase\":\"preparing\",\"runId\":\"run_01a13696-aa21-7500-a16b-8b167d137802\",\"seed\":0,\"startedAt\":\"2026-10-13T18:46:46.102Z\",\"workerId\":null,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            }
+          ]
+        },
+        {
+          "id": "run_01a13696-be06-77ef-a9d5-ead2c3efd635",
+          "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+          "outcome": "passed",
+          "gate": "passed",
+          "records": [
+            {
+              "data_json": "{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-13T18:46:51.142Z\",\"environmentRevisionId\":\"evr_01a13696-a5c7-75bd-8bd0-7e512cd63990\",\"gate\":\"passed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a13696-be06-77ef-a9d5-ead2c3efd635\",\"matrixCell\":{\"actor\":{\"credentialId\":null,\"credentialKind\":null,\"principalId\":\"usr_01a13696-a5b9-76ae-9648-10fd71b2b163\"},\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"capabilityManifestHash\":\"5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9\",\"configuredModelHash\":\"18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38\",\"dependenciesLockHash\":null,\"environmentHash\":\"7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c\",\"imageId\":\"sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[{\"apiKeyEnv\":\"FAKE_KEY\",\"baseUrl\":\"http://127.0.0.1:41813/v1\",\"id\":\"fake\",\"kind\":\"openai-compatible\",\"models\":[{\"capabilities\":{\"maxOutputTokens\":1024,\"structuredJson\":true,\"toolCalls\":true},\"id\":\"model\"}]}],\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[\"fake\"],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"playwright\"],\"revisionHash\":\"27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf\",\"runnerImageDigest\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"9e7542137645afa2aac18ede7738a715debfa0a53ea9ae35097bce2f2277c355\",\"baseUrl\":\"http://127.0.0.1:40505\",\"correlationId\":\"83767664-bdbc-427c-96af-4d8823f56ed6\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"on\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":1,\"executionTimeoutMs\":150000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":1,\"mode\":\"replay\",\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"healing\":{\"mode\":\"apply\"},\"project\":{\"id\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"name\":\"m3-assisted-review-surface-20261010\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"default\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"project\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"environment\"},\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\"},\"environmentId\":\"env_01a13696-a5c7-75bd-8bd0-8234fe777643\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"apply\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":150000,\"logBytes\":10485760,\"maxAttempts\":1,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"maxConcurrency\":1,\"ownership\":\"ephemeral\",\"planHash\":\"27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"passed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3\",\"status\":\"passed\",\"testId\":\"tst_01a13696-a5ee-73f6-a7e3-e67bf8fcc535\",\"version\":1,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            },
+            {
+              "data_json": "{\"endedAt\":null,\"id\":\"att_01a13696-be3b-70ab-93e8-5391c2a2e82c\",\"number\":1,\"outcome\":null,\"phase\":\"preparing\",\"runId\":\"run_01a13696-be06-77ef-a9d5-ead2c3efd635\",\"seed\":0,\"startedAt\":\"2026-10-13T18:46:51.195Z\",\"workerId\":null,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            }
+          ]
+        },
+        {
+          "id": "run_01a13696-c1ff-7342-be19-8bcd15ed5b85",
+          "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+          "outcome": "failed",
+          "gate": "failed",
+          "records": [
+            {
+              "data_json": "{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-13T18:46:52.159Z\",\"environmentRevisionId\":\"evr_01a13696-a5c7-75bd-8bd0-7e512cd63990\",\"gate\":\"failed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a13696-c1ff-7342-be19-8bcd15ed5b85\",\"matrixCell\":{\"actor\":{\"credentialId\":null,\"credentialKind\":null,\"principalId\":\"usr_01a13696-a5b9-76ae-9648-10fd71b2b163\"},\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"capabilityManifestHash\":\"5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9\",\"configuredModelHash\":\"18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38\",\"dependenciesLockHash\":null,\"environmentHash\":\"7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c\",\"imageId\":\"sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[{\"apiKeyEnv\":\"FAKE_KEY\",\"baseUrl\":\"http://127.0.0.1:41813/v1\",\"id\":\"fake\",\"kind\":\"openai-compatible\",\"models\":[{\"capabilities\":{\"maxOutputTokens\":1024,\"structuredJson\":true,\"toolCalls\":true},\"id\":\"model\"}]}],\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[\"fake\"],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"playwright\"],\"revisionHash\":\"27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf\",\"runnerImageDigest\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"9e7542137645afa2aac18ede7738a715debfa0a53ea9ae35097bce2f2277c355\",\"baseUrl\":\"http://127.0.0.1:40505\",\"correlationId\":\"83767664-bdbc-427c-96af-4d8823f56ed6\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"on\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":1,\"executionTimeoutMs\":150000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":1,\"mode\":\"replay\",\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"healing\":{\"mode\":\"apply\"},\"project\":{\"id\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"name\":\"m3-assisted-review-surface-20261010\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"default\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"project\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"environment\"},\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\"},\"environmentId\":\"env_01a13696-a5c7-75bd-8bd0-8234fe777643\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"apply\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":150000,\"logBytes\":10485760,\"maxAttempts\":1,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"maxConcurrency\":1,\"ownership\":\"ephemeral\",\"planHash\":\"27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"cli\",\"outcome\":\"failed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3\",\"status\":\"failed\",\"testId\":\"tst_01a13696-a5ee-73f6-a7e3-e67bf8fcc535\",\"version\":1,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            },
+            {
+              "data_json": "{\"endedAt\":null,\"id\":\"att_01a13696-c238-7377-a7da-cd2cd2d70c19\",\"number\":1,\"outcome\":null,\"phase\":\"preparing\",\"runId\":\"run_01a13696-c1ff-7342-be19-8bcd15ed5b85\",\"seed\":0,\"startedAt\":\"2026-10-13T18:46:52.216Z\",\"workerId\":null,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            }
+          ]
+        },
+        {
+          "id": "run_01a13697-40e1-758d-8a8d-607ca98e8414",
+          "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+          "outcome": "passed",
+          "gate": "passed",
+          "records": [
+            {
+              "data_json": "{\"analysisStatus\":\"not_requested\",\"batchId\":null,\"cleanupOutcome\":\"not_required\",\"createdAt\":\"2026-10-13T18:47:24.641Z\",\"environmentRevisionId\":\"evr_01a13696-a5c7-75bd-8bd0-7e512cd63990\",\"gate\":\"passed\",\"gatePolicy\":{\"cleanupRequired\":false,\"executor\":\"docker\",\"ownership\":\"ephemeral\",\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"policySatisfied\":true,\"requiredDependenciesPassed\":true,\"requiredEvidenceComplete\":true},\"id\":\"run_01a13697-40e1-758d-8a8d-607ca98e8414\",\"matrixCell\":{\"actor\":{\"credentialId\":null,\"credentialKind\":null,\"principalId\":\"usr_01a13696-a5b9-76ae-9648-10fd71b2b163\"},\"admissionSnapshot\":{\"browserImageDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"capabilityManifestHash\":\"5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9\",\"configuredModelHash\":\"18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38\",\"dependenciesLockHash\":null,\"environmentHash\":\"7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560\",\"generationModel\":null,\"generationModelCallId\":null,\"images\":{\"testmaster-runner\":{\"baseDigest\":\"mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27\",\"buildInputsHash\":\"4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}},\"testmaster-runner-python\":{\"baseDigest\":\"mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0\",\"buildInputsHash\":\"863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c\",\"imageId\":\"sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af\",\"seccomp\":{\"engineDependencySource\":\"https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod\",\"engineVersion\":\"29.8.1\",\"inputs\":{\"engineDefault\":{\"sha256\":\"536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74\",\"source\":\"https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json\"},\"originalDefault\":{\"sha256\":\"50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274\",\"source\":\"https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json\"},\"playwright\":{\"sha256\":\"cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849\",\"source\":\"https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json\"}},\"profileModuleVersion\":\"v0.2.3\",\"profileSha256\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\"}}},\"inputFixtureHashes\":{},\"inputHash\":\"3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19\",\"limitations\":[\"mutable-external-target\",\"mutable-external-payload\",\"browser-platform-rendering\",\"repository-commit-unavailable\",\"source-binding-unavailable\",\"source-dependency-lock-unavailable\"],\"modelConfigHash\":null,\"modelProviders\":[{\"apiKeyEnv\":\"FAKE_KEY\",\"baseUrl\":\"http://127.0.0.1:41813/v1\",\"id\":\"fake\",\"kind\":\"openai-compatible\",\"models\":[{\"capabilities\":{\"maxOutputTokens\":1024,\"structuredJson\":true,\"toolCalls\":true},\"id\":\"model\"}]}],\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\",\"profilePolicy\":{\"allowCiHealing\":false,\"allowUpload\":false,\"allowedModelProviders\":[\"fake\"],\"limits\":{\"attemptTimeoutMs\":900000,\"executionTimeoutMs\":7200000,\"maxAttempts\":2},\"offline\":false,\"projectId\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"security\":{\"allowUnsafeProcessExecution\":false}},\"repository\":{\"baseSha\":null,\"binding\":\"unbound\",\"checkoutSha\":null,\"commitSha\":null,\"deploymentId\":null,\"dirtyHash\":null,\"limitations\":[\"repository-commit-unavailable\"],\"repositoryId\":null},\"requiredCapabilities\":[\"playwright\"],\"revisionHash\":\"27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf\",\"runnerImageDigest\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"runtimeIdentity\":{\"browserName\":\"chromium\",\"browserVersion\":\"153.0.8010.12\",\"imageId\":\"sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c\",\"nodeVersion\":\"v24.20.0\",\"playwrightVersion\":\"1.63.0\"},\"seccompHash\":\"5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72\",\"seed\":0,\"sourceRevisions\":[]},\"admissionSnapshotHash\":\"9e7542137645afa2aac18ede7738a715debfa0a53ea9ae35097bce2f2277c355\",\"baseUrl\":\"http://127.0.0.1:40505\",\"correlationId\":\"cli_0fd83caa-48f6-40f9-8582-a374ccadae51\",\"effectiveConfig\":{\"config\":{\"artifacts\":{\"httpBodies\":\"off\",\"retentionDays\":30,\"trace\":\"on\",\"video\":\"off\"},\"browser\":{\"name\":\"chromium\",\"testIdAttributes\":[\"data-testid\"],\"viewport\":{\"height\":720,\"width\":1280}},\"environment\":{\"baseUrl\":\"http://127.0.0.1:3000\",\"locale\":\"en-US\",\"networkProfile\":\"local-loopback\",\"timezone\":\"UTC\"},\"execution\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"concurrency\":1,\"executionTimeoutMs\":150000,\"executor\":\"docker\",\"logBytes\":10485760,\"maxAttempts\":1,\"mode\":\"replay\",\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"healing\":{\"mode\":\"apply\"},\"project\":{\"id\":\"prj_01a13696-a5c4-7693-aac2-fa3d05489c81\",\"name\":\"m3-assisted-review-surface-20261010\"},\"schemaVersion\":\"1.0.0\",\"telemetry\":{\"enabled\":false}},\"origins\":{\"artifacts.httpBodies\":\"default\",\"artifacts.retentionDays\":\"project\",\"artifacts.trace\":\"project\",\"artifacts.video\":\"project\",\"browser.name\":\"project\",\"browser.testIdAttributes\":\"project\",\"browser.viewport.height\":\"project\",\"browser.viewport.width\":\"project\",\"environment.baseUrl\":\"project\",\"environment.locale\":\"project\",\"environment.networkProfile\":\"project\",\"environment.timezone\":\"project\",\"execution.analysisGraceMs\":\"project\",\"execution.artifactBytes\":\"project\",\"execution.attemptArtifactBytes\":\"project\",\"execution.attemptTimeoutMs\":\"project\",\"execution.bodyBytes\":\"project\",\"execution.collectionGraceMs\":\"project\",\"execution.concurrency\":\"project\",\"execution.executionTimeoutMs\":\"project\",\"execution.executor\":\"project\",\"execution.logBytes\":\"project\",\"execution.maxAttempts\":\"project\",\"execution.mode\":\"project\",\"execution.networkRequestTimeoutMs\":\"project\",\"execution.preparationTimeoutMs\":\"project\",\"execution.stepTimeoutMs\":\"project\",\"healing.mode\":\"project\",\"project.id\":\"project\",\"project.name\":\"project\",\"schemaVersion\":\"project\",\"telemetry.enabled\":\"environment\"},\"policyHash\":\"d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33\"},\"environmentId\":\"env_01a13696-a5c7-75bd-8bd0-8234fe777643\",\"environmentName\":\"local\",\"executor\":\"docker\",\"healingPolicy\":\"off\",\"healingProposalId\":\"hea_01a13696-b1e9-7731-829f-fa322a22e9ce\",\"limits\":{\"analysisGraceMs\":60000,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"attemptTimeoutMs\":120000,\"bodyBytes\":10485760,\"collectionGraceMs\":60000,\"executionTimeoutMs\":150000,\"logBytes\":10485760,\"maxAttempts\":1,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"stepTimeoutMs\":5000},\"maxConcurrency\":1,\"ownership\":\"ephemeral\",\"planHash\":\"27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf\",\"seed\":0},\"mode\":\"replay\",\"origin\":\"verification\",\"outcome\":\"passed\",\"phase\":\"completed\",\"revisionId\":\"rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3\",\"status\":\"passed\",\"testId\":\"tst_01a13696-a5ee-73f6-a7e3-e67bf8fcc535\",\"version\":1,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            },
+            {
+              "data_json": "{\"endedAt\":null,\"id\":\"att_01a13697-4127-748a-8101-f26a83911911\",\"number\":1,\"outcome\":null,\"phase\":\"preparing\",\"runId\":\"run_01a13697-40e1-758d-8a8d-607ca98e8414\",\"seed\":0,\"startedAt\":\"2026-10-13T18:47:24.711Z\",\"workerId\":null,\"workspaceId\":\"ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5\"}"
+            }
+          ]
+        }
+      ],
+      "manifests": [
+        {
+          "attemptId": "att_01a13696-a65c-74e6-8d3b-d44818a7576b",
+          "entries": [
+            {
+              "artifactId": "art_01a13696-a881-7208-a35b-9660f83ede64",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-before.png",
+              "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+              "sizeBytes": 4254,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a885-7000-a144-a0fa26bba5a1",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-before.html",
+              "sha256": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+              "sizeBytes": 39,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8a2-728c-97fb-2e5e1ed617bd",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-after.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8a4-74c3-9159-03f7586952c1",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-after.html",
+              "sha256": "878091e9ff9aa6b719cdb44116c3648513b70a45851b356a736f9d4ff933470a",
+              "sizeBytes": 199,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8b5-743e-b254-d2db7aa576f9",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-before.json",
+              "sha256": "b48c331be40b21fa671e8d9b4a1f3882a76893d2a58c69459171979b7f196ae6",
+              "sizeBytes": 1611,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8c3-76de-bdc2-9215533f72c3",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-before.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8c4-72bb-818f-a823deea97d4",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-before.html",
+              "sha256": "878091e9ff9aa6b719cdb44116c3648513b70a45851b356a736f9d4ff933470a",
+              "sizeBytes": 199,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8d2-7307-8397-6195e1b81cce",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-after.json",
+              "sha256": "f6759d1c71f7fc6b690faeffcddd95509b2d56695962c1475074272b2556d015",
+              "sizeBytes": 1610,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8e4-70bb-82ca-32b00e27970f",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-after.png",
+              "sha256": "bccd0c6d3832fee51304f7dc38178686917ed1e53199ecd964f9cf4afbfd49d4",
+              "sizeBytes": 6753,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8e6-755d-b2cc-cb6c19dbc7a2",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-after.html",
+              "sha256": "b436661adeef288fd09b8dbc0222cbbe3fc21744b96ab7392e2ac4697c31beb3",
+              "sizeBytes": 197,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8e9-73da-8e49-aa03e2338609",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-before.json",
+              "sha256": "a33cc524bf8ed065db94d11d720e237bf50385ad731bc361eb6c6a5ed225818e",
+              "sizeBytes": 1617,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8f5-705f-8ff7-4e0e5db45612",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-before.png",
+              "sha256": "19593398338b8296e8c2db90c3f4b398c10cb1cad15a7eab1679844e28bdff57",
+              "sizeBytes": 6434,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8f6-7122-bcde-67614a583e96",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-before.html",
+              "sha256": "b436661adeef288fd09b8dbc0222cbbe3fc21744b96ab7392e2ac4697c31beb3",
+              "sizeBytes": 197,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a8fe-763c-91a4-0ffc14f23aa4",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-after.json",
+              "sha256": "21f802047e93c151e8b0b277dd6790f6ae379e5833250de2b2aa0ee2b19c3ca5",
+              "sizeBytes": 1616,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a916-75dd-b36b-bc99aa848265",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-after.png",
+              "sha256": "19593398338b8296e8c2db90c3f4b398c10cb1cad15a7eab1679844e28bdff57",
+              "sizeBytes": 6434,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a917-700c-8432-31b4ac3c2adf",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-after.html",
+              "sha256": "b436661adeef288fd09b8dbc0222cbbe3fc21744b96ab7392e2ac4697c31beb3",
+              "sizeBytes": 197,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a91f-753b-a5b2-49f8650052a1",
+              "kind": "restrictedRaw.trace",
+              "mimeType": "application/zip",
+              "redactionStatus": "restrictedRaw",
+              "relativePath": "browser/trace.zip",
+              "sha256": "52ce16de8737b81ce186e2dfc099c49825feeb7b5cfec00a4e1ee47ac2dc9597",
+              "sizeBytes": 17292,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a922-73af-a97c-90ded6c365e8",
+              "kind": "console",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/console.json",
+              "sha256": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+              "sizeBytes": 30,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a922-73af-a97c-94b197976fbd",
+              "kind": "network",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/network.json",
+              "sha256": "6253ca4aee5e7ef54504e97df9e48732f22dafc7cdbf21f2c3a7bd1c198e3828",
+              "sizeBytes": 231,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a981-76a5-ae9d-52d5329308cf",
+              "kind": "log",
+              "mimeType": "text/plain",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/container.log",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a982-74d6-88d4-8d1aaf587a1a",
+              "kind": "snapshot",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "snapshot/runtime.json",
+              "sha256": "eca0ac6139ed52a8d69241994a38f38b9903aaacd9f2be9f0fdf813118e3b0a3",
+              "sizeBytes": 11705,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-a982-74d6-88d4-90d36ad7b945",
+              "kind": "network",
+              "mimeType": "application/x-ndjson",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/egress.ndjson",
+              "sha256": "f16e41f01f3484d3f53d49e288fb320d55ee456c7f50048c4d4c77fd13962eb4",
+              "sizeBytes": 194,
+              "state": "available"
+            }
+          ],
+          "executionSnapshot": {
+            "baseUrl": "http://127.0.0.1:40505",
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+            "capabilityManifestHash": "5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9",
+            "configuredModelHash": "18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38",
+            "controllerVersion": "1.0.0",
+            "correlationId": "83767664-bdbc-427c-96af-4d8823f56ed6",
+            "dependenciesLockHash": null,
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "on",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 120000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 1,
+                  "executionTimeoutMs": 150000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 1,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 90000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 5000
+                },
+                "healing": {
+                  "mode": "apply"
+                },
+                "project": {
+                  "id": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+                  "name": "m3-assisted-review-surface-20261010"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "default",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "project",
+                "project.id": "project",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33"
+            },
+            "environment": {
+              "authProfileRefs": [],
+              "createdAt": "2026-10-13T18:46:44.935Z",
+              "id": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+              "locale": "en-US",
+              "networkProfile": "local-loopback",
+              "production": false,
+              "targetOrigins": [
+                "http://127.0.0.1:40505"
+              ],
+              "timezone": "UTC",
+              "variables": {},
+              "version": 1,
+              "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+            },
+            "environmentHash": "7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560",
+            "environmentRevisionId": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "hostArchitecture": "x64",
+            "hostPlatform": "linux",
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [
+              {
+                "apiKeyEnv": "FAKE_KEY",
+                "baseUrl": "http://127.0.0.1:41813/v1",
+                "id": "fake",
+                "kind": "openai-compatible",
+                "models": [
+                  {
+                    "capabilities": {
+                      "maxOutputTokens": 1024,
+                      "structuredJson": true,
+                      "toolCalls": true
+                    },
+                    "id": "model"
+                  }
+                ]
+              }
+            ],
+            "originalRunId": null,
+            "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [
+                "fake"
+              ],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "provenance": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "repositoryId": null
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "playwright"
+            ],
+            "revisionHash": "fd845401ecb494833c1bc7743f0660dfb2aedb289517a0a987e7ea6eadcadbf6",
+            "revisionId": "rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c",
+            "runId": "run_01a13696-a62b-7570-8f10-bc88f01ae07e",
+            "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "sealedAt": "2026-10-13T18:46:45.113Z",
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "secretRefs": [],
+            "seed": 0,
+            "sourceRevisions": [],
+            "workerId": null
+          },
+          "reproduction": {
+            "degree": "strict-execution-replay",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ]
+          },
+          "revisionId": "rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c",
+          "runId": "run_01a13696-a62b-7570-8f10-bc88f01ae07e",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a13696-a65e-72e0-83cc-4f25b78f5cec",
+          "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+        },
+        {
+          "attemptId": "att_01a13696-aa56-7478-b6d5-163f58755f6f",
+          "entries": [
+            {
+              "artifactId": "art_01a13696-ac79-7411-b6a3-990854d9aca9",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-before.png",
+              "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+              "sizeBytes": 4254,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-ac7d-7747-a4a9-be23a9956646",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-before.html",
+              "sha256": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+              "sizeBytes": 39,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-ac9a-77b2-ad2a-8eeea34b0d82",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-after.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-ac9c-7682-88b7-5240359e7f05",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-after.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b093-75e6-8d95-651db95f8402",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-before.json",
+              "sha256": "cbd61dbd61e36a05293a197a4fe81e8ca121294c2e2f2f801ea9abdf20c16656",
+              "sizeBytes": 1616,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b09e-724c-bec6-fc24649a003d",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-before.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b09f-7467-bd0d-8cf57c6c7924",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-before.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b0a2-7007-a3e0-0387a8817a2c",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-after.json",
+              "sha256": "ead93ea10bd0a90f60d807cb33eda985db63333008a23fa43daabd8f3b29f4fb",
+              "sizeBytes": 1615,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b0b4-7569-9a6c-12c85c3b3fcd",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-after.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b0b5-77aa-852b-fbc99a1bd835",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-after.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b0bc-7477-b692-ec711ea25f6d",
+              "kind": "restrictedRaw.trace",
+              "mimeType": "application/zip",
+              "redactionStatus": "restrictedRaw",
+              "relativePath": "browser/trace.zip",
+              "sha256": "868297f20f7958938eebb2f90c9a531f6c44751115751cf217d2214ca425b881",
+              "sizeBytes": 12145,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b0bf-71f1-80da-7576ff739e8f",
+              "kind": "console",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/console.json",
+              "sha256": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+              "sizeBytes": 30,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b0bf-71f1-80da-79abd1a05d87",
+              "kind": "network",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/network.json",
+              "sha256": "86264ec170f300314a368e015696caa9ad1e9ced2030e1e750c80cdaa236fd14",
+              "sizeBytes": 125,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b12c-771f-a8e8-c04a00d76aa8",
+              "kind": "log",
+              "mimeType": "text/plain",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/container.log",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b12d-773e-976a-93433f8dafee",
+              "kind": "snapshot",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "snapshot/runtime.json",
+              "sha256": "f94e556655acb1ab77bbc43e57a16a5f2c7b8ffb7087efb4e51e48b39bfc3373",
+              "sizeBytes": 11705,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-b12d-773e-976a-96ac2048f984",
+              "kind": "network",
+              "mimeType": "application/x-ndjson",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/egress.ndjson",
+              "sha256": "3abdd392f4643f4e73faaee3a1ea437e1c2bb2135fdcd5a7cdf370d6fa48ac22",
+              "sizeBytes": 97,
+              "state": "available"
+            }
+          ],
+          "executionSnapshot": {
+            "baseUrl": "http://127.0.0.1:40505",
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+            "capabilityManifestHash": "5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9",
+            "configuredModelHash": "18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38",
+            "controllerVersion": "1.0.0",
+            "correlationId": "83767664-bdbc-427c-96af-4d8823f56ed6",
+            "dependenciesLockHash": null,
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "on",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 120000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 1,
+                  "executionTimeoutMs": 150000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 1,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 90000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 5000
+                },
+                "healing": {
+                  "mode": "apply"
+                },
+                "project": {
+                  "id": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+                  "name": "m3-assisted-review-surface-20261010"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "default",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "project",
+                "project.id": "project",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33"
+            },
+            "environment": {
+              "authProfileRefs": [],
+              "createdAt": "2026-10-13T18:46:44.935Z",
+              "id": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+              "locale": "en-US",
+              "networkProfile": "local-loopback",
+              "production": false,
+              "targetOrigins": [
+                "http://127.0.0.1:40505"
+              ],
+              "timezone": "UTC",
+              "variables": {},
+              "version": 1,
+              "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+            },
+            "environmentHash": "7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560",
+            "environmentRevisionId": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "hostArchitecture": "x64",
+            "hostPlatform": "linux",
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [
+              {
+                "apiKeyEnv": "FAKE_KEY",
+                "baseUrl": "http://127.0.0.1:41813/v1",
+                "id": "fake",
+                "kind": "openai-compatible",
+                "models": [
+                  {
+                    "capabilities": {
+                      "maxOutputTokens": 1024,
+                      "structuredJson": true,
+                      "toolCalls": true
+                    },
+                    "id": "model"
+                  }
+                ]
+              }
+            ],
+            "originalRunId": null,
+            "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [
+                "fake"
+              ],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "provenance": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "repositoryId": null
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "playwright"
+            ],
+            "revisionHash": "fd845401ecb494833c1bc7743f0660dfb2aedb289517a0a987e7ea6eadcadbf6",
+            "revisionId": "rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c",
+            "runId": "run_01a13696-aa21-7500-a16b-8b167d137802",
+            "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "sealedAt": "2026-10-13T18:46:46.134Z",
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "secretRefs": [],
+            "seed": 0,
+            "sourceRevisions": [],
+            "workerId": null
+          },
+          "reproduction": {
+            "degree": "strict-execution-replay",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ]
+          },
+          "revisionId": "rev_01a13696-a5ef-705f-b9e8-9c7dd30d728c",
+          "runId": "run_01a13696-aa21-7500-a16b-8b167d137802",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a13696-aa57-77bf-ba1c-b3e874f57482",
+          "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+        },
+        {
+          "attemptId": "att_01a13696-be3b-70ab-93e8-5391c2a2e82c",
+          "entries": [
+            {
+              "artifactId": "art_01a13696-c065-72ca-94fd-be838c86c9ec",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-before.png",
+              "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+              "sizeBytes": 4254,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c06b-753c-a709-571e40e2ea5b",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-before.html",
+              "sha256": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+              "sizeBytes": 39,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c096-71fc-9525-ed0862385aae",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-after.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c098-7215-a5e4-996557286536",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-after.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0aa-7341-adf1-6fb16af2f16e",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-before.json",
+              "sha256": "77cdb7174a0932ffb5e851aa8e2d3f5c505dc8c108a2615e3f9d79f80821a57f",
+              "sizeBytes": 1619,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0b7-75a2-bbe1-60dd98e1199d",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-before.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0b9-7051-ae21-342de5de8811",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-before.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0c8-7563-a41d-a7530798cf30",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-after.json",
+              "sha256": "b18ec1746fb431312c71f40c988445f9a5738d9def62ecd7668b53a2e218605e",
+              "sizeBytes": 1618,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0d9-72bd-8c6b-e6ec98c0a4a8",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-after.png",
+              "sha256": "bccd0c6d3832fee51304f7dc38178686917ed1e53199ecd964f9cf4afbfd49d4",
+              "sizeBytes": 6753,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0da-74cf-8449-e62ef5b549d2",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-after.html",
+              "sha256": "8c7f1ee934de300e01bad88e11e82b2ebb50489a05f6117cdf104a167e05708a",
+              "sizeBytes": 201,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0dd-7599-8445-28ff56dd9e91",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-before.json",
+              "sha256": "38219037c4d1166b8f5bf82005751a1730b5b090698f692984dab226eb8a783e",
+              "sizeBytes": 1621,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0ea-70a5-82ed-c4fe71f5dc71",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-before.png",
+              "sha256": "19593398338b8296e8c2db90c3f4b398c10cb1cad15a7eab1679844e28bdff57",
+              "sizeBytes": 6434,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0eb-75f7-96d8-4b1a05f7c58e",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-before.html",
+              "sha256": "8c7f1ee934de300e01bad88e11e82b2ebb50489a05f6117cdf104a167e05708a",
+              "sizeBytes": 201,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c0f2-772e-84d6-fba0b04547ea",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-after.json",
+              "sha256": "ac7660f2d1c63d38af3add7be3adc40a6e31396dcba9e317a4fa6e1f5a93ff87",
+              "sizeBytes": 1620,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c10b-7434-a71e-c117ab74169d",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-after.png",
+              "sha256": "19593398338b8296e8c2db90c3f4b398c10cb1cad15a7eab1679844e28bdff57",
+              "sizeBytes": 6434,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c10c-73d3-b923-15b7df12b685",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-after.html",
+              "sha256": "8c7f1ee934de300e01bad88e11e82b2ebb50489a05f6117cdf104a167e05708a",
+              "sizeBytes": 201,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c114-7387-a180-5d29aba7c3fd",
+              "kind": "restrictedRaw.trace",
+              "mimeType": "application/zip",
+              "redactionStatus": "restrictedRaw",
+              "relativePath": "browser/trace.zip",
+              "sha256": "520ce7e320e6e34aaa39c2585eee61736c8f688246ad9915a65654dec1460692",
+              "sizeBytes": 18813,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c117-7654-aeb9-bf09610b40a0",
+              "kind": "console",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/console.json",
+              "sha256": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+              "sizeBytes": 30,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c118-71c2-a04e-e9c365de9d7a",
+              "kind": "network",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/network.json",
+              "sha256": "6253ca4aee5e7ef54504e97df9e48732f22dafc7cdbf21f2c3a7bd1c198e3828",
+              "sizeBytes": 231,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c17a-728d-b07e-3614896a01f2",
+              "kind": "log",
+              "mimeType": "text/plain",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/container.log",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c17a-728d-b07e-3978bcea07e3",
+              "kind": "snapshot",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "snapshot/runtime.json",
+              "sha256": "ac1c0e5a0ada89f7ea99665034831274d03d75a4f6f3d21b8d63633eaa098500",
+              "sizeBytes": 11705,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c17b-700f-aef1-6af5b91ba6e9",
+              "kind": "network",
+              "mimeType": "application/x-ndjson",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/egress.ndjson",
+              "sha256": "f16e41f01f3484d3f53d49e288fb320d55ee456c7f50048c4d4c77fd13962eb4",
+              "sizeBytes": 194,
+              "state": "available"
+            }
+          ],
+          "executionSnapshot": {
+            "baseUrl": "http://127.0.0.1:40505",
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+            "capabilityManifestHash": "5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9",
+            "configuredModelHash": "18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38",
+            "controllerVersion": "1.0.0",
+            "correlationId": "83767664-bdbc-427c-96af-4d8823f56ed6",
+            "dependenciesLockHash": null,
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "on",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 120000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 1,
+                  "executionTimeoutMs": 150000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 1,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 90000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 5000
+                },
+                "healing": {
+                  "mode": "apply"
+                },
+                "project": {
+                  "id": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+                  "name": "m3-assisted-review-surface-20261010"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "default",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "project",
+                "project.id": "project",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33"
+            },
+            "environment": {
+              "authProfileRefs": [],
+              "createdAt": "2026-10-13T18:46:44.935Z",
+              "id": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+              "locale": "en-US",
+              "networkProfile": "local-loopback",
+              "production": false,
+              "targetOrigins": [
+                "http://127.0.0.1:40505"
+              ],
+              "timezone": "UTC",
+              "variables": {},
+              "version": 1,
+              "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+            },
+            "environmentHash": "7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560",
+            "environmentRevisionId": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "hostArchitecture": "x64",
+            "hostPlatform": "linux",
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [
+              {
+                "apiKeyEnv": "FAKE_KEY",
+                "baseUrl": "http://127.0.0.1:41813/v1",
+                "id": "fake",
+                "kind": "openai-compatible",
+                "models": [
+                  {
+                    "capabilities": {
+                      "maxOutputTokens": 1024,
+                      "structuredJson": true,
+                      "toolCalls": true
+                    },
+                    "id": "model"
+                  }
+                ]
+              }
+            ],
+            "originalRunId": null,
+            "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [
+                "fake"
+              ],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "provenance": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "repositoryId": null
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "playwright"
+            ],
+            "revisionHash": "27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf",
+            "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+            "runId": "run_01a13696-be06-77ef-a9d5-ead2c3efd635",
+            "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "sealedAt": "2026-10-13T18:46:51.225Z",
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "secretRefs": [],
+            "seed": 0,
+            "sourceRevisions": [],
+            "workerId": null
+          },
+          "reproduction": {
+            "degree": "strict-execution-replay",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ]
+          },
+          "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+          "runId": "run_01a13696-be06-77ef-a9d5-ead2c3efd635",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a13696-be3d-7257-a56d-1c69256e8532",
+          "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+        },
+        {
+          "attemptId": "att_01a13696-c238-7377-a7da-cd2cd2d70c19",
+          "entries": [
+            {
+              "artifactId": "art_01a13696-c46e-7427-87e6-ccd425dc7069",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-before.png",
+              "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+              "sizeBytes": 4254,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c472-7756-b127-62d0f0d50354",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-before.html",
+              "sha256": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+              "sizeBytes": 39,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c48f-7489-9c43-c22a99e8ffa8",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-after.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c491-71cd-af72-96fc0ad9cef6",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-after.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4a3-70ee-9dc5-9c7d7c8910f4",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-before.json",
+              "sha256": "77cdb7174a0932ffb5e851aa8e2d3f5c505dc8c108a2615e3f9d79f80821a57f",
+              "sizeBytes": 1619,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4b0-7411-88fd-f796df64af64",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-before.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4b1-71af-8aa0-57d70a05abb0",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-before.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4c1-7518-819f-921768833b07",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-after.json",
+              "sha256": "b18ec1746fb431312c71f40c988445f9a5738d9def62ecd7668b53a2e218605e",
+              "sizeBytes": 1618,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4d2-7608-9e46-423c3b292e87",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-after.png",
+              "sha256": "bccd0c6d3832fee51304f7dc38178686917ed1e53199ecd964f9cf4afbfd49d4",
+              "sizeBytes": 6753,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4d3-7403-9171-4d4d2a609e5c",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-after.html",
+              "sha256": "4e59ec24425491328200aa49b621918523265e4f223ecf4f7b3e37ab35b0db3f",
+              "sizeBytes": 200,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4d6-7743-8c2c-d482624039a5",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-before.json",
+              "sha256": "38219037c4d1166b8f5bf82005751a1730b5b090698f692984dab226eb8a783e",
+              "sizeBytes": 1621,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4e2-72f6-a212-672dacf8351e",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-before.png",
+              "sha256": "ab4dc42c231cbdd4abc99bf90af75c4471c0383b7995d3b09102cb51ca246593",
+              "sizeBytes": 6242,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13696-c4e3-7740-9821-d09bf20bad7b",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-before.html",
+              "sha256": "4e59ec24425491328200aa49b621918523265e4f223ecf4f7b3e37ab35b0db3f",
+              "sizeBytes": 200,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3a1a-74d2-a1cc-c716e64fc5b0",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-after.json",
+              "sha256": "ac7660f2d1c63d38af3add7be3adc40a6e31396dcba9e317a4fa6e1f5a93ff87",
+              "sizeBytes": 1620,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3a24-77dd-b342-c62bc26d83c1",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-after.png",
+              "sha256": "ab4dc42c231cbdd4abc99bf90af75c4471c0383b7995d3b09102cb51ca246593",
+              "sizeBytes": 6242,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3a25-76bd-ac04-6546355e9aad",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-after.html",
+              "sha256": "4e59ec24425491328200aa49b621918523265e4f223ecf4f7b3e37ab35b0db3f",
+              "sizeBytes": 200,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3a2f-733f-8ed6-aca94182231a",
+              "kind": "restrictedRaw.trace",
+              "mimeType": "application/zip",
+              "redactionStatus": "restrictedRaw",
+              "relativePath": "browser/trace.zip",
+              "sha256": "6fc5380b99169877e2fd54e60e1b91c5569647c56fc5cd3d966b1506f3e14e67",
+              "sizeBytes": 48162,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3a33-7234-a36d-44aebce9c40c",
+              "kind": "console",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/console.json",
+              "sha256": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+              "sizeBytes": 30,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3a33-7234-a36d-493549447767",
+              "kind": "network",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/network.json",
+              "sha256": "6253ca4aee5e7ef54504e97df9e48732f22dafc7cdbf21f2c3a7bd1c198e3828",
+              "sizeBytes": 231,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3ab2-72ca-8aff-b876a73063b8",
+              "kind": "log",
+              "mimeType": "text/plain",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/container.log",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3ab3-7419-b3da-5191f281b988",
+              "kind": "snapshot",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "snapshot/runtime.json",
+              "sha256": "c5d1b1b25810ecfbdfe140d74d6cc92647f1ebb239664ca0ee26c026356f1b60",
+              "sizeBytes": 11705,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-3ab3-7419-b3da-56d599111f54",
+              "kind": "network",
+              "mimeType": "application/x-ndjson",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/egress.ndjson",
+              "sha256": "f16e41f01f3484d3f53d49e288fb320d55ee456c7f50048c4d4c77fd13962eb4",
+              "sizeBytes": 194,
+              "state": "available"
+            }
+          ],
+          "executionSnapshot": {
+            "baseUrl": "http://127.0.0.1:40505",
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+            "capabilityManifestHash": "5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9",
+            "configuredModelHash": "18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38",
+            "controllerVersion": "1.0.0",
+            "correlationId": "83767664-bdbc-427c-96af-4d8823f56ed6",
+            "dependenciesLockHash": null,
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "on",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 120000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 1,
+                  "executionTimeoutMs": 150000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 1,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 90000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 5000
+                },
+                "healing": {
+                  "mode": "apply"
+                },
+                "project": {
+                  "id": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+                  "name": "m3-assisted-review-surface-20261010"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "default",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "project",
+                "project.id": "project",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33"
+            },
+            "environment": {
+              "authProfileRefs": [],
+              "createdAt": "2026-10-13T18:46:44.935Z",
+              "id": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+              "locale": "en-US",
+              "networkProfile": "local-loopback",
+              "production": false,
+              "targetOrigins": [
+                "http://127.0.0.1:40505"
+              ],
+              "timezone": "UTC",
+              "variables": {},
+              "version": 1,
+              "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+            },
+            "environmentHash": "7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560",
+            "environmentRevisionId": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "hostArchitecture": "x64",
+            "hostPlatform": "linux",
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [
+              {
+                "apiKeyEnv": "FAKE_KEY",
+                "baseUrl": "http://127.0.0.1:41813/v1",
+                "id": "fake",
+                "kind": "openai-compatible",
+                "models": [
+                  {
+                    "capabilities": {
+                      "maxOutputTokens": 1024,
+                      "structuredJson": true,
+                      "toolCalls": true
+                    },
+                    "id": "model"
+                  }
+                ]
+              }
+            ],
+            "originalRunId": null,
+            "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [
+                "fake"
+              ],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "provenance": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "repositoryId": null
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "playwright"
+            ],
+            "revisionHash": "27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf",
+            "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+            "runId": "run_01a13696-c1ff-7342-be19-8bcd15ed5b85",
+            "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "sealedAt": "2026-10-13T18:46:52.247Z",
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "secretRefs": [],
+            "seed": 0,
+            "sourceRevisions": [],
+            "workerId": null
+          },
+          "reproduction": {
+            "degree": "strict-execution-replay",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ]
+          },
+          "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+          "runId": "run_01a13696-c1ff-7342-be19-8bcd15ed5b85",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a13696-c239-7437-b4a5-097982751d94",
+          "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+        },
+        {
+          "attemptId": "att_01a13697-4127-748a-8101-f26a83911911",
+          "entries": [
+            {
+              "artifactId": "art_01a13697-442c-73ab-ac3f-2de53c36fe30",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-before.png",
+              "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+              "sizeBytes": 4254,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4430-7705-947e-279290a49c78",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-before.html",
+              "sha256": "a7fe83ec64bb23eb28090598db3d166ed98e52e39d1afbbfd74c579553f93e4e",
+              "sizeBytes": 39,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4460-7170-85e8-b9f7503efb9d",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/open-after.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4468-747c-bafd-73e5bfef1bb7",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/open-after.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4476-7647-85c0-1c152bca6ff3",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-before.json",
+              "sha256": "77cdb7174a0932ffb5e851aa8e2d3f5c505dc8c108a2615e3f9d79f80821a57f",
+              "sizeBytes": 1619,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-448f-7327-bf51-b04154de3c2a",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-before.png",
+              "sha256": "43b4eed70b2222f491de2bb136709b07e1e80c74d390cba5fe68a66d3759373d",
+              "sizeBytes": 6745,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4492-71f4-8e98-c3b9a78dbb08",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-before.html",
+              "sha256": "62509bc80ee42e34111d50a83d4347714aa2d98f1aaecb4f0ed8e14d43e4e7db",
+              "sizeBytes": 203,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44af-73f3-be2d-e1bd7271d23e",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-locator-0-after.json",
+              "sha256": "b18ec1746fb431312c71f40c988445f9a5738d9def62ecd7668b53a2e218605e",
+              "sizeBytes": 1618,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44c1-7331-84fc-5e24ec4e276c",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/quote-after.png",
+              "sha256": "bccd0c6d3832fee51304f7dc38178686917ed1e53199ecd964f9cf4afbfd49d4",
+              "sizeBytes": 6753,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44c2-714d-8a43-e034ac5f6d3d",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/quote-after.html",
+              "sha256": "8c7f1ee934de300e01bad88e11e82b2ebb50489a05f6117cdf104a167e05708a",
+              "sizeBytes": 201,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44c5-7662-80ec-d20ced0f2009",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-before.json",
+              "sha256": "38219037c4d1166b8f5bf82005751a1730b5b090698f692984dab226eb8a783e",
+              "sizeBytes": 1621,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44e0-73e2-931b-575791687caa",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-before.png",
+              "sha256": "19593398338b8296e8c2db90c3f4b398c10cb1cad15a7eab1679844e28bdff57",
+              "sizeBytes": 6434,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44e2-7778-b655-696b6feee60e",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-before.html",
+              "sha256": "8c7f1ee934de300e01bad88e11e82b2ebb50489a05f6117cdf104a167e05708a",
+              "sizeBytes": 201,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-44ec-7703-9ded-5afd54c65972",
+              "kind": "locator-evidence",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-locator-0-after.json",
+              "sha256": "ac7660f2d1c63d38af3add7be3adc40a6e31396dcba9e317a4fa6e1f5a93ff87",
+              "sizeBytes": 1620,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4501-72ac-81e4-96196ec8fe33",
+              "kind": "screenshot",
+              "mimeType": "image/png",
+              "redactionStatus": "not_applicable",
+              "relativePath": "browser/steps/exact-price-after.png",
+              "sha256": "19593398338b8296e8c2db90c3f4b398c10cb1cad15a7eab1679844e28bdff57",
+              "sizeBytes": 6434,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4503-71df-a1ce-e6b469dbee1b",
+              "kind": "dom",
+              "mimeType": "text/html",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/steps/exact-price-after.html",
+              "sha256": "8c7f1ee934de300e01bad88e11e82b2ebb50489a05f6117cdf104a167e05708a",
+              "sizeBytes": 201,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-450b-754f-88de-44ee2b25dabc",
+              "kind": "restrictedRaw.trace",
+              "mimeType": "application/zip",
+              "redactionStatus": "restrictedRaw",
+              "relativePath": "browser/trace.zip",
+              "sha256": "b84a04749831da790c99dc7edfaa5f17737085c2f99f9b54e7aca49376cf2181",
+              "sizeBytes": 20278,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-450f-76f6-bcda-43bfe81c6668",
+              "kind": "console",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/console.json",
+              "sha256": "9ef1588ed14e682ff9f84197fb3728c3d12dd5f20099ea0c2de3addcc37162c7",
+              "sizeBytes": 30,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-450f-76f6-bcda-450c085964ff",
+              "kind": "network",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "browser/network.json",
+              "sha256": "6253ca4aee5e7ef54504e97df9e48732f22dafc7cdbf21f2c3a7bd1c198e3828",
+              "sizeBytes": 231,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4585-77cc-90f4-b3f0c11f0341",
+              "kind": "log",
+              "mimeType": "text/plain",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/container.log",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4586-74f0-99de-8f0dc33b3ec4",
+              "kind": "snapshot",
+              "mimeType": "application/json",
+              "redactionStatus": "redacted",
+              "relativePath": "snapshot/runtime.json",
+              "sha256": "c0585a3287566fd0279c3d3034620662ba51a89464f684292c5acdd063160b39",
+              "sizeBytes": 11705,
+              "state": "available"
+            },
+            {
+              "artifactId": "art_01a13697-4587-726c-9f5a-c46c5c4e5951",
+              "kind": "network",
+              "mimeType": "application/x-ndjson",
+              "redactionStatus": "redacted",
+              "relativePath": "logs/egress.ndjson",
+              "sha256": "f16e41f01f3484d3f53d49e288fb320d55ee456c7f50048c4d4c77fd13962eb4",
+              "sizeBytes": 194,
+              "state": "available"
+            }
+          ],
+          "executionSnapshot": {
+            "baseUrl": "http://127.0.0.1:40505",
+            "browserImageDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+            "capabilityManifestHash": "5be153a729071e3f449dd8674c11578ba544b26eb54cade7fca5ee80f7ecbfb9",
+            "configuredModelHash": "18fe5a93803a18f880b05160ccf8a74757d46a6e71e05678eb2906ee342d0d38",
+            "controllerVersion": "1.0.0",
+            "correlationId": "cli_0fd83caa-48f6-40f9-8582-a374ccadae51",
+            "dependenciesLockHash": null,
+            "effectiveConfig": {
+              "config": {
+                "artifacts": {
+                  "httpBodies": "off",
+                  "retentionDays": 30,
+                  "trace": "on",
+                  "video": "off"
+                },
+                "browser": {
+                  "name": "chromium",
+                  "testIdAttributes": [
+                    "data-testid"
+                  ],
+                  "viewport": {
+                    "height": 720,
+                    "width": 1280
+                  }
+                },
+                "environment": {
+                  "baseUrl": "http://127.0.0.1:3000",
+                  "locale": "en-US",
+                  "networkProfile": "local-loopback",
+                  "timezone": "UTC"
+                },
+                "execution": {
+                  "analysisGraceMs": 60000,
+                  "artifactBytes": 67108864,
+                  "attemptArtifactBytes": 268435456,
+                  "attemptTimeoutMs": 120000,
+                  "bodyBytes": 10485760,
+                  "collectionGraceMs": 60000,
+                  "concurrency": 1,
+                  "executionTimeoutMs": 150000,
+                  "executor": "docker",
+                  "logBytes": 10485760,
+                  "maxAttempts": 1,
+                  "mode": "replay",
+                  "networkRequestTimeoutMs": 90000,
+                  "preparationTimeoutMs": 120000,
+                  "stepTimeoutMs": 5000
+                },
+                "healing": {
+                  "mode": "apply"
+                },
+                "project": {
+                  "id": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+                  "name": "m3-assisted-review-surface-20261010"
+                },
+                "schemaVersion": "1.0.0",
+                "telemetry": {
+                  "enabled": false
+                }
+              },
+              "origins": {
+                "artifacts.httpBodies": "default",
+                "artifacts.retentionDays": "project",
+                "artifacts.trace": "project",
+                "artifacts.video": "project",
+                "browser.name": "project",
+                "browser.testIdAttributes": "project",
+                "browser.viewport.height": "project",
+                "browser.viewport.width": "project",
+                "environment.baseUrl": "project",
+                "environment.locale": "project",
+                "environment.networkProfile": "project",
+                "environment.timezone": "project",
+                "execution.analysisGraceMs": "project",
+                "execution.artifactBytes": "project",
+                "execution.attemptArtifactBytes": "project",
+                "execution.attemptTimeoutMs": "project",
+                "execution.bodyBytes": "project",
+                "execution.collectionGraceMs": "project",
+                "execution.concurrency": "project",
+                "execution.executionTimeoutMs": "project",
+                "execution.executor": "project",
+                "execution.logBytes": "project",
+                "execution.maxAttempts": "project",
+                "execution.mode": "project",
+                "execution.networkRequestTimeoutMs": "project",
+                "execution.preparationTimeoutMs": "project",
+                "execution.stepTimeoutMs": "project",
+                "healing.mode": "project",
+                "project.id": "project",
+                "project.name": "project",
+                "schemaVersion": "project",
+                "telemetry.enabled": "environment"
+              },
+              "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33"
+            },
+            "environment": {
+              "authProfileRefs": [],
+              "createdAt": "2026-10-13T18:46:44.935Z",
+              "id": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+              "locale": "en-US",
+              "networkProfile": "local-loopback",
+              "production": false,
+              "targetOrigins": [
+                "http://127.0.0.1:40505"
+              ],
+              "timezone": "UTC",
+              "variables": {},
+              "version": 1,
+              "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+            },
+            "environmentHash": "7011254e2882c604fd90797008bf61cb1fd654fd561dd3eaffa3cb81b890d560",
+            "environmentRevisionId": "evr_01a13696-a5c7-75bd-8bd0-7e512cd63990",
+            "generationModel": null,
+            "generationModelCallId": null,
+            "hostArchitecture": "x64",
+            "hostPlatform": "linux",
+            "images": {
+              "testmaster-runner": {
+                "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+                "buildInputsHash": "4fa4baddcff11f0b75178990b480d42dd9c5c02170917d5899e7fdfd6d55f1fa",
+                "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              },
+              "testmaster-runner-python": {
+                "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+                "buildInputsHash": "863b1ebede8848f54b6902af3a10d20521a9a75ce57467aa12a44d398495cf6c",
+                "imageId": "sha256:1b7897aa3359a2aebb6aacda3450064104f140a7ab0d5a5fa1f6d604781140af",
+                "seccomp": {
+                  "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+                  "engineVersion": "29.8.1",
+                  "inputs": {
+                    "engineDefault": {
+                      "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74",
+                      "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json"
+                    },
+                    "originalDefault": {
+                      "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274",
+                      "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json"
+                    },
+                    "playwright": {
+                      "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849",
+                      "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json"
+                    }
+                  },
+                  "profileModuleVersion": "v0.2.3",
+                  "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+                }
+              }
+            },
+            "inputFixtureHashes": {},
+            "inputHash": "3e00eebba53c3d4c684411cba1607946a8312c4871ca3c99acac96a08e255a19",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ],
+            "modelConfigHash": null,
+            "modelProviders": [
+              {
+                "apiKeyEnv": "FAKE_KEY",
+                "baseUrl": "http://127.0.0.1:41813/v1",
+                "id": "fake",
+                "kind": "openai-compatible",
+                "models": [
+                  {
+                    "capabilities": {
+                      "maxOutputTokens": 1024,
+                      "structuredJson": true,
+                      "toolCalls": true
+                    },
+                    "id": "model"
+                  }
+                ]
+              }
+            ],
+            "originalRunId": null,
+            "policyHash": "d933faafe8a8a26a92759040887ed5a5da7455deed20e5712b2e1ebb9fbcaf33",
+            "profilePolicy": {
+              "allowCiHealing": false,
+              "allowUpload": false,
+              "allowedModelProviders": [
+                "fake"
+              ],
+              "limits": {
+                "attemptTimeoutMs": 900000,
+                "executionTimeoutMs": 7200000,
+                "maxAttempts": 2
+              },
+              "offline": false,
+              "projectId": "prj_01a13696-a5c4-7693-aac2-fa3d05489c81",
+              "security": {
+                "allowUnsafeProcessExecution": false
+              }
+            },
+            "provenance": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "repositoryId": null
+            },
+            "repository": {
+              "baseSha": null,
+              "binding": "unbound",
+              "checkoutSha": null,
+              "commitSha": null,
+              "deploymentId": null,
+              "dirtyHash": null,
+              "limitations": [
+                "repository-commit-unavailable"
+              ],
+              "repositoryId": null
+            },
+            "requiredCapabilities": [
+              "playwright"
+            ],
+            "revisionHash": "27b5c9cfeb249a28f87b4e5e3fc5ab835c19fd481c31c4e2687b5c6d8b2190cf",
+            "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+            "runId": "run_01a13697-40e1-758d-8a8d-607ca98e8414",
+            "runnerImageDigest": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+            "runtimeIdentity": {
+              "browserName": "chromium",
+              "browserVersion": "153.0.8010.12",
+              "imageId": "sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c",
+              "nodeVersion": "v24.20.0",
+              "playwrightVersion": "1.63.0"
+            },
+            "sealedAt": "2026-10-13T18:47:24.755Z",
+            "seccompHash": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72",
+            "secretRefs": [],
+            "seed": 0,
+            "sourceRevisions": [],
+            "workerId": null
+          },
+          "reproduction": {
+            "degree": "strict-execution-replay",
+            "limitations": [
+              "mutable-external-target",
+              "mutable-external-payload",
+              "browser-platform-rendering",
+              "repository-commit-unavailable",
+              "source-binding-unavailable",
+              "source-dependency-lock-unavailable"
+            ]
+          },
+          "revisionId": "rev_01a13696-b1ea-75de-928d-1f1e4fe89cf3",
+          "runId": "run_01a13697-40e1-758d-8a8d-607ca98e8414",
+          "schemaVersion": "1.0.0",
+          "snapshotId": "snp_01a13697-4133-71f7-9be4-fcf18734a568",
+          "workspaceId": "ws_01a13696-a5b8-7105-9fba-25ea0d68cfe5"
+        }
+      ],
+      "controlledProviderCalls": 1,
+      "paidModelCalls": 0,
+      "limitations": [
+        "One deterministic selector-drift family; no model-quality, holdout, human workload or usability claim."
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

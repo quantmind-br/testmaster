@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "ops002-daemon-readiness",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-health",
+  "externalDependency": "local-docker-no-target",
+  "observedAt": "2026-10-13T19:05:07.367Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bca8ad2f-80bd-4d21-b5d9-3f4efd394e44",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "migrated-storage-and-real-hardened-runner-health",
+      "passed": true,
+      "projectId": "prj_01a136a7-7223-75f1-a8da-90adeee5ff24",
+      "readiness": {
+        "status": "ready",
+        "components": {
+          "persistence": "ready",
+          "admission": "ready"
+        },
+        "worker": {
+          "status": "ready",
+          "runners": {
+            "http": {
+              "status": "ready"
+            },
+            "playwright": {
+              "status": "ready"
+            },
+            "python": {
+              "status": "ready"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Approved single-user hardened rootful Docker only; no compose/reverse-proxy/rootless certification."
+  ]
+}

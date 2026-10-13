@@ -1,0 +1,287 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m2-integration-workflow-healthy",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:03:13.969Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m2-integration-workflow-healthy",
+        "--base-url",
+        "http://127.0.0.1:45311",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_aa8dc711-9d74-4daa-a688-4c615fdb9b48",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "workflow-auth",
+        "--from-env",
+        "WORKFLOW_AUTH",
+        "--allowed-origin",
+        "http://127.0.0.1:45311",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4f4a72de-8184-42ec-8e89-6c94ffe2b758",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-DJyUKl/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4d9dea72-2de8-4251-b10a-741ccefde2f3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a136a5-abf3-77a3-830f-ca27b958437c",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f6bd3e54-de25-45c2-b852-9924d0292ab3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a136a5-b189-76c4-902a-98471df91ed5",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bf391b14-4b29-4ba1-a4ed-ae71e870e98c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a136a5-b189-76c4-902a-98471df91ed5",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f458152b-63d4-4c43-b51b-b4c881203dde",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a5-b189-76c4-902a-98471df91ed5"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "independentSqliteAndRawHttpPersistence",
+      "mutant": "healthy",
+      "runId": "run_01a136a5-b189-76c4-902a-98471df91ed5",
+      "row": {
+        "id": "7d0500e6-afff-46ec-b171-d43965368a69",
+        "name": "Workflow updated",
+        "price_cents": 456
+      },
+      "capturedValueFlow": {
+        "create": {
+          "request": {
+            "method": "POST",
+            "url": "http://127.0.0.1:45311/api/products",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "bodyMetadata": {
+              "sha256": "d1ab7c2ad358546d63972415d0c6bf62e57bd35be1f83c928b39a6e164adb115",
+              "sizeBytes": 45,
+              "contentType": "application/json"
+            },
+            "bindings": []
+          },
+          "captures": [
+            {
+              "name": "product_id",
+              "variableRef": "create.product_id",
+              "valueType": "string",
+              "sensitive": true,
+              "resolved": "[REDACTED]"
+            }
+          ],
+          "response": {
+            "status": 201,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "cc92992e47e422feaf14ac72f817c9660cdf10872dee333d3765259fd576149b",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 639.3916320000001
+          }
+        },
+        "read": {
+          "request": {
+            "method": "GET",
+            "url": "http://127.0.0.1:45311/api/products/[REDACTED]",
+            "headers": {},
+            "bodyMetadata": {
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "contentType": null
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "cc92992e47e422feaf14ac72f817c9660cdf10872dee333d3765259fd576149b",
+              "sizeBytes": 89,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 277.52379600000006
+          }
+        },
+        "update": {
+          "request": {
+            "method": "PUT",
+            "url": "http://127.0.0.1:45311/api/products/[REDACTED]",
+            "headers": {
+              "content-type": "application/json"
+            },
+            "bodyMetadata": {
+              "sha256": "3b3d4f52af44024bb0bdd4d47972c00305bd6becad1aa001bd7e1cde58b05400",
+              "sizeBytes": 44,
+              "contentType": "application/json"
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "46aec2020d90e878b93206e0ded1ec0e08e7bfe5c0d761884606b3a091cfd2af",
+              "sizeBytes": 88,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 60.40865199999985
+          }
+        },
+        "query": {
+          "request": {
+            "method": "GET",
+            "url": "http://127.0.0.1:45311/api/products/[REDACTED]",
+            "headers": {},
+            "bodyMetadata": {
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "sizeBytes": 0,
+              "contentType": null
+            },
+            "bindings": [
+              {
+                "variableRef": "create.product_id",
+                "sensitive": true,
+                "resolved": "[REDACTED]"
+              }
+            ]
+          },
+          "captures": [],
+          "response": {
+            "status": 200,
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "bodyMetadata": {
+              "sha256": "46aec2020d90e878b93206e0ded1ec0e08e7bfe5c0d761884606b3a091cfd2af",
+              "sizeBytes": 88,
+              "contentType": "application/json"
+            },
+            "failureExcerpt": null,
+            "durationMs": 61.53278299999988
+          }
+        }
+      },
+      "failingStep": null
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

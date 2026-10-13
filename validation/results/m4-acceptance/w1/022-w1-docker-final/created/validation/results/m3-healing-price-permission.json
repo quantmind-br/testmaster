@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-healing-price-permission",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T18:46:09.731Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-healing-price-permission",
+        "--base-url",
+        "http://127.0.0.1:34665",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f53af82e-7951-44b6-b1ed-d4d5190d9ac0",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a13695-15e3-75d8-ab2e-2335cbea9001",
+    "run_01a13695-1ac2-728f-b144-bea0d8abad51",
+    "run_01a13695-241c-7289-ad40-677b3457f5d1",
+    "run_01a13695-2884-723a-a1a3-ef81398d2eeb",
+    "run_01a13695-a28e-7212-914a-11aba203df83"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "pricePermissionHealingSafety",
+      "originalRunId": "run_01a13695-1ac2-728f-b144-bea0d8abad51",
+      "verificationRunId": "run_01a13695-241c-7289-ad40-677b3457f5d1",
+      "proposalId": "hea_01a13695-23d3-74bb-bff9-e862bdf7a7e9",
+      "defects": [
+        {
+          "defect": "price",
+          "runId": "run_01a13695-2884-723a-a1a3-ef81398d2eeb",
+          "healingRefused": true,
+          "requiredAssertionFailed": true
+        },
+        {
+          "defect": "permission",
+          "runId": "run_01a13695-a28e-7212-914a-11aba203df83",
+          "healingRefused": true,
+          "requiredAssertionFailed": true
+        }
+      ],
+      "controlledProvider": true,
+      "qualityEvidence": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

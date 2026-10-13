@@ -1,0 +1,181 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-selective-upstream-failure",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:01:00.561Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-selective-upstream-failure",
+        "--base-url",
+        "http://127.0.0.1:38649",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1e57b952-fbc0-4a8a-a707-43ecd0030d36",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-w7lR1M/repo/producer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_84011da1-1787-480a-83e8-5b058ede19fc",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-w7lR1M/repo/consumer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1024620d-08ad-427b-8226-5c84e1d63060",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a136a3-9977-7552-91fe-f075f3b738c6",
+        "--chain",
+        "--wait",
+        "--env",
+        "env_01a136a3-944a-71ea-884f-a87fefdb39ad",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1625c305-adc6-4442-b760-b0c172c5bc19",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a136a3-9977-7552-91fe-f075f3b738c6",
+        "--chain",
+        "--wait",
+        "--env",
+        "env_01a136a3-944a-71ea-884f-a87fefdb39ad",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_6917aaba-034f-455b-916b-74bf9f0dfd58",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a136a3-ab31-70a7-b7d2-20f6d9f3dbb7",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_73217ae5-c11a-4d0b-9bd3-153eccc6ae78",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a136a3-9977-7552-91fe-f075f3b738c6",
+        "--reuse-from-run",
+        "run_01a136a3-ab33-7426-b7c0-31a34a41cc34",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a136a3-944a-71ea-884f-a87fefdb39ad",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_cbd502cd-c0e1-4a0a-89c2-4628421c5624",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Explicit fixture producer did not pass",
+        "details": {
+          "reasonCode": "upstream_failed"
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a3-9f33-7203-9d14-a78bbb862b49",
+    "run_01a136a3-9f31-75b5-acb6-7441e52ba6f2",
+    "run_01a136a3-ab33-7426-b7c0-31a34a41cc34",
+    "run_01a136a3-ab31-70a7-b7d2-20f6d9f3dbb7"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "selectiveProducerFailurePropagation",
+      "healthyBatchId": "bat_01a136a3-9f2f-77bc-8956-ea89fc99516a",
+      "failedBatchId": "bat_01a136a3-ab2f-77c9-b329-004bf59bca89",
+      "failedProducerRunId": "run_01a136a3-ab33-7426-b7c0-31a34a41cc34",
+      "blockedConsumerRunId": "run_01a136a3-ab31-70a7-b7d2-20f6d9f3dbb7",
+      "consumerSteps": 0,
+      "consumerRequestsAfterFailure": 0,
+      "requests": [
+        "producer",
+        "consumer",
+        "producer"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

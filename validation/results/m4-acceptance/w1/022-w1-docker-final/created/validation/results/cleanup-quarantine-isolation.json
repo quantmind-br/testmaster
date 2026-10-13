@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cleanup-quarantine-isolation",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T19:05:31.517Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "cleanup-quarantine-isolation",
+        "--base-url",
+        "http://127.0.0.1:46289",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_add9d8cf-2ca6-4af9-be3a-b89406ef1246",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a136a7-cb5a-76bb-a0c1-28b0d434db1c",
+    "run_01a136a7-d09e-7094-ac25-1574413cf683"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "injected host cleanup failure quarantines durable slot; clear produces fresh session with same-attempt cookie positive control; admitted extension cannot activate hook",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
