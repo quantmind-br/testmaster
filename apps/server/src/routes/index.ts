@@ -1,4 +1,5 @@
 import { routeCatalog } from "@testmaster/contracts";
+import { auditRoutes } from "./audit.js";
 import { coreRoutes } from "./core.js";
 import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
@@ -11,6 +12,7 @@ export const routeModules: RouteModule[] = [
   eventRoutes,
   identityRoutes,
   integrationRoutes,
+  auditRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

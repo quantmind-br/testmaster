@@ -1,0 +1,153 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "createdAt",
+    "actor",
+    "operation",
+    "outcome",
+    "scope",
+    "correlationId",
+    "beforeHash",
+    "afterHash"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^aud_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "actor": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "displayName"
+      ],
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "const": "human",
+              "type": "string"
+            },
+            {
+              "const": "agent",
+              "type": "string"
+            },
+            {
+              "const": "integration",
+              "type": "string"
+            },
+            {
+              "const": "system",
+              "type": "string"
+            },
+            {
+              "const": "unauthenticated",
+              "type": "string"
+            }
+          ]
+        },
+        "displayName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "operation": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "const": "allowed",
+          "type": "string"
+        },
+        {
+          "const": "denied",
+          "type": "string"
+        },
+        {
+          "const": "requested",
+          "type": "string"
+        },
+        {
+          "const": "recorded",
+          "type": "string"
+        }
+      ]
+    },
+    "scope": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "resourceType",
+        "resourceId"
+      ],
+      "properties": {
+        "resourceType": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "resourceId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    "correlationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "beforeHash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "afterHash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuditEntry",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -62,6 +62,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET,POST", "/projects", "projects:R/W", "M1", "ProjectInput", "Project"],
   ["GET,PATCH", "/projects/{id}", "projects:R/W", "M1", "ProjectInput", "Project"],
   ["POST", "/projects/{id}/archive", "projects:W", "M1", "Empty", "Project"],
+  [
+    "GET,PUT",
+    "/projects/{id}/approval-policy",
+    "projects:R/A",
+    "M4",
+    "ApprovalPolicyInput",
+    "ApprovalPolicy",
+  ],
   ["POST", "/projects/{id}/purge", "projects:A", "M4", "ConfirmationInput", "DeletionOperation"],
   ["GET,POST", "/projects/{id}/environments", "env:R/W", "M1", "EnvironmentInput", "Environment"],
   ["GET,PATCH,DELETE", "/environments/{id}", "env:R/W", "M1", "EnvironmentInput", "Environment"],
@@ -181,7 +189,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/workers/{id}/heartbeat", "worker:X", "M4", "HeartbeatInput", "Worker"],
   ["GET", "/usage", "usage:R", "M2", "Empty", "UsageEntry"],
   ["POST", "/projects/{id}/budget", "usage:A", "M2", "TokenBudgetInput", "UsageEntry"],
-  ["GET", "/audit-events", "audit:R", "M4", "Empty", "AuditEvent"],
+  ["GET", "/audit-events", "audit:A", "M4", "Empty", "AuditEntry"],
   [
     "POST",
     "/integrations/{provider}/webhooks",
