@@ -19,8 +19,28 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["{packages,apps,fixtures,tools,validation}/**/*.test.ts"],
-          exclude: ["**/node_modules/**", "**/dist/**", "**/*.docker.test.ts", "**/*.live.test.ts"],
+          exclude: [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/*.docker.test.ts",
+            "**/*.live.test.ts",
+            "**/*.portal.test.ts",
+          ],
           testTimeout: 20_000,
+        },
+      },
+      {
+        // Browser journeys against the built portal and a real server-profile stack. The
+        // integration owner reconciles this with the `postgres` project (which also runs them).
+        extends: true,
+        ...common,
+        test: {
+          name: "portal",
+          include: ["{apps,validation}/**/*.portal.test.ts"],
+          exclude: ["**/node_modules/**", "**/dist/**"],
+          testTimeout: 300_000,
+          hookTimeout: 300_000,
+          fileParallelism: false,
         },
       },
       {
