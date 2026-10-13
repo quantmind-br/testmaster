@@ -8394,46 +8394,57 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
+      "status": "verified",
       "scenario": [
-        "validation/journeys/portal-onboarding.portal.test.ts::M4-04 the onboarding journey called only catalog /v1 routes and its own static assets",
-        "validation/journeys/portal-sources-discovery.portal.test.ts::M4-04 the sources and discovery journey called only catalog /v1 routes and its own static assets",
-        "validation/journeys/portal-requirements.portal.test.ts::M4-04 the requirements and feature map journey called only catalog /v1 routes and its own static assets"
+        "validation/journeys/portal-authoring.portal.test.ts::M4-04 UX-015 UX-016 reviews a subset in the real UI: A and B are accepted, C stays pending, a resend changes nothing",
+        "validation/journeys/portal-authoring.portal.test.ts::M4-04 every request the authoring pages make is a catalog /v1 route, and the pages are axe clean and reflow at 320 px",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-021 M4-04 a concurrent edit to a proposal is shown as a diff and never overwritten silently"
       ],
-      "oracle": [],
+      "oracle": [
+        "A real browser on the server profile reviews a subset of a proposal batch without loss (A and B accepted, C pending, a resend changes nothing), a concurrent edit is shown as a diff and never overwrites, and every request the authoring pages made is a catalog /v1 route; the pages have zero axe violations and reflow at 320 px."
+      ],
       "evidence": [
-        "validation/results/m4-acceptance/s4a/003-s4a-journey-onboarding/output.log",
-        "validation/results/m4-acceptance/s4a/004-s4a-journey-sources/output.log",
-        "validation/results/m4-acceptance/s4a/005-s4a-journey-requirements/output.log"
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
       ],
-      "code": [],
+      "code": [
+        "apps/web/src/routes/authoring.tsx",
+        "apps/web/src/routes/authoring",
+        "validation/journeys/portal-authoring.portal.test.ts",
+        "validation/journeys/fake-model.ts",
+        "validation/journeys/portal-seeds/authoring.ts"
+      ],
       "coverage": {
         "positive": [
-          "validation/journeys/portal-onboarding.portal.test.ts::M4-04 the onboarding journey called only catalog /v1 routes and its own static assets",
-          "validation/journeys/portal-sources-discovery.portal.test.ts::M4-04 the sources and discovery journey called only catalog /v1 routes and its own static assets",
-          "validation/journeys/portal-requirements.portal.test.ts::M4-04 the requirements and feature map journey called only catalog /v1 routes and its own static assets"
+          "validation/journeys/portal-authoring.portal.test.ts::M4-04 UX-015 UX-016 reviews a subset in the real UI: A and B are accepted, C stays pending, a resend changes nothing",
+          "validation/journeys/portal-authoring.portal.test.ts::M4-04 every request the authoring pages make is a catalog /v1 route, and the pages are axe clean and reflow at 320 px"
         ],
         "negative": [
-          "validation/journeys/portal-onboarding.portal.test.ts::M4-04 the onboarding journey called only catalog /v1 routes and its own static assets",
-          "validation/journeys/portal-sources-discovery.portal.test.ts::M4-04 the sources and discovery journey called only catalog /v1 routes and its own static assets",
-          "validation/journeys/portal-requirements.portal.test.ts::M4-04 the requirements and feature map journey called only catalog /v1 routes and its own static assets"
+          "validation/journeys/portal-authoring.portal.test.ts::UX-021 M4-04 a concurrent edit to a proposal is shown as a diff and never overwritten silently"
         ],
         "criticalAssertions": [
           {
-            "path": "validation/journeys/portal-onboarding.portal.test.ts",
-            "assertion": "expect(privateEndpointCalls(calls)).toEqual([]);"
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(unknown).toEqual([]);"
           },
           {
-            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
-            "assertion": "expect(privateEndpointCalls(calls)).toEqual([]);"
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(app.tests.list(projectId)).toHaveLength(2);"
           },
           {
-            "path": "validation/journeys/portal-requirements.portal.test.ts",
-            "assertion": "expect(privateEndpointCalls(calls)).toEqual([]);"
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await conflict.textContent()).toContain(\"Nothing was overwritten\");"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(used, expected).toContain(expected);"
           }
         ]
       },
-      "note": "S4a added network-log proofs that the onboarding, sources, discovery, requirements and feature-map pages call only catalog /v1 routes and their own static assets."
+      "note": "S4a added network-log proofs that the onboarding, sources, discovery, requirements and feature-map pages call only catalog /v1 routes and their own static assets. S4b proved the proposal review, test editor and refinement pages with the portal-authoring journey (catalog-only routes, axe and 320 px reflow)."
     },
     {
       "id": "M4-05",
@@ -14358,11 +14369,67 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/refinement.test.ts::REQ-054 a chat refinement becomes a new proposal with a reviewable diff and never edits an active test",
+        "packages/application/src/ai/refinement.test.ts::REQ-054 refining an existing test proposes a candidate revision and never moves the active revision",
+        "validation/journeys/portal-authoring.portal.test.ts::REQ-054 a chat refinement lands as a new proposal for review, a weakening answer is refused, and no test changes",
+        "apps/server/src/authoring.test.ts::REQ-054 an untouched refinement thread is empty and a refinement of an unknown subject is refused",
+        "packages/application/src/ai/refinement.test.ts::REQ-054 a refinement that weakens an assertion, changes scope or injects instructions is refused and persists nothing",
+        "packages/application/src/ai/refinement.test.ts::REQ-054 refinement replays by idempotency key and refuses viewers, stale batches, conflicts and an unavailable model"
+      ],
+      "oracle": [
+        "A chat message about a proposal or a test yields a new proposal with its own diff and an accept step; no active test or revision changes, the original proposal stays pending, and an answer that weakens an assertion, changes scope, proposes no change or obeys an injected instruction is refused and persists nothing. Replays use the idempotency key; viewers, stale batches and an unavailable model are refused."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/refinement.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/refinement-chat.tsx",
+        "packages/persistence/migrations/sqlite/0013_authoring_portal.sql",
+        "packages/persistence/migrations/postgres/0013_authoring_portal.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/refinement.test.ts::REQ-054 a chat refinement becomes a new proposal with a reviewable diff and never edits an active test",
+          "packages/application/src/ai/refinement.test.ts::REQ-054 refining an existing test proposes a candidate revision and never moves the active revision",
+          "validation/journeys/portal-authoring.portal.test.ts::REQ-054 a chat refinement lands as a new proposal for review, a weakening answer is refused, and no test changes",
+          "apps/server/src/authoring.test.ts::REQ-054 an untouched refinement thread is empty and a refinement of an unknown subject is refused"
+        ],
+        "negative": [
+          "packages/application/src/ai/refinement.test.ts::REQ-054 a refinement that weakens an assertion, changes scope or injects instructions is refused and persists nothing",
+          "packages/application/src/ai/refinement.test.ts::REQ-054 refinement replays by idempotency key and refuses viewers, stale batches, conflicts and an unavailable model"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/refinement.test.ts",
+            "assertion": "expect(thread.proposal).toEqual({ id: refined.id, batchId: batch.id });"
+          },
+          {
+            "path": "packages/application/src/ai/refinement.test.ts",
+            "assertion": "expect(original).toMatchObject({ state: \"proposed\", version: proposal.version, plan: base });"
+          },
+          {
+            "path": "packages/application/src/ai/refinement.test.ts",
+            "assertion": "expect(f.completions, label).toBeGreaterThan(calls);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(app.tests.list(projectId)).toHaveLength(0);"
+          },
+          {
+            "path": "apps/server/src/authoring.test.ts",
+            "assertion": "expect(unknown.statusCode).toBe(404);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "REQ-055",
@@ -17803,11 +17870,57 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/proposal-review.test.ts::UX-015 preview lists the revisions a selection would create and accepting needs no model call",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-015 UX-016 a keyboard-only reviewer selects a proposal and accepts it without the pointer",
+        "apps/server/src/authoring.test.ts::UX-015 UX-016 lists batch summaries and previews what accepting would create, and refuses an unknown proposal",
+        "packages/application/src/ai/proposal-review.test.ts::UX-015 an invalid proposal is blocked in the preview and never becomes a test"
+      ],
+      "oracle": [
+        "The preview lists, for each selected proposal, the revision acceptance would create (runner, step and assertion counts, duration estimate) before anything is written, and a stored valid proposal is accepted with the model provider stopped and no further model call. An invalid proposal is shown as not selectable with its issue and accepting it is refused without creating a test."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/proposals.ts",
+        "packages/application/src/plan-analysis.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/batch-page.tsx",
+        "apps/web/src/routes/authoring/proposal-card.tsx",
+        "apps/web/src/routes/authoring/proposals-page.tsx",
+        "packages/contracts/src/m4/authoring.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-015 preview lists the revisions a selection would create and accepting needs no model call",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-015 UX-016 a keyboard-only reviewer selects a proposal and accepts it without the pointer",
+          "apps/server/src/authoring.test.ts::UX-015 UX-016 lists batch summaries and previews what accepting would create, and refuses an unknown proposal"
+        ],
+        "negative": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-015 an invalid proposal is blocked in the preview and never becomes a test"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(f.completions).toBe(modelCalls);"
+          },
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(preview.items.map((item) => item.selectable)).toEqual([true, false]);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(app.tests.list(projectId).map((test) => test.name)).toEqual([\"Keyboard A\"]);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-016",
@@ -17815,11 +17928,59 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/proposal-review.test.ts::UX-016 accepting A and B retains C and an identical resend replays the receipt",
+        "validation/journeys/portal-authoring.portal.test.ts::M4-04 UX-015 UX-016 reviews a subset in the real UI: A and B are accepted, C stays pending, a resend changes nothing",
+        "packages/application/src/ai/proposal-review.test.ts::UX-016 a partial accept that cannot complete creates nothing and leaves every proposal pending"
+      ],
+      "oracle": [
+        "Accepting A and B of A/B/C creates exactly two tests and leaves C pending and selectable; an identical resend returns the original receipt and creates nothing, in the application and from the real UI. A selection that cannot complete (a member became invalid) creates nothing and leaves every proposal and the batch version unchanged."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/proposals.ts",
+        "packages/application/src/plan-analysis.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/batch-page.tsx",
+        "apps/web/src/routes/authoring/proposal-card.tsx",
+        "apps/web/src/routes/authoring/proposals-page.tsx",
+        "packages/contracts/src/m4/authoring.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-016 accepting A and B retains C and an identical resend replays the receipt",
+          "validation/journeys/portal-authoring.portal.test.ts::M4-04 UX-015 UX-016 reviews a subset in the real UI: A and B are accepted, C stays pending, a resend changes nothing"
+        ],
+        "negative": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-016 a partial accept that cannot complete creates nothing and leaves every proposal pending"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(receipt).toMatchObject({ retained: [c.id], rejected: [] });"
+          },
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(f.app.proposals.accept(batch.id, input)).toEqual(receipt);"
+          },
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(after.proposals.every((item) => item.state === \"proposed\")).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(resend.status).toBe(200);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-017",
@@ -17827,11 +17988,55 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/proposal-review.test.ts::UX-017 provenance tells model output from human edits and carries it to the revision",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-017 an exact duplicate needs an explicit decision, a merely similar proposal only warns, and both show their match",
+        "packages/application/src/ai/proposal-review.test.ts::UX-017 an exact duplicate needs an explicit decision while a merely similar plan only warns"
+      ],
+      "oracle": [
+        "Each proposal shows whether the model or a person wrote it and carries that provenance (model call, human edits) to the accepted revision. An exact duplicate of an existing test shows its similarity and needs an explicit, audited decision (`duplicate_decision_required` otherwise); a merely similar plan shows a warning and accepts without a decision."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/proposals.ts",
+        "packages/application/src/plan-analysis.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/batch-page.tsx",
+        "apps/web/src/routes/authoring/proposal-card.tsx",
+        "apps/web/src/routes/authoring/proposals-page.tsx",
+        "packages/contracts/src/m4/authoring.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-017 provenance tells model output from human edits and carries it to the revision",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-017 an exact duplicate needs an explicit decision, a merely similar proposal only warns, and both show their match"
+        ],
+        "negative": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-017 an exact duplicate needs an explicit decision while a merely similar plan only warns"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "details: expect.objectContaining({ reason: \"duplicate_decision_required\" }),"
+          },
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(history(testB)).toMatchObject({ authorship: \"llm\", humanEdited: true });"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await duplicate.getByTestId(\"similar\").textContent()).toMatch(/100% match with test/);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-018",
@@ -17839,11 +18044,61 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/proposal-review.test.ts::UX-018 a cancelled generation persists nothing, keeps completed phases and can be resumed",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-018 generation shows its budget, cancelling keeps the prepared phases and creates nothing, and resume completes",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-018 a project without a token limit says so instead of failing the generate panel",
+        "packages/application/src/ai/proposal-review.test.ts::UX-018 a new source marks the previous generation stale and blocks accepting it until reviewed"
+      ],
+      "oracle": [
+        "Generation shows the project's token budget; cancelling it (the server cancels the model call when the connection drops) stores nothing and keeps the normalized requirements, and resuming completes. A new source marks the earlier batch stale with a reason, blocks its acceptance and shows the issue in the preview."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/proposals.ts",
+        "packages/application/src/plan-analysis.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/batch-page.tsx",
+        "apps/web/src/routes/authoring/proposal-card.tsx",
+        "apps/web/src/routes/authoring/proposals-page.tsx",
+        "packages/contracts/src/m4/authoring.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-018 a cancelled generation persists nothing, keeps completed phases and can be resumed",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-018 generation shows its budget, cancelling keeps the prepared phases and creates nothing, and resume completes",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-018 a project without a token limit says so instead of failing the generate panel"
+        ],
+        "negative": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-018 a new source marks the previous generation stale and blocks accepting it until reviewed"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(f.app.proposals.summaries(f.projectId)).toEqual([]);"
+          },
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(preview).toMatchObject({ stale: true, blocked: true });"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "await cancelled;"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "toContain(\"No limit set for this project\");"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-019",
@@ -17851,11 +18106,64 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/ai/proposal-review.test.ts::UX-019 only an interactive human session may accept a proposal, never an API credential",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-019 only a person in an interactive session may accept; a token is refused and told why, and nothing becomes a test",
+        "apps/server/src/authoring.test.ts::UX-019 a read-only token previews but is told it cannot accept, and cannot refine"
+      ],
+      "oracle": [
+        "Accepting a proposal is refused with POLICY_DENIED and a stated reason for API, worker and operator credentials and is allowed for a person's interactive session; the preview states the policy (and a role without write permission is told it cannot accept), the portal disables the action with that reason, and nothing becomes a test through the refused paths. Consent given in an interactive session is not inherited by automation."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/proposals.ts",
+        "packages/application/src/plan-analysis.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/batch-page.tsx",
+        "apps/web/src/routes/authoring/proposal-card.tsx",
+        "apps/web/src/routes/authoring/proposals-page.tsx",
+        "packages/contracts/src/m4/authoring.ts",
+        "docs/usage/portal-authoring.md"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/ai/proposal-review.test.ts::UX-019 only an interactive human session may accept a proposal, never an API credential",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-019 only a person in an interactive session may accept; a token is refused and told why, and nothing becomes a test"
+        ],
+        "negative": [
+          "apps/server/src/authoring.test.ts::UX-019 a read-only token previews but is told it cannot accept, and cannot refine"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "expect(interactive.proposals.preview(batch.id, [a.id]).policy.canAccept).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/ai/proposal-review.test.ts",
+            "assertion": "reason: \"interactive_acceptance_required\","
+          },
+          {
+            "path": "apps/server/src/authoring.test.ts",
+            "assertion": "expect(preview.json().data.policy.canAccept).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(denied.status).toBe(422);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await accept.isDisabled()).toBe(true);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-020",
@@ -17863,11 +18171,61 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/revision-editor.test.ts::UX-020 history marks current, candidate, superseded and accepted revisions from persisted facts",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-020 UX-022 UX-023 UX-024 the editor blocks an unrunnable plan, undoes locally, recovers a draft, publishes with a diff and keeps revision 1 intact"
+      ],
+      "oracle": [
+        "Revision states (current, candidate, superseded, accepted, executed) are derived from persisted facts; saving revision B leaves revision A byte-identical and current until promotion, a Run of A still shows A, and the downloaded file contains A's plan, not B's."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/revision-history.ts",
+        "packages/application/src/test-drafts.ts",
+        "packages/application/src/plan-validation.ts",
+        "packages/application/src/authoring.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/test-page.tsx",
+        "apps/web/src/routes/authoring/plan-editor.tsx",
+        "apps/web/src/routes/authoring/history-panel.tsx",
+        "packages/persistence/migrations/sqlite/0013_authoring_portal.sql",
+        "packages/persistence/migrations/postgres/0013_authoring_portal.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/revision-editor.test.ts::UX-020 history marks current, candidate, superseded and accepted revisions from persisted facts",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-020 UX-022 UX-023 UX-024 the editor blocks an unrunnable plan, undoes locally, recovers a draft, publishes with a diff and keeps revision 1 intact"
+        ],
+        "negative": [
+          "validation/journeys/portal-authoring.portal.test.ts::UX-020 UX-022 UX-023 UX-024 the editor blocks an unrunnable plan, undoes locally, recovers a draft, publishes with a diff and keeps revision 1 intact"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(history[1]?.promotedAt).toMatch(/^\\d{4}-/);"
+          },
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(f.app.revisions.get(activeId)).toEqual(original);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(app.revisions.get(revisionOne)).toEqual(original);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(JSON.stringify(downloaded.plan)).toContain('{\"literal\":\"ok\"}');"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-021",
@@ -17875,11 +18233,57 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/revision-editor.test.ts::UX-021 stale writers get a recoverable conflict with both sides and the stored text is never overwritten",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-021 M4-04 a concurrent edit to a proposal is shown as a diff and never overwritten silently"
+      ],
+      "oracle": [
+        "A stale writer (draft version, promotion version or proposal If-Match) receives REVISION_CONFLICT with both sides, and the stored text is never overwritten; the UI shows the other person's version beside the edit and keeps the edit for a conscious retry."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/revision-history.ts",
+        "packages/application/src/test-drafts.ts",
+        "packages/application/src/plan-validation.ts",
+        "packages/application/src/authoring.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/test-page.tsx",
+        "apps/web/src/routes/authoring/plan-editor.tsx",
+        "apps/web/src/routes/authoring/history-panel.tsx",
+        "packages/persistence/migrations/sqlite/0013_authoring_portal.sql",
+        "packages/persistence/migrations/postgres/0013_authoring_portal.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/revision-editor.test.ts::UX-021 stale writers get a recoverable conflict with both sides and the stored text is never overwritten",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-021 M4-04 a concurrent edit to a proposal is shown as a diff and never overwritten silently"
+        ],
+        "negative": [
+          "packages/application/src/revision-editor.test.ts::UX-021 stale writers get a recoverable conflict with both sides and the stored text is never overwritten"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(conflict?.details?.diff?.current?.name).toBe(\"First tab\");"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await conflict.textContent()).toContain(\"Nothing was overwritten\");"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect((await read()).plan.name).toBe(\"Theirs\");"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-022",
@@ -17887,11 +18291,66 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/revision-editor.test.ts::UX-022 the editor names the field and step that block a run and offers it only when every check passes",
+        "apps/server/src/authoring.test.ts::UX-022 plan validation names the failing field and step, and offers a run only when the plan is clean",
+        "packages/application/src/revision-editor.test.ts::UX-022 validation persists nothing and treats hostile plan text as data"
+      ],
+      "oracle": [
+        "Validation checks structure, sequence, types, references, assertions, dependencies, secrets and permissions and names the JSON pointer and step of each issue; a missing secret or a dependency cycle makes the plan not runnable and the editor does not offer the run, while a clean plan is offered it. Validation persists nothing and treats hostile text as data."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/revision-history.ts",
+        "packages/application/src/test-drafts.ts",
+        "packages/application/src/plan-validation.ts",
+        "packages/application/src/authoring.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/test-page.tsx",
+        "apps/web/src/routes/authoring/plan-editor.tsx",
+        "apps/web/src/routes/authoring/history-panel.tsx",
+        "packages/persistence/migrations/sqlite/0013_authoring_portal.sql",
+        "packages/persistence/migrations/postgres/0013_authoring_portal.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/revision-editor.test.ts::UX-022 the editor names the field and step that block a run and offers it only when every check passes",
+          "apps/server/src/authoring.test.ts::UX-022 plan validation names the failing field and step, and offers a run only when the plan is clean"
+        ],
+        "negative": [
+          "packages/application/src/revision-editor.test.ts::UX-022 validation persists nothing and treats hostile plan text as data"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(valid).toMatchObject({ valid: true, runnable: true, issues: [] });"
+          },
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect.objectContaining({ code: \"secret_missing\", stepId: \"get-health\" }),"
+          },
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect.objectContaining({ code: \"dependency_cycle\", field: \"/dependsOn/0/producerTestId\" }),"
+          },
+          {
+            "path": "apps/server/src/authoring.test.ts",
+            "assertion": "expect(result.runnable).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await page.getByRole(\"button\", { name: /^Run revision/ }).isDisabled()).toBe(true);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-023",
@@ -17899,11 +18358,63 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/revision-editor.test.ts::UX-023 a draft is private, recoverable and never becomes a revision until it is published",
+        "apps/server/src/authoring.test.ts::UX-023 UX-024 a draft is saved, conflicts on a stale version, and is discarded; history lists the revision",
+        "packages/application/src/authoring.pg.test.ts::UX-023 REQ-054 PostgreSQL keeps drafts and refinement turns inside their workspace, even for raw SQL"
+      ],
+      "oracle": [
+        "A per-person draft is stored server-side, recovered exactly (even when not yet a valid plan), never alters the published revision, is invisible to other people and tenants (including raw SQL on PostgreSQL), and a stale writer cannot overwrite it; the editor offers local undo and a diff before publishing."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/revision-history.ts",
+        "packages/application/src/test-drafts.ts",
+        "packages/application/src/plan-validation.ts",
+        "packages/application/src/authoring.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/test-page.tsx",
+        "apps/web/src/routes/authoring/plan-editor.tsx",
+        "apps/web/src/routes/authoring/history-panel.tsx",
+        "packages/persistence/migrations/sqlite/0013_authoring_portal.sql",
+        "packages/persistence/migrations/postgres/0013_authoring_portal.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/revision-editor.test.ts::UX-023 a draft is private, recoverable and never becomes a revision until it is published",
+          "apps/server/src/authoring.test.ts::UX-023 UX-024 a draft is saved, conflicts on a stale version, and is discarded; history lists the revision",
+          "packages/application/src/authoring.pg.test.ts::UX-023 REQ-054 PostgreSQL keeps drafts and refinement turns inside their workspace, even for raw SQL"
+        ],
+        "negative": [
+          "packages/application/src/revision-editor.test.ts::UX-023 a draft is private, recoverable and never becomes a revision until it is published"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(f.app.testDrafts.get(test.id).plan).toEqual(unfinished);"
+          },
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(second.version).toBe(2);"
+          },
+          {
+            "path": "apps/server/src/authoring.test.ts",
+            "assertion": "expect(stale.statusCode).toBe(412);"
+          },
+          {
+            "path": "packages/application/src/authoring.pg.test.ts",
+            "assertion": "expect(unscoped.all(\"SELECT workspace_id FROM test_drafts\")).toHaveLength(2);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-024",
@@ -17911,11 +18422,61 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/revision-editor.test.ts::UX-024 history separates assertion, operational and source/model changes and never reduces an assertion edit to auto-heal",
+        "apps/server/src/authoring.test.ts::UX-023 UX-024 a draft is saved, conflicts on a stale version, and is discarded; history lists the revision"
+      ],
+      "oracle": [
+        "History labels each revision as intent/assertion, operational or source/model change from the plans themselves, with author, timestamp and justification; an assertion edit is never reported as only an automatic repair, and a manual operational edit is never reported as an assertion change."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/revision-history.ts",
+        "packages/application/src/test-drafts.ts",
+        "packages/application/src/plan-validation.ts",
+        "packages/application/src/authoring.ts",
+        "apps/server/src/routes/authoring.ts",
+        "apps/web/src/routes/authoring/test-page.tsx",
+        "apps/web/src/routes/authoring/plan-editor.tsx",
+        "apps/web/src/routes/authoring/history-panel.tsx",
+        "packages/persistence/migrations/sqlite/0013_authoring_portal.sql",
+        "packages/persistence/migrations/postgres/0013_authoring_portal.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/revision-editor.test.ts::UX-024 history separates assertion, operational and source/model changes and never reduces an assertion edit to auto-heal",
+          "apps/server/src/authoring.test.ts::UX-023 UX-024 a draft is saved, conflicts on a stale version, and is discarded; history lists the revision"
+        ],
+        "negative": [
+          "packages/application/src/revision-editor.test.ts::UX-024 history separates assertion, operational and source/model changes and never reduces an assertion edit to auto-heal"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "changeKinds: [\"intent_assertion\"],"
+          },
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(healedEntry?.changeKinds).not.toEqual([\"source_model\"]);"
+          },
+          {
+            "path": "packages/application/src/revision-editor.test.ts",
+            "assertion": "expect(operationalEntry?.changeKinds).not.toContain(\"intent_assertion\");"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await entry.textContent()).not.toContain(\"Auto-heal\");"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-025",
@@ -17923,11 +18484,52 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-authoring.portal.test.ts::UX-025 hostile titles, step text and test names render as inert text in every authoring page",
+        "packages/application/src/revision-editor.test.ts::UX-022 validation persists nothing and treats hostile plan text as data"
+      ],
+      "oracle": [
+        "Hostile test names, step descriptions, proposal titles and plan JSON render in every authoring page as inert text (no element, no script, no page error), while the same characters stay visible in escaped form; plan validation treats hostile plan text as data."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/output.log",
+        "validation/results/m4-acceptance/s4b/073-ev-authoring-pg-4/created/validation/results/m4-portal-authoring.json",
+        "validation/results/m4-acceptance/s4b/075-ev-full-postgres/output.log",
+        "validation/results/m4-acceptance/s4b/076-ev-full-parity/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/authoring.tsx",
+        "apps/web/src/routes/authoring/parts.tsx",
+        "apps/web/src/routes/authoring/plan-editor.tsx",
+        "apps/web/src/routes/authoring/tests-page.tsx",
+        "apps/web/src/routes/authoring/test-page.tsx",
+        "apps/web/src/routes/authoring/proposal-card.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-authoring.portal.test.ts::UX-025 hostile titles, step text and test names render as inert text in every authoring page"
+        ],
+        "negative": [
+          "packages/application/src/revision-editor.test.ts::UX-022 validation persists nothing and treats hostile plan text as data"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await page.locator(\"main script\").count()).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(await page.locator(\"pre.untrusted-block\").first().textContent()).toContain(\"<img\");"
+          },
+          {
+            "path": "validation/journeys/portal-authoring.portal.test.ts",
+            "assertion": "expect(diagnostics.pageErrors).toEqual([]);"
+          }
+        ]
+      },
+      "note": "S4b proved this in the application, over HTTP and in the portal."
     },
     {
       "id": "UX-026",
