@@ -6922,11 +6922,84 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count",
+        "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter"
+      ],
+      "oracle": [
+        "On PostgreSQL the real scheduler fires a New York schedule over a cross-project list: the DST gap is skipped, an overlapping firing is forbidden, and the next firing publishes a new BatchRun with one Run per revision and cell, while a late tick records a misfire. While Slack answers 503, one webhook request times out after it was sent and a forged callback is refused by the egress policy, every event has exactly one delivery per destination, Slack and the forged callback end as visible dead letters, the webhook retries under the same delivery and event IDs, and no Run verdict, gate or Run count moves.",
+        "After the destination recovers, requeueing from the operations DLQ redelivers the first attempt's bytes under the same delivery IDs once each, the forged callback stays refused, and a second dispatcher or a restarted scheduler creates no further delivery. A control with healthy destinations delivers each event once on the first attempt with no dead letter. Only the Jira/Linear tracker part of J13 is M5."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/output.log",
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/manifest.json",
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/created/validation/results/j13-schedule-notify.json"
+      ],
+      "code": [
+        "validation/journeys/j13-schedule-notify.pg.test.ts",
+        "validation/journeys/schedule-helpers.ts",
+        "packages/application/src/testing/j13-notify.ts",
+        "packages/application/src/testing/notification-harness.ts",
+        "packages/application/src/scheduling/scheduler.ts",
+        "packages/application/src/notifications/service.ts",
+        "packages/application/src/notifications/providers.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/application/src/operations.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count"
+        ],
+        "negative": [
+          "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(evidence.gap).toMatchObject({ state: \"skipped\", dst: \"gap_skipped\", batchId: null });"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(slackReceiver.requests).toHaveLength(10 * events);"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(forged.every((delivery) => delivery.lastReasonCode === \"egress_denied\")).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(slackReceiver.requests).toHaveLength(11 * events);"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(world.totals()).toEqual(totalsBefore);"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(report.runsAfter).toBe(report.runsBefore);"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(h.service.deadLetters()).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
+            "assertion": "    expect(evidence.firings.filter((firing) => firing.batchId !== null)).toHaveLength(2);"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "Jira/Linear tracker import as intent, issue preview/link and ticket prompt-injection handling",
+          "specQuote": {
+            "path": "specs/10-validation.md",
+            "text": "M4 schedule/delivery, M5 tracker."
+          }
+        }
+      ],
+      "note": "J13's schedule and delivery half is proven on PostgreSQL in M4; the tracker half is M5. Local HTTPS receivers stand in for Slack and the webhook consumer, so no SaaS endpoint was contacted."
     },
     {
       "id": "J14",
@@ -13200,12 +13273,14 @@
         "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
         "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
         "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
-        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed"
+        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+        "packages/application/src/restore-isolation.pg.test.ts::OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it"
       ],
       "oracle": [
         "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted.",
         "A restored GitHub installation that was revoked stays revoked after restoring a backup taken while it was active, and one that was never revoked keeps working.",
-        "A restored server starts isolated (operational_state restore:isolated and admission suspended_restore): admission is paused, schedules, integrations and outbox dispatch read application.operations.isolated() and do nothing, alert evaluation is skipped, and isolation ends only when an operator confirms the restore review and releases it; the DR rehearsal records the same gates on a fresh stack."
+        "A restored server starts isolated (operational_state restore:isolated and admission suspended_restore): admission is paused, schedules, integrations and outbox dispatch read application.operations.isolated() and do nothing, alert evaluation is skipped, and isolation ends only when an operator confirms the restore review and releases it; the DR rehearsal records the same gates on a fresh stack.",
+        "On PostgreSQL a real backup restored into a fresh database starts isolated with every integration paused and every token dropped: every registered server controller and the scheduler do nothing, no notification leaves, no check or comment is published and an inbound webhook is refused without being recorded, even after an administrator resumed the integrations. Only the owner may release, and only after the review; after the release the same pending schedule, notification and check proceed, the refused webhook delivery is processed on redelivery, and a schedule created by a revoked token stays paused as owner_revoked."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
@@ -13221,7 +13296,9 @@
         "packages/application/src/integrations/github/github-restore.test.ts",
         "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
         "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
-        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log",
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/output.log",
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/manifest.json"
       ],
       "code": [
         "packages/application/src/backups.ts",
@@ -13232,9 +13309,13 @@
         "packages/application/src/notifications/controllers.ts",
         "packages/application/src/integrations/github/service.ts",
         "packages/application/src/operations.ts",
-        "deploy/compose/dr-rehearsal.sh"
+        "deploy/compose/dr-rehearsal.sh",
+        "packages/application/src/restore-isolation.pg.test.ts",
+        "packages/application/src/integrations/service.ts",
+        "packages/application/src/notifications/service.ts",
+        "packages/persistence/src/restore-tightening.ts"
       ],
-      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof. S2b added the restore:isolated flag, application.operations.isolated() and the review-then-release gate.",
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof. S2b added the restore:isolated flag, application.operations.isolated() and the review-then-release gate. M4 proved scheduler, notification, GitHub and inbound-webhook isolation of a restored server-profile copy on PostgreSQL (restore-isolation.pg.test.ts).",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
@@ -13246,7 +13327,8 @@
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
           "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
           "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
-          "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it"
+          "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+          "packages/application/src/restore-isolation.pg.test.ts::OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it"
         ],
         "negative": [
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
@@ -13258,7 +13340,8 @@
           "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
           "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
           "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
-          "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed"
+          "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+          "packages/application/src/restore-isolation.pg.test.ts::OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it"
         ],
         "criticalAssertions": [
           {
@@ -13308,19 +13391,33 @@
           {
             "path": "packages/application/src/operations.pg.test.ts",
             "assertion": "expect(owner.operations.status().isolation).toEqual({ isolated: true, review: \"pending\" });"
+          },
+          {
+            "path": "packages/application/src/restore-isolation.pg.test.ts",
+            "assertion": "  expect(total(application, \"SELECT COUNT(*) AS n FROM server_tokens\")).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/restore-isolation.pg.test.ts",
+            "assertion": "  expect(effects(src, application)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/restore-isolation.pg.test.ts",
+            "assertion": "  expect(owner.operations.isolated()).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/restore-isolation.pg.test.ts",
+            "assertion": "  expect(released.dispatched).toBeGreaterThanOrEqual(1);"
+          },
+          {
+            "path": "packages/application/src/restore-isolation.pg.test.ts",
+            "assertion": "  expect(after.notificationRequests).toBe(before.notificationRequests + 1);"
+          },
+          {
+            "path": "packages/application/src/restore-isolation.pg.test.ts",
+            "assertion": "  expect(accepted).toMatchObject({ outcome: \"accepted\", duplicate: false });"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Scheduler activation and webhook registration of the server profile; the SQLite schema has no scheduler or webhook table, and restore already marks every outbox row non-dispatchable",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "| M4 | OPS-005–007/010–012/015–019/024–028/032–033/035–038: servidor/team/scheduler"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-026",
@@ -14022,13 +14119,16 @@
         "validation/journeys/github-portal.portal.test.ts::OPS-035 INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result",
         "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
         "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
-        "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent"
+        "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent",
+        "apps/server/src/integrations.test.ts::OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both",
+        "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can"
       ],
       "oracle": [
         "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only.",
         "The portal grant editor issues allow and deny grants by resource type, actions, projects, environments and expiry, lists them, and the server refuses grants beyond the issuer; the member editor changes roles with If-Match and refuses self-promotion.",
         "M4 (S3) adds the auth-dynamic operator surfaces: profile, test sign-in, checkpoint and session-revocation routes, CLI commands and portal pages, each refusing callers without the role and returning no credential value.",
-        "GitHub surfaces: the CLI manifest setup helper, per-repository settings (validated, administrator-only) and the portal settings form bind errors to their fields."
+        "GitHub surfaces: the CLI manifest setup helper, per-repository settings (validated, administrator-only) and the portal settings form bind errors to their fields.",
+        "Over HTTP a caller without administrator scope cannot pause or revoke a webhook integration and an administrator can; a viewer and a runner cannot revoke an authenticated session of an auth profile (state unchanged) and an owner can."
       ],
       "evidence": [
         "docs/operations/local-operations.md",
@@ -14050,7 +14150,9 @@
         "apps/server/src/github.routes.test.ts",
         "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
-        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/w2b/002-w2b-unit-final/output.log",
+        "validation/results/m4-acceptance/w2b/006-w2b-portal-clean/output.log"
       ],
       "code": [
         "docs/operations/local-operations.md",
@@ -14069,9 +14171,11 @@
         "apps/web/src/routes/auth.tsx",
         "apps/web/src/routes/github.tsx",
         "apps/cli/src/github.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "packages/application/src/integrations/service.ts",
+        "packages/application/src/auth/profiles.ts"
       ],
-      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal. M4 S7 adds the GitHub App setup and settings surfaces.",
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal. M4 S7 adds the GitHub App setup and settings surfaces. M4 W2b closed the M4 scope with a viewer/runner refusal and owner/administrator control for every M4 operator surface: grant editor (team.portal), GitHub settings and previews (github.routes, github-portal), webhook integrations (integrations.test), auth profiles and checkpoints (auth-routes, auth-pages) and workers and notification deliveries (workers-deliveries, notifications-workers); webhook replay and the S3 outage repair remain M6.",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -14086,7 +14190,9 @@
           "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
           "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
           "validation/journeys/github-portal.portal.test.ts::OPS-035 INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result",
-          "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets"
+          "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
+          "apps/server/src/integrations.test.ts::OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both",
+          "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can"
         ],
         "negative": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -14097,7 +14203,9 @@
           "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
           "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
           "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
-          "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent"
+          "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent",
+          "apps/server/src/integrations.test.ts::OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both",
+          "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can"
         ],
         "criticalAssertions": [
           {
@@ -14151,18 +14259,18 @@
           {
             "path": "validation/journeys/github-portal.portal.test.ts",
             "assertion": "    expect(await field.getAttribute(\"aria-invalid\")).toBe(\"true\");"
+          },
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "    expect(refused.json().error.code).toBe(\"FORBIDDEN\");"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "    expect(await sessionState()).toBe(before);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Multi-user grant editor and GitHub/webhook/auth dynamic surfaces",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "M4 | OPS-005–007/010–012/015–019/024–028/032–033/035–038"
-          }
-        },
         {
           "milestone": "M5",
           "scope": "Tunnel kill and global worker pause surfaces",
@@ -18549,34 +18657,77 @@
         "packages/runner/src/http.test.ts::refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA",
         "packages/sandbox/src/egress/policy.test.ts::refuses an insecure TLS network policy at construction",
         "packages/runner/src/http.test.ts::rejects secret queries, header injection, unsafe URLs and artifacts before IO",
-        "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+        "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects",
+        "validation/journeys/server-transport.pg.test.ts::SEC-013 a client that does not trust the server certificate fails the handshake before any request reaches the server, and the trusted CA gets through",
+        "validation/journeys/server-transport.pg.test.ts::SEC-013 the session cookie is Secure, HttpOnly, SameSite=Strict and host-bound, and a cross-site write with that cookie is refused",
+        "validation/journeys/server-transport.pg.test.ts::SEC-013 a correctly signed webhook over plaintext is refused with no effect, and over TLS it is accepted once and replayed without effect",
+        "packages/application/src/notifications/webhook-transport.test.ts::SEC-013 a webhook integration cannot be configured for a plain http URL, and the https one delivers a signed, timestamped request",
+        "apps/server/src/identity.test.ts::ADR-017 logs in with a __Host- session cookie and keeps loopback requests authenticated",
+        "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery",
+        "validation/journeys/server-transport.pg.test.ts::SEC-013 plaintext reaches nothing but the liveness probe, and not even the login route accepts a password over http",
+        "validation/journeys/server-transport.pg.test.ts::SEC-013 a webhook with a wrong, altered or missing signature has no effect, and a browser session cookie never authorizes one",
+        "validation/journeys/server-transport.pg.test.ts::SEC-013 replay protection is durable: a captured delivery replayed after the metadata and audit windows is still answered from its record",
+        "packages/application/src/notifications/webhook-transport.test.ts::SEC-013 a signing secret bound to another origin never sends the notification to this webhook URL",
+        "apps/server/src/identity.test.ts::ADR-017 refuses plaintext requests in server mode except health/live and ignores forwarding headers from untrusted peers",
+        "apps/server/src/identity.test.ts::ADR-017 requires the CSRF token and an allowed Origin for cookie-authenticated writes",
+        "packages/application/src/notifications/resilience.test.ts::INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing",
+        "packages/application/src/notifications/resilience.test.ts::INT-028 an HTTP redirect is never followed",
+        "apps/server/src/github.routes.test.ts::INT-014 INT-002 the GitHub webhook route authenticates by signature only and answers each failure with its own status"
       ],
       "oracle": [
-        "Untrusted TLS is refused before any login or request (browser login and request counters 0; runner server hits 0), while the same server succeeds through an explicitly pinned CA; an insecure-TLS network policy is refused at construction; cross-origin redirects drop authorization, cookies and API keys."
+        "Untrusted TLS is refused before any login or request (browser login and request counters 0; runner server hits 0), while the same server succeeds through an explicitly pinned CA; an insecure-TLS network policy is refused at construction; cross-origin redirects drop authorization, cookies and API keys.",
+        "Server profile over real TLS (PostgreSQL, real HTTP server, TLS-terminating proxy): a client that does not trust the certificate fails the handshake before any request reaches the server; plaintext reaches only /health/live (a login password is refused over http); the session cookie is __Host-, Secure, HttpOnly, SameSite=Strict and a cross-site write with it is refused for Origin and CSRF token; a correctly signed webhook over plaintext has no effect, a wrong, altered or unsigned one (even with a valid session cookie) has no effect, and a replay is answered from a durable record that survives retention purges.",
+        "Outbound webhooks: a plain http URL cannot be configured, a signing secret bound to another origin sends nothing, a consumer rejects a stale timestamp or wrong secret, loopback and redirect destinations are refused. GitHub sends no signed timestamp, so inbound replay protection is the delivery-ID record with the payload hash."
       ],
       "evidence": [
         "packages/sandbox/src/attempt/adversarial.docker.test.ts",
         "packages/runner/src/http.test.ts",
         "packages/sandbox/src/egress/policy.test.ts",
         "validation/results/sandbox-adversarial.json",
-        "docs/security/threat-model.md"
+        "docs/security/threat-model.md",
+        "validation/results/m4-acceptance/w2b/034-w2b-postgres-final3/output.log",
+        "validation/results/m4-acceptance/w2b/002-w2b-unit-final/output.log",
+        "validation/journeys/server-transport.pg.test.ts",
+        "packages/application/src/notifications/webhook-transport.test.ts"
       ],
       "code": [
         "packages/runner/src/browser.ts",
         "packages/runner/src/http.ts",
-        "packages/sandbox/src/egress/policy.ts"
+        "packages/sandbox/src/egress/policy.ts",
+        "apps/server/src/server.ts",
+        "apps/server/src/transport.ts",
+        "packages/application/src/integrations/service.ts",
+        "packages/application/src/integrations/provider.ts",
+        "packages/application/src/notifications/providers.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/application/src/notifications/signature.ts"
       ],
-      "note": "Local chain and hostname verification, insecure-TLS refusal, query-secret rejection and cross-origin credential stripping verified. The specification sentence that a private CA is preferred is a preference, not an acceptance criterion, and no user-facing CA option exists; it is not claimed. Server TLS, cookies, CSRF and signed webhooks are deferred to M4.",
+      "note": "Local chain and hostname verification, insecure-TLS refusal, query-secret rejection and cross-origin credential stripping verified. The specification sentence that a private CA is preferred is a preference, not an acceptance criterion, and no user-facing CA option exists; it is not claimed. Server TLS, cookies, CSRF and signed webhooks are deferred to M4. M4 W2b proved the hosted surface over real TLS on the server profile (tls_required, __Host- Secure/HttpOnly/SameSite=Strict cookie, Origin and CSRF refusal, signed inbound webhook with dedupe/tamper and durable replay protection, https-only signed outbound webhooks with timestamp tolerance); the TLS-terminating proxy is a Node stand-in for Caddy and Caddy itself is proven by J17.",
       "coverage": {
         "positive": [
           "packages/runner/src/http.test.ts::refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA",
-          "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects"
+          "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects",
+          "validation/journeys/server-transport.pg.test.ts::SEC-013 a client that does not trust the server certificate fails the handshake before any request reaches the server, and the trusted CA gets through",
+          "validation/journeys/server-transport.pg.test.ts::SEC-013 the session cookie is Secure, HttpOnly, SameSite=Strict and host-bound, and a cross-site write with that cookie is refused",
+          "validation/journeys/server-transport.pg.test.ts::SEC-013 a correctly signed webhook over plaintext is refused with no effect, and over TLS it is accepted once and replayed without effect",
+          "packages/application/src/notifications/webhook-transport.test.ts::SEC-013 a webhook integration cannot be configured for a plain http URL, and the https one delivers a signed, timestamped request",
+          "apps/server/src/identity.test.ts::ADR-017 logs in with a __Host- session cookie and keeps loopback requests authenticated",
+          "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery"
         ],
         "negative": [
           "packages/sandbox/src/attempt/adversarial.docker.test.ts::invalid TLS certificate is rejected before the page can perform login",
           "packages/runner/src/http.test.ts::refuses an untrusted self-signed HTTPS target before any request and accepts the same target through a pinned CA",
           "packages/sandbox/src/egress/policy.test.ts::refuses an insecure TLS network policy at construction",
-          "packages/runner/src/http.test.ts::rejects secret queries, header injection, unsafe URLs and artifacts before IO"
+          "packages/runner/src/http.test.ts::rejects secret queries, header injection, unsafe URLs and artifacts before IO",
+          "validation/journeys/server-transport.pg.test.ts::SEC-013 plaintext reaches nothing but the liveness probe, and not even the login route accepts a password over http",
+          "validation/journeys/server-transport.pg.test.ts::SEC-013 a webhook with a wrong, altered or missing signature has no effect, and a browser session cookie never authorizes one",
+          "validation/journeys/server-transport.pg.test.ts::SEC-013 replay protection is durable: a captured delivery replayed after the metadata and audit windows is still answered from its record",
+          "packages/application/src/notifications/webhook-transport.test.ts::SEC-013 a signing secret bound to another origin never sends the notification to this webhook URL",
+          "apps/server/src/identity.test.ts::ADR-017 refuses plaintext requests in server mode except health/live and ignores forwarding headers from untrusted peers",
+          "apps/server/src/identity.test.ts::ADR-017 requires the CSRF token and an allowed Origin for cookie-authenticated writes",
+          "packages/application/src/notifications/resilience.test.ts::INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing",
+          "packages/application/src/notifications/resilience.test.ts::INT-028 an HTTP redirect is never followed",
+          "apps/server/src/github.routes.test.ts::INT-014 INT-002 the GitHub webhook route authenticates by signature only and answers each failure with its own status"
         ],
         "criticalAssertions": [
           {
@@ -18598,19 +18749,57 @@
           {
             "path": "packages/runner/src/http.test.ts",
             "assertion": "expect(observed.authorization).toBeUndefined();"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  expect(proxy.requests).toHaveLength(seen);"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  expect(me.json.error).toMatchObject({ code: \"FORBIDDEN\", details: { reason: \"tls_required\" } });"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  for (const attribute of [\"Path=/\", \"HttpOnly\", \"Secure\", \"SameSite=Strict\"])\n    expect(setCookie).toContain(attribute);"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  expect(foreign.status).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  expect(plain.json.error?.details?.reason).toBe(\"tls_required\");"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  expect(unsigned.status).toBe(401);"
+          },
+          {
+            "path": "validation/journeys/server-transport.pg.test.ts",
+            "assertion": "  expect(tampered.status).toBe(409);"
+          },
+          {
+            "path": "packages/application/src/notifications/webhook-transport.test.ts",
+            "assertion": "  ).toThrowError(expect.objectContaining({ code: \"INVALID_ARGUMENT\" }));"
+          },
+          {
+            "path": "packages/application/src/notifications/webhook-transport.test.ts",
+            "assertion": "  expect(request?.headers[\"testmaster-signature\"]).toMatch(/^t=\\d{10},v1=[0-9a-f]{64}$/u);"
+          },
+          {
+            "path": "packages/application/src/notifications/webhook-transport.test.ts",
+            "assertion": "  expect(h.service.list()[0]).toMatchObject({\n    state: \"dead_letter\",\n    lastReasonCode: \"secret_origin_mismatch\",\n  });"
+          },
+          {
+            "path": "apps/server/src/identity.test.ts",
+            "assertion": "  expect(foreign.json().error.message).toBe(\"Origin is not allowed\");"
+          },
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(late.handle(request)).toMatchObject({ status: 401, reason: \"stale_timestamp\" });"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Server TLS, secure cookies, CSRF and signed webhook/replay scenarios belong to the hosted M4 surface.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "**SEC-013 — TLS e conteúdo autenticado (M1–M4).**"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "SEC-014",
@@ -20384,12 +20573,15 @@
         "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
         "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
         "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
-        "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows"
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows",
+        "packages/application/src/retention-controller.pg.test.ts::SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock",
+        "packages/application/src/retention-controller.pg.test.ts::SEC-037 OPS-021 a legal hold on one workspace keeps its rows through the controller while another workspace is purged"
       ],
       "oracle": [
         "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission.",
         "A user's audit export and report export on a two-organization PostgreSQL database never include the other organization's workspace, ids, principals or secret values, and a report export of another organization's Run is refused with nothing written.",
-        "The server-profile retention purge of one workspace never reads or deletes another workspace's Runs or audit events."
+        "The server-profile retention purge of one workspace never reads or deletes another workspace's Runs or audit events.",
+        "The retention-purge controller registered for the server profile (and not for the local profile) purges, on the real clock and in every workspace, terminal Runs older than 90 days and audit events older than 365 days while keeping rows inside the windows (89 and 364 days), leaves a signed summary per workspace and never touches a workspace under legal hold."
       ],
       "evidence": [
         "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts",
@@ -20401,14 +20593,17 @@
         "packages/application/src/audit.test.ts",
         "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
         "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
-        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log",
+        "validation/results/m4-acceptance/w2b/034-w2b-postgres-final3/output.log",
+        "packages/application/src/retention-controller.pg.test.ts"
       ],
       "code": [
         "packages/application/src/retention.ts",
         "packages/application/src/backups.ts",
         "packages/application/src/artifacts.ts",
         "packages/application/src/audit.ts",
-        "packages/application/src/retention-purge.ts"
+        "packages/application/src/retention-purge.ts",
+        "packages/application/src/operations-controllers.ts"
       ],
       "coverage": {
         "positive": [
@@ -20420,7 +20615,8 @@
           "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
           "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
           "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
-          "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows"
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows",
+          "packages/application/src/retention-controller.pg.test.ts::SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock"
         ],
         "negative": [
           "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
@@ -20432,7 +20628,8 @@
           "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
           "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
           "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
-          "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows"
+          "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows",
+          "packages/application/src/retention-controller.pg.test.ts::SEC-037 OPS-021 a legal hold on one workspace keeps its rows through the controller while another workspace is purged"
         ],
         "criticalAssertions": [
           {
@@ -20498,20 +20695,34 @@
           {
             "path": "packages/application/src/retention-purge.pg.test.ts",
             "assertion": "expect(count(stack, \"runs\", \"id\", theirs.runId, otherId)).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/retention-controller.pg.test.ts",
+            "assertion": "  expect(controller).toBeDefined();"
+          },
+          {
+            "path": "packages/application/src/retention-controller.pg.test.ts",
+            "assertion": "  expect(present(\"runs\", runs.mineExpired.runId, stack.workspaceId)).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/retention-controller.pg.test.ts",
+            "assertion": "  expect(present(\"audit_events\", audit.otherExpired, other)).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/retention-controller.pg.test.ts",
+            "assertion": "  expect(present(\"runs\", runs.mineInside.runId, stack.workspaceId)).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/retention-controller.pg.test.ts",
+            "assertion": "  expect(present(\"audit_events\", audit.mineInside, stack.workspaceId)).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/retention-controller.pg.test.ts",
+            "assertion": "  expect(count(stack, \"runs\", held.runId, other)).toBe(1);"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Multi-organization export isolation (user export never includes another organization) and enforcement of the declared metadata and audit retention windows belong to the server profile; nothing in the local profile deletes metadata or audit rows.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "SEC-037 — Retenção, exportação e exclusão (M3–M4)."
-          }
-        }
-      ],
-      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name). M4 added multi-organization export isolation (tenancy.pg.test.ts); retention windows remain with the operations slice. S2b enforced the declared metadata and audit retention windows per workspace."
+      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name). M4 added multi-organization export isolation (tenancy.pg.test.ts); retention windows remain with the operations slice. S2b enforced the declared metadata and audit retention windows per workspace. M4 W2b added the controller-level enforcement of the 90-day metadata and 365-day audit windows; multi-organization export isolation is proven by the tenancy.pg audit and report export tests."
     },
     {
       "id": "SEC-038",
@@ -26581,11 +26792,21 @@
         "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
         "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
         "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
-        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering"
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering",
+        "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 the same deployment_status delivered twice by ID and again under a new ID before the reconcile creates exactly one Run",
+        "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 a deployment_status or pull_request repeated after the verdict neither starts another Run nor rewrites its checks",
+        "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 a tampered redelivery of a deployment_status is refused and its different SHA starts nothing",
+        "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched"
       ],
       "oracle": [
         "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict.",
-        "Webhook dedupe and tamper handling: a duplicate delivery is answered from the record, a reused ID with other bytes is refused as IDEMPOTENCY_CONFLICT and recorded, and bad, unsigned or oversize deliveries change nothing."
+        "Webhook dedupe and tamper handling: a duplicate delivery is answered from the record, a reused ID with other bytes is refused as IDEMPOTENCY_CONFLICT and recorded, and bad, unsigned or oversize deliveries change nothing.",
+        "A deployment_status delivered twice by ID and again under a new ID before the reconcile creates one Run and one Batch; redelivered deployment_status and pull_request events after the verdict start no Run, keep the Batch and rewrite no check, while a new head SHA still runs; a reused delivery ID with another SHA is refused and starts nothing; a deployment of the PR's merge commit never satisfies the head SHA's preview and no check leaves the head SHA."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
@@ -26598,7 +26819,10 @@
         "packages/application/src/integrations/github/github-webhooks.test.ts",
         "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
-        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/w2b/002-w2b-unit-final/output.log",
+        "packages/application/src/integrations/github/github-duplicates.test.ts",
+        "validation/results/m4-acceptance/w2b/034-w2b-postgres-final3/created/validation/results/j12-github.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
@@ -26616,7 +26840,13 @@
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
           "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
-          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering"
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering",
+          "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 the same deployment_status delivered twice by ID and again under a new ID before the reconcile creates exactly one Run",
+          "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 a deployment_status or pull_request repeated after the verdict neither starts another Run nor rewrites its checks",
+          "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
@@ -26624,7 +26854,12 @@
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
           "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
-          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing"
+          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+          "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 a tampered redelivery of a deployment_status is refused and its different SHA starts nothing",
+          "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA",
+          "packages/application/src/integrations/github/github-duplicates.test.ts::VAL-033 a deployment_status or pull_request repeated after the verdict neither starts another Run nor rewrites its checks",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing"
         ],
         "criticalAssertions": [
           {
@@ -26650,20 +26885,38 @@
           {
             "path": "validation/journeys/j12-github.pg.test.ts",
             "assertion": "    expect(tampered.statusCode).toBe(409);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-duplicates.test.ts",
+            "assertion": "    expect(counts(w)).toMatchObject({ runs: 1, batches: 1 });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-duplicates.test.ts",
+            "assertion": "    expect(counts(w)).toEqual(settled);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-duplicates.test.ts",
+            "assertion": "    ).rejects.toMatchObject({ code: \"IDEMPOTENCY_CONFLICT\" });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-duplicates.test.ts",
+            "assertion": "    expect(w.fake.checkRuns.map((check) => check.head_sha)).not.toContain(MERGE);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(pullState(w, SHA_B)).toBe(\"awaiting_preview\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(w.fake.checkRuns.map((check) => check.head_sha).sort()).toEqual(\n      [SHA_A, SHA_A, SHA_B, SHA_B].sort(),\n    );"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(String(world.pull(SHA_A).state)).toBe(\"superseded\");"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation, notification failure isolation",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "VAL-026/027/033–037/041/043/045/052 no escopo M4"
-          }
-        }
-      ],
-      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5). M4 S8 added notification failure isolation and fan-out dedupe. M4 S7 adds GitHub webhook dedupe and tamper proofs."
+      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5). M4 S8 added notification failure isolation and fan-out dedupe. M4 S7 adds GitHub webhook dedupe and tamper proofs. M4 W2b proved duplicate-delivery Run creation, merge-ref preview binding and the GitHub redelivery paths; webhook dedupe and tamper are proven by J12 and github-webhooks, SHA checks by github-pr, notification failure isolation by resilience.test and notifications.pg."
     },
     {
       "id": "VAL-034",
