@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { PersistenceDatabase } from "@testmaster/persistence";
 import {
   createTestDatabase,
   type TestDatabase,
@@ -195,5 +196,57 @@ it("SEC-036 decrypting a secret needs an explicit unexpired secrets:export grant
   await expect(as([grant()]).secrets.reveal(stored.id)).resolves.toMatchObject({
     id: stored.id,
     value: "plaintext-canary-sec036",
+  });
+});
+
+/** A copy of the PostgreSQL migrations plus one extra release, to play the "next release" build. */
+async function nextRelease(root: string): Promise<string> {
+  const source = resolve(import.meta.dirname, "../../persistence/migrations/postgres");
+  const directory = join(root, "next-release");
+  await cp(source, directory, { recursive: true });
+  const count = (await readdir(source)).filter((name) => name.endsWith(".sql")).length;
+  await writeFile(
+    join(directory, `${String(count + 1).padStart(4, "0")}_rolling_upgrade_probe.sql`),
+    "CREATE TABLE rolling_upgrade_probe (id TEXT PRIMARY KEY);\n",
+  );
+  return directory;
+}
+
+it("OPS-038 a build older than the database refuses to start, and the new build refuses until it is migrated", async () => {
+  const { server, root, application } = await stack();
+  const directory = await nextRelease(root);
+  const open = (migrationsDir?: string) =>
+    Application.open({
+      cwd: root,
+      home: join(root, "home"),
+      env: {},
+      server,
+      ...(migrationsDir ? { migrationsDir } : {}),
+    });
+  // The next build is not migrated yet: it refuses to run against the old schema.
+  await expect(open(directory)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    message: "Database schema is behind; run testmaster db migrate",
+  });
+  // `db migrate` of the next release.
+  const migrator = PersistenceDatabase.openPostgres(server.database, { migrationsDir: directory });
+  try {
+    await migrator.migrate(directory);
+  } finally {
+    migrator.close();
+  }
+  const upgraded = await open(directory);
+  cleanups.push(() => upgraded.close());
+  expect((await upgraded.readiness()).schema.state).toBe("current");
+  // The still-running old build now sees a database that is ahead of it ...
+  expect(application.database.schemaCompatibility().state).toBe("ahead");
+  expect(await application.readiness()).toMatchObject({
+    status: "unavailable",
+    reasons: ["schema_ahead"],
+  });
+  // ... and a fresh process of the old build is refused.
+  await expect(open()).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "schema_ahead" },
   });
 });
