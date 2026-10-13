@@ -21,6 +21,7 @@ import type {
   StoredIntegration,
 } from "../integrations/provider.js";
 import type { IntegrationsService } from "../integrations/service.js";
+import { isRestoreIsolated } from "../operations-state.js";
 import type { BatchesService } from "../runs.js";
 import { buildNotificationPayload, type NotificationSource, notificationBody } from "./payload.js";
 
@@ -107,12 +108,7 @@ function parse(json: unknown): Record<string, unknown> {
 }
 /** Restore isolation (OPS-025): a restored copy sends nothing until an operator releases it. */
 function restoreIsolated(ctx: ServiceContext): boolean {
-  const flag = ctx.database.get("SELECT value FROM operational_state WHERE key='restore:isolated'");
-  if (flag && !["", "0", "false", "no"].includes(String(flag.value).toLowerCase())) return true;
-  return (
-    ctx.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value ===
-    "suspended_restore"
-  );
+  return isRestoreIsolated(ctx.database);
 }
 function safeDetail(value: string | null | undefined): string | null {
   if (!value) return null;

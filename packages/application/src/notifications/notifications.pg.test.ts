@@ -96,7 +96,13 @@ it("INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visib
   // The dead letter is visible to operators and can be requeued once the destination recovers.
   receiver.behave(() => ({ status: 200 }));
   if (!delivery) throw new Error("Missing delivery");
-  h.service.requeue(delivery.id);
+  expect(
+    h.app.operations
+      .dlq()
+      .filter((entry) => entry.source === "notification")
+      .map((entry) => entry.id),
+  ).toEqual([delivery.id]);
+  h.app.operations.requeue({ source: "notification", id: delivery.id });
   await h.settle();
   expect(h.service.get(delivery.id)).toMatchObject({ state: "delivered" });
   expect(runRow()).toEqual(before);

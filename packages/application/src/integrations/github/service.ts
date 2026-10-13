@@ -27,6 +27,7 @@ import {
   deliveryBackoffMs,
   deliveryRetryPolicy,
 } from "../../delivery.js";
+import { isRestoreIsolated } from "../../operations-state.js";
 import {
   type InboundOutcome,
   type InboundRequest,
@@ -217,10 +218,7 @@ export class GithubService {
   }
   /** `restore:isolated` pauses every integration side effect until an administrator releases it. */
   private isolated(): boolean {
-    return (
-      this.scope.database.get("SELECT value FROM operational_state WHERE key='restore:isolated'")
-        ?.value === "true"
-    );
+    return isRestoreIsolated(this.scope.database);
   }
   private revokedTombstone(installationId: string): boolean {
     return Boolean(

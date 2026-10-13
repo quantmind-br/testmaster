@@ -63,3 +63,4 @@ and rollback means restoring a backup taken before the upgrade.
 | 15 | `notifications` | `a4a5b6a0f2de` | `notification_deliveries` and `notification_attempts` with the outbox index for durable per-integration notification delivery (ADR-021) |
 | 16 | `auth_dynamic` | `c9f78f8e427b` | `auth_profile_state` and `auth_authorizations` plus the pending-checkpoint index for dynamic target authentication |
 | 17 | `github_app` | `7984ca8b0967` | `github_installations`, `github_repositories`, `github_pulls`, `github_deployments` and `github_checks` for the GitHub App integration (ADR-020) |
+| 18 | `operations` | `a5c6bb9e417a` | `admin_operations`, `alerts`, `incidents`, `incident_events` and `audit_purge_summaries` for administrator operations, alerting and audit retention |

@@ -503,6 +503,10 @@ export class Application {
     this.notifications = new NotificationsService(this.context, this.integrations, this.batches, {
       publicOrigin,
     });
+    this.operations.registerDlqSource("notification", {
+      list: () => this.notifications.deadLetters(),
+      requeue: (id) => this.notifications.requeue(id),
+    });
   }
 
   /** Releases a secret of this workspace for delivery as the workspace system principal, with its bound origins. */
