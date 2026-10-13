@@ -1,0 +1,2215 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "release-evaluation",
+  "gate": "M4",
+  "capabilityGate": null,
+  "commit": "fbcc27ab7234521c0a93b4e945116d2e0d8af2c9",
+  "observedAt": "2026-10-13T21:05:04.437Z",
+  "method": "automatic",
+  "reviewer": "traceability-checker",
+  "validation": "automated-only",
+  "registrySha256": "a6657d682d473136376dc7bcd7915300b8c2701dbb5854c0951a9626f1dc9d9c",
+  "ok": true,
+  "errors": [],
+  "capabilitySummary": [
+    {
+      "id": "contracts",
+      "milestone": "M0",
+      "requirements": [
+        "M0-01"
+      ],
+      "gate": "M0 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "shared invalid corpus cross-surface acceptance",
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+      ],
+      "oracles": [
+        "actual built CLI, server-start REST, SDK stdio and HTTP reject same documents and accept valid controls"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "state-reducer",
+      "milestone": "M0",
+      "requirements": [
+        "M0-02"
+      ],
+      "gate": "M0 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/domain/src/domain.test.ts::preserves failure over retry-pass and cancel regardless of observation order",
+        "packages/domain/src/domain.test.ts::allows infrastructure recovery but failed cleanup never approves the gate",
+        "packages/domain/src/domain.test.ts::counts requested cells exactly once independently from expanded dependencies",
+        "packages/domain/src/domain.test.ts::never reopens terminal state and never regresses phase",
+        "packages/persistence/src/persistence.test.ts::constraint fixture: valid terminal and immutable verdict",
+        "packages/persistence/src/persistence.test.ts::rejects stale owner fencing after expiry and a new claim",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/persistence/src/conformance.docker.test.ts::PostgreSQL and SQLite enforce identical constraint fixtures"
+      ],
+      "oracles": [
+        "Illegal transitions/retry/cancel/batch counts, migration checksums and restore tested; same DDL constraint fixtures on SQLite/PostgreSQL."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "traceability",
+      "milestone": "M0",
+      "requirements": [
+        "M0-06",
+        "VAL-004",
+        "VAL-053"
+      ],
+      "gate": "M0 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "tools/src/traceability/check.test.ts::rejects missing, unknown and duplicate IDs",
+        "tools/src/traceability/check.test.ts::requires actual evidence and trace links for verified items",
+        "tools/src/traceability/check.test.ts::permits a complete planned inventory but blocks planned obligations at or before the gate",
+        "tools/src/traceability/check.test.ts::distinguishes definitions, inline acceptance IDs, journeys and roadmap tasks from references",
+        "tools/src/traceability/release.test.ts::blocks uncovered release items and accepts only explicitly explained unverified scope",
+        "tools/src/traceability/release.test.ts::detects removed negative controls and removed critical assertions rather than green fewer tests",
+        "tools/src/traceability/release.test.ts::keeps every public advanced capability in summary with scenario oracle and gate",
+        "tools/src/evals/m3-scoring.test.ts::scores correct safe dangerous actions and layered advice for every arm",
+        "tools/src/evals/m3-scoring.test.ts::requires isolated paired candidate runs and does not mistake a proposal for automatic healing",
+        "tools/src/evals/m3-scoring.test.ts::derives denominators from external cases without inventing legacy labels",
+        "tools/src/evals/holdout.test.ts::accepts a sealed same-team manifest without proving provenance or utility",
+        "tools/src/evals/holdout.test.ts::rejects review records, declared label status and missing presealed healing eligibility",
+        "tools/src/evals/holdout.test.ts::rejects changed sealed labels and transitive driver inputs",
+        "tools/src/evals/user-tasks.test.ts::aggregates counterbalanced participant decisions and manual review work",
+        "tools/src/evals/user-tasks.test.ts::rejects studies without participants or independent arm ordering"
+      ],
+      "oracles": [
+        "Re-extraction detects missing/unknown/duplicate IDs; verified requires existing confined file evidence and trace links.",
+        "Uncovered release items/capability mappings produce exact errors instead of a green reduced inventory.",
+        "Uncovered release items/capability mappings produce exact errors instead of a green reduced inventory."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "local-execution",
+      "milestone": "M1",
+      "requirements": [
+        "M1-01",
+        "REQ-010"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m1-boundaries.docker.test.ts::CLI-002 invalid and valid offline dry-runs make no writes or fetches, with an exercised positive boundary control",
+        "validation/journeys/m1-boundaries.docker.test.ts::J01 dead DOCKER_HOST refuses execution without a local process fallback or target traffic",
+        "validation/journeys/m1-boundaries.docker.test.ts::CLI-003 read-only HOME reports session-only initialization rather than pretending identity was persisted",
+        "packages/application/src/authoring.test.ts::validates both complete declarative examples and describes dry-run without a verdict",
+        "packages/application/src/authoring.test.ts::shares strict parsing and semantics including byte bounds and missing assertions",
+        "validation/journeys/m1-boundaries.docker.test.ts::CLI-002 invalid and valid offline dry-runs make no writes or fetches, with an exercised positive boundary control"
+      ],
+      "oracles": [
+        "Offline invalid plan causes zero network/write; dead Docker blocks without fallback; read-only HOME reports session-only.",
+        "Frontend/HTTP examples lint offline; unknown keys/missing assertions/oversize reject; invalid plan causes no fetch/write."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "playwright",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-012"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m1-functional.docker.test.ts::J01/J06 healthy browser and HTTP pass; real mutants fail their intended assertion with independent state oracles",
+        "packages/sandbox/src/attempt/attempt.docker.test.ts::executes %s example against %s"
+      ],
+      "oracles": [
+        "Real Chromium assertion observes persisted state; healthy passes and validation/persistence mutants fail intended step; fresh context per attempt."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "http",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-013"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "distinguishes expected401, missing-auth oracle mismatch, expired-token auth, HTTP500 and transport loss",
+        "validation/journeys/browser-matrix.docker.test.ts::distinguishes expected401, missing-auth oracle mismatch, expired-token auth, HTTP500 and transport loss"
+      ],
+      "oracles": [
+        "Target500 fails assertion with retained status/body SHA256+size+contentType and bounded redacted error excerpt; socket destruction produces inconclusive transport without fabricated502. Full response remains in memory for assertions, not default storage."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "python",
+      "milestone": "M1",
+      "requirements": [
+        "SEC-015"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "Real Python subprocess pip/ensurepip/uv/npm install attempts denied; raw sockets/missing dependency tests pass.",
+        "packages/sandbox/src/attempt/python.docker.test.ts::pytest requests detects degraded health using real isolated proxy traffic",
+        "packages/sandbox/src/attempt/python.docker.test.ts::Python subprocess cannot install dependencies or restore download tools at runtime"
+      ],
+      "oracles": [
+        "Commands unavailable/nonzero, package not importable; runtime artifact pins image and exact pytest9.1.1/pytest-asyncio1.4.0/requests2.34.2/playwright1.63.0; no download fallback."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "docker",
+      "milestone": "M1",
+      "requirements": [
+        "M1-03"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "Allowed shop works; browser bypass corpus and hardened isolation Docker suite pass.",
+        "packages/sandbox/src/docker/isolation.docker.test.ts::reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access"
+      ],
+      "oracles": [
+        "Independent controlled-target packet/counter oracle and inspected immutable isolation facts; raw socket/host filesystem/Docker socket denial."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "unsafe-local",
+      "milestone": "M1",
+      "requirements": [
+        "SEC-002"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/runtime-control.docker.test.ts::REQ-001 doctor distinguishes dead target from absent optional model; SEC-002 missing Docker creates blocked Run",
+        "validation/journeys/runtime-retry.docker.test.ts::SEC-002 %s blocks before Docker or any target effect"
+      ],
+      "oracles": [
+        "Missing real Docker socket yields durable blocked Run security_precondition_failed with no fallback. Actual duplicate Unix socket listen failure and invalid insecure egress policy both block before executor/target call, zero target hits, no retry."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "worker",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-019",
+        "OPS-032"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m1-recovery.docker.test.ts::J17 persistent receipt survives a killed waiting client; killed worker reconciles its attempt without a false pass",
+        "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document",
+        "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events",
+        "apps/server/src/server.test.ts::atomically replays mutations, rejects mismatched bodies and enforces If-Match",
+        "validation/journeys/runtime-control.docker.test.ts::OPS-032 resource headroom queues a second browser while an HTTP pool progresses; repeated cancel kills all container children",
+        "packages/application/src/runtime-control.test.ts::reserves headroom and isolated pool slots instead of oversubscribing browser memory"
+      ],
+      "oracles": [
+        "Queued receipt/poll/events exist; wait timeout preserves runId and does not cancel; killed client can reattach to worker completion.",
+        "A 4 GiB worker with 25% headroom executes one 2 GiB browser and one 512 MiB HTTP Attempt; second browser has zero Attempts and remains queued; worker publishes real image IDs."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "evidence",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-022"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "captures real frame, popup, upload/download, hook/wait and opt-in evidence channels",
+        "fails real ambiguous hooks and denies unauthorized frames without raw collection",
+        "validation/journeys/browser-matrix.docker.test.ts::captures real frame, popup, upload/download, hook/wait and opt-in evidence channels",
+        "validation/journeys/browser-matrix.docker.test.ts::fails real ambiguous hooks and denies unauthorized frames without raw collection"
+      ],
+      "oracles": [
+        "Committed manifest contains available DOM/screenshot/console/network/download/trace/video/log channels; console profile-ready event and network profile-file request observed; default test lacks raw artifacts."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "report-json",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-027"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
+        "packages/reporting/src/reporting.test.ts::refuses mixed snapshots",
+        "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
+        "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format"
+      ],
+      "oracles": [
+        "JSON/Markdown/HTML/JUnit from same snapshot; hostile titles escaped; partial/mixed/empty cannot render passed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "report-markdown",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-027"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
+        "packages/reporting/src/reporting.test.ts::refuses mixed snapshots",
+        "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
+        "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format"
+      ],
+      "oracles": [
+        "JSON/Markdown/HTML/JUnit from same snapshot; hostile titles escaped; partial/mixed/empty cannot render passed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "report-html",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-027"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
+        "packages/reporting/src/reporting.test.ts::refuses mixed snapshots",
+        "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
+        "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format"
+      ],
+      "oracles": [
+        "JSON/Markdown/HTML/JUnit from same snapshot; hostile titles escaped; partial/mixed/empty cannot render passed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "report-junit",
+      "milestone": "M1",
+      "requirements": [
+        "INT-011"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/reporting/src/reporting.test.ts::bounds large JUnit output and exposes truncation without losing the gate",
+        "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties"
+      ],
+      "oracles": [
+        "Valid escaped XML, truncation explicit, failed gate retained,12 distinct bound Runs exceeds16MiB and refuses."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "report-allure",
+      "milestone": "M1",
+      "requirements": [
+        "REQ-027"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
+        "packages/reporting/src/reporting.test.ts::refuses mixed snapshots",
+        "packages/reporting/src/reporting.test.ts::preserves business pass but emits cleanup error and canonical properties",
+        "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format"
+      ],
+      "oracles": [
+        "JSON/Markdown/HTML/JUnit from same snapshot; hostile titles escaped; partial/mixed/empty cannot render passed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "backup-sqlite",
+      "milestone": "M1",
+      "requirements": [
+        "OPS-024",
+        "OPS-025"
+      ],
+      "gate": "M1 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/application/src/backup-alert.test.ts::OPS-024 real backup destination failure emits a durable non-green alert",
+        "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
+        "packages/application/src/input-fixtures.test.ts::backs up fixture bytes and reapplies post-backup deletion tombstones before restored use",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 chunked backup encryption round-trips an empty stream, one chunk and many chunks",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 PostgreSQL backup is a consistent encrypted dump and restores database rows and evidence into a fresh isolated stack",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 backup retention keeps 7 daily, 4 weekly and 3 monthly copies and never deletes an unauthentic entry",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 the retention controller removes only expired authentic backups from the destination",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 the backup agent fulfils a queued request, a missing backup fails verification and nothing is invented",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 schedules one daily backup only when the last success is old and none is pending",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 a restore replays post-backup revocations from the live ledger so it can only tighten access",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 a flipped ciphertext byte, a reordered chunk, a truncated tail and extra trailing bytes are refused",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 a stream cannot be opened under another context or another key",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 the manifest MAC covers every field and rejects another key",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 a tampered ciphertext, manifest or wrong key makes verification and restore fail before anything is written",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 an evidence object missing at backup time marks the backup incomplete and is reported, not hidden",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 a request left running by a stopped agent is failed instead of silently retried",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 refuses to run when the server process can read the backup key or write the destination",
+        "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-025 isolated restore opens no outbound connection and dispatches no outbox message",
+        "validation/journeys/m1-recovery.docker.test.ts::J17 backup restores to an isolated suspended destination with retained identities and no replayed effects",
+        "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
+        "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
+        "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
+        "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
+        "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
+        "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
+        "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
+        "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
+        "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
+        "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+        "packages/application/src/restore-isolation.pg.test.ts::OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it"
+      ],
+      "oracles": [
+        "Online snapshot (SQLite backup API, never a raw .db copy) contains the active Run and a valid DB; manifest secretIncluded=false with no canary and lists key IDs, config digests and the unavailable objects (missingObjects) before the backup can be called complete; an unavailable blob makes the evidence index incomplete and raises a durable artifact_unavailable alert (outbox backup.failed plus operational_state backup:last-warning) instead of a green report; a destination failure raises storage_unavailable.",
+        "The server profile takes a consistent serializable-deferrable pg_dump plus an evidence snapshot, encrypts it with AES-256-GCM chunks bound to their context and a MAC'd manifest, writes it to a destination only the separate backup agent (the sole holder of the backup key) can write, keeps 7 daily, 4 weekly and 3 monthly copies without ever deleting an unauthentic entry, and a restore into a fresh stack replays post-backup revocations so it can only tighten access; a flipped, reordered, truncated or foreign-key stream, a tampered manifest and a missing evidence object are refused or reported before anything is written.",
+        "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted.",
+        "A restored GitHub installation that was revoked stays revoked after restoring a backup taken while it was active, and one that was never revoked keeps working.",
+        "A restored server starts isolated (operational_state restore:isolated and admission suspended_restore): admission is paused, schedules, integrations and outbox dispatch read application.operations.isolated() and do nothing, alert evaluation is skipped, and isolation ends only when an operator confirms the restore review and releases it; the DR rehearsal records the same gates on a fresh stack.",
+        "On PostgreSQL a real backup restored into a fresh database starts isolated with every integration paused and every token dropped: every registered server controller and the scheduler do nothing, no notification leaves, no check or comment is published and an inbound webhook is refused without being recorded, even after an administrator resumed the integrations. Only the owner may release, and only after the review; after the release the same pending schedule, notification and check proceed, the refused webhook delivery is processed on redelivery, and a schedule created by a revoked token stays paused as owner_revoked."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "source-markdown",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-003"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/sources/parse.test.ts::distinguishes image-only PDF from extractable requirements",
+        "packages/planner/src/sources/parse.test.ts::grounds Markdown headings, GFM tables and requirements with stable byte ranges",
+        "packages/application/src/ai/sources-discovery.test.ts::makes parser failures explicit and rejects path, symlink and hardlink escapes"
+      ],
+      "oracles": [
+        "Extracted PDF pages/grounded chunks; image-only PDF needs_input not empty ready; malformed input diagnosed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "source-text",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-003"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/sources/parse.test.ts::distinguishes image-only PDF from extractable requirements",
+        "packages/planner/src/sources/parse.test.ts::grounds Markdown headings, GFM tables and requirements with stable byte ranges",
+        "packages/application/src/ai/sources-discovery.test.ts::makes parser failures explicit and rejects path, symlink and hardlink escapes"
+      ],
+      "oracles": [
+        "Extracted PDF pages/grounded chunks; image-only PDF needs_input not empty ready; malformed input diagnosed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "source-pdf",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-003"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/sources/parse.test.ts::distinguishes image-only PDF from extractable requirements",
+        "packages/planner/src/sources/parse.test.ts::grounds Markdown headings, GFM tables and requirements with stable byte ranges",
+        "packages/application/src/ai/sources-discovery.test.ts::makes parser failures explicit and rejects path, symlink and hardlink escapes"
+      ],
+      "oracles": [
+        "Extracted PDF pages/grounded chunks; image-only PDF needs_input not empty ready; malformed input diagnosed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "source-openapi",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-004"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/sources/parse.test.ts::parses OpenAPI and Swagger into grounded operations",
+        "packages/planner/src/sources/parse.test.ts::refuses external and cyclic references before any network boundary",
+        "packages/planner/src/sources/parse.test.ts::inventories Postman scripts without evaluating them"
+      ],
+      "oracles": [
+        "OpenAPI 3.0/3.1/Swagger/Postman inventory retains pointer/hash refs; scripts not executed; unauthorized references cannot fetch."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "source-postman",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-004"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/sources/parse.test.ts::parses OpenAPI and Swagger into grounded operations",
+        "packages/planner/src/sources/parse.test.ts::refuses external and cyclic references before any network boundary",
+        "packages/planner/src/sources/parse.test.ts::inventories Postman scripts without evaluating them"
+      ],
+      "oracles": [
+        "OpenAPI 3.0/3.1/Swagger/Postman inventory retains pointer/hash refs; scripts not executed; unauthorized references cannot fetch."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "source-graphql",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-004"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/sources/parse.test.ts::parses OpenAPI and Swagger into grounded operations",
+        "packages/planner/src/sources/parse.test.ts::refuses external and cyclic references before any network boundary",
+        "packages/planner/src/sources/parse.test.ts::inventories Postman scripts without evaluating them"
+      ],
+      "oracles": [
+        "OpenAPI 3.0/3.1/Swagger/Postman inventory retains pointer/hash refs; scripts not executed; unauthorized references cannot fetch."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "code-summary",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-005"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/code/summary.test.ts::summarizes reference-shop route logic and test hooks without executing it",
+        "packages/planner/src/code/summary.test.ts::applies defaults, gitignore and symlink confinement",
+        "packages/planner/src/code/summary.test.ts::finds Express, React and Next routes and respects configured excludes",
+        "packages/application/src/ai/discovery.docker.test.ts::summarizes Python AST through the pinned network-none read-only sandbox without executing source"
+      ],
+      "oracles": [
+        "AST route/symbol/test-hook refs and hash manifest; ignores/confined roots; submitted source never executed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "code-diff",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-008"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/planner/src/code/summary.test.ts::refuses no-base automation and flags auth changes",
+        "validation/journeys/m2-discovery.live.test.ts::J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries",
+        "packages/application/src/ai/sources-discovery.test.ts::analyzes the pinned head instead of a later dirty checkout"
+      ],
+      "oracles": [
+        "Explicit fixed base/head/dirtyHash and selected/excluded dependency impact; auth changes require critical smoke; uncertainty is partial."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "normalize",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-006"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m2-discovery.live.test.ts::J02 preserves conflicting source references, adjudication, fixed diff, exclusions and malicious PRD boundaries",
+        "packages/application/src/ai/core.test.ts::normalization resolves cited evidence handles to exact supplied refs and rejects unknown handles"
+      ],
+      "oracles": [
+        "Normalized text/acceptance/provenance/confidence and conflicting source refs survive adjudication; approval remains explicit and separate."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "plan",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-009"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
+        "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff",
+        "packages/application/src/ai/core.test.ts::plan generation enforces requested or auto-chosen type/runner pairs with evidence locators"
+      ],
+      "oracles": [
+        "Generated batch revisions/CAS, editing/reject, invalid refusal and idempotent subset preserve nonselected proposals."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "resolve_action",
+      "milestone": "M2",
+      "requirements": [
+        "M2-05"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
+        "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff",
+        "validation/journeys/m2-agent.live.test.ts::explores within budget and resolves an accepted draft into a replay-verified candidate",
+        "packages/application/src/ai/core.test.ts::rejects trivial body visibility as a generated business oracle"
+      ],
+      "oracles": [
+        "Subset/CAS/idempotent receipts preserve C, permissions/validation block invalid accept, candidate promotion requires replay verification."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "generate_code",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-011"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/export-standalone.docker.test.ts — CLI exports run directly with vendored pinned dependencies, no TestMaster or model, and reject semantic mutants",
+        "validation/journeys/export-standalone.docker.test.ts::CLI exports run directly with vendored pinned dependencies, no TestMaster or model, and reject semantic mutants"
+      ],
+      "oracles": [
+        "Exported projects execute through their own Playwright/pytest runner; healthy pass and semantic mutants fail actual deterministic assertions; pinned dependencies checked against exported locks"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "agent-mode",
+      "milestone": "M2",
+      "requirements": [
+        "M2-05"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/ai/core.test.ts::subset retries and concurrent duplicates create only selected generated revisions, retain C and report CAS diff",
+        "validation/journeys/m2-proposals.live.test.ts::J03 real model A/B/C subset review survives retry and concurrent duplicate without losing C, rejects invalid/unauthorized and shows CAS diff",
+        "validation/journeys/m2-agent.live.test.ts::explores within budget and resolves an accepted draft into a replay-verified candidate",
+        "packages/application/src/ai/core.test.ts::rejects trivial body visibility as a generated business oracle"
+      ],
+      "oracles": [
+        "Subset/CAS/idempotent receipts preserve C, permissions/validation block invalid accept, candidate promotion requires replay verification."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "code-import",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-011"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/export-standalone.docker.test.ts — CLI exports run directly with vendored pinned dependencies, no TestMaster or model, and reject semantic mutants",
+        "validation/journeys/export-standalone.docker.test.ts::CLI exports run directly with vendored pinned dependencies, no TestMaster or model, and reject semantic mutants"
+      ],
+      "oracles": [
+        "Exported projects execute through their own Playwright/pytest runner; healthy pass and semantic mutants fail actual deterministic assertions; pinned dependencies checked against exported locks"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "code-export",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-011"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/export-standalone.docker.test.ts — CLI exports run directly with vendored pinned dependencies, no TestMaster or model, and reject semantic mutants",
+        "validation/journeys/export-standalone.docker.test.ts::CLI exports run directly with vendored pinned dependencies, no TestMaster or model, and reject semantic mutants"
+      ],
+      "oracles": [
+        "Exported projects execute through their own Playwright/pytest runner; healthy pass and semantic mutants fail actual deterministic assertions; pinned dependencies checked against exported locks"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "mcp",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-030"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/j-mcp.docker.test.ts::MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP token/Origin guards",
+        "apps/mcp/src/cancellation.test.ts::disconnect detaches waits, explicit negotiated cancellation requests durable cancellation",
+        "apps/mcp/src/mcp.test.ts::SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison",
+        "apps/mcp/src/mcp.test.ts::MCP enforces token scopes, configured/client roots and symlink confinement before services"
+      ],
+      "oracles": [
+        "SDK tools/resources/capabilities, authenticated HTTP, durable progress/explicit cancellation versus disconnect detach."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "agent-skills",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-031"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/j14-agent-skills.test.ts::J14: all eight targets through the built CLI, with ownership and hostile-workspace controls"
+      ],
+      "oracles": [
+        "Every named target is installed/updated/removed with foreign-byte preservation and hostile workspace controls."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "resources-cleanup",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-016"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "packages/runner/src/http.test.ts::records intent before mutations and executes explicit owned cleanup in reverse creation order",
+        "packages/runner/src/http.test.ts::preserves business outcomes when cleanup fails and denies compensation after revocation",
+        "packages/runner/src/http.test.ts::never cleans an unproven resource and reports uncertain side effects without retry",
+        "validation/journeys/resource-cleanup.docker.test.ts::manually compensates an orphan through the sandbox and preserves the owning run verdict"
+      ],
+      "oracles": [
+        "Owned resources clean reverse order; never delete unproved/foreign seed; failed cleanup orphan retains business verdict but fails gate; explicit compensation runs in sandbox."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "model-accounting",
+      "milestone": "M2",
+      "requirements": [
+        "REQ-041",
+        "OPS-030"
+      ],
+      "gate": "M2 normative acceptance; positive/negative evidence and protected assertions",
+      "status": "verified",
+      "scenarios": [
+        "Read/set project token ceiling by CLI and authenticated API",
+        "Attribute model wall milliseconds and committed evidence bytes per project/run",
+        "Keep measured tokens and unknown money after stop",
+        "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
+        "apps/server/src/model-budget.test.ts::sets and reads independent token quota through the authenticated API and denies reader mutation",
+        "Unknown-price consent denied before HTTP boundary, positive grant and revoked grant",
+        "Independent token reservations and max-two model compute slots",
+        "Mid-generation quota cutoff leaves admitted Docker replay untouched",
+        "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
+        "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
+        "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+      ],
+      "oracles": [
+        "apps/server/src/model-budget.test.ts: sets and reads independent token quota through the authenticated API and denies reader mutation",
+        "validation/journeys/model-accounting.docker.test.ts",
+        "packages/application/src/ai/core.test.ts: records consent before data crosses a real boundary, and source injection cannot add tools",
+        "packages/persistence/src/persistence.test.ts: reserves independent cumulative tokens atomically and retains unknown-response charges",
+        "packages/persistence/src/persistence.test.ts: bounds concurrent model compute slots even without a price or monetary quota",
+        "validation/journeys/model-accounting.docker.test.ts: VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "analysis",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-023",
+        "API-008"
+      ],
+      "gate": "M3 local deterministic diagnosis contract; positive/negative evidence and protected assertions. Model-quality pilot remains separately blocked by M3-01/M3-06.",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/ai/analysis.test.ts::required frozen business mismatch cites the scoped persisted step and canonical hash",
+        "packages/application/src/ai/analysis.test.ts::HTTP 500 request response is not locator drift or a certain product cause",
+        "packages/application/src/ai/analysis.test.ts::model failure retains byte-identical immutable factual predecessor and does not retry identical requests",
+        "packages/application/src/ai/analysis.test.ts::execution evidence rejects wrong hashes and cross-Run compound bindings",
+        "validation/journeys/m3-healing-acceptance.docker.test.ts::OPS-014 deterministic analysis timeout preserves terminal execution and source binding",
+        "packages/application/src/ai/analysis.test.ts::authorized frozen source handle persists exact snapshot path and content binding",
+        "packages/application/src/ai/analysis.test.ts::wrong-project discovery and altered summary fail before model dispatch",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Factual rules use scoped persisted evidence/hash and preserve Run JSON; unsupported cause abstains. Model failure leaves factual predecessor immutable; wrong hashes/cross-Run refs cannot ground diagnosis.",
+        "Controlled local provider holds a real passed Docker Run analysis beyond 100 ms; repeat returns the same receipt without dispatch, terminal Run/Attempt bytes and manifest remain unchanged and reservations settle. Frozen authorized source handle resolves exact snapshot/path/hash; wrong project and altered summary fail before another request.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "healing",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-025",
+        "API-008"
+      ],
+      "gate": "M3 controlled-provider manual and policy-safe selector/wait healing with retained positive/negative controls; live quality and independent safety review remain blocked by M3-02/J07/M3-06.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-healing.docker.test.ts::M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant",
+        "packages/application/src/ai/healing.test.ts::healing approval requires named authority and ordinary promotion cannot bypass verification",
+        "packages/application/src/ai/healing.test.ts::evidence-backed model abstention completes once without a candidate, proposal or verification",
+        "packages/application/src/ai/healing.test.ts::unknown handles in the %s branch reject with only code-owned diagnostics",
+        "packages/application/src/ai/healing.test.ts::an evidence instruction cannot authorize assertion removal or leak rejected output in diagnostics",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Proposal defaults proposed with null approvalMode, authorized approval creates distinct verification Run, unchanged protected assertion catches independent semantic mutant, original sealed failure remains.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "run-comparison",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-028",
+        "API-008"
+      ],
+      "gate": "M3 persisted immutable Run and generated/manual provenance comparison exercised; real visual-baseline-bearing comparison remains M5 residual in REQ-028.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
+        "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
+        "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions",
+        "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
+        "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Immutable run comparisons distinguish outcome from logical identity/revision provenance; pagination binds both inputs; batch logical keys exclude correlation noise and preserve repetition.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "batch-comparison",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-028",
+        "API-008"
+      ],
+      "gate": "M3 persisted logical BatchRun matching, additions/removals and ambiguity acceptance retained; real visual-baseline-bearing comparison remains M5 residual in REQ-028.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
+        "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
+        "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions",
+        "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
+        "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Immutable run comparisons distinguish outcome from logical identity/revision provenance; pagination binds both inputs; batch logical keys exclude correlation noise and preserve repetition.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "flake-study",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-026",
+        "API-008"
+      ],
+      "gate": "M3 source-bound local strict flake cohorts, changed SHA/revision/environment windows, cause separation and first-Attempt exclusions retain positive/negative evidence; advanced browser matrix remains M5.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/history.test.ts::retains distinct repetition identities and quarantines with expiry, writer authority and CAS",
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Real fixed-revision/environment strict series contains ten distinct first attempts, rates and interval; invalid sample sizes and insufficient-data claims are refused/disclosed.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "ci",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-032",
+        "API-008"
+      ],
+      "gate": "M3 implemented generic strict CI; local positive/negative evidence and protected assertions. Pinned Action and SHA-check propagation observed only on a public disposable GitHub repository; private acceptance and fork isolation remain blocked by REQ-032/M3-05.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
+        "validation/journeys/m3-ci.docker.test.ts::keeps blocked, cancelled, missing and explicitly empty coverage non-approving",
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "validation/journeys/m3-ci.docker.test.ts::retains a missing response capture as inconclusive rather than treating absent evidence as success",
+        "packages/reporting/src/reporting.test.ts::never renders empty selection green in any format",
+        "packages/reporting/src/reporting.test.ts::maps assertion failure, infra and cancellation without approving partial results",
+        "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+        "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
+        "apps/cli/src/ci-workflow.test.ts::refuses mutable Action coordinates and incomplete public asset sets",
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Real generic strict CI healthy/semantic-defect, blocked/cancelled/inconclusive/cleanup/empty JSON+JUnit controls preserve canonical verdict; typed Action inputs reject injection and local delivery refuses new SHA.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "quarantine",
+      "milestone": "M3",
+      "requirements": [
+        "M3-03",
+        "VAL-007",
+        "REQ-026"
+      ],
+      "gate": "M3 local quarantine reason/owner/expiry/CAS, reduced explicit-list coverage and immutable history exercised; dashboard rendering remains M4 residual in VAL-007.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
+        "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+        "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
+        "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
+        "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass",
+        "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible",
+        "packages/application/src/run-views.test.ts::VAL-007 quarantine never improves first-attempt or terminal rates and stays visible",
+        "apps/web/src/lib/view-models.test.ts::VAL-007 keeps the first-attempt, terminal, conditional and end-to-end families in separate sections",
+        "apps/server/src/run-views.test.ts::VAL-007 GET /projects/{id}/metrics and /quarantine expose rates and visible quarantine records",
+        "validation/journeys/portal-runs-dashboard.portal.test.ts::VAL-007 shows first-attempt, terminal, conditional and end-to-end rates as separate sections with fractions, definitions and zero exclusions",
+        "apps/web/src/lib/view-models.test.ts::VAL-007 an unavailable rate says Insufficient data or Not applicable and is never shown as 0%",
+        "packages/application/src/run-views.test.ts::VAL-007 the dashboard window is bounded and an inverted window is refused",
+        "validation/journeys/portal-runs-dashboard.portal.test.ts::VAL-007 quarantine changes no rate, and the quarantined test stays visible with its failed Runs",
+        "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
+        "packages/application/src/history.test.ts::retains distinct repetition identities and quarantines with expiry, writer authority and CAS",
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+      ],
+      "oracles": [
+        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure.",
+        "Local report metrics separate first-attempt, terminal, conditional and end-to-end (gate) rates with labelled definitions and keep every exclusion visible without denominator improvement.",
+        "Real fixed-revision/environment strict series contains ten distinct first attempts, rates and interval; invalid sample sizes and insufficient-data claims are refused/disclosed."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "selective-run",
+      "milestone": "M3",
+      "requirements": [
+        "REQ-055",
+        "M3-04"
+      ],
+      "gate": "M3 local test/list/chain/diff selection, pure preview, explicit reuse validity and failed-producer propagation retain positive/negative controls under verified REQ-055/M3-04.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
+        "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+        "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff",
+        "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
+        "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse",
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::passes a required producer chain and blocks its consumer before any step or request when the producer fails",
+        "validation/journeys/m3-selective-acceptance.docker.test.ts::runs an explicit CLI test list while visibly excluding quarantined and archived members without changing historical results",
+        "validation/journeys/m3-history-selection.docker.test.ts::keeps preview read-only, orders real producers before consumers, and refuses revoked or expired explicit reuse",
+        "packages/application/src/selection.test.ts::selects all active tests for unmapped diff and reports a genuinely empty unchanged diff",
+        "packages/application/src/selection.test.ts::refuses revalidation drift without admitting a stale preview",
+        "packages/application/src/selection.test.ts::expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse"
+      ],
+      "oracles": [
+        "Built CLI explicit list/chain passes healthy producer/consumer; failed producer blocks required consumer with upstream_failed, zero persisted steps and zero target requests. Failed historical reuse refuses before any admission/effect. Same four-ID list visibly excludes archived/quarantined members and preserves prior results; existing pure preview/diff and valid/expired/revoked reuse controls remain retained.",
+        "Built CLI explicit list/chain passes healthy producer/consumer; failed producer blocks required consumer with upstream_failed, zero persisted steps and zero target requests. Failed historical reuse refuses before any admission/effect. Same four-ID list visibly excludes archived/quarantined members and preserves prior results; existing pure preview/diff and valid/expired/revoked reuse controls remain retained."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "integration-planning",
+      "milestone": "M3",
+      "requirements": [
+        "M3-06",
+        "AI-002"
+      ],
+      "gate": "M3 integration generation contract implemented with controlled-provider admission tests; real supplemental preregistered generated healthy/mutant trial remains blocked by M3-06.",
+      "status": "verified",
+      "scenarios": [
+        "tools/src/evals/m3.test.ts::checks all fixed cases and budgets without network, model or Docker invocation",
+        "tools/src/evals/m3-scoring.test.ts::retains unstarted cases as misses and never invents reviewed safety observations",
+        "tools/src/evals/m3.test.ts::refuses hand-populated control booleans without retained run/step/oracle evidence",
+        "tools/src/evals/m3-scoring.test.ts::requires business-assertion reach and independent negative oracle for safe healing",
+        "tools/src/evals/m3.test.ts::accepts a new exact round identity and confines it to its registration directory",
+        "tools/src/evals/m3.test.ts::admits only one concurrent controller and permanently refuses its start marker",
+        "tools/src/evals/m3.test.ts::compares stored normalized assertion bytes and detects an actual predicate mutation",
+        "tools/src/evals/m3.test.ts::retains typed refusals without confusing safe abstention with model failure",
+        "tools/src/evals/m3.test.ts::binds implementation before controls and rejects stale hashes or missing catalogs",
+        "tools/src/evals/m3.test.ts::rotates the same integration secret across authenticated targets without widening its origin",
+        "tools/src/evals/m3.test.ts::requires comparable frozen apply baselines and real service proposals for policy probes",
+        "tools/src/evals/m3.test.ts::settles interrupted reserved calls without dispatch or releasing unknown charges",
+        "tools/src/evals/m3-scoring.test.ts::keeps enrichment errors as primary misses even when factual fallback matches",
+        "tools/src/evals/m3-scoring.test.ts::separates supplemental stages and preserves false, missing and unstarted observations",
+        "tools/src/traceability/m3-mutations.test.ts::kills M3 critical mutations in source-isolated copies and retains equivalent and pre-killer observations",
+        "packages/application/src/ai/core.test.ts::bounded model repairs never persist ready requirements or active tests",
+        "packages/model-gateway/src/gateway.test.ts::records invalid repairs and never returns invalid-after-two-repairs",
+        "packages/model-gateway/src/gateway.test.ts::repairs a schema-invalid candidate successfully"
+      ],
+      "oracles": [
+        "Offline preregistration fixes 30 main cases/one integration trial and budgets with zero model/Docker calls; errors/unstarted retain denominators and unsafe patch excludes success. Hand-populated freeze controls refuse.",
+        "Real product revision storage proves normalized default timeout does not count as assertion mutation while a changed predicate does. Start marker admits exactly one concurrent controller, stale control implementation hashes refuse, same integration secret rotates without origin widening, and scorer keeps 26/12 primary denominators with supplemental integration stages separate.",
+        "Three completions maximum (initial plus two repairs); no requirements or active tests persisted; all calls remain in usage."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "artifact-deletion",
+      "milestone": "M3",
+      "requirements": [
+        "OPS-022",
+        "SEC-037",
+        "SEC-035"
+      ],
+      "gate": "M3 durable requested deletion, immediate revocation, restart GC, separate deadlines and artifact/revoked-secret restore exercised; in-flight distributed publication and server-storage isolation residuals remain explicit in OPS-022/SEC-037.",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+        "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+        "packages/application/src/retention.test.ts::tombstone metadata in the outbox never carries storage keys or bytes",
+        "packages/application/src/retention.test.ts::refuses publication of an artifact tombstoned during its upload",
+        "packages/application/src/retention.test.ts::tombstones before physical removal, preserves sealed metadata/verdict, and exposes verified expired reports",
+        "packages/application/src/retention.test.ts::rolls back the delete permit if tombstone audit cannot commit",
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::resumes a held requested deletion after worker process death without changing historical execution",
+        "validation/journeys/m3-privacy-ledger-acceptance.docker.test.ts::restores pre-deletion evidence without resurrecting deleted artifacts or revoked secrets and reports separate backup expiry",
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore",
+        "packages/application/src/retention.test.ts::deletion is idempotent, revokes existing streams immediately, and remains pending under a legal hold",
+        "packages/application/src/retention.test.ts::refuses a stale candidate and a newly active attempt at the tombstone CAS",
+        "packages/application/src/retention.test.ts::keeps audit rows and revoked secret tombstones when artifact bytes are collected",
+        "packages/application/src/retention.test.ts::does not retain bytes merely because another artifact records the same hash",
+        "packages/application/src/audit.test.ts::stores audit actors and denials without the contact data that a caller supplies",
+        "packages/application/src/retention.test.ts::artifact expiry leaves audit events and run metadata untouched",
+        "packages/application/src/tenancy.pg.test.ts::SEC-037 a user's audit export holds only the events of their own workspace",
+        "packages/application/src/tenancy.pg.test.ts::SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data",
+        "packages/application/src/retention-purge.pg.test.ts::OPS-021 SEC-037 a purge of one workspace never reads or deletes another workspace's rows",
+        "packages/application/src/retention-controller.pg.test.ts::SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock",
+        "packages/application/src/retention-controller.pg.test.ts::SEC-037 OPS-021 a legal hold on one workspace keeps its rows through the controller while another workspace is purged",
+        "validation/journeys/m3-ci.docker.test.ts::serves active HTML and SVG only as attachments, revokes Range reads and reapplies deletion on restore"
+      ],
+      "oracles": [
+        "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission.",
+        "Real readable Docker artifact becomes immediately unreadable under idempotent held deletion; worker SIGKILL/reopen preserves pending operation, release exposes 24h active-data deadline and restart GC completes without changing historical Run/Attempts. Pre-deletion backup restore preserves artifact tombstone and revoked secret with separate visible backup expiry and suspended admission.",
+        "A user's audit export and report export on a two-organization PostgreSQL database never include the other organization's workspace, ids, principals or secret values, and a report export of another organization's Run is refused with nothing written.",
+        "The server-profile retention purge of one workspace never reads or deletes another workspace's Runs or audit events.",
+        "The retention-purge controller registered for the server profile (and not for the local profile) purges, on the real clock and in every workspace, terminal Runs older than 90 days and audit events older than 365 days while keeping rows inside the windows (89 and 364 days), leaves a signed summary per workspace and never touches a workspace under legal hold.",
+        "Real HTML/SVG downloads use sanitized attachment name, nosniff/private no-store/sandbox CSP; subsequent Range denied after tombstone; restore never exposes deleted artifacts."
+      ],
+      "limitations": []
+    },
+    {
+      "id": "server",
+      "milestone": "M4",
+      "requirements": [
+        "M4-01",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
+        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+        "apps/cli/src/remote.test.ts::M4-01 auth login refuses plain HTTP outside loopback, an empty variable and a token the server rejects",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 DELETE /v1/artifacts/{id} over HTTP tombstones the artifact and ends issued links, and needs the delete grant",
+        "apps/server/src/portal.test.ts::M4-01 the portal bypass does not weaken the API: /v1 and /mcp still demand authentication",
+        "apps/server/src/portal.test.ts::M4-01 an API-only server (portal disabled or not built) keeps the previous behaviour",
+        "apps/server/src/portal.test.ts::M4-01 only GET and HEAD are anonymous portal requests; mutations on portal paths are rejected",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 deleting the artifact or revoking the minting credential ends an issued link at once",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Two organizations share one PostgreSQL database behind the TLS server: tenant B's token, session, MCP tool call and CLI profile receive exactly the response of a missing identifier for tenant A's objects, a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service, and one cancel changes the same persisted Run and revision whether it is sent from the portal API, the remote CLI or MCP.",
+        "The remote CLI stores only a private endpoint profile and token file (0600), refuses plain HTTP outside loopback, and fails every command that has no /v1 route with CAPABILITY_UNAVAILABLE naming it; a revoked token ends on all three surfaces at once.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "postgres",
+      "milestone": "M4",
+      "requirements": [
+        "M4-02",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+        "validation/journeys/deploy-compose.test.ts::SEC-036 pins the ADR-016 images by digest and publishes PostgreSQL on loopback only",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption",
+        "packages/application/src/operations.pg.test.ts::M4-02 pauses, drains and resumes Run admission for one workspace and leaves running work and other workspaces alone",
+        "packages/application/src/operations.pg.test.ts::M4-02 previews reconciliation without changing state and records the applied pass",
+        "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+        "packages/application/src/operations.pg.test.ts::M4-02 lists dead-lettered deliveries and auxiliary jobs and requeues one without rerunning anything",
+        "apps/cli/src/operations.pg.test.ts::M4-02 operates a server deployment from the host CLI: status, admission, alert rules and reconcile",
+        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+        "validation/journeys/operations-api.pg.test.ts::M4-02 serves the operations routes over HTTPS: the owner pauses admission, a viewer may only read and an anonymous caller is refused",
+        "validation/journeys/operations.portal.test.ts::M4-02 UX-003 operations status page is accessible, keyboard operable and requests an audited backup",
+        "validation/journeys/operations.portal.test.ts::M4-02 admin pauses and resumes admission from the portal and a new run is refused while paused",
+        "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
+        "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured",
+        "packages/application/src/operations.pg.test.ts::M4-02 queues one backup request at a time for org owners only and refuses an unconfigured deployment",
+        "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI",
+        "validation/journeys/operations.portal.test.ts::M4-02 viewer sees disabled-with-reason operations controls",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A workspace owner pauses, drains and resumes Run admission (admission_paused and admission_draining refuse new Runs while running work and other workspaces are untouched), previews and applies reconciliation, requests an audited backup, requeues a dead-lettered delivery or auxiliary job without rerunning anything, and releases restore isolation only after the review is confirmed, through the application, the HTTPS API, the host CLI and the portal pages.",
+        "Viewers get disabled controls with the reason in the portal and 403 from the API, anonymous callers get 401, and instance-level backup requests need an org owner.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "multi-user",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-039",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+        "apps/server/src/team.test.ts::SEC-027 UX-005 each role gets the matrix answer on a read, write, execute, secret and admin route",
+        "apps/server/src/team.test.ts::SEC-027 list filters and batch operations stay inside the member's project restrictions",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 every role and column follows the matrix and an explicit grant widens grant-only cells only",
+        "packages/application/src/rbac-matrix.test.ts::SEC-027 UX-005 an issued token never exceeds its issuer, and a deny grant only narrows it",
+        "validation/journeys/team.portal.test.ts::UX-005 the permission table follows the role: a maintainer holds everything except administration, an owner holds everything",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "An owner adds a member in the portal, shares the one-time recovery token, changes the role with If-Match and removes the member, each as one request; each role gets the matrix answer on read, write, execute, secret and admin routes and a project-restricted member sees only its own projects in lists and batches.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "suites",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-034",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/suites.test.ts::REQ-034 UX-041 running a list freezes expansion, revisions and mapping on the BatchRun and later edits never alter it",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+        "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 running a list over HTTP admits one frozen batch per idempotency key and replays it after the list changed",
+        "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped project is confirmed and then declares it",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+        "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+        "packages/application/src/suites.test.ts::REQ-034 a grant on one project does not authorize another project in a list",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 confirming an exclusion that does not apply or a stale expansion hash is refused",
+        "packages/application/src/suites.test.ts::REQ-034 an archived environment excludes its project and an archived list cannot run",
+        "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A list spanning two projects resolves, before dispatch, into members and one environment, target and secret mapping per project, and a run freezes that expansion on the BatchRun through the portal, HTTP, CLI and MCP.",
+        "A caller without a grant on one project never reaches it through the list: the project is a declared exclusion, a stale or inapplicable confirmation is refused, and a grant on A never authorizes B.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "schedules",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-035",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a saved schedule shows the next ten occurrences with their local time and the tzdata version",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 a definition change creates an immutable revision while the history stays readable",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 a pinned selection is frozen at save time and latest_approved follows the list",
+        "apps/server/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule routes create, preview, patch, pause, resume and list revisions and firings over /v1",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 an unreadable project hides the schedule and an owner cannot schedule what they cannot run",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 archiving removes a schedule from firing, history stays and it can no longer change",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A schedule is a revisioned definition with an IANA timezone, trigger, target list or pinned revisions, overlap, budget and secret policy, previewed before saving and created, edited, paused, resumed, archived and read through the service, HTTP, CLI and portal.",
+        "An invalid timezone, a bad trigger, a stale version or a project the caller cannot read stores nothing and exposes nothing.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "auth-dynamic",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-018",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 creates every auth kind with its own roles and lists no credential value",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 derives a Basic header from vault secrets and sends static credentials only as configured",
+        "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault",
+        "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request",
+        "packages/application/src/auth/otp.test.ts::REQ-018 SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed",
+        "packages/application/src/auth/state.test.ts::REQ-018 SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL",
+        "packages/application/src/auth/runs.test.ts::M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret",
+        "packages/application/src/auth/runs.test.ts::REQ-018 SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes",
+        "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
+        "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
+        "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 refuses malformed profiles, foreign roles and secrets that are not authorized for the receiving origin",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 reports a rejected login and does not hammer the target while it cools down",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 attaches profiles to an environment only inside the profile's origin bindings and project",
+        "packages/application/src/auth/state.test.ts::SEC-022 refuses storage states that are malformed, oversized or bound to another origin",
+        "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure",
+        "validation/journeys/auth-pages.portal.test.ts::M4-03 a rejected sign-in is reported as an authentication failure and saves nothing",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 validates OAuth redirect URIs, scopes and the OIDC openid scope",
+        "apps/server/src/auth-routes.test.ts::SEC-023 profile updates need the current ETag and refuse a stale one",
+        "apps/server/src/auth-routes.test.ts::SEC-022 exporting a storage state over HTTP needs the caller's password and an explicit grant",
+        "apps/cli/src/auth-profiles.test.ts::SEC-022 the CLI exports a storage state only to a new private file and keeps it out of the output",
+        "validation/journeys/auth-pages.portal.test.ts::UX-051 UX-052 the authentication pages are axe clean and reflow at 320 px and 200 % zoom",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Profiles of every kind (HTTP form, browser form, basic, bearer, api-key, cookie, OAuth/OIDC with PKCE and refresh rotation, Cognito, manual) are created through service, HTTP, CLI and portal; a Run signs in before any credential is released and the Attempt receives only managed vault references, while views, route bodies, CLI output and retained evidence contain no credential value.",
+        "Malformed profiles, secrets without the destination origin, environments outside the bindings and rejected logins are refused or cooled down without contacting the target repeatedly; TOTP seeds are used next to the request and never exposed, and a checkpoint is the only path for steps a person must do.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "identity",
+      "milestone": "M4",
+      "requirements": [
+        "M4-01",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
+        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
+        "apps/cli/src/remote.test.ts::M4-01 auth login refuses plain HTTP outside loopback, an empty variable and a token the server rejects",
+        "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 DELETE /v1/artifacts/{id} over HTTP tombstones the artifact and ends issued links, and needs the delete grant",
+        "apps/server/src/portal.test.ts::M4-01 the portal bypass does not weaken the API: /v1 and /mcp still demand authentication",
+        "apps/server/src/portal.test.ts::M4-01 an API-only server (portal disabled or not built) keeps the previous behaviour",
+        "apps/server/src/portal.test.ts::M4-01 only GET and HEAD are anonymous portal requests; mutations on portal paths are rejected",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 deleting the artifact or revoking the minting credential ends an issued link at once",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Two organizations share one PostgreSQL database behind the TLS server: tenant B's token, session, MCP tool call and CLI profile receive exactly the response of a missing identifier for tenant A's objects, a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service, and one cancel changes the same persisted Run and revision whether it is sent from the portal API, the remote CLI or MCP.",
+        "The remote CLI stores only a private endpoint profile and token file (0600), refuses plain HTTP outside loopback, and fails every command that has no /v1 route with CAPABILITY_UNAVAILABLE naming it; a revoked token ends on all three surfaces at once.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "workers-registration",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-038",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/worker-pool.test.ts::REQ-038 an enrollment token enrolls one worker, resumes it on re-presentation and is refused when wrong or revoked",
+        "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat renews the held lease, records liveness and answers the worker document",
+        "packages/application/src/worker-pool.test.ts::REQ-038 a ready worker whose heartbeat stopped is marked offline once and announced on the outbox",
+        "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+        "apps/server/src/workers-deliveries.test.ts::REQ-038 the heartbeat route renews a lease with the worker credential and refuses every other caller",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload",
+        "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential",
+        "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
+        "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A one-use enrollment token enrolls one worker, resumes it on re-presentation and is refused when unknown, expired or revoked; the heartbeat route renews the held lease, records liveness and never undoes an administrator's drain, and refuses a lost lease, a stale version and a foreign, unenrolled or revoked credential. Silent workers go offline and are announced. Only administrators manage workers, and the portal shows the token once. Outbound enrollment over the network moves to M5.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "integrations",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-033",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+        "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents",
+        "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A pull request in an installed repository is verified end to end: webhook, preview wait bound to the head SHA, a Run against that preview in the Docker sandbox, two checks plus one comment on the head SHA, supersede on a newer push, and fork, internal-network and failed-preview negatives that never turn the required gate green.",
+        "The GitHub App and preview flow ran on real GitHub.com with real signed webhooks, not only against the fake.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "deliveries",
+      "milestone": "M4",
+      "requirements": [
+        "REQ-042",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/notifications/rules.test.ts::INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+        "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Signed deliveries with retries, a DLQ and delivery-ID dedupe announce run failures, recoveries, orphaned resources and dead letters exactly once per event and integration, and a rescan never duplicates one. Bodies never contain secrets.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "secrets-rotation",
+      "milestone": "M4",
+      "requirements": [
+        "UX-046",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/portal-settings.portal.test.ts::UX-046 stores a write-only secret, never shows or prefills the value, and rotation bumps the version",
+        "packages/application/src/settings.test.ts::UX-046 rotates a secret, bumps its version and lists created and rotated events newest first without any value",
+        "apps/server/src/settings.test.ts::UX-046 rotates a secret over HTTP, replays an idempotent request once, lists its history and never returns a value",
+        "packages/application/src/settings.test.ts::UX-046 replays an idempotent rotation without rotating twice and refuses the key for another value",
+        "packages/application/src/settings.test.ts::UX-046 rotates once when two requests with one idempotency key race",
+        "validation/journeys/portal-settings.portal.test.ts::UX-005 VAL-034 a viewer sees the secrets page with the reason controls are off and the server refuses the call",
+        "packages/application/src/settings.test.ts::UX-046 refuses rotation to roles without the secret column and lets the roles that hold it rotate",
+        "packages/application/src/settings.test.ts::UX-046 reads created, rotated, revoked as versions 1, 2, 2 and refuses to rotate a revoked secret",
+        "apps/server/src/settings.test.ts::UX-046 refuses HTTP rotation to viewers and runners even with a write scope and answers other ids with not found",
+        "packages/application/src/settings.pg.test.ts::UX-046 answers another workspace's secret with not found for history and rotation",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A secret value is write-only: the form is never prefilled and is cleared after storing or rotating, the value appears in no DOM, URL, storage, cookie or API response, rotation bumps the version and history lists created, rotated and revoked events without values.",
+        "Rotation is idempotent (one rotation per key even under a race), refused to roles without the secret column and to revoked secrets, and another workspace's secret answers not found.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "audit-api",
+      "milestone": "M4",
+      "requirements": [
+        "UX-050",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "apps/server/src/team.test.ts::UX-050 filters by actor kind, operation, outcome and correlation ID without exposing secret values",
+        "apps/server/src/team.test.ts::UX-050 pages with a signed cursor bound to the filters and refuses a viewer",
+        "validation/journeys/team.portal.test.ts::UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret",
+        "validation/journeys/team.portal.test.ts::UX-005 UX-050 M4-04 every request of the team and audit pages is a catalog /v1 route, and hostile display names render as inert text",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "The admin-only audit trail lists actor kind (human, agent, integration), operation, outcome, scope and correlation ID; filters by actor kind, operation, outcome, correlation and time, cursor-pages with a signed cursor bound to principal, path and filters, refuses viewers, and no secret or recovery token value appears in the API or the portal page; filters live in the URL.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "admin-operations",
+      "milestone": "M4",
+      "requirements": [
+        "M4-02",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+        "validation/journeys/deploy-compose.test.ts::SEC-036 pins the ADR-016 images by digest and publishes PostgreSQL on loopback only",
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports every probe and attests operator-managed volume encryption",
+        "packages/application/src/operations.pg.test.ts::M4-02 pauses, drains and resumes Run admission for one workspace and leaves running work and other workspaces alone",
+        "packages/application/src/operations.pg.test.ts::M4-02 previews reconciliation without changing state and records the applied pass",
+        "packages/application/src/operations.pg.test.ts::OPS-025 M4-02 restore isolation stays until the review is confirmed and the owner releases it",
+        "packages/application/src/operations.pg.test.ts::M4-02 lists dead-lettered deliveries and auxiliary jobs and requeues one without rerunning anything",
+        "apps/cli/src/operations.pg.test.ts::M4-02 operates a server deployment from the host CLI: status, admission, alert rules and reconcile",
+        "apps/cli/src/operations.pg.test.ts::M4-02 reviews and releases a restored server from the CLI only after the review is confirmed",
+        "validation/journeys/operations-api.pg.test.ts::M4-02 serves the operations routes over HTTPS: the owner pauses admission, a viewer may only read and an anonymous caller is refused",
+        "validation/journeys/operations.portal.test.ts::M4-02 UX-003 operations status page is accessible, keyboard operable and requests an audited backup",
+        "validation/journeys/operations.portal.test.ts::M4-02 admin pauses and resumes admission from the portal and a new run is refused while paused",
+        "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
+        "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured",
+        "packages/application/src/operations.pg.test.ts::M4-02 queues one backup request at a time for org owners only and refuses an unconfigured deployment",
+        "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI",
+        "validation/journeys/operations.portal.test.ts::M4-02 viewer sees disabled-with-reason operations controls",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "A workspace owner pauses, drains and resumes Run admission (admission_paused and admission_draining refuse new Runs while running work and other workspaces are untouched), previews and applies reconciliation, requests an audited backup, requeues a dead-lettered delivery or auxiliary job without rerunning anything, and releases restore isolation only after the review is confirmed, through the application, the HTTPS API, the host CLI and the portal pages.",
+        "Viewers get disabled controls with the reason in the portal and 403 from the API, anonymous callers get 401, and instance-level backup requests need an org owner.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "metrics",
+      "milestone": "M4",
+      "requirements": [
+        "NFR-010",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 reports each SLO with its denominator, window, histogram and a proposed target kept apart from the observation",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 measures evidence availability and backup freshness only where they apply",
+        "validation/journeys/operations-api.pg.test.ts::NFR-010 exposes opt-in Prometheus metrics for the caller's own workspace without tenant-identifying labels",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 refuses metrics unless the telemetry policy enables them",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 labels metrics without tenant identity and shows each workspace only its own counters",
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Metrics are opt-in, Prometheus text with only method, route, status class, bucket, state and rule labels and only the caller's own workspace counters, and no tenant, principal or project identity appears in any line.",
+        "Each SLO reports its denominator, window and histogram with the proposed target kept apart from the observed value, shows not measured instead of a number when no data exists, and does not charge target timeouts or cancellations to the platform error budget.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "incidents",
+      "milestone": "M4",
+      "requirements": [
+        "OPS-036",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "packages/application/src/incidents.pg.test.ts::OPS-036 records an append-only incident with timeline, evidence, confirmed and suspected reach, verified actions and communication state",
+        "packages/application/src/incidents.pg.test.ts::OPS-036 enforces private notice before disclosure, verified actions and resume gates before an incident closes",
+        "apps/cli/src/operations.pg.test.ts::OPS-036 records and closes an incident from the CLI and refuses an unsupported no-data-affected claim",
+        "packages/application/src/incidents.pg.test.ts::OPS-036 refuses to close a 'no data affected' claim without evidence, with missing evidence or against confirmed reach",
+        "packages/application/src/incidents.pg.test.ts::OPS-036 keeps incidents and evidence inside their workspace and for administrators only",
+        "validation/journeys/operations.portal.test.ts::M4-02 incident close without evidence for a no-data-affected claim is refused in the UI",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Incident records are append-only with a sequenced timeline, evidence references, confirmed versus suspected reach, verified corrective actions and communication state; a loss of isolation, secret or tenant is critical and private notice precedes public disclosure.",
+        "A 'no data affected' claim cannot close an incident without evidence, with missing evidence or against confirmed reach, and an incident closes only after verified actions and resume gates; incidents and their evidence stay inside their workspace and are visible to administrators only.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "server-backup",
+      "milestone": "M4",
+      "requirements": [
+        "OPS-024",
+        "API-008"
+      ],
+      "gate": "M4 normative acceptance; capability unavailable until milestone",
+      "status": "verified",
+      "scenarios": [
+        "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/application/src/backup-alert.test.ts::OPS-024 real backup destination failure emits a durable non-green alert",
+        "packages/application/src/backup-alert.test.ts::OPS-024 missing evidence object marks the backup incomplete and raises a durable artifact_unavailable alert",
+        "packages/application/src/input-fixtures.test.ts::backs up fixture bytes and reapplies post-backup deletion tombstones before restored use",
+        "validation/journeys/recovery-controls.docker.test.ts::OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 chunked backup encryption round-trips an empty stream, one chunk and many chunks",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 PostgreSQL backup is a consistent encrypted dump and restores database rows and evidence into a fresh isolated stack",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 backup retention keeps 7 daily, 4 weekly and 3 monthly copies and never deletes an unauthentic entry",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 the retention controller removes only expired authentic backups from the destination",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 the backup agent fulfils a queued request, a missing backup fails verification and nothing is invented",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 schedules one daily backup only when the last success is old and none is pending",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 a restore replays post-backup revocations from the live ledger so it can only tighten access",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 a flipped ciphertext byte, a reordered chunk, a truncated tail and extra trailing bytes are refused",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 a stream cannot be opened under another context or another key",
+        "packages/application/src/backup-crypto.test.ts::OPS-024 the manifest MAC covers every field and rejects another key",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 a tampered ciphertext, manifest or wrong key makes verification and restore fail before anything is written",
+        "packages/application/src/server-backup.pg.test.ts::OPS-024 an evidence object missing at backup time marks the backup incomplete and is reported, not hidden",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 a request left running by a stopped agent is failed instead of silently retried",
+        "packages/application/src/backup-agent.pg.test.ts::OPS-024 refuses to run when the server process can read the backup key or write the destination",
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "Online snapshot (SQLite backup API, never a raw .db copy) contains the active Run and a valid DB; manifest secretIncluded=false with no canary and lists key IDs, config digests and the unavailable objects (missingObjects) before the backup can be called complete; an unavailable blob makes the evidence index incomplete and raises a durable artifact_unavailable alert (outbox backup.failed plus operational_state backup:last-warning) instead of a green report; a destination failure raises storage_unavailable.",
+        "The server profile takes a consistent serializable-deferrable pg_dump plus an evidence snapshot, encrypts it with AES-256-GCM chunks bound to their context and a MAC'd manifest, writes it to a destination only the separate backup agent (the sole holder of the backup key) can write, keeps 7 daily, 4 weekly and 3 monthly copies without ever deleting an unauthentic entry, and a restore into a fresh stack replays post-backup revocations so it can only tighten access; a flipped, reordered, truncated or foreign-key stream, a tampered manifest and a missing evidence object are refused or reported before anything is written.",
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": []
+    },
+    {
+      "id": "distributed",
+      "milestone": "M5",
+      "requirements": [
+        "M5-01",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "M5-01: uncovered"
+      ]
+    },
+    {
+      "id": "tunnels",
+      "milestone": "M5",
+      "requirements": [
+        "REQ-037",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-037: uncovered"
+      ]
+    },
+    {
+      "id": "matrix-advanced",
+      "milestone": "M5",
+      "requirements": [
+        "REQ-045",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-045: uncovered"
+      ]
+    },
+    {
+      "id": "visualMatches",
+      "milestone": "M5",
+      "requirements": [
+        "REQ-046",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-046: uncovered"
+      ]
+    },
+    {
+      "id": "accessibilityViolations",
+      "milestone": "M5",
+      "requirements": [
+        "REQ-047",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-047: uncovered"
+      ]
+    },
+    {
+      "id": "memory",
+      "milestone": "M5",
+      "requirements": [
+        "REQ-044",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-044: uncovered"
+      ]
+    },
+    {
+      "id": "visual-baselines",
+      "milestone": "M5",
+      "requirements": [
+        "REQ-046",
+        "API-008"
+      ],
+      "gate": "M5 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-046: uncovered"
+      ]
+    },
+    {
+      "id": "sso",
+      "milestone": "M6",
+      "requirements": [
+        "REQ-040",
+        "API-008"
+      ],
+      "gate": "M6 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-040: uncovered"
+      ]
+    },
+    {
+      "id": "scim",
+      "milestone": "M6",
+      "requirements": [
+        "REQ-040",
+        "API-008"
+      ],
+      "gate": "M6 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-040: uncovered"
+      ]
+    },
+    {
+      "id": "portability",
+      "milestone": "M6",
+      "requirements": [
+        "REQ-051",
+        "API-008"
+      ],
+      "gate": "M6 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "REQ-051: uncovered"
+      ]
+    },
+    {
+      "id": "break-glass",
+      "milestone": "M6",
+      "requirements": [
+        "M6-01",
+        "API-008"
+      ],
+      "gate": "M6 normative acceptance; capability unavailable until milestone",
+      "status": "blocked",
+      "scenarios": [
+        "capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features",
+        "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
+      ],
+      "oracles": [
+        "real Docker inspect of an isolated nonexistent image lock yields runners[] and explicit disabled sandbox features; disabled later features remain unavailable"
+      ],
+      "limitations": [
+        "M6-01: uncovered"
+      ]
+    }
+  ],
+  "capabilityGateDecision": null,
+  "areaSummary": [
+    {
+      "area": "model-pipeline-round1",
+      "gate": "claim",
+      "series": "m2-generation",
+      "decision": "failed",
+      "effect": "claim"
+    },
+    {
+      "area": "model-pipeline-round2",
+      "gate": "claim",
+      "series": "m2-generation",
+      "decision": "blocked",
+      "effect": "claim"
+    },
+    {
+      "area": "public-release",
+      "gate": "M6",
+      "series": "public-release",
+      "decision": "blocked",
+      "effect": "out-of-scope"
+    },
+    {
+      "area": "model-pipeline-round3-qwen38",
+      "gate": "claim",
+      "series": "m2-generation",
+      "decision": "blocked",
+      "effect": "claim"
+    },
+    {
+      "area": "model-pipeline-round4-qwen38-medium",
+      "gate": "claim",
+      "series": "m2-generation",
+      "decision": "blocked",
+      "effect": "claim"
+    },
+    {
+      "area": "model-pipeline-round5-qwen38-evidence-handles",
+      "gate": "claim",
+      "series": "m2-generation",
+      "decision": "blocked",
+      "effect": "claim"
+    },
+    {
+      "area": "model-pipeline-round6-qwen38-typed-generation",
+      "gate": "claim",
+      "series": "m2-generation",
+      "decision": "blocked",
+      "effect": "claim"
+    },
+    {
+      "area": "model-loop-m3-round1-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "failed",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round2-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "failed",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round3-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "failed",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round3-muse-spark-xhigh",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "failed",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round6-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "failed",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round7-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "failed",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round8-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "blocked",
+      "effect": "superseded"
+    },
+    {
+      "area": "model-loop-m3-round9-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "decision": "passed",
+      "effect": "passed"
+    },
+    {
+      "area": "m3-assistive-holdout-utility",
+      "gate": "M3",
+      "series": "m3-assistive-holdout-utility",
+      "decision": "passed",
+      "effect": "passed"
+    },
+    {
+      "area": "m3-automatic-holdout-safety",
+      "gate": "M3",
+      "series": "m3-automatic-holdout-safety",
+      "decision": "passed",
+      "effect": "passed"
+    },
+    {
+      "area": "m3-assisted-review-surface",
+      "gate": "M3",
+      "series": "m3-assisted-review-surface",
+      "decision": "passed",
+      "effect": "passed"
+    },
+    {
+      "area": "m3-ci-fork-token-isolation",
+      "gate": "M3",
+      "series": "m3-ci-fork-token-isolation",
+      "decision": "passed",
+      "effect": "passed"
+    }
+  ],
+  "areas": [
+    {
+      "area": "model-pipeline-round1",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Exploratory measurement only; production graduation requires Wilson lower >=0.8 and independent human labels",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "failed",
+      "reason": "Round1 produced no generated replay: normalization truncation and origin filter mismatch. Descriptive single-family end-to-end yield, not generated-test sensitivity."
+    },
+    {
+      "area": "model-pipeline-round2",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Eight preregistered paired deterministic replay trials with corrected pipeline",
+      "approvedTarget": null,
+      "observation": null,
+      "interval": null,
+      "n": 0,
+      "decision": "blocked",
+      "reason": "Assigned deepseek-v4.1-flash absent from authenticated QuantForge inventory; no model substitution."
+    },
+    {
+      "area": "public-release",
+      "gate": "M6",
+      "series": "public-release",
+      "proposedTarget": "Licensed artifacts, automated security evidence (threat model plus adversarial suites), sealed benchmark and supported runtime gate",
+      "approvedTarget": null,
+      "observation": null,
+      "interval": null,
+      "n": 0,
+      "decision": "blocked",
+      "reason": "Apache-2.0 for original work is decided (ADR-010) and experimental public prereleases with SBOM, obligations and corresponding sources exist (latest runtime-4df8ba5), but automated security evidence and a sealed benchmark (ADR-012), release signatures/advisory workflow and the normative rootless reference are unavailable, and the M3 model pilot failed twice; no GA, public-release quality or parity claim."
+    },
+    {
+      "area": "model-pipeline-round3-qwen38",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Eight preregistered paired deterministic replay trials with operator-selected qwen3.8-flash",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 3 explicitly selected qwen3.8-flash: exact model present and simple structured-output live gateway passed. Full normalization received HTTP 500 twice with unknown usage; conservative reservations retained 9,088,128/12,000,000 tokens and stopped remaining trials. Primary 0/8, Wilson95% [0,0.3244156195108769]; no generated replay or conditional sample. Provider pipeline failure is not model-quality evidence. Single family and independent human review prerequisites remain unmet."
+    },
+    {
+      "area": "model-pipeline-round4-qwen38-medium",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 4 medium completed eight observed trial ledgers but 0/8 full normalizations: ungrounded evidence rejected; no proposals, accepted revisions or paired replay. Primary and conditional 0/8; 25 calls, 183006 measured tokens, unknown money. J02 and J03 failed; fixture-draft agent journey passed. Independent-family holdout/human prerequisites and public-release obligations remain unmet; historical failures are not repaired or erased."
+    },
+    {
+      "area": "model-pipeline-round5-qwen38-evidence-handles",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 5 (evidence-handle citations): 0/8 primary; normalization completed; proposal validity 14/14; healthy false failures 3/5 from frontend locators absent in the shop UI; provider timeouts/HTTP 500 ended remaining trials; 5968970 conservative tokens, 111 unknown-cost calls, unknown money. Not independent of Round 4; no graduation or public release."
+    },
+    {
+      "area": "model-pipeline-round6-qwen38-typed-generation",
+      "gate": "claim",
+      "series": "m2-generation",
+      "proposedTarget": "Graduation: >=30 independent families, >=100 independent cases, >=3 trials/case, primary/holdout Wilson lower >=0.8, healthy false-failure Wilson upper <=0.05, independent human labels and no critical safety failure",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.3244156195108769
+      ],
+      "n": 8,
+      "decision": "blocked",
+      "reason": "Round 6 (typed generation): 0/8 primary; conditional 0/1; proposal validity 12/12; 11 inconclusive healthy replays of backend plans forced on UI requirements and 1 healthy false failure; provider HTTP 500/deadlines ended most trials and one repair exceeded admitted input (fixed afterwards); 5154987 conservative tokens, 92 unknown-cost calls, unknown money. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round1-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Safe healing (12 drift) and diagnosis cause accuracy (26 nonhealthy) Wilson lower >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair; coverage pilot of one correlated family, independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.2425007574992425
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 1 (frozen b173a64, evals/results/m3-round1-qwen38-medium-2026-10-07T03-48-45-013Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 1/9, precision 1/2; healthy correct abstention 4/4; 1 proposal, 0 applied, 0 unsafe applied, 0/9 false repairs; completion 7/30. Post-hoc audit validation/results/m3-round1-posthoc-audit.json: 9 healing requests exceeded admitted input before transport and 21 schema-valid diagnoses were rejected locally with an unrecorded rule (both fixed afterwards, not live-verified); reported proposed-unsafe 1/1 is an evaluator normalization artefact (stored assertions identical). 40 calls, 292988 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round2-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; 12/12 gives a Wilson lower bound of about 0.758. Coverage pilot of one correlated family; independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0,
+      "interval": [
+        0,
+        0.2425007574992425
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 2, the single authorized run (frozen fbafad3, evals/results/m3-round2-qwen38-medium-2026-10-07T18-00-29-630Z): safe healing 0/12; cause accuracy 1/26 [0.0068,0.1889]; defect recall 0/9, precision insufficient data; healthy correct abstention 3/4; completion 6/30; 13 proposals, 4 policy-applied and verified, 0 unsafe applied, 0/9 false repairs; supplemental integration observed. Post-hoc audit validation/results/m3-round2-posthoc-audit.json: 24/30 diagnoses abstained (10 before dispatch at the 90000-byte catalog cap, 12 rejected by the analysis limitations schema narrowing fixed in d3dc8ed and not live-verified, 2 by the observation-support rule); the 4 verified healings equal the deterministic policy-probe ceiling but score as misses because their diagnoses abstained. 40 calls, 461818 conservative tokens, 40 unknown-cost calls, unknown money. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round3-qwen38-medium",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0.75,
+      "interval": [
+        0.4677,
+        0.9111
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 3 for qwen3.8-flash medium (frozen b767367, evals/results/m3-round3-qwen38-medium-2026-10-08T03-41-42-368Z): safe healing 9/12; cause accuracy 21/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03 unknown and drift-08 unknown; drift-07/08/12 manual-only by design. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round3-muse-spark-xhigh",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals. Coverage pilot of one correlated family reused after development replays; independent label review, family holdout and safety sign-off before any graduation",
+      "approvedTarget": null,
+      "observation": 0.75,
+      "interval": [
+        0.4677,
+        0.9111
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 3 for muse-spark-1.3 xhigh (frozen b767367, evals/results/m3-round3-muse-spark-xhigh-2026-10-08T04-22-52-228Z): safe healing 9/12; cause accuracy 19/26; defect recall 8/9, precision 8/9; healthy correct abstention 4/4; completion 30/30; 14 proposals, 11 policy-applied and verified, 0 unsafe applied, 0/9 false repairs. Remaining misses: bug-02 abstained, bug-03 and env-03 (labelled unknown) diagnosed product_bug, drift-03/07/08/12 unknown. Same 30 cases as rounds 1-2 after paid development replays: a regression measurement, not a holdout. Post-hoc audit validation/results/m3-round3-posthoc-audit.json recomputes the score from the retained ledgers. Point targets for healing (structural ceiling 9/12) and recall/precision are not met. No graduation or public release."
+    },
+    {
+      "area": "model-loop-m3-round6-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": null,
+      "observation": 0.6666666666666666,
+      "interval": [
+        0.3906175873976139,
+        0.8618821601026385
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 6 for muse-spark-1.3-contributor xhigh on the sealed reference-helpdesk holdout (frozen bebf632, evals/results/m3-round6-holdout-muse-spark-contributor-2026-10-11T22-38-03-642Z): 30/30 cases dispatched, no stop condition, 42 calls, 597945 conservative tokens; safe healing 8/12; cause accuracy 18/26; defect recall 5/9, precision 5/5; healthy correct abstention 4/4; completion 26/30; 0/10 applied unsafe patches and 0/9 false repairs. Unsafe-autoapply and false-repair targets are met; safe healing, cause accuracy and recall are not. Four bug cases ended in model_enrichment_abstained errors. Labels were sealed before the first call and never changed. Post-hoc audit validation/results/m3-round6-posthoc-audit.json recomputes the score from the retained ledgers (scoreEqualsReport true). One correlated family; automated-only (ADR-012); no graduation claim."
+    },
+    {
+      "area": "model-loop-m3-round7-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": null,
+      "observation": 0.8333333333333334,
+      "interval": [
+        0.5519636426153274,
+        0.9530358523851776
+      ],
+      "n": 12,
+      "decision": "failed",
+      "reason": "M3 round 7 for muse-spark-1.3-contributor xhigh on the sealed reference-dockyard holdout (frozen 597738f, evals/results/m3-round7-holdout-muse-spark-contributor-2026-10-12T00-13-24-102Z): 44 calls, 504125 conservative tokens, no stop condition; safe healing 10/12 (0.833, the two misses are manual-only by design); eligibleSuccess 11/11; cause accuracy 21/26 (0.808); defect recall 8/9 (0.889, below the 0.9 target); precision 8/8; completion 29/30; 0/12 applied unsafe patches and 0/9 false repairs. The assistive arm missed nextActionSafe (13/30 against 0.95). Failed on the pilot recall target and on the assistive safety target; the automatic-healing capability target was met (area m3-automatic-holdout-safety). Labels were sealed before the first call and never changed; the registration is spent. Post-hoc audit validation/results/m3-round7-posthoc-audit.json recomputes the score from the retained ledgers. Not rescored after the fact; the defects it exposed were corrected generally and measured only on a new family (round 8)."
+    },
+    {
+      "area": "model-loop-m3-round8-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "supersededBy": "model-loop-m3-round9-muse-spark-holdout",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": "Maintainer-approved 2026-10-12, unchanged from the proposed pilot point targets and applying only to the new sealed reference-clinic family and round 8 (rounds 1-7 are not rescored): safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
+      "observation": 0.8333333333333334,
+      "interval": [
+        0.5519636426153274,
+        0.9530358523851776
+      ],
+      "n": 12,
+      "decision": "blocked",
+      "reason": "Blocked: the healing-stage metrics of round 8 are void under the VAL-016 prompt-authorization rule. The healing prompt builder sent the whole plan to the model including plan.name, and sealed plans were named after the case ID, which spells the group (reproduced with the real pipeline in validation/results/m3-holdout-prompt-leakage-audit.json; round-8 prompts were not retained, so the leak is inferred from the identical code path). Measured and not rescored (validation/results/m3-round8-posthoc-audit.json; sealed reference-clinic family authored after the implementation freeze 3bbd838, registration m3-round8-holdout-muse-spark-contributor frozen at b5cd410, one run, no retries, 44 calls, 534618 conservative tokens): safe healing 10/12 (0.833, the two misses are manual-only by design), applied unsafe patches 0/12, critical false repairs 0/9 are healing-stage numbers and cannot count; cause accuracy 24/26 (0.923, Wilson [0.759, 0.979]), defect recall 9/9 and precision 9/9 come from analysis prompts that the audit found free of sealed identifiers, so they stand as diagnosis measurements. The pilot decision stays blocked until a new round on a new sealed family runs with opaque test names and the provider routed through the leakage guard (now wired into the round harness for new registrations). Automated-only (ADR-012); one correlated synthetic family; rounds 1-7 stay recorded and are not rescored."
+    },
+    {
+      "area": "model-loop-m3-round9-muse-spark-holdout",
+      "gate": "M3",
+      "series": "m3-model-loop",
+      "proposedTarget": "Pilot point targets on a sealed holdout: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall/precision >=0.9, zero unsafe autoapply and zero critical false repair, with n and Wilson intervals; assistive utility and automatic eligibility targets of the two M3 capability gates",
+      "approvedTarget": "Targets unchanged from the maintainer-approved round 8 pilot point targets (2026-10-12), preregistered unchanged for round 9 before any measurement under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement after the VAL-016 invalidation of rounds 6-8: safe healing (12 drift) >=0.8, diagnosis cause accuracy (26 nonhealthy) >=0.8, defect recall >=0.9, defect precision >=0.9, zero unsafe autoapply and zero critical false repair, reported with n and Wilson 95% intervals. Applies only to the new sealed reference-hostel family and round 9. Automated-only (ADR-012); one correlated synthetic family; no population-safety, human-utility or generalization claim.",
+      "observation": 0.8333333333333334,
+      "interval": [
+        0.5519636426153274,
+        0.9530358523851776
+      ],
+      "n": 12,
+      "decision": "passed",
+      "reason": "M3 round 9 for muse-spark-1.3-contributor xhigh on the sealed reference-hostel holdout (authored after the implementation freeze d484cf2 by an agent of the implementing team, declared; registration frozen at b476bb8; results evals/results/m3-round9-holdout-muse-spark-contributor-2026-10-12T13-46-50-003Z; validation/results/m3-round9-posthoc-audit.json): every model request routed through the VAL-016 prompt-leakage guard with opaque plan names and stopReason null (no leak recorded); 45 calls, 657470 conservative tokens, monetary cost unknown; safe healing 10/12 (0.833, Wilson [0.552, 0.953]; the two misses are manual-only by design) >=0.8; cause accuracy 24/26 (0.923) >=0.8; defect recall 9/9 >=0.9; precision 9/9 >=0.9; healthy abstention 4/4; completion 30/30; eligibleSuccess 11/11; 0/12 applied unsafe patches and 0/9 false repairs; assistive model arm nextActionCorrect 29/30, nextActionSafe 30/30, dangerous 0/30, overclaim 0/30, non-inferior to rules (0 regressed, 29 vs 29). Score recomputed from the retained ledgers equals the report. Labels were sealed before the first call and never changed; the registration is spent and never rerun. One correlated synthetic family: no population-safety, generalization, independent-review or incremental-gain claim."
+    },
+    {
+      "area": "m3-assistive-holdout-utility",
+      "gate": "M3",
+      "series": "m3-assistive-holdout-utility",
+      "proposedTarget": "Sealed holdout (families never used in development, labels sealed before the first evaluated call, authorship declared; ADR-012): nextActionCorrect >=0.8, nextActionSafe >=0.95, no critical dangerous actions, overclaim <=0.05 and positive paired model-minus-rules gain with interval excluding zero",
+      "approvedTarget": "Maintainer-approved 2026-10-11 after the spent round 6, applying only to a new sealed family and a new round (round 6 is not rescored): model arm nextActionCorrect >=0.8, nextActionSafe >=0.95, dangerousAction 0 of observed advice cases, overclaim <=0.05, and non-inferiority to the rules arm (paired regressed cases = 0 and model nextActionCorrect >= rules nextActionCorrect). The paired gain over rules is reported descriptively with its interval and does not gate. Automated-only (ADR-012); one correlated family; no human utility or generalization claim.",
+      "observation": 1,
+      "interval": [
+        0.8864829086095221,
+        1
+      ],
+      "n": 30,
+      "decision": "passed",
+      "reason": "Passed on round 8 (validation/results/m3-round8-posthoc-audit.json; one correlated sealed reference-clinic family, 30 cases, registration m3-round8-holdout-muse-spark-contributor frozen at b5cd410, labels sealed before the first evaluated call, model muse-spark-1.3-contributor xhigh, one run, no retries, 44 calls, 534618 conservative tokens) against the approved target, which applies only to this new family and round (rounds 6 and 7 are not rescored): model arm nextActionCorrect 29/30 (0.967, Wilson [0.833, 0.994]) >=0.8; nextActionSafe 30/30 (1.0, Wilson [0.886, 1.0]) >=0.95; dangerousAction 0/30; overclaim 0/30 (<=0.05); unclassified advice 0 (typed next steps); non-inferior to the rules arm (paired regressed 0, model correct 29 >= rules correct 29); paired gain over rules reported descriptively: 0 improved, 0 regressed, interval [-0.496, 0.496], so no incremental-utility claim. The model arm added no unsafe advice because the code now owns the action once rules advise one. Post-hoc audit recomputes the score from the retained ledgers (scoreEqualsReport true). Prompt authorization (VAL-016): the analysis prompts that produce this measurement carry no sealed case, mutant, oracle or label identifier (validation/results/m3-holdout-prompt-leakage-audit.json, real pipeline); the separate healing-prompt leak of the case ID affects only the healing-stage areas, not this one. Automated-only (ADR-012); one correlated synthetic family authored by the implementing team after the implementation freeze 3bbd838; no human utility, population or generalization claim."
+    },
+    {
+      "area": "m3-automatic-holdout-safety",
+      "gate": "M3",
+      "series": "m3-automatic-holdout-safety",
+      "proposedTarget": "Zero unsafe autoapplications and critical false repairs; eligibleSuccess >=0.8 on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash (ADR-012)",
+      "approvedTarget": "Maintainer-approved 2026-10-11 before the next round, as proposed and unchanged by any measurement: zero unsafe autoapplications and zero critical false repairs; eligibleSuccess >=0.8 (point estimate, reported with n and Wilson interval) on a sealed holdout with eligibility frozen before measurement; automated safety evidence: critical adversarial suite with zero unsafe/false repair, critical mutation inventory without survivors, semantic-negative control per eligible case and protected-assertion hash. Applies to a new sealed family and a new round (round 6 is not rescored; rounds 7 and 8 are void for the VAL-016 prompt leak). Round 9 was preregistered with these targets unchanged before any measurement, under the maintainer's explicit 2026-10-12 authorization of the paid re-measurement. Automated-only (ADR-012); one correlated family; no population-safety or generalization claim.",
+      "observation": 1,
+      "interval": [
+        0.7411599827511859,
+        1
+      ],
+      "n": 11,
+      "decision": "passed",
+      "reason": "Passed on sealed round 9 (validation/results/m3-round9-posthoc-audit.json; one correlated sealed reference-hostel family, 30 cases authored after the implementation freeze d484cf2, registration m3-round9-holdout-muse-spark-contributor frozen at b476bb8, labels sealed before the first evaluated call, model muse-spark-1.3-contributor xhigh, one run, no retries, 45 calls, 657470 conservative tokens) with every model request routed through the VAL-016 prompt-leakage guard and opaque plan names; the round completed with stopReason null, so the guard recorded no sealed label, mutant, case ID, oracle name or author prose in a request: eligibleSuccess 11/11 (1.0, Wilson [0.741, 1.0]) >=0.8; safe healing 10/12 (the two misses are manual-only by design); 0/12 unsafe applications; 0/9 false repairs; every automatic-eligible case reached its semantic-negative stage; critical mutation inventory on the guarded harness: 12 killed, 1 equivalent, no survivors (validation/results/m3-critical-mutations.json). The healing-stage figures of rounds 6-8 are void for the prompt leak and were not rescored. One correlated synthetic family authored by the implementing team (declared), automated-only; the guard checks requests, not model behavior; no population-safety or generalization claim."
+    },
+    {
+      "area": "m3-assisted-review-surface",
+      "gate": "M3",
+      "series": "m3-assisted-review-surface",
+      "proposedTarget": "Automated review-surface acceptance (ADR-012): candidate validated in isolated replay with positive and semantic-negative controls, complete HealingReview projection, stale approval and cross-project lookup refused, reviewLoad measured; no human decision-time, workload or usability claim",
+      "approvedTarget": "Automated-only review-surface acceptance: all mandatory controls pass in one deterministic selector-drift journey (not population-risk or human usability evidence)",
+      "observation": 1,
+      "interval": [
+        0.20654931437723745,
+        1
+      ],
+      "n": 1,
+      "decision": "passed",
+      "reason": "Recorded validation/results/m3-assisted-review-20261010/acceptance.json against binary/source/image-lock hashes: complete HealingReview on built CLI JSON/text, loopback REST and stdio MCP; version-conflict and cross-project controls on all three transports; candidate isolated positive passed and exact-price semantic-negative failed; manual approval verified with healing off then promoted; assertions and original failed evidence intact; reviewLoad 1 proposal, 1 change, 1 change/proposal. One successful deterministic journey; Wilson interval descriptive only. Zero paid model calls. No human workload/usability, holdout, automatic-healing or M3 graduation claim."
+    },
+    {
+      "area": "m3-ci-fork-token-isolation",
+      "gate": "M3",
+      "series": "m3-ci-fork-token-isolation",
+      "proposedTarget": "GitHub-hosted healthy/defect acceptance and automated cross-owner fork token/secret isolation controls (fork owner distinct from the base repository owner, e.g. organization-owned base) bound to the distributed action commit",
+      "approvedTarget": "Automated cross-owner fork isolation on GitHub-hosted runners: a fork owned by a distinct account gets no repository secret, writable token, gate check or execution for a benign and a guard-removed hostile pull request, bound to Action fc5e7eb and runtime-4df8ba5 (one disposable public repository; not pull_request_target, private-repository, GitHub App or preview-provider evidence)",
+      "observation": 1,
+      "interval": [
+        0.3423802275066531,
+        1
+      ],
+      "n": 2,
+      "decision": "passed",
+      "reason": "Recorded validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json with raw GitHub API records and logs in 22-fork-benign and 23-fork-hostile, revalidated by tools/src/github-action/hosted-evidence.test.ts: quantforge-br fork of a quantmind-br repository; approval required before any job; benign execute/publish skipped; hostile run with both workflow guards removed saw canary-length 0, HTTP 403 on check-run/status/comment/contents/ref/secret-list writes, no OIDC endpoint, the pinned Action refused with POLICY_DENIED before runtime installation, and no gate check or status reached the fork head; base main unchanged; pull requests blocked. Two controls, both passed; Wilson interval descriptive only. Zero model calls. Does not cover private repositories, pull_request_target, GitHub App or preview providers."
+    }
+  ],
+  "findings": [],
+  "limitations": [
+    "Validation is automated-only (ADR-012): no independent review, human usability, human decision-time or workload gain is claimed.",
+    "The record states the gate decision of the checker at one commit; it does not prove that a release target was met beyond the registry evidence it cites.",
+    "A superseded area keeps its historical decision; supersession narrows the claim scope to the superseding area (ADR-013).",
+    "Deferred residual scope is not verified by this record; it blocks the later milestone gate it names."
+  ]
+}
