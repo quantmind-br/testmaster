@@ -128,3 +128,6 @@ SELECT tm_enable_tenant_rls('incidents');
 SELECT tm_enable_tenant_rls('incident_events');
 
 SELECT tm_enable_tenant_rls('audit_purge_summaries');
+
+-- Deliveries of purged Runs go with them: the permit lifts the delete guard here too.
+CREATE OR REPLACE FUNCTION protect_delivery() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP='DELETE' THEN IF EXISTS(SELECT 1 FROM operational_state WHERE key='retention:purge-permit:' || OLD.workspace_id) THEN RETURN OLD; END IF; RAISE EXCEPTION 'immutable' USING ERRCODE='23514'; END IF; IF NEW.destination_ref<>OLD.destination_ref OR NEW.subject_sha<>OLD.subject_sha OR NEW.report_hash<>OLD.report_hash OR NEW.check_name<>OLD.check_name OR NEW.payload_hash<>OLD.payload_hash OR NEW.event_id<>OLD.event_id OR (OLD.external_id IS NOT NULL AND NEW.external_id IS DISTINCT FROM OLD.external_id) OR OLD.state IN ('delivered','dead_letter') THEN RAISE EXCEPTION 'delivery_subject_frozen' USING ERRCODE='23514'; END IF; RETURN NEW; END $$;

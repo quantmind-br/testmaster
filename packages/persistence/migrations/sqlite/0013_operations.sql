@@ -128,3 +128,8 @@ CREATE TRIGGER analyses_no_delete BEFORE DELETE ON analyses WHEN NOT EXISTS(SELE
 DROP TRIGGER healing_proposals_no_delete;
 
 CREATE TRIGGER healing_proposals_no_delete BEFORE DELETE ON healing_proposals WHEN NOT EXISTS(SELECT 1 FROM operational_state WHERE key='retention:purge-permit:' || OLD.workspace_id) BEGIN SELECT RAISE(ABORT,'immutable'); END;
+
+-- Deliveries of purged Runs go with them: the permit lifts the delete guard here too.
+DROP TRIGGER deliveries_no_delete;
+
+CREATE TRIGGER deliveries_no_delete BEFORE DELETE ON deliveries WHEN NOT EXISTS(SELECT 1 FROM operational_state WHERE key='retention:purge-permit:' || OLD.workspace_id) BEGIN SELECT RAISE(ABORT,'immutable'); END;
