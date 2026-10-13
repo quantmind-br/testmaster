@@ -76,7 +76,7 @@ entry.
 
 ## During the incident
 
-1. Contain first with the authenticated operations that exist: `ops admission pause|drain`,
+1. Contain first with the authenticated operations that exist: `ops pause|drain`,
    `worker drain`, `run cancel`, `secret remove|rotate`, `consent revoke`, token revocation, and
    `ops reconcile preview|apply`. Record each action as a timeline entry.
 2. Preserve before repair: database, audit export, sealed manifests, bounded logs, the images lock and

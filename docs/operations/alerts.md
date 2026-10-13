@@ -51,7 +51,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
      OOM kills, Docker daemon and PostgreSQL latency; a worker that cannot reach the database cannot
      renew its 30 s lease.
   2. `testmaster ops reconcile preview` and review the proposed recovery, then `ops reconcile apply`.
-  3. While the cause is unknown, `testmaster ops admission pause --reason "<why>"` to stop new work.
+  3. While the cause is unknown, `testmaster ops pause --reason "<why>"` to stop new work.
 * **Verification:** no new `attempt.lease_expired` for one full evaluation window, workers heartbeating,
   the alert resolves, and a healthy replay finishes `passed`.
 * **Escalation:** persists after a restart or affects several workers: open an incident (`outage`, high).
@@ -102,7 +102,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
   itself when use falls; only that automatic suspension does); evidence publication can fail; the
   database and audit trail are at risk of full-disk failure.
 * **First actions:**
-  1. `testmaster ops admission drain --reason "storage critical"` if it is not already suspended, and
+  1. `testmaster ops drain --reason "storage critical"` if it is not already suspended, and
      let in-flight Attempts finish.
   2. Free space with operator-owned files first; grow the volume. Never delete active bundles, WAL,
      secret data, legal-held objects or `.partial` staging that is still referenced.
@@ -163,7 +163,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 * **Impact:** sensitive operations refuse to run because the mandatory audit write fails; the trail
   of actions is incomplete or untrusted from the first failure onward.
 * **First actions:**
-  1. `testmaster ops admission pause --reason "audit unavailable"` where it still works.
+  1. `testmaster ops pause --reason "audit unavailable"` where it still works.
   2. Check PostgreSQL health, disk (`storage_critical`) and permissions of the application role.
   3. Preserve the database, logs and the time of the first failure. Do not edit audit rows.
   4. After repair, export and verify the audit trail (`testmaster audit export`, `audit verify` with an
@@ -244,7 +244,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
      redacted).
   2. If the destination is legitimate, fix the project's environment network profile; never widen the
      allow-list to private ranges or the metadata endpoint.
-  3. If it looks like a bypass: `testmaster run cancel <run>`, `testmaster ops admission pause`,
+  3. If it looks like a bypass: `testmaster run cancel <run>`, `testmaster ops pause --reason "<why>"`,
      `testmaster worker drain`, and keep labels, runtime facts and the denial logs.
 * **Verification:** the Run is terminal or re-run with a correct profile without denials; independent
   review of the boundary for the suspicious case; the alert resolves.
