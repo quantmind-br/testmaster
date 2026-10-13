@@ -203,6 +203,11 @@ export function createServer(options: ServerOptions): FastifyInstance {
     join(options.application.config.dataDir, "logs", "api"),
     options.application.config.logRetentionDays,
     options.now ?? Date.now,
+    server?.telemetry?.logExport === "stdout-json"
+      ? (line) => {
+          process.stdout.write(line);
+        }
+      : undefined,
   );
   app.addHook("onClose", async () => logs.flush());
   app.addHook("onResponse", async (request, reply) => {

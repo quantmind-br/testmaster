@@ -31,6 +31,8 @@ export class OperationalLogger {
     readonly root: string,
     readonly retentionDays: number = defaults.logRetentionDays,
     readonly now = Date.now,
+    /** Log export policy: receives every accepted line; the line already holds IDs and status only. */
+    private readonly exportLine?: (line: string) => void,
   ) {
     if (!Number.isSafeInteger(retentionDays) || retentionDays < 1 || retentionDays > 365)
       throw new ContractError("INVALID_ARGUMENT", "Log retention must be 1–365 days");
@@ -65,6 +67,7 @@ export class OperationalLogger {
       ...(record.statusCode === undefined ? {} : { statusCode: record.statusCode }),
       droppedCount: this.dropped,
     })}\n`;
+    this.exportLine?.(line);
     this.pending++;
     this.chain = this.chain
       .then(async () => {
