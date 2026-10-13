@@ -16,7 +16,7 @@ it("ADR-017 migration 0010 moves local-token rows into server_tokens, keeps othe
   roots.push(root);
   const all = await loadMigrations();
   const before = all.filter((migration) => migration.version < 10);
-  expect(before.length).toBe(all.length - 1);
+  expect(before).toHaveLength(9);
   const legacy = join(root, "release-before-identity");
   await mkdir(legacy);
   for (const migration of before)
@@ -55,7 +55,7 @@ it("ADR-017 migration 0010 moves local-token rows into server_tokens, keeps othe
     record(true),
   );
   old.run("INSERT INTO operational_state(key,value) VALUES('user:state','keep-me')");
-  expect(old.status().currentVersion).toBe(all.length - 1);
+  expect(old.status().currentVersion).toBe(9);
   old.close();
 
   const migrated = await PersistenceDatabase.open(path);

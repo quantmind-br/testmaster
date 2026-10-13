@@ -8,6 +8,7 @@ import {
   authenticateBearer,
   authenticateSession,
   insertToken,
+  isPostgres,
   issueLocalToken,
   lockoutPolicy,
   type PermissionGrant,
@@ -336,11 +337,17 @@ it("ADR-017 only operator tokens create workspaces and the single-user profile r
   expect(operator.token.startsWith("tm_op_")).toBe(true);
   const identity = authenticateBearer(app, operator.token);
   expect(identity.credential.kind).toBe("operator");
-  // Positive control for the operator gate: the token passes it and meets the engine rule instead.
-  expect(() =>
-    app.forIdentity(identity).workspaces.create({ name: "other", ownerLogin: "other-owner" }),
-  ).toThrowError(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
-  expect(app.operator.workspaceIds()).toHaveLength(1);
+  // Positive control for the operator gate: the token passes it; SQLite then refuses a second
+  // workspace by engine rule, PostgreSQL creates it.
+  const create = () =>
+    app.forIdentity(identity).workspaces.create({ name: "other", ownerLogin: "other-owner" });
+  if (isPostgres(app.database)) {
+    expect(create().ownerLogin).toBe("other-owner");
+    expect(app.operator.workspaceIds()).toHaveLength(2);
+  } else {
+    expect(create).toThrowError(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
+    expect(app.operator.workspaceIds()).toHaveLength(1);
+  }
 });
 
 it("ADR-017 ends a queued Run blocked with actor_revoked when its admitting member loses execute access", async () => {

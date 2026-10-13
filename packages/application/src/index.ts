@@ -43,4 +43,5 @@ export * from "./selection.js";
 export * from "./server-config.js";
 export * from "./worker.js";
 export * from "./team.js";
+export { isPostgres } from "./tenancy.js";
 export * from "./tokens.js";

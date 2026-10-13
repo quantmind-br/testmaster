@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   Application,
+  isPostgres,
   type PermissionGrant,
   type ServerConfig,
   scaffoldPlan,
@@ -335,9 +336,14 @@ it("ADR-017 allows only operator tokens to create workspaces and reports the eng
     headers: f.bearer(operator.token),
     payload: input,
   });
-  // SQLite keeps exactly one workspace, so the operator passes the gate and meets the engine rule.
-  expect(allowed.json().error.code).toBe("PRECONDITION_FAILED");
-  expect(f.application.operator.workspaceIds()).toHaveLength(1);
+  // The operator passes the gate; SQLite keeps exactly one workspace, PostgreSQL creates it.
+  if (isPostgres(f.application.database)) {
+    expect(allowed.statusCode).toBe(201);
+    expect(f.application.operator.workspaceIds()).toHaveLength(2);
+  } else {
+    expect(allowed.json().error.code).toBe("PRECONDITION_FAILED");
+    expect(f.application.operator.workspaceIds()).toHaveLength(1);
+  }
 });
 
 it("ADR-017 refuses self-promotion and demoting the last org_owner over HTTP", async () => {
