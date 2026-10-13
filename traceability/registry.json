@@ -2237,11 +2237,89 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/integrations.test.ts::INT-001 an integration exposes its adapter version, schemaVersion and capabilities and validates against the /v1 contract",
+        "packages/application/src/integrations/integrations.test.ts::INT-001 integration routes are declared under /v1 with distinct request and response contracts",
+        "packages/application/src/integrations/integrations.test.ts::INT-001 an integration whose adapter is not registered is described as unregistered and cannot run",
+        "packages/application/src/integrations/integrations.test.ts::INT-001 an adapter built for another schemaVersion is refused with an update action before any adapter code runs",
+        "packages/application/src/integrations/integrations.test.ts::INT-001 malformed adapter declarations are rejected at registration",
+        "packages/application/src/integrations/integrations.test.ts::INT-001 adapter faults surface as structured errors and never leak adapter messages",
+        "packages/application/src/integrations/integrations.test.ts::INT-001 an outcome or disposition outside the contract is never read as delivered or accepted",
+        "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering",
+        "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
+      ],
+      "oracle": [
+        "An integration reports its adapter's version, schemaVersion and declared capabilities and validates against the /v1 IntegrationMetadata contract; an adapter built for another core schemaVersion is refused with the update-adapter action before any of its code runs.",
+        "Adapter faults surface as structured errors without the adapter's message, and an unrecognized delivery state or inbound disposition is a failure or contract violation, never delivered or accepted.",
+        "On PostgreSQL, a workspace-scoped connection sees only its own integrations and deliveries under row-level security while webhook intake resolves installations across tenants in the controller scope."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/fd/049-fd-final-verbose-unit/output.log",
+        "validation/results/m4-acceptance/fd/050-fd-final-verbose-pg/output.log",
+        "validation/results/m4-acceptance/fd/051-fd-final-verbose-parity/output.log",
+        "validation/results/m4-acceptance/fd/046-fd-final-unit/output.log",
+        "validation/results/m4-acceptance/fd/047-fd-final-postgres/output.log",
+        "validation/results/m4-acceptance/fd/048-fd-final-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/integrations/provider.ts",
+        "packages/application/src/integrations/registry.ts",
+        "packages/application/src/integrations/service.ts",
+        "packages/application/src/integrations/index.ts",
+        "packages/contracts/src/m4/integrations.ts",
+        "packages/contracts/src/surfaces.ts",
+        "apps/server/src/routes/integrations.ts",
+        "apps/server/src/server.ts",
+        "packages/persistence/migrations/postgres/0012_integrations.sql",
+        "packages/persistence/migrations/sqlite/0012_integrations.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/integrations.test.ts::INT-001 an integration exposes its adapter version, schemaVersion and capabilities and validates against the /v1 contract",
+          "packages/application/src/integrations/integrations.test.ts::INT-001 integration routes are declared under /v1 with distinct request and response contracts",
+          "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering"
+        ],
+        "negative": [
+          "packages/application/src/integrations/integrations.test.ts::INT-001 an integration whose adapter is not registered is described as unregistered and cannot run",
+          "packages/application/src/integrations/integrations.test.ts::INT-001 an adapter built for another schemaVersion is refused with an update action before any adapter code runs",
+          "packages/application/src/integrations/integrations.test.ts::INT-001 malformed adapter declarations are rejected at registration",
+          "packages/application/src/integrations/integrations.test.ts::INT-001 adapter faults surface as structured errors and never leak adapter messages",
+          "packages/application/src/integrations/integrations.test.ts::INT-001 an outcome or disposition outside the contract is never read as delivered or accepted",
+          "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(created.adapterStatus).toBe(\"compatible\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "nextActions: [\"update-adapter\"],"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(JSON.stringify(error) + String(error)).not.toContain(leak);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(receipt.detail).toBe(\"Adapter reported an unrecognized outcome\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(odd.rows(\"SELECT id FROM inbound_webhook_deliveries\")).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.pg.test.ts",
+            "assertion": "expect(application.database.all(\"SELECT id FROM integrations\")).toHaveLength(2);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.pg.test.ts",
+            "assertion": "expect(visibleToTest).toEqual([1]);"
+          }
+        ]
+      },
+      "note": "The core ships no adapter: GitHub (INT-014 and later) and Slack/email/webhook (INT-025 and later) prove their own adapters against this contract."
     },
     {
       "id": "INT-002",
@@ -2249,11 +2327,121 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/integrations.test.ts::INT-002 a repeated delivery returns the original receipt reference and the handler runs once",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 dedupe is scoped per workspace: another workspace's identical delivery ID is independent and invisible",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 signatures verify against either secret during rotation and reject tampered or malformed values",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 the same delivery ID with a different payload is a tamper conflict recorded durably and never replaces the original",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 the same delivery ID with a different installation, project, event or action is a conflict even when the body is identical",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 a failed handler can be redelivered, an in-flight delivery cannot, and an abandoned one is reclaimed",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 content type, size, signature and schema are all checked before any dedupe record exists",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 a paused or revoked integration never processes a delivery even when the adapter accepts it",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 an unknown installation is recorded unattributed, deduplicated, invisible to tenants and creates no work",
+        "packages/application/src/integrations/integrations.test.ts::INT-002 an adapter cannot accept a delivery for an integration the workspace does not own",
+        "apps/server/src/integrations.test.ts::INT-002 the signed webhook route needs neither token, cookie nor Idempotency-Key and dedupes by delivery ID",
+        "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering",
+        "apps/server/src/integrations.test.ts::INT-002 the signed webhook route verifies the raw bytes, content type and size before anything is recorded",
+        "apps/server/src/integrations.test.ts::INT-002 the signed webhook route keeps the caller's rate limit",
+        "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
+      ],
+      "oracle": [
+        "A repeated inbound delivery returns the original receipt reference and runs the handler once; the same delivery ID with a different payload hash, installation, project, event or action is refused as IDEMPOTENCY_CONFLICT and recorded as a linked tampered row while the original stays untouched.",
+        "Dedupe records are durable and workspace-scoped, content type, size, signature and schema are checked before any record exists, and paused, revoked or unattributed deliveries are recorded as ignored without running a handler.",
+        "Over HTTP the signed webhook route needs no token, cookie or Idempotency-Key, refuses a wrong signature, content type or oversized body before recording anything, keeps the caller's rate limit and answers a tampered delivery 409; on PostgreSQL concurrent deliveries of one ID process once."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/fd/049-fd-final-verbose-unit/output.log",
+        "validation/results/m4-acceptance/fd/050-fd-final-verbose-pg/output.log",
+        "validation/results/m4-acceptance/fd/051-fd-final-verbose-parity/output.log",
+        "validation/results/m4-acceptance/fd/046-fd-final-unit/output.log",
+        "validation/results/m4-acceptance/fd/047-fd-final-postgres/output.log",
+        "validation/results/m4-acceptance/fd/048-fd-final-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/integrations/provider.ts",
+        "packages/application/src/integrations/registry.ts",
+        "packages/application/src/integrations/service.ts",
+        "packages/application/src/integrations/index.ts",
+        "packages/contracts/src/m4/integrations.ts",
+        "packages/contracts/src/surfaces.ts",
+        "apps/server/src/routes/integrations.ts",
+        "apps/server/src/server.ts",
+        "packages/persistence/migrations/postgres/0012_integrations.sql",
+        "packages/persistence/migrations/sqlite/0012_integrations.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/integrations.test.ts::INT-002 a repeated delivery returns the original receipt reference and the handler runs once",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 dedupe is scoped per workspace: another workspace's identical delivery ID is independent and invisible",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 signatures verify against either secret during rotation and reject tampered or malformed values",
+          "apps/server/src/integrations.test.ts::INT-002 the signed webhook route needs neither token, cookie nor Idempotency-Key and dedupes by delivery ID",
+          "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering"
+        ],
+        "negative": [
+          "packages/application/src/integrations/integrations.test.ts::INT-002 the same delivery ID with a different payload is a tamper conflict recorded durably and never replaces the original",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 the same delivery ID with a different installation, project, event or action is a conflict even when the body is identical",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 a failed handler can be redelivered, an in-flight delivery cannot, and an abandoned one is reclaimed",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 content type, size, signature and schema are all checked before any dedupe record exists",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 a paused or revoked integration never processes a delivery even when the adapter accepts it",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 an unknown installation is recorded unattributed, deduplicated, invisible to tenants and creates no work",
+          "packages/application/src/integrations/integrations.test.ts::INT-002 an adapter cannot accept a delivery for an integration the workspace does not own",
+          "apps/server/src/integrations.test.ts::INT-002 the signed webhook route verifies the raw bytes, content type and size before anything is recorded",
+          "apps/server/src/integrations.test.ts::INT-002 the signed webhook route keeps the caller's rate limit",
+          "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(second.duplicate).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect((error as ContractError).code).toBe(\"IDEMPOTENCY_CONFLICT\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(outcomes).toEqual([\"accepted:-\", \"tampered:linked\"]);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(code).toBe(\"IDEMPOTENCY_CONFLICT\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(a.event.receiptRef).not.toBe(b.event.receiptRef);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(count()).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(receipt).toMatchObject({ outcome: \"ignored\", ignoredReason: \"paused_integration\" });"
+          },
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "expect(tampered.statusCode).toBe(409);"
+          },
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "expect(wrongSignature.statusCode).toBe(401);"
+          },
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "expect(tooLarge.statusCode).toBe(413);"
+          },
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "expect(limited.statusCode).toBe(429);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.pg.test.ts",
+            "assertion": "expect(processed.filter((entry) => entry.endsWith(\"d-race\"))).toHaveLength(1);"
+          }
+        ]
+      },
+      "note": "Provider signature verification lives in each adapter (verifyHmacSha256 supports a rotation window); the receiver proves ordering, dedupe and tamper handling with a test-local adapter."
     },
     {
       "id": "INT-003",
@@ -2273,11 +2461,93 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/integrations.test.ts::INT-004 widening settings or resuming re-checks consent against what the adapter now requires",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery is labelled, carries the test marker and never becomes a delivery, Run or event of record",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 creating an integration without consent for every required scope is refused and stores nothing",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 revoking ends access with no fallback: no consent, no secrets, no test, no update, no reactivation",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 only an administrator of the workspace may configure, list or test an integration",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 projects and secrets of another workspace, archived projects and revoked secrets cannot be bound",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 optimistic versions and unique names guard configuration changes",
+        "apps/server/src/integrations.test.ts::INT-004 integration routes configure, patch, test and list over /v1 with token authentication and administrator scope",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery only resolves the integrations of its own workspace while webhook intake spans all"
+      ],
+      "oracle": [
+        "Creating or widening an integration without consent for every scope its adapter requires is refused with the missing scopes and stores nothing; a test delivery carries the test marker and the label 'test notification' and creates no delivery, Run or outbox event of record.",
+        "Revoking an integration clears its consent and secret bindings, refuses tests and updates and cannot be undone, even directly in the database; only workspace administrators can configure, list or test integrations.",
+        "Over HTTP, configuration routes need a token with administrator scope and refuse missing consent; a test delivery resolves only its own workspace's integrations."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/fd/049-fd-final-verbose-unit/output.log",
+        "validation/results/m4-acceptance/fd/050-fd-final-verbose-pg/output.log",
+        "validation/results/m4-acceptance/fd/051-fd-final-verbose-parity/output.log",
+        "validation/results/m4-acceptance/fd/046-fd-final-unit/output.log",
+        "validation/results/m4-acceptance/fd/047-fd-final-postgres/output.log",
+        "validation/results/m4-acceptance/fd/048-fd-final-parity/output.log"
+      ],
+      "code": [
+        "packages/application/src/integrations/provider.ts",
+        "packages/application/src/integrations/registry.ts",
+        "packages/application/src/integrations/service.ts",
+        "packages/application/src/integrations/index.ts",
+        "packages/contracts/src/m4/integrations.ts",
+        "packages/contracts/src/surfaces.ts",
+        "apps/server/src/routes/integrations.ts",
+        "apps/server/src/server.ts",
+        "packages/persistence/migrations/postgres/0012_integrations.sql",
+        "packages/persistence/migrations/sqlite/0012_integrations.sql"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/integrations.test.ts::INT-004 widening settings or resuming re-checks consent against what the adapter now requires",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery is labelled, carries the test marker and never becomes a delivery, Run or event of record",
+          "apps/server/src/integrations.test.ts::INT-004 integration routes configure, patch, test and list over /v1 with token authentication and administrator scope",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery only resolves the integrations of its own workspace while webhook intake spans all"
+        ],
+        "negative": [
+          "packages/application/src/integrations/integrations.test.ts::INT-004 creating an integration without consent for every required scope is refused and stores nothing",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 revoking ends access with no fallback: no consent, no secrets, no test, no update, no reactivation",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 only an administrator of the workspace may configure, list or test an integration",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 projects and secrets of another workspace, archived projects and revoked secrets cannot be bound",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 optimistic versions and unique names guard configuration changes"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect((missing as ContractError).code).toBe(\"PRECONDITION_FAILED\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(after).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(revoked).toMatchObject({ state: \"revoked\", secretRefs: [] });"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(f.probe.tests[0]?.context.workspaceId).toBe(f.workspaceId);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(await codeOf(() => service.test(created.id))).toBe(\"FORBIDDEN\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(f.service.get(created.id).state).toBe(\"revoked\");"
+          },
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "expect(noConsent.statusCode).toBe(422);"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(seenByTest?.map((item) => item.id)).toEqual([created.id]);"
+          }
+        ]
+      },
+      "note": "Consent is checked against the scopes the adapter returns for the stored settings; adapter-specific scope names and test message formats are proven by each adapter's own slice."
     },
     {
       "id": "INT-005",
@@ -9363,10 +9633,27 @@
         "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses SQLite on network or FUSE storage before creating the database",
         "packages/persistence/src/persistence.test.ts::upgrades populated evidence while preserving code artifact foreign keys",
         "packages/persistence/src/persistence.test.ts::rolls back an invalid rebuild upgrade and restores runtime foreign keys",
-        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs"
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 applies checksummed contiguous migrations, never implicitly, and refuses altered bytes",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 enforces row-level security so a scoped connection never reads another workspace",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 makes a write wait for another process's writer transaction while reads stay available",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 lets exactly one of two OS processes claim the same queued job",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 serializes two concurrent migrators on the advisory lock and applies each migration once",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 keeps PostgreSQL DDL equivalent to the SQLite schema for tables, columns, keys, indexes and triggers",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 refuses superuser and BYPASSRLS roles because they would ignore tenant isolation",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 row-level security rejects cross-workspace writes and leaves foreign rows untouched",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 bounds writer contention with a typed retryable error and recovers once the writer commits",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 refuses a workspace scope switch inside an open transaction",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 requires row-level security and the tenant policy on every table with a workspace_id",
+        "packages/persistence/src/database.pg.test.ts::OPS-005 releases the writer lock and discards uncommitted rows when a writer process is SIGKILLed mid-transaction",
+        "packages/persistence/src/postgres/dialect.test.ts::OPS-005 refuses unsupported SQL loudly: %s",
+        "packages/persistence/src/postgres/bridge.test.ts::OPS-005 refuses a password embedded in the URL",
+        "packages/persistence/src/postgres/bridge.test.ts::OPS-005 refuses plaintext connections to non-loopback hosts and accepts loopback and sockets",
+        "packages/persistence/src/persistence.test.ts::outbox and state mutation roll back together"
       ],
       "oracle": [
-        "Real SQLite connection refused before migrations on non-WAL storage and on NFS/SMB/FUSE statfs types; a second connection hitting the writer lock fails with UNAVAILABLE writer_contention within its busy timeout, never starts a transaction, and succeeds after the holder commits; after a SIGKILL around revision/admission commit no orphan revision/Run; exactly one of two OS processes wins a claim and a stale fence cannot finalize."
+        "Real SQLite connection refused before migrations on non-WAL storage and on NFS/SMB/FUSE statfs types; a second connection hitting the writer lock fails with UNAVAILABLE writer_contention within its busy timeout, never starts a transaction, and succeeds after the holder commits; after a SIGKILL around revision/admission commit no orphan revision/Run; exactly one of two OS processes wins a claim and a stale fence cannot finalize.",
+        "On PostgreSQL 17 through the synchronous bridge: a second OS process holding the writer transaction makes another writer wait and, after the 5 s lock timeout, fail with UNAVAILABLE writer_contention (reads stay available and never see uncommitted rows); a SIGKILLed writer releases the lock and leaves no rows; exactly one of two processes wins a claim; two concurrent migrators serialize on the advisory lock and apply each migration once; a scoped connection reads zero rows of another workspace in every table with a workspace_id, cross-workspace inserts are rejected, superuser and BYPASSRLS roles are refused, and the application, persistence, server and CLI suites pass unchanged on PostgreSQL."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
@@ -9374,24 +9661,49 @@
         "validation/journeys/commit-retry.docker.test.ts",
         "packages/persistence/src/storage-profile.test.ts",
         "packages/persistence/src/persistence.test.ts",
-        "docs/adr/002-storage.md"
+        "docs/adr/002-storage.md",
+        "validation/results/m4-acceptance/fa/043-fa-m-pg/output.log",
+        "validation/results/m4-acceptance/fa/042-fa-m-parity/output.log",
+        "validation/results/m4-acceptance/fa/044-fa-m-docker/output.log",
+        "validation/results/m4-acceptance/fa/021-fa-fals-writer-lock/output.log",
+        "validation/results/m4-acceptance/fa/017-fa-fals-rls-force/output.log",
+        "docs/adr/015-postgres-runtime.md"
       ],
       "code": [
         "packages/persistence/src/database.ts",
-        "packages/persistence/src/repositories.ts"
+        "packages/persistence/src/repositories.ts",
+        "packages/persistence/src/postgres/",
+        "packages/persistence/migrations/postgres/0011_tenant_rls.sql",
+        "packages/persistence/src/testing/"
       ],
-      "note": "Verified for the local SQLite profile: WAL with normal locking, foreign keys on, busy_timeout 5 s, a single controller writer, and refusal of non-WAL and NFS/SMB/FUSE storage before any migration. A busy writer lock surfaces as the typed retryable UNAVAILABLE error (reasonCode writer_contention) from BEGIN IMMEDIATE only; errors raised after the transaction started are not remapped. Migrations take BEGIN EXCLUSIVE directly and are outside this mapping. PostgreSQL has no runtime (ADR-002); its DDL mirror is not runtime support.",
+      "note": "Verified for the local SQLite profile: WAL with normal locking, foreign keys on, busy_timeout 5 s, a single controller writer, and refusal of non-WAL and NFS/SMB/FUSE storage before any migration. A busy writer lock surfaces as the typed retryable UNAVAILABLE error (reasonCode writer_contention) from BEGIN IMMEDIATE only; errors raised after the transaction started are not remapped. Migrations take BEGIN EXCLUSIVE directly and are outside this mapping. PostgreSQL has no runtime (ADR-002); its DDL mirror is not runtime support. M4 (F-A) adds the PostgreSQL runtime behind the synchronous PersistenceDatabase API (ADR-015): advisory-lock writer serialization, forced row-level security per workspace, byte-order collation, a migration lock, and a postgres-parity run of the application, persistence, server and CLI suites; the PostgreSQL profile still serializes writes on one host.",
       "coverage": {
         "positive": [
           "validation/journeys/commit-retry.docker.test.ts::OPS-005 SIGKILL before and after revision/admission commit preserves all-or-none ownership",
           "packages/persistence/src/persistence.test.ts::allows exactly one of two OS processes to claim",
-          "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits"
+          "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 applies checksummed contiguous migrations, never implicitly, and refuses altered bytes",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 enforces row-level security so a scoped connection never reads another workspace",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 makes a write wait for another process's writer transaction while reads stay available",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 lets exactly one of two OS processes claim the same queued job",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 serializes two concurrent migrators on the advisory lock and applies each migration once",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 keeps PostgreSQL DDL equivalent to the SQLite schema for tables, columns, keys, indexes and triggers",
+          "packages/persistence/src/persistence.test.ts::outbox and state mutation roll back together"
         ],
         "negative": [
           "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses a real SQLite connection forced into non-WAL journal storage before migrations",
           "packages/persistence/src/storage-profile.test.ts::OPS-005 refuses SQLite on network or FUSE storage before creating the database",
           "packages/persistence/src/persistence.test.ts::rejects stale owner fencing after expiry and a new claim",
-          "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits"
+          "packages/persistence/src/persistence.test.ts::bounds writer contention with a typed retryable error and succeeds once the writer commits",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 refuses superuser and BYPASSRLS roles because they would ignore tenant isolation",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 row-level security rejects cross-workspace writes and leaves foreign rows untouched",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 bounds writer contention with a typed retryable error and recovers once the writer commits",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 refuses a workspace scope switch inside an open transaction",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 requires row-level security and the tenant policy on every table with a workspace_id",
+          "packages/persistence/src/database.pg.test.ts::OPS-005 releases the writer lock and discards uncommitted rows when a writer process is SIGKILLed mid-transaction",
+          "packages/persistence/src/postgres/dialect.test.ts::OPS-005 refuses unsupported SQL loudly: %s",
+          "packages/persistence/src/postgres/bridge.test.ts::OPS-005 refuses a password embedded in the URL",
+          "packages/persistence/src/postgres/bridge.test.ts::OPS-005 refuses plaintext connections to non-loopback hosts and accepts loopback and sockets"
         ],
         "criticalAssertions": [
           {
@@ -9417,19 +9729,61 @@
           {
             "path": "validation/journeys/commit-retry.docker.test.ts",
             "assertion": "expect(retained.prepare(\"PRAGMA integrity_check\").get()?.integrity_check).toBe(\"ok\");"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(viewA.all(\"SELECT id FROM runs\").map((row) => row.id)).toEqual([a.run]);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(foreign, table).toBe(0);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(unscoped.rows[0]?.n).toBe(0);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": ").toThrowError(expect.objectContaining({ code: \"42501\" }));"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(await tablesMissingTenantRls(client)).toEqual([]);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "message: \"Database role bypasses row-level security\","
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "message: \"Workspace scope switch inside a transaction\","
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "details: { reasonCode: \"writer_contention\", retryable: true },"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(Date.now() - started).toBeGreaterThanOrEqual(1000);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(results.filter((result) => result.out.includes(\"winner\"))).toHaveLength(1);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(waiting.rows[0]?.found).toBeNull();"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "await expect(db.migrate(directory)).rejects.toBeInstanceOf(MigrationChecksumError);"
+          },
+          {
+            "path": "packages/persistence/src/database.pg.test.ts",
+            "assertion": "expect(db.get(\"SELECT value FROM operational_state WHERE key='lock-holder'\")).toBeUndefined();"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "PostgreSQL constraints, transactions and tenant-scoped rows for claims, finalization and outbox",
-          "specQuote": {
-            "path": "docs/adr/002-storage.md",
-            "text": "PostgreSQL runtime remains an M4 disabled capability."
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-006",
