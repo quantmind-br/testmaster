@@ -1,0 +1,2059 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "server-load",
+  "requirement": "OPS-034",
+  "measuredRequirement": "NFR-006",
+  "startedAt": "2026-10-13T17:18:24.945Z",
+  "finishedAt": "2026-10-13T17:23:46.065Z",
+  "durationSeconds": 321,
+  "hardware": {
+    "cpuModel": "AMD Ryzen 9 9950X3D 16-Core Processor",
+    "logicalCores": 32,
+    "memoryTotalGiB": 60.485,
+    "memoryFreeGiBAtStart": 22.145,
+    "kernel": "7.2.9-arch1-1",
+    "platform": "linux x64",
+    "node": "v24.21.0",
+    "docker": {
+      "serverVersion": "29.9.0",
+      "clientVersion": "29.9.0",
+      "storageDriver": "overlayfs",
+      "cgroupVersion": "2"
+    },
+    "evidenceAndStateFilesystem": "btrfs",
+    "postgresDataFilesystem": "btrfs",
+    "sourceCommit": "4c1150f36cc3c54b15a90399d654df259cc2f2d0",
+    "sourceTreeDirty": false,
+    "loadAverageAtStart": [
+      5.42,
+      4.58,
+      6.27
+    ],
+    "loadAverageAtEnd": [
+      3.59,
+      4.16,
+      5.64
+    ]
+  },
+  "stack": {
+    "profile": "server",
+    "engine": "PostgreSQL",
+    "postgres": {
+      "image": "postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24",
+      "imageId": "sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24",
+      "serverVersion": "17.11",
+      "settings": {
+        "fsync": "on",
+        "synchronous_commit": "on",
+        "full_page_writes": "on",
+        "shared_buffers": "128MB",
+        "max_connections": "100",
+        "wal_level": "replica",
+        "random_page_cost": "4"
+      },
+      "dataVolume": "tm-s2b-bench-pgdata-647664-mv6y2yt7",
+      "container": "tm-s2b-bench-pg-647664-mv6y2yt7"
+    },
+    "evidenceStorage": "filesystem",
+    "clientTransport": "plain HTTP on loopback with X-Forwarded-Proto: https from a trusted proxy address; TLS termination and reverse-proxy cost are excluded",
+    "authentication": "bearer API tokens; one runner principal per admission slice, the workspace owner for reads",
+    "workers": "A real worker (Docker executor) runs three Runs to publish the artifacts that are read, then is stopped. During measurement its worker row is kept ready by a benchmark heartbeat because admission is refused without a live worker; no process claims work, so admitted Runs stay queued and the benchmark measures the control plane only",
+    "cache": "warm: five unmeasured requests per operation precede each series; the first of them is reported as coldFirstRequestMs",
+    "network": "loopback only; target is a local node:http fixture, no external network"
+  },
+  "dataset": {
+    "workspaces": 1,
+    "projects": 20,
+    "testsPerProject": 50,
+    "tests": 1000,
+    "runsRequested": 10000,
+    "runsInDatabaseAfterSeeding": 10000,
+    "runsByOutcome": {
+      "passed": 6668,
+      "failed": 1666,
+      "cancelled": 833,
+      "inconclusive": 833
+    },
+    "seedSeconds": 14.341,
+    "seededRunShape": "terminal Run documents built by RunsService.prepare (admission snapshot included) and completed; no attempts, steps, events or artifacts",
+    "artifacts": {
+      "status": "available",
+      "reason": null,
+      "runs": [
+        {
+          "runId": "run_01a13646-1a47-71fa-895b-c2548e72ccbe",
+          "phase": "completed",
+          "outcome": "passed",
+          "entries": 3
+        },
+        {
+          "runId": "run_01a13646-1a62-74ad-8806-1dbdf68271bd",
+          "phase": "completed",
+          "outcome": "passed",
+          "entries": 3
+        },
+        {
+          "runId": "run_01a13646-1a72-77df-8a9f-950b923d9b44",
+          "phase": "completed",
+          "outcome": "passed",
+          "entries": 3
+        }
+      ],
+      "artifacts": [
+        {
+          "artifactId": "art_01a13646-1d9a-7720-8ee2-dbcdc6ee0f92",
+          "sizeBytes": 491
+        },
+        {
+          "artifactId": "art_01a13646-1e2b-7514-b102-84ecc0564676",
+          "sizeBytes": 11706
+        },
+        {
+          "artifactId": "art_01a13646-1e34-75d0-a229-8cccdef6b404",
+          "sizeBytes": 97
+        },
+        {
+          "artifactId": "art_01a13646-1dda-7531-b21e-a248c31bb111",
+          "sizeBytes": 499
+        },
+        {
+          "artifactId": "art_01a13646-1e68-7599-9f1c-cf378f283ca0",
+          "sizeBytes": 11706
+        },
+        {
+          "artifactId": "art_01a13646-1e6a-7243-b94f-441f1f4496a4",
+          "sizeBytes": 97
+        },
+        {
+          "artifactId": "art_01a13646-2149-7711-9971-ac8d902c3980",
+          "sizeBytes": 500
+        },
+        {
+          "artifactId": "art_01a13646-21c1-74e4-9ece-d12267a5d0e2",
+          "sizeBytes": 11706
+        },
+        {
+          "artifactId": "art_01a13646-21c3-7783-8837-791285644b74",
+          "sizeBytes": 97
+        }
+      ]
+    }
+  },
+  "method": {
+    "load": "closed loop: each worker issues its next request as soon as the previous finishes; no think time",
+    "concurrencyLevels": [
+      1,
+      4,
+      8,
+      32
+    ],
+    "referenceSeries": [
+      1,
+      4,
+      8
+    ],
+    "referenceSeriesSource": "specs/10-validation.md 9 (concurrency series 1/4/8); the other levels are reported as stress levels and do not decide a verdict",
+    "iterationsPerLevel": 200,
+    "admissionsPerLevel": 120,
+    "maxSecondsPerLevel": 90,
+    "percentileRule": "p95 is reported as a measurement from 100 successful samples, p99 from 500; below that the number is shown but flagged unsupported and never decides a verdict",
+    "errorHandling": "failed or non-expected-status requests are counted as errors and excluded from latency percentiles; a level with errors cannot be 'met'",
+    "fixtureTargetRequests": {
+      "afterArtifactRuns": 3,
+      "atEnd": 3,
+      "note": "The target is only hit while the three artifact Runs execute; admission, listing, SSE and artifact reads send it nothing, so controller, queue and storage load is separate from target load"
+    }
+  },
+  "operations": [
+    {
+      "operation": "health_live",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 0.074,
+        "meanMs": 0.17,
+        "p50Ms": 0.123,
+        "p95Ms": 0.248,
+        "p99Ms": 0.497,
+        "maxMs": 4.457
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.036,
+      "throughputPerSecond": 5549.332,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/health/live",
+      "description": "Control: unauthenticated route that never touches the database; isolates HTTP and Fastify cost.",
+      "resources": {
+        "serverCpuCores": 1.269,
+        "serverPeakRssMiB": 318.02,
+        "postgresCpuCores": 0.186,
+        "benchmarkClientCpuCores": 0.378
+      },
+      "coldFirstRequestMs": 0.582,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "health_live",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 0.072,
+        "meanMs": 0.223,
+        "p50Ms": 0.178,
+        "p95Ms": 0.402,
+        "p99Ms": 1.102,
+        "maxMs": 1.509
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.012,
+      "throughputPerSecond": 17029.906,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/health/live",
+      "description": "Control: unauthenticated route that never touches the database; isolates HTTP and Fastify cost.",
+      "resources": {
+        "serverCpuCores": 0.423,
+        "serverPeakRssMiB": 328.645,
+        "postgresCpuCores": 0.273,
+        "benchmarkClientCpuCores": 0.391
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "health_live",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 0.116,
+        "meanMs": 0.458,
+        "p50Ms": 0.339,
+        "p95Ms": 1.181,
+        "p99Ms": 1.954,
+        "maxMs": 2.414
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.012,
+      "throughputPerSecond": 16802.339,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/health/live",
+      "description": "Control: unauthenticated route that never touches the database; isolates HTTP and Fastify cost.",
+      "resources": {
+        "serverCpuCores": 0.421,
+        "serverPeakRssMiB": 328.656,
+        "postgresCpuCores": 0.259,
+        "benchmarkClientCpuCores": 0.612
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "health_live",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 0.48,
+        "meanMs": 2.587,
+        "p50Ms": 1.112,
+        "p95Ms": 11.254,
+        "p99Ms": 11.536,
+        "maxMs": 11.566
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.017,
+      "throughputPerSecond": 11875.387,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/health/live",
+      "description": "Control: unauthenticated route that never touches the database; isolates HTTP and Fastify cost.",
+      "resources": {
+        "serverCpuCores": 0.191,
+        "serverPeakRssMiB": 334.461,
+        "postgresCpuCores": 0.247,
+        "benchmarkClientCpuCores": 0.393
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "project_detail",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 1.8,
+        "meanMs": 2.898,
+        "p50Ms": 2.52,
+        "p95Ms": 5.044,
+        "p99Ms": 5.853,
+        "maxMs": 7.076
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.583,
+      "throughputPerSecond": 343.185,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}",
+      "description": "Control: authenticated single-entity read (authentication, audit write and one lookup).",
+      "resources": {
+        "serverCpuCores": 0.389,
+        "serverPeakRssMiB": 345.797,
+        "postgresCpuCores": 0.228,
+        "benchmarkClientCpuCores": 0.048
+      },
+      "coldFirstRequestMs": 6.503,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "project_detail",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 3.455,
+        "meanMs": 9.18,
+        "p50Ms": 7.227,
+        "p95Ms": 16.116,
+        "p99Ms": 18.736,
+        "maxMs": 19.742
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.463,
+      "throughputPerSecond": 432.057,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}",
+      "description": "Control: authenticated single-entity read (authentication, audit write and one lookup).",
+      "resources": {
+        "serverCpuCores": 0.421,
+        "serverPeakRssMiB": 346.078,
+        "postgresCpuCores": 0.263,
+        "benchmarkClientCpuCores": 0.067
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "project_detail",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 3.46,
+        "meanMs": 17.514,
+        "p50Ms": 15.539,
+        "p95Ms": 31.444,
+        "p99Ms": 34.648,
+        "maxMs": 36.82
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.447,
+      "throughputPerSecond": 447.744,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}",
+      "description": "Control: authenticated single-entity read (authentication, audit write and one lookup).",
+      "resources": {
+        "serverCpuCores": 0.27,
+        "serverPeakRssMiB": 352.145,
+        "postgresCpuCores": 0.286,
+        "benchmarkClientCpuCores": 0.05
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "project_detail",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 3.827,
+        "meanMs": 67.371,
+        "p50Ms": 69.911,
+        "p95Ms": 83.694,
+        "p99Ms": 132.24,
+        "maxMs": 154.193
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.451,
+      "throughputPerSecond": 443.575,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}",
+      "description": "Control: authenticated single-entity read (authentication, audit write and one lookup).",
+      "resources": {
+        "serverCpuCores": 0.413,
+        "serverPeakRssMiB": 355.527,
+        "postgresCpuCores": 0.27,
+        "benchmarkClientCpuCores": 0.049
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "run_detail",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 2.537,
+        "meanMs": 3.485,
+        "p50Ms": 3.409,
+        "p95Ms": 4.828,
+        "p99Ms": 5.161,
+        "maxMs": 5.869
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.699,
+      "throughputPerSecond": 286.225,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs/{id}",
+      "description": "Open one seeded Run (analogue of opening a Run detail page).",
+      "resources": {
+        "serverCpuCores": 0.369,
+        "serverPeakRssMiB": 356.52,
+        "postgresCpuCores": 0.361,
+        "benchmarkClientCpuCores": 0.028
+      },
+      "coldFirstRequestMs": 4.547,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "run_detail",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 4.904,
+        "meanMs": 13.928,
+        "p50Ms": 11.307,
+        "p95Ms": 22.985,
+        "p99Ms": 25.128,
+        "maxMs": 29.441
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.703,
+      "throughputPerSecond": 284.587,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs/{id}",
+      "description": "Open one seeded Run (analogue of opening a Run detail page).",
+      "resources": {
+        "serverCpuCores": 0.381,
+        "serverPeakRssMiB": 356.875,
+        "postgresCpuCores": 0.41,
+        "benchmarkClientCpuCores": 0.037
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "run_detail",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 5.067,
+        "meanMs": 27.248,
+        "p50Ms": 24.418,
+        "p95Ms": 50.095,
+        "p99Ms": 53.983,
+        "maxMs": 56.285
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.694,
+      "throughputPerSecond": 288.309,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs/{id}",
+      "description": "Open one seeded Run (analogue of opening a Run detail page).",
+      "resources": {
+        "serverCpuCores": 0.288,
+        "serverPeakRssMiB": 356.895,
+        "postgresCpuCores": 0.356,
+        "benchmarkClientCpuCores": 0.039
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "run_detail",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 6.763,
+        "meanMs": 99.03,
+        "p50Ms": 101.375,
+        "p95Ms": 110.208,
+        "p99Ms": 206.239,
+        "maxMs": 213.318
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 0.673,
+      "throughputPerSecond": 297.386,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs/{id}",
+      "description": "Open one seeded Run (analogue of opening a Run detail page).",
+      "resources": {
+        "serverCpuCores": 0.282,
+        "serverPeakRssMiB": 356.945,
+        "postgresCpuCores": 0.364,
+        "benchmarkClientCpuCores": 0.044
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "list_runs_first_page",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 51.976,
+        "meanMs": 67.691,
+        "p50Ms": 67.394,
+        "p95Ms": 79.901,
+        "p99Ms": 90.33,
+        "maxMs": 93.513
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 13.547,
+      "throughputPerSecond": 14.763,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50",
+      "description": "First page of the workspace Run list (the server builds the full list, then pages).",
+      "resources": {
+        "serverCpuCores": 0.361,
+        "serverPeakRssMiB": 381.609,
+        "postgresCpuCores": 0.531,
+        "benchmarkClientCpuCores": 0.025
+      },
+      "coldFirstRequestMs": 77.412,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_runs_first_page",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 80.557,
+        "meanMs": 263.86,
+        "p50Ms": 227.377,
+        "p95Ms": 445.905,
+        "p99Ms": 512.88,
+        "maxMs": 526.623
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 13.289,
+      "throughputPerSecond": 15.05,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50",
+      "description": "First page of the workspace Run list (the server builds the full list, then pages).",
+      "resources": {
+        "serverCpuCores": 0.359,
+        "serverPeakRssMiB": 424.406,
+        "postgresCpuCores": 0.534,
+        "benchmarkClientCpuCores": 0.026
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "list_runs_first_page",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 60.932,
+        "meanMs": 520.469,
+        "p50Ms": 481.342,
+        "p95Ms": 937.861,
+        "p99Ms": 1068.374,
+        "maxMs": 1863.186
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 13.224,
+      "throughputPerSecond": 15.124,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50",
+      "description": "First page of the workspace Run list (the server builds the full list, then pages).",
+      "resources": {
+        "serverCpuCores": 0.356,
+        "serverPeakRssMiB": 426.547,
+        "postgresCpuCores": 0.535,
+        "benchmarkClientCpuCores": 0.026
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_runs_first_page",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 57.263,
+        "meanMs": 1916.402,
+        "p50Ms": 977.788,
+        "p95Ms": 12317.441,
+        "p99Ms": 12924.43,
+        "maxMs": 13052.51
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 13.053,
+      "throughputPerSecond": 15.322,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50",
+      "description": "First page of the workspace Run list (the server builds the full list, then pages).",
+      "resources": {
+        "serverCpuCores": 0.353,
+        "serverPeakRssMiB": 427.371,
+        "postgresCpuCores": 0.534,
+        "benchmarkClientCpuCores": 0.024
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_runs_cursor_page",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 48.445,
+        "meanMs": 65.109,
+        "p50Ms": 63.997,
+        "p95Ms": 82.994,
+        "p99Ms": 88.621,
+        "maxMs": 111.025
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 13.033,
+      "throughputPerSecond": 15.346,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50&cursor=...",
+      "description": "Pages 2-4 of the Run list through signed cursors.",
+      "resources": {
+        "serverCpuCores": 0.357,
+        "serverPeakRssMiB": 426.527,
+        "postgresCpuCores": 0.531,
+        "benchmarkClientCpuCores": 0.03
+      },
+      "coldFirstRequestMs": 68.467,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_runs_cursor_page",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 62.28,
+        "meanMs": 255.995,
+        "p50Ms": 210.979,
+        "p95Ms": 436.063,
+        "p99Ms": 457.206,
+        "maxMs": 551.647
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 12.903,
+      "throughputPerSecond": 15.501,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50&cursor=...",
+      "description": "Pages 2-4 of the Run list through signed cursors.",
+      "resources": {
+        "serverCpuCores": 0.354,
+        "serverPeakRssMiB": 426.527,
+        "postgresCpuCores": 0.534,
+        "benchmarkClientCpuCores": 0.027
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_runs_cursor_page",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 53.467,
+        "meanMs": 505.602,
+        "p50Ms": 468.613,
+        "p95Ms": 926.154,
+        "p99Ms": 986.588,
+        "maxMs": 1643.388
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 12.87,
+      "throughputPerSecond": 15.54,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50&cursor=...",
+      "description": "Pages 2-4 of the Run list through signed cursors.",
+      "resources": {
+        "serverCpuCores": 0.353,
+        "serverPeakRssMiB": 427.027,
+        "postgresCpuCores": 0.531,
+        "benchmarkClientCpuCores": 0.027
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_runs_cursor_page",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 70.171,
+        "meanMs": 1897.314,
+        "p50Ms": 960.722,
+        "p95Ms": 12256.221,
+        "p99Ms": 12760.268,
+        "maxMs": 12883.212
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 12.884,
+      "throughputPerSecond": 15.523,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?limit=50&cursor=...",
+      "description": "Pages 2-4 of the Run list through signed cursors.",
+      "resources": {
+        "serverCpuCores": 0.355,
+        "serverPeakRssMiB": 427.027,
+        "postgresCpuCores": 0.532,
+        "benchmarkClientCpuCores": 0.021
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "search_runs",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 7.546,
+        "meanMs": 10.864,
+        "p50Ms": 10.427,
+        "p95Ms": 15.238,
+        "p99Ms": 18.374,
+        "maxMs": 18.857
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 2.178,
+      "throughputPerSecond": 91.846,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?testId=...&limit=50",
+      "description": "Run search by test (filter evaluated server-side over the full list).",
+      "resources": {
+        "serverCpuCores": 0.37,
+        "serverPeakRssMiB": 424.531,
+        "postgresCpuCores": 0.464,
+        "benchmarkClientCpuCores": 0.044
+      },
+      "coldFirstRequestMs": 13.003,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "search_runs",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 12.739,
+        "meanMs": 40.136,
+        "p50Ms": 33.302,
+        "p95Ms": 67.226,
+        "p99Ms": 73.023,
+        "maxMs": 88.065
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 2.028,
+      "throughputPerSecond": 98.633,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?testId=...&limit=50",
+      "description": "Run search by test (filter evaluated server-side over the full list).",
+      "resources": {
+        "serverCpuCores": 0.368,
+        "serverPeakRssMiB": 423.652,
+        "postgresCpuCores": 0.47,
+        "benchmarkClientCpuCores": 0.061
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "search_runs",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 14.024,
+        "meanMs": 84.768,
+        "p50Ms": 74.847,
+        "p95Ms": 151.969,
+        "p99Ms": 174.561,
+        "maxMs": 309.49
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 2.152,
+      "throughputPerSecond": 92.923,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?testId=...&limit=50",
+      "description": "Run search by test (filter evaluated server-side over the full list).",
+      "resources": {
+        "serverCpuCores": 0.343,
+        "serverPeakRssMiB": 423.664,
+        "postgresCpuCores": 0.478,
+        "benchmarkClientCpuCores": 0.053
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "search_runs",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 11.627,
+        "meanMs": 335.903,
+        "p50Ms": 175.343,
+        "p95Ms": 2177.445,
+        "p99Ms": 2268.745,
+        "maxMs": 2289.636
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 2.29,
+      "throughputPerSecond": 87.329,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/runs?testId=...&limit=50",
+      "description": "Run search by test (filter evaluated server-side over the full list).",
+      "resources": {
+        "serverCpuCores": 0.365,
+        "serverPeakRssMiB": 424.063,
+        "postgresCpuCores": 0.468,
+        "benchmarkClientCpuCores": 0.049
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_first_page",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 14.071,
+        "meanMs": 19.161,
+        "p50Ms": 18.468,
+        "p95Ms": 25.153,
+        "p99Ms": 28.507,
+        "maxMs": 30.718
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.841,
+      "throughputPerSecond": 52.073,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10",
+      "description": "First page of one project's tests.",
+      "resources": {
+        "serverCpuCores": 0.428,
+        "serverPeakRssMiB": 442.336,
+        "postgresCpuCores": 0.468,
+        "benchmarkClientCpuCores": 0.016
+      },
+      "coldFirstRequestMs": 24.732,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_first_page",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 19.57,
+        "meanMs": 72.759,
+        "p50Ms": 58.737,
+        "p95Ms": 120.516,
+        "p99Ms": 130.473,
+        "maxMs": 132.195
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.667,
+      "throughputPerSecond": 54.538,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10",
+      "description": "First page of one project's tests.",
+      "resources": {
+        "serverCpuCores": 0.427,
+        "serverPeakRssMiB": 442.504,
+        "postgresCpuCores": 0.471,
+        "benchmarkClientCpuCores": 0.015
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_first_page",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 22.512,
+        "meanMs": 143.198,
+        "p50Ms": 132.447,
+        "p95Ms": 264.152,
+        "p99Ms": 292.202,
+        "maxMs": 454.369
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.646,
+      "throughputPerSecond": 54.857,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10",
+      "description": "First page of one project's tests.",
+      "resources": {
+        "serverCpuCores": 0.464,
+        "serverPeakRssMiB": 442.605,
+        "postgresCpuCores": 0.465,
+        "benchmarkClientCpuCores": 0.015
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_first_page",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 18.966,
+        "meanMs": 497.882,
+        "p50Ms": 240.56,
+        "p95Ms": 3220.809,
+        "p99Ms": 3368.284,
+        "maxMs": 3402.745
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.404,
+      "throughputPerSecond": 58.763,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10",
+      "description": "First page of one project's tests.",
+      "resources": {
+        "serverCpuCores": 0.424,
+        "serverPeakRssMiB": 452.191,
+        "postgresCpuCores": 0.471,
+        "benchmarkClientCpuCores": 0.013
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "list_tests_cursor_page",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 13.374,
+        "meanMs": 17.491,
+        "p50Ms": 16.712,
+        "p95Ms": 24.677,
+        "p99Ms": 26.784,
+        "maxMs": 27.49
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.504,
+      "throughputPerSecond": 57.073,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10&cursor=...",
+      "description": "Page 2 of one project's tests through a signed cursor.",
+      "resources": {
+        "serverCpuCores": 0.412,
+        "serverPeakRssMiB": 452.207,
+        "postgresCpuCores": 0.477,
+        "benchmarkClientCpuCores": 0.012
+      },
+      "coldFirstRequestMs": 14.132,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_cursor_page",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 20.365,
+        "meanMs": 65.533,
+        "p50Ms": 53.271,
+        "p95Ms": 107.925,
+        "p99Ms": 117.652,
+        "maxMs": 120.635
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.303,
+      "throughputPerSecond": 60.555,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10&cursor=...",
+      "description": "Page 2 of one project's tests through a signed cursor.",
+      "resources": {
+        "serverCpuCores": 0.425,
+        "serverPeakRssMiB": 452.715,
+        "postgresCpuCores": 0.477,
+        "benchmarkClientCpuCores": 0.014
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_cursor_page",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 16.132,
+        "meanMs": 146.86,
+        "p50Ms": 134.651,
+        "p95Ms": 273.961,
+        "p99Ms": 316.548,
+        "maxMs": 446.924
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.746,
+      "throughputPerSecond": 53.385,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10&cursor=...",
+      "description": "Page 2 of one project's tests through a signed cursor.",
+      "resources": {
+        "serverCpuCores": 0.428,
+        "serverPeakRssMiB": 453.242,
+        "postgresCpuCores": 0.464,
+        "benchmarkClientCpuCores": 0.015
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "list_tests_cursor_page",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 18.205,
+        "meanMs": 525.273,
+        "p50Ms": 299.673,
+        "p95Ms": 3369.124,
+        "p99Ms": 3513.521,
+        "maxMs": 3549.889
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 3.55,
+      "throughputPerSecond": 56.331,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/projects/{id}/tests?limit=10&cursor=...",
+      "description": "Page 2 of one project's tests through a signed cursor.",
+      "resources": {
+        "serverCpuCores": 0.421,
+        "serverPeakRssMiB": 455.527,
+        "postgresCpuCores": 0.472,
+        "benchmarkClientCpuCores": 0.014
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_read",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 6.273,
+        "meanMs": 9.031,
+        "p50Ms": 8.657,
+        "p95Ms": 12.814,
+        "p99Ms": 14.265,
+        "maxMs": 17.328
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 1.813,
+      "throughputPerSecond": 110.293,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id}",
+      "description": "Full read of a published artifact (491/11706/97/499/11706/97/500/11706/97 bytes) through the evidence gateway.",
+      "resources": {
+        "serverCpuCores": 0.735,
+        "serverPeakRssMiB": 456.457,
+        "postgresCpuCores": 0.377,
+        "benchmarkClientCpuCores": 0.027
+      },
+      "coldFirstRequestMs": 35.931,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_read",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 17.811,
+        "meanMs": 34.919,
+        "p50Ms": 34.522,
+        "p95Ms": 42.822,
+        "p99Ms": 46.169,
+        "maxMs": 46.276
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 1.75,
+      "throughputPerSecond": 114.281,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id}",
+      "description": "Full read of a published artifact (491/11706/97/499/11706/97/500/11706/97 bytes) through the evidence gateway.",
+      "resources": {
+        "serverCpuCores": 0.715,
+        "serverPeakRssMiB": 456.066,
+        "postgresCpuCores": 0.398,
+        "benchmarkClientCpuCores": 0.023
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_read",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 34.21,
+        "meanMs": 68.501,
+        "p50Ms": 66.686,
+        "p95Ms": 90.915,
+        "p99Ms": 98.961,
+        "maxMs": 101.343
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 1.718,
+      "throughputPerSecond": 116.384,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id}",
+      "description": "Full read of a published artifact (491/11706/97/499/11706/97/500/11706/97 bytes) through the evidence gateway.",
+      "resources": {
+        "serverCpuCores": 0.661,
+        "serverPeakRssMiB": 451.266,
+        "postgresCpuCores": 0.404,
+        "benchmarkClientCpuCores": 0.018
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_read",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 106.638,
+        "meanMs": 230.148,
+        "p50Ms": 237.15,
+        "p95Ms": 299.728,
+        "p99Ms": 353.063,
+        "maxMs": 357.649
+      },
+      "errors": 0,
+      "statusCounts": {
+        "200": 200
+      },
+      "wallSeconds": 1.48,
+      "throughputPerSecond": 135.16,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id}",
+      "description": "Full read of a published artifact (491/11706/97/499/11706/97/500/11706/97 bytes) through the evidence gateway.",
+      "resources": {
+        "serverCpuCores": 0.614,
+        "serverPeakRssMiB": 451.367,
+        "postgresCpuCores": 0.388,
+        "benchmarkClientCpuCores": 0.023
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "artifact_range_read",
+      "concurrency": 1,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 5.622,
+        "meanMs": 8.181,
+        "p50Ms": 7.795,
+        "p95Ms": 11.593,
+        "p99Ms": 13.153,
+        "maxMs": 14.535
+      },
+      "errors": 0,
+      "statusCounts": {
+        "206": 200
+      },
+      "wallSeconds": 1.642,
+      "throughputPerSecond": 121.783,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id} (Range)",
+      "description": "Single explicit byte range of a published artifact.",
+      "resources": {
+        "serverCpuCores": 0.697,
+        "serverPeakRssMiB": 451.367,
+        "postgresCpuCores": 0.385,
+        "benchmarkClientCpuCores": 0.024
+      },
+      "coldFirstRequestMs": 10.107,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_range_read",
+      "concurrency": 4,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 15.322,
+        "meanMs": 29.225,
+        "p50Ms": 28.809,
+        "p95Ms": 38.548,
+        "p99Ms": 45.938,
+        "maxMs": 46.012
+      },
+      "errors": 0,
+      "statusCounts": {
+        "206": 200
+      },
+      "wallSeconds": 1.464,
+      "throughputPerSecond": 136.574,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id} (Range)",
+      "description": "Single explicit byte range of a published artifact.",
+      "resources": {
+        "serverCpuCores": 0.647,
+        "serverPeakRssMiB": 451.367,
+        "postgresCpuCores": 0.398,
+        "benchmarkClientCpuCores": 0.016
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_range_read",
+      "concurrency": 8,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 22.687,
+        "meanMs": 55.953,
+        "p50Ms": 56.567,
+        "p95Ms": 67.737,
+        "p99Ms": 73.635,
+        "maxMs": 73.644
+      },
+      "errors": 0,
+      "statusCounts": {
+        "206": 200
+      },
+      "wallSeconds": 1.403,
+      "throughputPerSecond": 142.505,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id} (Range)",
+      "description": "Single explicit byte range of a published artifact.",
+      "resources": {
+        "serverCpuCores": 0.653,
+        "serverPeakRssMiB": 450.766,
+        "postgresCpuCores": 0.393,
+        "benchmarkClientCpuCores": 0.022
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "artifact_range_read",
+      "concurrency": 32,
+      "requestedIterations": 200,
+      "startedIterations": 200,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 200,
+        "minMs": 94.716,
+        "meanMs": 220.785,
+        "p50Ms": 226.592,
+        "p95Ms": 267.603,
+        "p99Ms": 315.986,
+        "maxMs": 330.99
+      },
+      "errors": 0,
+      "statusCounts": {
+        "206": 200
+      },
+      "wallSeconds": 1.415,
+      "throughputPerSecond": 141.363,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "GET /v1/artifacts/{id} (Range)",
+      "description": "Single explicit byte range of a published artifact.",
+      "resources": {
+        "serverCpuCores": 0.6,
+        "serverPeakRssMiB": 451.051,
+        "postgresCpuCores": 0.39,
+        "benchmarkClientCpuCores": 0.021
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "admit_run",
+      "concurrency": 1,
+      "requestedIterations": 120,
+      "startedIterations": 120,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 120,
+        "minMs": 9.641,
+        "meanMs": 11.85,
+        "p50Ms": 11.388,
+        "p95Ms": 14.812,
+        "p99Ms": 19.111,
+        "maxMs": 23.357
+      },
+      "errors": 0,
+      "statusCounts": {
+        "202": 120
+      },
+      "wallSeconds": 1.425,
+      "throughputPerSecond": 84.207,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "POST /v1/runs",
+      "description": "Admit a Run (replay, queued, no worker): authentication, authorization, admission snapshot, queue insert, outbox. Each principal admits at most 15 Runs so the per-principal write rate limit (20 burst, 1/s) is never the subject, and the per-tenant budget (200 burst, 20/s) refills before every level.",
+      "resources": {
+        "serverCpuCores": 0.424,
+        "serverPeakRssMiB": 451.117,
+        "postgresCpuCores": 0.337,
+        "benchmarkClientCpuCores": 0.019
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "admit_run",
+      "concurrency": 4,
+      "requestedIterations": 120,
+      "startedIterations": 120,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 120,
+        "minMs": 25.116,
+        "meanMs": 44.493,
+        "p50Ms": 44.108,
+        "p95Ms": 51.905,
+        "p99Ms": 56.193,
+        "maxMs": 58.429
+      },
+      "errors": 0,
+      "statusCounts": {
+        "202": 120
+      },
+      "wallSeconds": 1.349,
+      "throughputPerSecond": 88.955,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "POST /v1/runs",
+      "description": "Admit a Run (replay, queued, no worker): authentication, authorization, admission snapshot, queue insert, outbox. Each principal admits at most 15 Runs so the per-principal write rate limit (20 burst, 1/s) is never the subject, and the per-tenant budget (200 burst, 20/s) refills before every level.",
+      "resources": {
+        "serverCpuCores": 0.353,
+        "serverPeakRssMiB": 451.117,
+        "postgresCpuCores": 0.361,
+        "benchmarkClientCpuCores": 0.024
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.501
+    },
+    {
+      "operation": "admit_run",
+      "concurrency": 8,
+      "requestedIterations": 120,
+      "startedIterations": 120,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 120,
+        "minMs": 34.463,
+        "meanMs": 89.983,
+        "p50Ms": 91.114,
+        "p95Ms": 100.43,
+        "p99Ms": 103.792,
+        "maxMs": 119.111
+      },
+      "errors": 0,
+      "statusCounts": {
+        "202": 120
+      },
+      "wallSeconds": 1.385,
+      "throughputPerSecond": 86.634,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "POST /v1/runs",
+      "description": "Admit a Run (replay, queued, no worker): authentication, authorization, admission snapshot, queue insert, outbox. Each principal admits at most 15 Runs so the per-principal write rate limit (20 burst, 1/s) is never the subject, and the per-tenant budget (200 burst, 20/s) refills before every level.",
+      "resources": {
+        "serverCpuCores": 0.437,
+        "serverPeakRssMiB": 360.68,
+        "postgresCpuCores": 0.35,
+        "benchmarkClientCpuCores": 0.024
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    },
+    {
+      "operation": "admit_run",
+      "concurrency": 32,
+      "requestedIterations": 120,
+      "startedIterations": 120,
+      "truncatedByTime": false,
+      "latency": {
+        "count": 120,
+        "minMs": 94.542,
+        "meanMs": 344.268,
+        "p50Ms": 366.68,
+        "p95Ms": 428.683,
+        "p99Ms": 431.355,
+        "maxMs": 439.146
+      },
+      "errors": 0,
+      "statusCounts": {
+        "202": 120
+      },
+      "wallSeconds": 1.456,
+      "throughputPerSecond": 82.431,
+      "p95Supported": true,
+      "p99Supported": false,
+      "route": "POST /v1/runs",
+      "description": "Admit a Run (replay, queued, no worker): authentication, authorization, admission snapshot, queue insert, outbox. Each principal admits at most 15 Runs so the per-principal write rate limit (20 burst, 1/s) is never the subject, and the per-tenant budget (200 burst, 20/s) refills before every level.",
+      "resources": {
+        "serverCpuCores": 0.389,
+        "serverPeakRssMiB": 373.238,
+        "postgresCpuCores": 0.361,
+        "benchmarkClientCpuCores": 0.029
+      },
+      "coldFirstRequestMs": null,
+      "settleSeconds": 0.502
+    }
+  ],
+  "skippedLevels": [],
+  "sse": {
+    "description": "N concurrent streams on one Run; time to first event, then fan-out latency of published events (publisher commit start to receipt, same host clock)",
+    "results": [
+      {
+        "streams": 1,
+        "opened": 1,
+        "openFailures": 0,
+        "timeToFirstEvent": {
+          "count": 1,
+          "minMs": 9.558,
+          "meanMs": 9.558,
+          "p50Ms": 9.558,
+          "p95Ms": 9.558,
+          "p99Ms": 9.558,
+          "maxMs": 9.558
+        },
+        "eventsPublished": 20,
+        "expectedDeliveries": 20,
+        "deliveries": 20,
+        "missedDeliveries": 0,
+        "fanOutLatency": {
+          "count": 20,
+          "minMs": 9.545,
+          "meanMs": 59.528,
+          "p50Ms": 54.933,
+          "p95Ms": 100.002,
+          "p99Ms": 102.752,
+          "maxMs": 102.752
+        },
+        "publishIntervalMs": 250,
+        "resources": {
+          "serverCpuCores": 0.02,
+          "serverPeakRssMiB": 567.316,
+          "postgresCpuCores": 0.028,
+          "benchmarkClientCpuCores": 0.005
+        }
+      },
+      {
+        "streams": 4,
+        "opened": 4,
+        "openFailures": 0,
+        "timeToFirstEvent": {
+          "count": 4,
+          "minMs": 6.994,
+          "meanMs": 15.631,
+          "p50Ms": 12.715,
+          "p95Ms": 24.309,
+          "p99Ms": 24.309,
+          "maxMs": 24.309
+        },
+        "eventsPublished": 20,
+        "expectedDeliveries": 80,
+        "deliveries": 80,
+        "missedDeliveries": 0,
+        "fanOutLatency": {
+          "count": 80,
+          "minMs": 5.537,
+          "meanMs": 57.833,
+          "p50Ms": 57.738,
+          "p95Ms": 98.726,
+          "p99Ms": 103.036,
+          "maxMs": 103.036
+        },
+        "publishIntervalMs": 250,
+        "resources": {
+          "serverCpuCores": 0.062,
+          "serverPeakRssMiB": 568.199,
+          "postgresCpuCores": 0.08,
+          "benchmarkClientCpuCores": 0.006
+        }
+      },
+      {
+        "streams": 8,
+        "opened": 8,
+        "openFailures": 0,
+        "timeToFirstEvent": {
+          "count": 8,
+          "minMs": 11.842,
+          "meanMs": 41.698,
+          "p50Ms": 40.557,
+          "p95Ms": 64.974,
+          "p99Ms": 64.974,
+          "maxMs": 64.974
+        },
+        "eventsPublished": 20,
+        "expectedDeliveries": 160,
+        "deliveries": 160,
+        "missedDeliveries": 0,
+        "fanOutLatency": {
+          "count": 160,
+          "minMs": 4.698,
+          "meanMs": 55.527,
+          "p50Ms": 55.551,
+          "p95Ms": 100.133,
+          "p99Ms": 102.709,
+          "maxMs": 105.042
+        },
+        "publishIntervalMs": 250,
+        "resources": {
+          "serverCpuCores": 0.117,
+          "serverPeakRssMiB": 569.266,
+          "postgresCpuCores": 0.151,
+          "benchmarkClientCpuCores": 0.007
+        }
+      },
+      {
+        "streams": 32,
+        "opened": 32,
+        "openFailures": 0,
+        "timeToFirstEvent": {
+          "count": 32,
+          "minMs": 10.438,
+          "meanMs": 113.599,
+          "p50Ms": 110.682,
+          "p95Ms": 204.932,
+          "p99Ms": 210.597,
+          "maxMs": 210.597
+        },
+        "eventsPublished": 20,
+        "expectedDeliveries": 640,
+        "deliveries": 640,
+        "missedDeliveries": 0,
+        "fanOutLatency": {
+          "count": 640,
+          "minMs": 4.338,
+          "meanMs": 63.953,
+          "p50Ms": 65.49,
+          "p95Ms": 115.837,
+          "p99Ms": 129.787,
+          "maxMs": 135.707
+        },
+        "publishIntervalMs": 250,
+        "resources": {
+          "serverCpuCores": 0.367,
+          "serverPeakRssMiB": 572.621,
+          "postgresCpuCores": 0.494,
+          "benchmarkClientCpuCores": 0.011
+        }
+      }
+    ]
+  },
+  "backpressure": {
+    "requests": 80,
+    "statusCounts": {
+      "202": 20,
+      "429": 60
+    },
+    "retryAfterHeaderOnRateLimited": 60,
+    "serverErrors": 0,
+    "healthLiveAfter": 200,
+    "authenticatedReadAfter": 200
+  },
+  "saturation": {
+    "concurrentRequests": 256,
+    "statusCounts": {
+      "200": 256
+    },
+    "latency": {
+      "count": 256,
+      "minMs": 25.87,
+      "meanMs": 434.109,
+      "p50Ms": 429.172,
+      "p95Ms": 832.556,
+      "p99Ms": 864.604,
+      "maxMs": 870.799
+    },
+    "wallSeconds": 0.876,
+    "healthLiveAfter": 200
+  },
+  "serverStillRunning": true,
+  "nfr006": [
+    {
+      "id": "NFR-006/admission-latency",
+      "item": "Admission latency",
+      "source": "specs/08-operations.md 9.2 (Admission latency, p95 < 2 s, no job executed in the request)",
+      "proposedTarget": {
+        "metric": "p95",
+        "limit": 2,
+        "unit": "s",
+        "condition": "up to configured capacity; authentication and database time count"
+      },
+      "measured": {
+        "metric": "p95",
+        "valueMs": 100.43,
+        "operation": "admit_run",
+        "concurrency": 8,
+        "samples": 120,
+        "byConcurrency": [
+          {
+            "concurrency": 1,
+            "operation": "admit_run",
+            "p95Ms": 14.812,
+            "samples": 120,
+            "errors": 0
+          },
+          {
+            "concurrency": 4,
+            "operation": "admit_run",
+            "p95Ms": 51.905,
+            "samples": 120,
+            "errors": 0
+          },
+          {
+            "concurrency": 8,
+            "operation": "admit_run",
+            "p95Ms": 100.43,
+            "samples": 120,
+            "errors": 0
+          }
+        ]
+      },
+      "verdict": "met",
+      "reason": "p95 within 2000 ms with zero errors at every reference concurrency (1/4/8)."
+    },
+    {
+      "id": "NFR-006/detail-open",
+      "item": "Run detail open (API request analogue of the UI target)",
+      "source": "specs/10-validation.md 9 (UI: p95 of detail open <= 2 s with 10,000 Runs)",
+      "proposedTarget": {
+        "metric": "p95",
+        "limit": 2,
+        "unit": "s",
+        "condition": "dataset of 10,000 Runs; the specification measures to useful render, the benchmark measures the API request only"
+      },
+      "measured": {
+        "metric": "p95",
+        "valueMs": 50.095,
+        "operation": "run_detail",
+        "concurrency": 8,
+        "samples": 200,
+        "byConcurrency": [
+          {
+            "concurrency": 1,
+            "operation": "run_detail",
+            "p95Ms": 4.828,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 4,
+            "operation": "run_detail",
+            "p95Ms": 22.985,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 8,
+            "operation": "run_detail",
+            "p95Ms": 50.095,
+            "samples": 200,
+            "errors": 0
+          }
+        ]
+      },
+      "verdict": "met",
+      "reason": "p95 within 2000 ms with zero errors at every reference concurrency (1/4/8)."
+    },
+    {
+      "id": "NFR-006/search",
+      "item": "Run search and listing (API request analogue of the UI target)",
+      "source": "specs/10-validation.md 9 (UI: p95 of search <= 2 s with 10,000 Runs)",
+      "proposedTarget": {
+        "metric": "p95",
+        "limit": 2,
+        "unit": "s",
+        "condition": "dataset of 10,000 Runs; the worst of first page, cursor page and filtered search decides"
+      },
+      "measured": {
+        "metric": "p95",
+        "valueMs": 937.861,
+        "operation": "list_runs_first_page",
+        "concurrency": 8,
+        "samples": 200,
+        "byConcurrency": [
+          {
+            "concurrency": 1,
+            "operation": "list_runs_first_page",
+            "p95Ms": 79.901,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 4,
+            "operation": "list_runs_first_page",
+            "p95Ms": 445.905,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 8,
+            "operation": "list_runs_first_page",
+            "p95Ms": 937.861,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 1,
+            "operation": "list_runs_cursor_page",
+            "p95Ms": 82.994,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 4,
+            "operation": "list_runs_cursor_page",
+            "p95Ms": 436.063,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 8,
+            "operation": "list_runs_cursor_page",
+            "p95Ms": 926.154,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 1,
+            "operation": "search_runs",
+            "p95Ms": 15.238,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 4,
+            "operation": "search_runs",
+            "p95Ms": 67.226,
+            "samples": 200,
+            "errors": 0
+          },
+          {
+            "concurrency": 8,
+            "operation": "search_runs",
+            "p95Ms": 151.969,
+            "samples": 200,
+            "errors": 0
+          }
+        ]
+      },
+      "verdict": "met",
+      "reason": "p95 within 2000 ms with zero errors at every reference concurrency (1/4/8)."
+    },
+    {
+      "id": "NFR-006/orchestration-overhead",
+      "item": "Orchestration overhead per local warm dispatch",
+      "source": "specs/10-validation.md 9 (p95 <= 2 s, excluding imposed queue time, container preparation and application execution)",
+      "proposedTarget": {
+        "metric": "p95",
+        "limit": 2,
+        "unit": "s",
+        "condition": "local warm dispatch"
+      },
+      "measured": null,
+      "verdict": "not measured",
+      "reason": "Needs executed Runs with instrumented queue, preparation and execution boundaries at load; this benchmark executes only a handful of Runs to obtain artifacts, far below a measurable sample."
+    },
+    {
+      "id": "NFR-006/queue-start-lag",
+      "item": "Queue start lag",
+      "source": "specs/08-operations.md 9.2 (Queue start lag, p95 < 60 s with slots available)",
+      "proposedTarget": {
+        "metric": "p95",
+        "limit": 60,
+        "unit": "s",
+        "condition": "slots available and target admitted"
+      },
+      "measured": null,
+      "verdict": "not measured",
+      "reason": "Needs a worker pool executing the admitted Runs; the benchmark leaves its admitted Runs queued so it measures the control plane only."
+    },
+    {
+      "id": "NFR-006/artifact-publication",
+      "item": "Artifact publication",
+      "source": "specs/08-operations.md 9.2 (Artifact publication, p95 < 30 s up to 64 MiB)",
+      "proposedTarget": {
+        "metric": "p95",
+        "limit": 30,
+        "unit": "s",
+        "condition": "artifacts up to 64 MiB, healthy storage"
+      },
+      "measured": null,
+      "verdict": "not measured",
+      "reason": "The benchmark reads published artifacts; publication happens inside Run execution and is not exercised at load."
+    }
+  ],
+  "limitations": [
+    "Single host: server, PostgreSQL container and the load generator share one machine and its other workloads (see loadAverage).",
+    "Every PostgreSQL write transaction takes one advisory lock (ADR-015), so writes are serialized; the synchronous bridge blocks the server's only JavaScript thread for each query.",
+    "Latencies are API request times, not UI render times; the UI targets are mapped to their API analogues.",
+    "Orchestration overhead, queue start lag and artifact publication need executed Runs under load and are not measured.",
+    "Artifacts are small (a few KiB); throughput for large artifacts is not measured.",
+    "Distributed scale, S3-compatible storage and distributed SLOs belong to M5; Windows and macOS to M6."
+  ]
+}
