@@ -57,10 +57,19 @@ afterAll(async () => {
  */
 const reviewers: StackUser[] = [];
 let nextReviewer = 0;
-async function portal(): Promise<OpenPortal & { user: StackUser }> {
+let viewer: StackUser | null = null;
+async function portal(
+  role: "org_admin" | "viewer" = "org_admin",
+): Promise<OpenPortal & { user: StackUser }> {
   const index = nextReviewer++ % 3;
-  reviewers[index] ??= await stack.addMember("org_admin");
-  const user = reviewers[index] as StackUser;
+  let user: StackUser;
+  if (role === "viewer") {
+    viewer ??= await stack.addMember("viewer");
+    user = viewer;
+  } else {
+    reviewers[index] ??= await stack.addMember("org_admin");
+    user = reviewers[index] as StackUser;
+  }
   const opened = await openPortal(
     { baseUrl: stack.baseUrl, spkiSha256: stack.ca.spkiSha256 },
     user,
@@ -429,6 +438,19 @@ describe("portal authoring on the server profile", () => {
     await expect.poll(async () => page.getByTestId("policy").textContent()).toMatch(/\S/);
     await page.getByRole("checkbox", { name: "Needs a person" }).check();
     expect(await page.getByRole("button", { name: "Accept 1 selected" }).isEnabled()).toBe(true);
+
+    // A viewer can read the batch, is told why accepting is unavailable, and the server agrees.
+    const reader = await portal("viewer");
+    await reader.page.goto(`/proposal-batches/${batch.id}`);
+    await expect
+      .poll(async () => reader.page.getByTestId("policy").textContent())
+      .toContain("Your role can read this batch but not accept it");
+    // Nothing can be selected for acceptance, so the accept action stays disabled with the reason above.
+    await reader.page.getByRole("button", { name: /^Accept \d+ selected$/ }).waitFor();
+    expect(
+      await reader.page.getByRole("button", { name: /^Accept \d+ selected$/ }).isDisabled(),
+    ).toBe(true);
+    expect((await system()).tests.list(projectId)).toHaveLength(0);
   });
 
   it("UX-021 M4-04 a concurrent edit to a proposal is shown as a diff and never overwritten silently", async () => {
