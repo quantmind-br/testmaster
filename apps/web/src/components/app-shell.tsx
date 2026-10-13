@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
+  matchPath,
   NavLink,
   Outlet,
   useLoaderData,
@@ -45,11 +46,30 @@ function groupNavigation(routes: readonly PortalRoute[]): [string, PortalRoute[]
   return [...sections];
 }
 
+/** Project pages share a sub-navigation: routes under `/projects/:projectId/` that declare `projectNav`. */
+export function projectNavigation(
+  routes: readonly PortalRoute[],
+  pathname: string,
+): { id: string; links: { label: string; path: string }[] } | null {
+  const match = matchPath({ path: "/projects/:projectId", end: false }, pathname);
+  const id = match?.params.projectId;
+  if (!id) return null;
+  const links = routes
+    .flatMap((route) => (route.projectNav ? [{ ...route.projectNav, route }] : []))
+    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+    .map(({ label, route }) => ({
+      label,
+      path: route.path.replace(":projectId", encodeURIComponent(id)),
+    }));
+  return { id, links };
+}
+
 export function AppShell({ routes }: { routes: readonly PortalRoute[] }): ReactNode {
   const me = useLoaderData() as Me;
   const location = useLocation();
   const navigate = useNavigate();
   const announce = useAnnounce();
+  const project = projectNavigation(routes, location.pathname);
   const main = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -113,6 +133,23 @@ export function AppShell({ routes }: { routes: readonly PortalRoute[] }): ReactN
               </ul>
             </section>
           ))}
+          {project ? (
+            <section aria-label="Project" data-testid="project-nav">
+              <h2>Project</h2>
+              <ul>
+                <li>
+                  <NavLink to={`/projects/${encodeURIComponent(project.id)}`} end>
+                    Overview
+                  </NavLink>
+                </li>
+                {project.links.map((link) => (
+                  <li key={link.path}>
+                    <NavLink to={link.path}>{link.label}</NavLink>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </nav>
         <main id="main" className="shell-main" tabIndex={-1} ref={main}>
           <Outlet context={me} />

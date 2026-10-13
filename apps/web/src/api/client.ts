@@ -61,6 +61,10 @@ export interface ApiOptions {
   readonly handleUnauthenticated?: boolean;
   /** Set by the client on its single CSRF retry. */
   readonly csrfRetried?: boolean;
+  /** Raw request body sent as `application/octet-stream` (source uploads). Excludes `body`. */
+  readonly bytes?: Uint8Array<ArrayBuffer>;
+  /** Extra headers such as `X-Upload-Token`; they never override the client's own security headers. */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 export interface ApiEnvironment {
@@ -149,6 +153,12 @@ export function createApiClient(environment: ApiEnvironment = {}): ApiClient {
         headers["Content-Type"] = "application/json";
         init.body = JSON.stringify(options.body);
       }
+      if (options.bytes !== undefined) {
+        headers["Content-Type"] = "application/octet-stream";
+        init.body = options.bytes;
+      }
+      for (const [name, value] of Object.entries(options.headers ?? {}))
+        if (!(name in headers)) headers[name] = value;
       let response: Response;
       try {
         response = await requestFetch(buildUrl(prefix, path, options.query), init);
