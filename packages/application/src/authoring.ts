@@ -270,17 +270,6 @@ export class ProjectsService {
       return next;
     });
   }
-  purge(id: string, confirm: string | boolean): never {
-    this.ctx.authorize("A", id);
-    project(this.ctx, id);
-    if (confirm !== id)
-      throw new ContractError("INVALID_ARGUMENT", "Purge confirmation must equal the project ID");
-    throw new ContractError(
-      "CAPABILITY_UNAVAILABLE",
-      "Project purge requires the M4 deletion lifecycle",
-      { capability: "project-purge", milestone: "M4" },
-    );
-  }
 }
 
 export class EnvironmentsService {

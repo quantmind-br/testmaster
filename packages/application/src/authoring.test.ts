@@ -173,7 +173,6 @@ describe("authoring services", () => {
       () => tests.create({ projectId: project.id, plan: scaffoldPlan("backend") }),
       "PRECONDITION_FAILED",
     );
-    code(() => projects.purge(project.id, project.id), "CAPABILITY_UNAVAILABLE");
   });
   it("returns not-found and authorizes public entry points", async () => {
     const ctx = await context();
