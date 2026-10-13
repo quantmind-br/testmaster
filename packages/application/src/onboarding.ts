@@ -295,12 +295,22 @@ export class OnboardingService {
     const profile =
       input.networkProfile ??
       (revision?.networkProfile as PrerequisiteInput["networkProfile"] | undefined);
-    if (!targetUrl || !profile)
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "A target URL and network profile, or an environment, are required",
-      );
     const runner = await this.runnerCheck();
+    if (!targetUrl || !profile) {
+      // Before a target is chosen only the runner can be checked; the rest is reported as pending.
+      const pending = "No target is selected yet";
+      return {
+        projectId,
+        checkedAt: new Date().toISOString(),
+        ready: false,
+        checks: [
+          runner,
+          notChecked("auth", pending),
+          notChecked("policy", pending),
+          notChecked("target", pending),
+        ],
+      };
+    }
     const policy = await this.policyCheck(targetUrl, profile, revision);
     const auth = this.authCheck(input.secretRefs ?? [], targetUrl);
     const target =

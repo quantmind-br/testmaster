@@ -201,6 +201,25 @@ it("UX-010 reports a missing runner with its own reason and never falls back", a
   expect(report.checks.find((check) => check.id === "policy")?.status).toBe("passed");
 });
 
+it("UX-010 checks only the runner before a target is chosen and reports the rest as pending, never as passed", async () => {
+  const { service, projectId, reach } = await fixture();
+  const report = await service.check(projectId, {});
+  expect(report.checks.map((check) => [check.id, check.status])).toEqual([
+    ["runner", "passed"],
+    ["auth", "not_checked"],
+    ["policy", "not_checked"],
+    ["target", "not_checked"],
+  ]);
+  expect(report.ready).toBe(false);
+  expect(reach).not.toHaveBeenCalled();
+  // Negative control: an unavailable runner is still reported before any target exists.
+  const broken = await fixture({
+    runner: async () => ({ available: false, mode: "unknown", diagnostics: ["no_docker"] }),
+  });
+  const failed = await broken.service.check(broken.projectId, {});
+  expect(failed.checks[0]).toMatchObject({ id: "runner", status: "failed" });
+});
+
 it("UX-010 denies a target by policy and never contacts it", async () => {
   const { service, projectId, reach } = await fixture();
   const report = await service.check(projectId, {
