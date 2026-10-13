@@ -1,3 +1,4 @@
+import { routes as audit } from "./audit";
 import { routes as authoring } from "./authoring";
 import { routes as discovery } from "./discovery";
 import { routes as featureMap } from "./feature-map";
@@ -11,6 +12,7 @@ import { routes as schedules } from "./schedules";
 import { routes as secrets } from "./secrets";
 import { routes as settings } from "./settings";
 import { routes as sources } from "./sources";
+import { routes as team } from "./team";
 import type { PortalRoute } from "./types";
 
 /** One line per area; slices append their `routes/<area>.tsx` here. */
@@ -28,4 +30,6 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...authoring,
   ...lists,
   ...schedules,
+  ...team,
+  ...audit,
 ];

@@ -259,6 +259,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
     "secrets-rotation",
     "suites",
     "schedules",
+    "audit-api",
   ],
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(

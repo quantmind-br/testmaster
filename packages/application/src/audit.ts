@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
 import { resolve } from "node:path";
-import { ContractError, validate } from "@testmaster/contracts";
+import {
+  type AuditActorKind,
+  type AuditEntry,
+  type AuditOutcome,
+  auditActorKinds,
+  auditOutcomes,
+  ContractError,
+  validate,
+} from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import {
   AuditRepository,
@@ -9,6 +17,29 @@ import {
   type PersistenceDatabase,
 } from "@testmaster/persistence";
 import type { ServiceContext } from "./context.js";
+import { systemPrincipalKey } from "./team.js";
+
+export interface AuditQuery {
+  actorKind?: AuditActorKind;
+  actorId?: string;
+  /** Exact operation name or dotted prefix, such as `member` or `auth.token.issue`. */
+  operation?: string;
+  outcome?: AuditOutcome;
+  correlationId?: string;
+  resourceId?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  after?: { createdAt: string; id: string };
+}
+/** Principal prefixes are the kind marker; the controller principal is the one recorded per workspace. */
+export function auditActorKindOf(actor: string, systemPrincipal: string): AuditActorKind {
+  if (actor === systemPrincipal) return "system";
+  if (actor.startsWith("usr_")) return "human";
+  if (actor.startsWith("svc_")) return "agent";
+  if (actor.startsWith("integration:")) return "integration";
+  return "unauthenticated";
+}
 
 export interface AuditActor {
   database: PersistenceDatabase;
@@ -119,6 +150,127 @@ export class AuditService {
     private readonly ctx: ServiceContext,
     private readonly cwd: string,
   ) {}
+
+  /**
+   * The workspace audit trail for administrators (UX-050): newest first, filtered in SQL so cursor
+   * paging stays exact. Rows carry hashes and ids only, so no secret value can appear.
+   */
+  list(query: AuditQuery = {}): { items: AuditEntry[]; hasMore: boolean } {
+    this.ctx.authorize("A");
+    const limit = query.limit ?? 50;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+      throw new ContractError("INVALID_ARGUMENT", "Page size must be 1–100");
+    const where = ["a.workspace_id=?"];
+    const params: unknown[] = [this.ctx.workspaceId];
+    const systemKey = systemPrincipalKey(this.ctx.workspaceId);
+    const systemActor = "COALESCE((SELECT value FROM operational_state WHERE key=?),'')";
+    if (query.actorKind) {
+      if (!auditActorKinds.includes(query.actorKind))
+        throw new ContractError("INVALID_ARGUMENT", "Unknown actor kind", { field: "actorKind" });
+      const kinds: Record<AuditActorKind, [string, unknown[]]> = {
+        human: ["substr(a.actor,1,4)='usr_'", []],
+        agent: [`(substr(a.actor,1,4)='svc_' AND a.actor<>${systemActor})`, [systemKey]],
+        integration: ["substr(a.actor,1,12)='integration:'", []],
+        system: [`a.actor=${systemActor}`, [systemKey]],
+        unauthenticated: ["substr(a.actor,1,15)='unauthenticated'", []],
+      };
+      const [clause, values] = kinds[query.actorKind];
+      where.push(clause);
+      params.push(...values);
+    }
+    if (query.actorId) {
+      where.push("a.actor=?");
+      params.push(query.actorId);
+    }
+    if (query.operation) {
+      if (!/^[a-z0-9._:-]{1,100}$/.test(query.operation))
+        throw new ContractError("INVALID_ARGUMENT", "Invalid operation filter", {
+          field: "operation",
+        });
+      where.push("substr(a.action,1,?)=?");
+      params.push(query.operation.length, query.operation);
+    }
+    if (query.outcome) {
+      if (!auditOutcomes.includes(query.outcome))
+        throw new ContractError("INVALID_ARGUMENT", "Unknown outcome", { field: "outcome" });
+      if (query.outcome === "recorded")
+        where.push(
+          "a.action NOT LIKE '%.allowed' AND a.action NOT LIKE '%.denied' AND a.action NOT LIKE '%.requested'",
+        );
+      else {
+        where.push("a.action LIKE ?");
+        params.push(`%.${query.outcome}`);
+      }
+    }
+    if (query.correlationId) {
+      where.push("a.request_id=?");
+      params.push(query.correlationId);
+    }
+    if (query.resourceId) {
+      where.push("a.resource_id=?");
+      params.push(query.resourceId);
+    }
+    for (const [field, operator] of [
+      ["from", ">="],
+      ["to", "<="],
+    ] as const) {
+      const value = query[field];
+      if (value === undefined) continue;
+      if (!Number.isFinite(Date.parse(value)))
+        throw new ContractError("INVALID_ARGUMENT", "Invalid time filter", { field });
+      where.push(`a.created_at${operator}?`);
+      params.push(new Date(value).toISOString());
+    }
+    if (query.after) {
+      where.push("(a.created_at<? OR (a.created_at=? AND a.id<?))");
+      params.push(query.after.createdAt, query.after.createdAt, query.after.id);
+    }
+    const rows = this.ctx.database.all(
+      `SELECT a.id AS id,a.created_at AS created_at,a.actor AS actor,a.action AS action,a.resource_id AS resource_id,a.request_id AS request_id,a.before_hash AS before_hash,a.after_hash AS after_hash FROM audit_events a WHERE ${where.join(" AND ")} ORDER BY a.created_at DESC,a.id DESC LIMIT ?`,
+      ...params,
+      limit + 1,
+    );
+    const system = String(
+      this.ctx.database.get("SELECT value FROM operational_state WHERE key=?", systemKey)?.value ??
+        "",
+    );
+    const names = new Map<string, string | null>();
+    const items = rows.slice(0, limit).map((row): AuditEntry => {
+      const actor = String(row.actor);
+      if (!names.has(actor))
+        names.set(
+          actor,
+          actor.startsWith("usr_") || actor.startsWith("svc_")
+            ? ((
+                this.ctx.database.get(
+                  "SELECT display_name FROM principals WHERE workspace_id=? AND id=?",
+                  this.ctx.workspaceId,
+                  actor,
+                ) as { display_name?: string } | undefined
+              )?.display_name ?? null)
+            : null,
+        );
+      const action = String(row.action);
+      const suffix = /\.(allowed|denied|requested)$/.exec(action);
+      const resourceId = String(row.resource_id);
+      return {
+        id: String(row.id),
+        createdAt: String(row.created_at),
+        actor: {
+          id: actor,
+          kind: auditActorKindOf(actor, system),
+          displayName: names.get(actor) ?? null,
+        },
+        operation: suffix ? action.slice(0, suffix.index) : action,
+        outcome: (suffix?.[1] as AuditOutcome | undefined) ?? "recorded",
+        scope: { resourceType: /^([a-z]+)_/.exec(resourceId)?.[1] ?? "resource", resourceId },
+        correlationId: String(row.request_id),
+        beforeHash: row.before_hash ? String(row.before_hash) : null,
+        afterHash: row.after_hash ? String(row.after_hash) : null,
+      };
+    });
+    return { items, hasMore: rows.length > limit };
+  }
 
   async export(out: string) {
     return auditedOperation(this.ctx, "audit.export", this.ctx.workspaceId, async () => {

@@ -18,6 +18,7 @@ import { suiteCommands } from "./lists.js";
 import { mcpCommands } from "./mcp.js";
 import { planCommands } from "./plans.js";
 import { projectCommands } from "./projects.js";
+import { remoteCommands } from "./remote.js";
 import { reportCommands } from "./reports.js";
 import { requirementCommands } from "./requirements.js";
 import { resourceCommands } from "./resources.js";
@@ -82,6 +83,7 @@ export function createCli(runtime: Runtime): Command {
   ciCommands(program, runtime);
   suiteCommands(program, runtime);
   scheduleCommands(program, runtime);
+  remoteCommands(program, runtime);
   unavailableCommands(program, runtime);
   return program;
 }

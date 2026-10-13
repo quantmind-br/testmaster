@@ -132,7 +132,7 @@ export function testCommands(program: Command, runtime: Runtime): void {
       };
     },
   );
-  runtime.bind(group.command("get <id>"), async (rt, args) => ({
+  runtime.bind(group.command("get <id>").alias("show"), async (rt, args) => ({
     data: await (await rt.app()).tests.get(String(args[0])),
   }));
   runtime.bind(

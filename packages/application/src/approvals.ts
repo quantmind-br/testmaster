@@ -1,9 +1,12 @@
 import {
   type Approval,
+  type ApprovalPolicy,
+  type ApprovalPolicyInput,
   ContractError,
   type EnvironmentRevision,
   type ExecutablePlan,
   type PlanStep,
+  type Project,
   type Run,
   type TestCase,
   type TestRevision,
@@ -86,6 +89,8 @@ export function planRiskActions(plan: ExecutablePlan): Array<{ stepId: string; r
   return actions;
 }
 
+const approvalPolicyExtension = "testmaster:approvalPolicy";
+
 export class ApprovalsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -100,6 +105,103 @@ export class ApprovalsService {
     );
     if (!row) throw new ContractError("NOT_FOUND", "Approval environment does not exist");
     return String(row.project_id);
+  }
+  /** The project's approval policy; a project without one needs one approver and no separation. */
+  private policyFor(projectId: string): ApprovalPolicy {
+    const project = requireEntity(this.ctx, "Project", projectId);
+    const stored = (project.extensions as Record<string, unknown> | undefined)?.[
+      approvalPolicyExtension
+    ] as
+      | {
+          requiredApprovers: 1 | 2;
+          separationOfDuties: boolean;
+          updatedAt: string;
+          updatedBy: string;
+        }
+      | undefined;
+    return {
+      projectId,
+      requiredApprovers: stored?.requiredApprovers ?? 1,
+      separationOfDuties: stored?.separationOfDuties ?? false,
+      version: Number(project.version ?? 1),
+      updatedAt: stored?.updatedAt ?? null,
+      updatedBy: stored?.updatedBy ?? null,
+    };
+  }
+  policy(projectId: string): ApprovalPolicy {
+    this.ctx.authorize("R", projectId);
+    return this.policyFor(projectId);
+  }
+  /** Administrators set how many independent humans must approve and whether requesters are excluded. */
+  setPolicy(
+    projectId: string,
+    input: ApprovalPolicyInput,
+    expectedVersion: number,
+  ): ApprovalPolicy {
+    this.ctx.authorize("A", projectId);
+    if (![1, 2].includes(input.requiredApprovers) || typeof input.separationOfDuties !== "boolean")
+      throw new ContractError("INVALID_ARGUMENT", "Approval policy needs 1 or 2 approvers");
+    if (input.requiredApprovers === 2 && !input.separationOfDuties)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Two independent approvers require separation of duties",
+        { field: "separationOfDuties" },
+      );
+    return authoringTransaction(this.ctx, () => {
+      const current = requireEntity(this.ctx, "Project", projectId) as Stored<Project>;
+      if (current.version !== expectedVersion)
+        throw new ContractError("REVISION_CONFLICT", "Entity version changed", {
+          currentVersion: current.version,
+        });
+      const before = this.policyFor(projectId);
+      const next = {
+        ...current,
+        extensions: {
+          ...current.extensions,
+          [approvalPolicyExtension]: {
+            requiredApprovers: input.requiredApprovers,
+            separationOfDuties: input.separationOfDuties,
+            updatedAt: new Date().toISOString(),
+            updatedBy: this.ctx.principalId,
+          },
+        },
+        version: expectedVersion + 1,
+      };
+      validate("Project", next);
+      this.ctx.entities.update("Project", this.ctx.workspaceId, projectId, expectedVersion, next);
+      this.audit("approval.policy.set", projectId, semanticHash(before), semanticHash(input));
+      return this.policyFor(projectId);
+    });
+  }
+  /**
+   * Picks the approvals that satisfy the project's policy: one per distinct human reviewer, never
+   * the requester when separation of duties applies. Throws `approval_required` when too few.
+   */
+  private independentApprovals(
+    candidates: Stored<Approval>[],
+    requesterId: string,
+    policy: ApprovalPolicy,
+    check: (candidate: Stored<Approval>) => void,
+    refusal: () => never = () => {
+      throw new ContractError("POLICY_DENIED", "Approval policy is not satisfied", {
+        reasonCode: "approval_required",
+        requiredApprovers: policy.requiredApprovers,
+        separationOfDuties: policy.separationOfDuties,
+      });
+    },
+  ): Stored<Approval>[] {
+    const chosen: Stored<Approval>[] = [];
+    const reviewers: Record<string, true> = {};
+    for (const candidate of candidates) {
+      if (chosen.length >= policy.requiredApprovers) break;
+      if (reviewers[candidate.reviewerId]) continue;
+      if (policy.separationOfDuties && candidate.reviewerId === requesterId) continue;
+      check(candidate);
+      reviewers[candidate.reviewerId] = true;
+      chosen.push(candidate);
+    }
+    if (chosen.length < policy.requiredApprovers) return refusal();
+    return chosen;
   }
   private executionBinding(
     revision: Stored<TestRevision>,
@@ -189,6 +291,13 @@ export class ApprovalsService {
           "FORBIDDEN",
           "Execution approvals require an enabled human reviewer",
         );
+      const policy = this.policyFor(projectId);
+      if (policy.separationOfDuties && (input.actorId ?? this.ctx.principalId) === reviewerId)
+        throw new ContractError(
+          "FORBIDDEN",
+          "Separation of duties: the requester cannot approve their own execution",
+          { reason: "separation_of_duties" },
+        );
       const now = Date.now();
       const expiresAt = input.expiresAt ?? new Date(now + 30 * 60_000).toISOString();
       const deadline = Date.parse(expiresAt);
@@ -207,6 +316,24 @@ export class ApprovalsService {
         reason: input.reason,
       }) as Stored<Approval>;
       validate("Approval", value);
+      if (
+        policy.requiredApprovers > 1 &&
+        (allEntities(this.ctx, "Approval") as Stored<Approval>[]).some(
+          (existing) =>
+            existing.reviewerId === reviewerId &&
+            existing.actorId === value.actorId &&
+            existing.revisionHash === value.revisionHash &&
+            existing.environmentRevisionId === value.environmentRevisionId &&
+            existing.policyHash === value.policyHash &&
+            !existing.revokedAt &&
+            Date.parse(existing.expiresAt) > now,
+        )
+      )
+        throw new ContractError(
+          "FORBIDDEN",
+          "Each independent approver may approve a binding once",
+          { reason: "duplicate_approver" },
+        );
       if (
         !value.actionSet.length ||
         new Set(value.actionSet).size !== value.actionSet.length ||
@@ -420,63 +547,73 @@ export class ApprovalsService {
         const approval = cleanup.approvalId
           ? (requireEntity(this.ctx, "Approval", cleanup.approvalId) as Stored<Approval>)
           : null;
-        if (
-          !approval ||
-          approval.actorId !== this.ctx.principalId ||
-          approval.revisionHash !== cleanup.digest ||
-          approval.environmentRevisionId !== environment.id ||
-          approval.policyHash !== cleanup.policyHash ||
-          !approval.actionSet.includes(`cleanup:${cleanup.resourceId}`) ||
-          approval.revokedAt ||
-          Date.parse(approval.expiresAt) <= Date.now() ||
-          cleanup.origins.some((origin) => !approval.originSet.includes(origin))
-        )
+        const bindsCleanup = (candidate: Stored<Approval>): boolean =>
+          candidate.actorId === this.ctx.principalId &&
+          candidate.revisionHash === cleanup.digest &&
+          candidate.environmentRevisionId === environment.id &&
+          candidate.policyHash === cleanup.policyHash &&
+          candidate.actionSet.includes(`cleanup:${cleanup.resourceId}`) &&
+          !candidate.revokedAt &&
+          Date.parse(candidate.expiresAt) > Date.now() &&
+          cleanup.origins.every((origin) => candidate.originSet.includes(origin));
+        if (!approval || !bindsCleanup(approval))
           throw new ContractError(
             "POLICY_DENIED",
             "Manual compensation requires resource-bound approval",
             { reasonCode: "approval_required" },
           );
-        const binding = this.ctx.database.get(
-          "SELECT value FROM operational_state WHERE key=?",
-          `approval:binding:${this.ctx.workspaceId}:${approval.id}`,
-        );
-        if (
-          !binding ||
-          semanticHash(JSON.parse(String(binding.value))) !==
-            semanticHash(
-              this.executionBinding(
-                revision,
-                environment,
-                (run.matrixCell as Record<string, unknown> | undefined)?.limits,
-              ),
+        const approvalPolicy = this.policyFor(test.projectId);
+        // The named approval first, then any other independent human who bound the same cleanup.
+        const chosen = this.independentApprovals(
+          [
+            approval,
+            ...(allEntities(this.ctx, "Approval") as Stored<Approval>[]).filter(
+              (candidate) => candidate.id !== approval.id && bindsCleanup(candidate),
+            ),
+          ],
+          approval.actorId,
+          approvalPolicy,
+          (candidate) => {
+            const binding = this.ctx.database.get(
+              "SELECT value FROM operational_state WHERE key=?",
+              `approval:binding:${this.ctx.workspaceId}:${candidate.id}`,
+            );
+            if (
+              !binding ||
+              semanticHash(JSON.parse(String(binding.value))) !==
+                semanticHash(
+                  this.executionBinding(
+                    revision,
+                    environment,
+                    (run.matrixCell as Record<string, unknown> | undefined)?.limits,
+                  ),
+                )
             )
-        )
-          throw new ContractError(
-            "PRECONDITION_FAILED",
-            "Cleanup approval execution binding changed",
-            { reasonCode: "binding_mismatch" },
+              throw new ContractError(
+                "PRECONDITION_FAILED",
+                "Cleanup approval execution binding changed",
+                { reasonCode: "binding_mismatch" },
+              );
+            const reviewer = requireEntity(this.ctx, "Principal", candidate.reviewerId);
+            if (reviewer.kind !== "human" || reviewer.disabledAt)
+              throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled");
+          },
+        );
+        for (const used of chosen) {
+          const consumed = {
+            ...used,
+            revokedAt: new Date().toISOString(),
+            version: Number(used.version) + 1,
+          };
+          this.ctx.entities.update(
+            "Approval",
+            this.ctx.workspaceId,
+            used.id,
+            Number(used.version),
+            consumed,
           );
-        const reviewer = requireEntity(this.ctx, "Principal", approval.reviewerId);
-        if (reviewer.kind !== "human" || reviewer.disabledAt)
-          throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled");
-        const consumed = {
-          ...approval,
-          revokedAt: new Date().toISOString(),
-          version: Number(approval.version) + 1,
-        };
-        this.ctx.entities.update(
-          "Approval",
-          this.ctx.workspaceId,
-          approval.id,
-          Number(approval.version),
-          consumed,
-        );
-        this.audit(
-          "approval.consumed",
-          approval.id,
-          semanticHash(approval),
-          semanticHash(consumed),
-        );
+          this.audit("approval.consumed", used.id, semanticHash(used), semanticHash(consumed));
+        }
         return approval;
       }
       if (!revision.plan) {
@@ -522,66 +659,83 @@ export class ApprovalsService {
       };
       visit(revision.plan.steps);
       const actorId = run.actorId ?? this.ctx.principalId;
-      const approval = (allEntities(this.ctx, "Approval") as Stored<Approval>[]).find(
-        (candidate) =>
-          candidate.actorId === actorId &&
-          candidate.revisionHash === revision.contentHash &&
-          candidate.environmentRevisionId === environment.id &&
-          candidate.policyHash === policyHash &&
-          !candidate.revokedAt &&
-          Date.parse(candidate.expiresAt) > Date.now() &&
-          [...origins].every((origin) => candidate.originSet.includes(origin)) &&
-          actions.every(
-            (action) =>
-              candidate.actionSet.includes(action.risk) ||
-              candidate.actionSet.includes(action.stepId),
-          ),
-      );
-      if (!approval)
-        throw new ContractError(
-          "POLICY_DENIED",
-          "Risky production actions require a current bound human approval",
-          { reasonCode: "approval_required", actions },
-        );
-      const reviewer = requireEntity(this.ctx, "Principal", approval.reviewerId);
-      if (reviewer.kind !== "human" || reviewer.disabledAt)
-        throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled", {
-          reasonCode: "approval_required",
-        });
-      const binding = this.ctx.database.get(
-        "SELECT value FROM operational_state WHERE key=?",
-        `approval:binding:${this.ctx.workspaceId}:${approval.id}`,
-      );
+      const approvalPolicy = this.policyFor(test.projectId);
       const cell = run.matrixCell as Record<string, unknown> | undefined;
-      if (
-        !binding ||
-        semanticHash(JSON.parse(String(binding.value))) !==
-          semanticHash(this.executionBinding(revision, environment, cell?.limits))
-      )
-        throw new ContractError("PRECONDITION_FAILED", "Approval execution binding changed", {
-          reasonCode: "binding_mismatch",
-        });
-      this.audit("approval.verified", approval.id, null, revision.contentHash, run.id);
-      const consumed = {
-        ...approval,
-        revokedAt: new Date().toISOString(),
-        version: (approval.version ?? 1) + 1,
-      };
-      this.ctx.entities.update(
-        "Approval",
-        this.ctx.workspaceId,
-        approval.id,
-        approval.version ?? 1,
-        consumed,
+      const chosen = this.independentApprovals(
+        (allEntities(this.ctx, "Approval") as Stored<Approval>[]).filter(
+          (candidate) =>
+            candidate.actorId === actorId &&
+            candidate.revisionHash === revision.contentHash &&
+            candidate.environmentRevisionId === environment.id &&
+            candidate.policyHash === policyHash &&
+            !candidate.revokedAt &&
+            Date.parse(candidate.expiresAt) > Date.now() &&
+            [...origins].every((origin) => candidate.originSet.includes(origin)) &&
+            actions.every(
+              (action) =>
+                candidate.actionSet.includes(action.risk) ||
+                candidate.actionSet.includes(action.stepId),
+            ),
+        ),
+        actorId,
+        approvalPolicy,
+        (approval) => {
+          const reviewer = requireEntity(this.ctx, "Principal", approval.reviewerId);
+          if (reviewer.kind !== "human" || reviewer.disabledAt)
+            throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled", {
+              reasonCode: "approval_required",
+            });
+          const binding = this.ctx.database.get(
+            "SELECT value FROM operational_state WHERE key=?",
+            `approval:binding:${this.ctx.workspaceId}:${approval.id}`,
+          );
+          if (
+            !binding ||
+            semanticHash(JSON.parse(String(binding.value))) !==
+              semanticHash(this.executionBinding(revision, environment, cell?.limits))
+          )
+            throw new ContractError("PRECONDITION_FAILED", "Approval execution binding changed", {
+              reasonCode: "binding_mismatch",
+            });
+        },
+        () => {
+          throw new ContractError(
+            "POLICY_DENIED",
+            approvalPolicy.requiredApprovers > 1
+              ? "Risky production actions require current bound approvals from independent humans"
+              : "Risky production actions require a current bound human approval",
+            {
+              reasonCode: "approval_required",
+              actions,
+              requiredApprovers: approvalPolicy.requiredApprovers,
+              separationOfDuties: approvalPolicy.separationOfDuties,
+            },
+          );
+        },
       );
-      this.audit(
-        "approval.consumed",
-        approval.id,
-        semanticHash(approval),
-        semanticHash(consumed),
-        run.id,
-      );
-      return approval;
+      for (const approval of chosen) {
+        this.audit("approval.verified", approval.id, null, revision.contentHash, run.id);
+        const consumed = {
+          ...approval,
+          revokedAt: new Date().toISOString(),
+          version: (approval.version ?? 1) + 1,
+        };
+        this.ctx.entities.update(
+          "Approval",
+          this.ctx.workspaceId,
+          approval.id,
+          approval.version ?? 1,
+          consumed,
+        );
+        this.audit(
+          "approval.consumed",
+          approval.id,
+          semanticHash(approval),
+          semanticHash(consumed),
+          run.id,
+        );
+      }
+      return chosen[0] as Stored<Approval>;
     });
   }
   private audit(

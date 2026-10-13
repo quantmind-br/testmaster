@@ -1,0 +1,101 @@
+$ vitest run --project unit
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s1
+
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/client.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s1/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+ ❯ |unit| tools/src/security/threat-model-acceptance.test.ts (8 tests | 3 failed) 280ms
+   ❯ SEC-001 versioned threat model acceptance (6)
+     × models every boundary and every executor, transport and capability found in code with existing enforcing tests 19ms
+     × fails an executor, transport or capability present in code but absent from the model 17ms
+     × fails when code enables a boundary the model still lists as disabled, and when the model drops coverage 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| tools/src/security/threat-model-acceptance.test.ts > SEC-001 versioned threat model acceptance > models every boundary and every executor, transport and capability found in code with existing enforcing tests
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "capability:audit-api is enabled in code but modelled under disabled boundary B-17",
++ ]
+
+ ❯ tools/src/security/threat-model-acceptance.test.ts:49:35
+     47| describe("SEC-001 versioned threat model acceptance", () => {
+     48|   it("models every boundary and every executor, transport and capabili…
+     49|     expect(await check(markdown)).toEqual([]);
+       |                                   ^
+     50|     const parsed = parseThreatModel(markdown);
+     51|     for (const klass of Object.keys(requiredBoundaryClasses))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |unit| tools/src/security/threat-model-acceptance.test.ts > SEC-001 versioned threat model acceptance > fails an executor, transport or capability present in code but absent from the model
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "capability:audit-api is enabled in code but modelled under disabled boundary B-17",
++ ]
+
+ ❯ tools/src/security/threat-model-acceptance.test.ts:161:7
+    159|     expect(
+    160|       await check(markdown, await deriveCodeComponents(fake, Object.va…
+    161|     ).toEqual([]);
+       |       ^
+    162|
+    163|     // Negative controls: the same tree gains a new transport and a ne…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |unit| tools/src/security/threat-model-acceptance.test.ts > SEC-001 versioned threat model acceptance > fails when code enables a boundary the model still lists as disabled, and when the model drops coverage
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
++   "capability:audit-api is enabled in code but modelled under disabled boundary B-17",
+    "capability:tunnels is enabled in code but modelled under disabled boundary B-16",
+  ]
+
+ ❯ tools/src/security/threat-model-acceptance.test.ts:194:83
+    192|       capability.id === "tunnels" ? { ...capability, enabled: true } :…
+    193|     );
+    194|     expect(await check(markdown, { ...components, capabilities: enable…
+       |                                                                                   ^
+    195|       "capability:tunnels is enabled in code but modelled under disabl…
+    196|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 154 passed (155)
+      Tests  3 failed | 1271 passed (1274)
+   Start at  13:03:27
+   Duration  55.21s (tests 77%, import 13%, transform 9%)
+
+[ELIFECYCLE] Test failed. See above for more details.

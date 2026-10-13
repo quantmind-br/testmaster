@@ -19,7 +19,7 @@ import { resolveIssuance } from "./local-auth.js";
 import { loginPattern } from "./passwords.js";
 import { insertToken, revokeTokenRow, type TokenData } from "./tokens.js";
 
-const systemPrincipalKey = (workspaceId: string) => `system-principal:${workspaceId}`;
+export const systemPrincipalKey = (workspaceId: string) => `system-principal:${workspaceId}`;
 const operatorPrincipalKey = "operator-principal";
 const roleOrder = Object.keys(rbacMatrix) as Role[];
 const isRole = (value: string): value is Role => (roleOrder as string[]).includes(value);

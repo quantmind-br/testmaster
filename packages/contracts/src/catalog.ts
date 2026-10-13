@@ -1,5 +1,6 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
+import { auditContracts } from "./m4/audit.js";
 import { authoringContracts } from "./m4/authoring.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
@@ -631,6 +632,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...httpInputs,
   ...integrationContracts,
   ...authoringContracts,
+  ...auditContracts,
   ...identityContracts,
   ...settingsContracts,
   ...onboardingContracts,

@@ -1436,6 +1436,146 @@
         }
       }
     },
+    "/projects/{id}/approval-policy": {
+      "get": {
+        "operationId": "get__projects_id_approval_policy",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "projects:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ApprovalPolicy"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "put__projects_id_approval_policy",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "projects:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ApprovalPolicy"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalPolicyInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{id}/purge": {
       "post": {
         "operationId": "post__projects_id_purge",
@@ -9720,7 +9860,7 @@
           "M4"
         ],
         "parameters": [],
-        "x-scope": "audit:R",
+        "x-scope": "audit:A",
         "x-milestone": "M4",
         "responses": {
           "200": {
@@ -9743,7 +9883,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/AuditEvent"
+                      "$ref": "#/components/schemas/AuditEntry"
                     },
                     "warnings": {
                       "type": "array",
@@ -28485,6 +28625,94 @@
         },
         "$defs": {}
       },
+      "ApprovalPolicy": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "projectId",
+          "requiredApprovers",
+          "separationOfDuties",
+          "version",
+          "updatedAt",
+          "updatedBy"
+        ],
+        "properties": {
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "requiredApprovers": {
+            "anyOf": [
+              {
+                "const": 1,
+                "type": "number"
+              },
+              {
+                "const": 2,
+                "type": "number"
+              }
+            ]
+          },
+          "separationOfDuties": {
+            "type": "boolean"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updatedBy": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {}
+      },
+      "ApprovalPolicyInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requiredApprovers",
+          "separationOfDuties"
+        ],
+        "properties": {
+          "requiredApprovers": {
+            "anyOf": [
+              {
+                "const": 1,
+                "type": "number"
+              },
+              {
+                "const": 2,
+                "type": "number"
+              }
+            ]
+          },
+          "separationOfDuties": {
+            "type": "boolean"
+          }
+        },
+        "$defs": {}
+      },
       "Artifact": {
         "additionalProperties": false,
         "type": "object",
@@ -29136,6 +29364,157 @@
             ]
           }
         }
+      },
+      "AuditEntry": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "actor",
+          "operation",
+          "outcome",
+          "scope",
+          "correlationId",
+          "beforeHash",
+          "afterHash"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^aud_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "actor": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "displayName"
+            ],
+            "properties": {
+              "id": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "human",
+                    "type": "string"
+                  },
+                  {
+                    "const": "agent",
+                    "type": "string"
+                  },
+                  {
+                    "const": "integration",
+                    "type": "string"
+                  },
+                  {
+                    "const": "system",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unauthenticated",
+                    "type": "string"
+                  }
+                ]
+              },
+              "displayName": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "operation": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "const": "allowed",
+                "type": "string"
+              },
+              {
+                "const": "denied",
+                "type": "string"
+              },
+              {
+                "const": "requested",
+                "type": "string"
+              },
+              {
+                "const": "recorded",
+                "type": "string"
+              }
+            ]
+          },
+          "scope": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "resourceType",
+              "resourceId"
+            ],
+            "properties": {
+              "resourceType": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "resourceId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              }
+            }
+          },
+          "correlationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "beforeHash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "afterHash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {}
       },
       "AuditEvent": {
         "additionalProperties": false,

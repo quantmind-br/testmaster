@@ -1,4 +1,5 @@
 import { routeCatalog } from "@testmaster/contracts";
+import { auditRoutes } from "./audit.js";
 import { authoringRoutes } from "./authoring.js";
 import { coreRoutes } from "./core.js";
 import { eventRoutes } from "./events.js";
@@ -21,6 +22,7 @@ export const routeModules: RouteModule[] = [
   authoringRoutes,
   scheduleRoutes,
   suiteRoutes,
+  auditRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;
