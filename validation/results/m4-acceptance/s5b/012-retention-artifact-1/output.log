@@ -1,0 +1,43 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b
+
+ ❯ |postgres| validation/journeys/portal-retention-artifact.portal.test.ts (2 tests | 2 failed) 33013ms
+   ❯ expiring an artifact from the retention page (2)
+     × UX-048 UX-055 expires exactly one artifact after a contextual confirmation, keeps the run and the other artifact, and records a tombstone 18ms
+     × UX-048 UX-005 a viewer sees why artifacts cannot be expired and the server refuses the call 30438ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/portal-retention-artifact.portal.test.ts > expiring an artifact from the retention page > UX-048 UX-055 expires exactly one artifact after a contextual confirmation, keeps the run and the other artifact, and records a tombstone
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ validation/journeys/portal-retention-artifact.portal.test.ts:88:20
+     86|   it("UX-048 UX-055 expires exactly one artifact after a contextual co…
+     87|     const entries = await bundle();
+     88|     expect(entries.map((entry) => entry.state)).toEqual(["available", …
+       |                    ^
+     89|     const { page, diagnostics } = await portal(stack.owner);
+     90|     await page.goto(`/projects/${projectId}/retention`);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| validation/journeys/portal-retention-artifact.portal.test.ts > expiring an artifact from the retention page > UX-048 UX-005 a viewer sees why artifacts cannot be expired and the server refuses the call
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('table', { name: 'Artifacts of run run_01a135dd-d903-7799-bbf5-f0ff75212279' }) to be visible
+
+ ❯ validation/journeys/portal-retention-artifact.portal.test.ts:159:17
+    157|     await page.getByRole("button", { name: `Show artifacts of ${runId}…
+    158|     const table = page.getByRole("table", { name: `Artifacts of run ${…
+    159|     await table.waitFor();
+       |                 ^
+    160|     expect(await page.getByRole("button", { name: /^Expire artifact/ }…
+    161|     expect(await page.innerText("main")).toContain("Your role cannot e…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 17 passed (19)
+   Start at  12:24:29
+   Duration  55.40s (tests 98%, import 2%, transform 1%)
+

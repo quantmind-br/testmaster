@@ -1,0 +1,122 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b
+
+ ❯ |postgres| validation/journeys/portal-retention-artifact.portal.test.ts (2 tests | 1 failed) 3836ms
+   ❯ expiring an artifact from the retention page (2)
+     × UX-048 UX-005 a viewer sees why artifacts cannot be expired and the server refuses the call 399ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/portal-retention-artifact.portal.test.ts > expiring an artifact from the retention page > UX-048 UX-005 a viewer sees why artifacts cannot be expired and the server refuses the call
+AssertionError: expected 'Artifact retention project\n\nRetenti…' to contain 'Your role cannot expire artifacts.'
+
+- Expected
++ Received
+
+- Your role cannot expire artifacts.
++ Artifact retention project
++
++ Retention and deletion
++
++ Three actions are kept apart on purpose: removing a reference, archiving a test and expiring an artifact. Each says what stays.
++
++ Remove a reference
++
++ Removing a reference stops tests from resolving it. It deletes no test, revision, result or artifact.
++
++ Your role cannot manage secrets (secret access is required).
++
++ Nothing here yet
++
++ There are no items to show.
++
++ Archive a test
++
++ Archiving hides a test from active use. History and evidence stay.
++
++ Your role cannot archive tests (write access is required).
++
++ Search tests
++ State
++ All
++ Active
++ Archived
++
++ 1 loaded rows
++
++ Tests
++ Select	Test	State	Action
++ —	Checkout flow	Active	—
++ 1 loaded
++ End of list
++ Expire an artifact
++
++ Expiring ends access to one piece of evidence and records a tombstone. The run, its result and the other artifacts stay.
++
++ Search recent runs
++
++ 1 loaded rows
++
++ Recent runs
++ Run	Status	Created	Action
++ run_01a135df-1dc8-73f9-843e-7f9dd80a844b	
++ Passed
++ 	2026-10-13T15:26:17.032Z	Show artifacts
++ of run_01a135df-1dc8-73f9-843e-7f9dd80a844b
++ 1 loaded
++ End of list
++ Search artifacts of run run_01a135df-1dc8-73f9-843e-7f9dd80a844b
++
++ 2 loaded rows
++
++ Artifacts of run run_01a135df-1dc8-73f9-843e-7f9dd80a844b
++ Artifact	Kind	Size	State	Action
++ logs/console.txt	console	17 bytes	Expired (tombstone kept; deletion tracked below)	—
++ logs/network.txt	network	16 bytes	Available	—
++ Purge project data
++
++ Purging ends access to every artifact and input of this project in one operation. It does not remove tests, revisions, run results or the audit trail, and it never bypasses a legal hold. Only an archived project with no unfinished runs can be purged.
++
++ Active
++  Archive the project before purging it.
++
++ Archive project
++
++ Your role cannot archive projects (write access is required).
++
++ Purge project data
++
++ Your role cannot purge a project (admin access is required).
++
++ Deletion history and tombstones
++
++ Access to deleted evidence ends immediately. Physical removal is due by the date shown and is delayed, never skipped, by a legal hold. Backups expire separately.
++
++ Search deletion operations
++
++ 1 loaded rows
++
++ Deletion operations
++ Operation	Items	Access ended	Physical deletion	Due	Holds	Requested by
++ del_01a135df-2166-764a-ba12-e74e1653603b	1	2026-10-13T15:26:17.958Z	
++ Scheduled
++ 	2026-10-14T15:26:17.958Z	None	usr_01a135df-1755-71d8-80ae-eb6778ff93b7
++ 1 loaded
++ End of list
+
+ ❯ validation/journeys/portal-retention-artifact.portal.test.ts:161:42
+    159|     await table.waitFor();
+    160|     expect(await page.getByRole("button", { name: /^Expire artifact/ }…
+    161|     expect(await page.innerText("main")).toContain("Your role cannot e…
+       |                                          ^
+    162|     const entry = (await bundle()).find((item) => item.relativePath ==…
+    163|     const client = stack.anonymous();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  12:26:12
+   Duration  6.00s (tests 82%, transform 9%, import 9%)
+

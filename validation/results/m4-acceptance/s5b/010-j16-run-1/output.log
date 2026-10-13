@@ -1,0 +1,255 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b
+
+ ❯ |postgres| validation/journeys/j16-accessibility.portal.test.ts (17 tests | 12 failed) 4997ms
+   ❯ J16 harness checks fail on defective pages (4)
+     × J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not 319ms
+   ❯ J16 keyboard and ARIA over the pages this slice owns (4)
+     × J16 UX-051 reaches and operates a settings action with the keyboard alone, with the ARIA tree following the dialog 6ms
+     × J16 UX-054 loading without evidence never turns into passed: settings, secrets and retention keep loading while data is withheld 5ms
+     × J16 UX-053 keeps every page of this slice usable at 320 CSS px and 200 % zoom 3ms
+   ❯ J16 the journey pages come from the route table and the seed registry (fails closed) (9)
+     × J16 UX-006 every step of the journey has its page in apps/web/src/routes/index.ts 1ms
+     × J16 UX-006 every step of the journey is claimed by a seed in validation/journeys/portal-seeds 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 review: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 runDetail: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 comparison: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+     × J16 UX-051 UX-052 UX-053 UX-054 healing: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 harness checks fail on defective pages > J16 UX-054 loading that turns into a pass by time is reported and a steady loading state is not
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:178:79
+    176|     const turned = await checkLoadingNeverPassed(page, 600);
+    177|     expect(turned.some((entry) => entry.includes("loading state disapp…
+    178|     expect(turned.some((entry) => entry.includes('success word ("Passe…
+       |                                                                               ^
+    179|     // A steady loading state is not reported.
+    180|     await page.setContent(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 keyboard and ARIA over the pages this slice owns > J16 UX-051 reaches and operates a settings action with the keyboard alone, with the ARIA tree following the dialog
+Error: secret seed failed: 412 {"schemaVersion":"1.0.0","requestId":"df3fa31b-33cb-4ec0-88ef-800a977351db","error":{"code":"REVISION_CONFLICT","message":"Secret name already exists; use rotate","retryable":false,"details":{},"nextActions":[]}}
+ ❯ /secrets validation/journeys/portal-seeds/core.ts:38:15
+     36|       });
+     37|       if (created.status !== 201 && created.status !== 200)
+     38|         throw new Error(`secret seed failed: ${created.status} ${creat…
+       |               ^
+     39|     },
+     40|   },
+ ❯ projectPaths validation/journeys/j16-accessibility.portal.test.ts:210:22
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:235:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 keyboard and ARIA over the pages this slice owns > J16 UX-054 loading without evidence never turns into passed: settings, secrets and retention keep loading while data is withheld
+Error: secret seed failed: 412 {"schemaVersion":"1.0.0","requestId":"e95c0576-3e05-4935-a501-da62f56b3180","error":{"code":"REVISION_CONFLICT","message":"Secret name already exists; use rotate","retryable":false,"details":{},"nextActions":[]}}
+ ❯ /secrets validation/journeys/portal-seeds/core.ts:38:15
+     36|       });
+     37|       if (created.status !== 201 && created.status !== 200)
+     38|         throw new Error(`secret seed failed: ${created.status} ${creat…
+       |               ^
+     39|     },
+     40|   },
+ ❯ projectPaths validation/journeys/j16-accessibility.portal.test.ts:210:22
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:259:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 keyboard and ARIA over the pages this slice owns > J16 UX-053 keeps every page of this slice usable at 320 CSS px and 200 % zoom
+Error: secret seed failed: 412 {"schemaVersion":"1.0.0","requestId":"25ce4381-90b8-4356-96a2-7ea4605c2ef9","error":{"code":"REVISION_CONFLICT","message":"Secret name already exists; use rotate","retryable":false,"details":{},"nextActions":[]}}
+ ❯ /secrets validation/journeys/portal-seeds/core.ts:38:15
+     36|       });
+     37|       if (created.status !== 201 && created.status !== 200)
+     38|         throw new Error(`secret seed failed: ${created.status} ${creat…
+       |               ^
+     39|     },
+     40|   },
+ ❯ projectPaths validation/journeys/j16-accessibility.portal.test.ts:210:22
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:272:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-006 every step of the journey has its page in apps/web/src/routes/index.ts
+AssertionError: journey pages missing from the portal route table: expected [ …(6) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "onboarding: /projects/:projectId/onboarding",
++   "review: /projects/:projectId/proposals",
++   "runDetail: /runs/:runId",
++   "textualArtifact: /runs/:runId",
++   "comparison: /compare",
++   "healing: /healing-proposals/:proposalId",
++ ]
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:294:7
+    292|       missing.map((key) => `${key}: ${requiredRoutes[key]}`),
+    293|       "journey pages missing from the portal route table",
+    294|     ).toEqual([]);
+       |       ^
+    295|   });
+    296|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-006 every step of the journey is claimed by a seed in validation/journeys/portal-seeds
+AssertionError: journey steps no seed provides a page for: expected [ 'onboarding', 'review', …(4) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "onboarding",
++   "review",
++   "runDetail",
++   "textualArtifact",
++   "comparison",
++   "healing",
++ ]
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:299:68
+    297|   it("J16 UX-006 every step of the journey is claimed by a seed in val…
+    298|     const unclaimed = stepKeys.filter((key) => !seeds.journeySteps.has…
+    299|     expect(unclaimed, "journey steps no seed provides a page for").toE…
+       |                                                                    ^
+    300|   });
+    301|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 onboarding: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /projects/:projectId/onboarding for step onboarding is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:316:92
+    314|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    315|       const declared = portalRoutes.some((route) => route.path === req…
+    316|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    317|         true,
+    318|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 review: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /projects/:projectId/proposals for step review is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:316:92
+    314|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    315|       const declared = portalRoutes.some((route) => route.path === req…
+    316|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    317|         true,
+    318|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 runDetail: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /runs/:runId for step runDetail is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:316:92
+    314|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    315|       const declared = portalRoutes.some((route) => route.path === req…
+    316|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    317|         true,
+    318|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 textualArtifact: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /runs/:runId for step textualArtifact is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:316:92
+    314|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    315|       const declared = portalRoutes.some((route) => route.path === req…
+    316|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    317|         true,
+    318|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 comparison: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /compare for step comparison is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:316:92
+    314|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    315|       const declared = portalRoutes.some((route) => route.path === req…
+    316|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    317|         true,
+    318|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/12]⎯
+
+ FAIL  |postgres| validation/journeys/j16-accessibility.portal.test.ts > J16 the journey pages come from the route table and the seed registry (fails closed) > J16 UX-051 UX-052 UX-053 UX-054 healing: keyboard, ARIA outline, colour, viewer alternative, reflow and a loading state that never turns passed
+AssertionError: route /healing-proposals/:proposalId for step healing is not registered: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j16-accessibility.portal.test.ts:316:92
+    314|     it(`J16 UX-051 UX-052 UX-053 UX-054 ${step}: keyboard, ARIA outlin…
+    315|       const declared = portalRoutes.some((route) => route.path === req…
+    316|       expect(declared, `route ${requiredRoutes[step]} for step ${step}…
+       |                                                                                            ^
+    317|         true,
+    318|       );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/12]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 5 passed (17)
+   Start at  12:19:33
+   Duration  7.28s (tests 84%, transform 8%, import 7%)
+
