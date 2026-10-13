@@ -721,7 +721,10 @@
         "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
         "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
         "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
-        "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed"
+        "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed",
+        "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
+        "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ"
       ],
       "oracle": [
         "Run outcome passed stays immutable when storage publication or export fails; incomplete evidence is surfaced as completeness partial and fails the gate; zero false Artifact rows."
@@ -730,25 +733,31 @@
         "validation/journeys/crash-recovery.docker.test.ts",
         "validation/results/j17-publication-crash-matrix.json",
         "packages/application/src/retention.test.ts",
-        "packages/reporting/src/reporting.test.ts"
+        "packages/reporting/src/reporting.test.ts",
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log"
       ],
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
         "packages/application/src/worker.ts",
         "packages/reporting/src/index.ts",
-        "packages/application/src/ci.ts"
+        "packages/application/src/ci.ts",
+        "packages/application/src/notifications/service.ts"
       ],
-      "note": "Storage export failure keeps the persisted outcome and surfaces partial completeness through reportGate (packages/application/src/ci.ts gate computation). Notification clause is M4-08: notifications are disabled until M4 and no mock substitutes that surface.",
+      "note": "Storage export failure keeps the persisted outcome and surfaces partial completeness through reportGate (packages/application/src/ci.ts gate computation). Notification clause is M4-08: notifications are disabled until M4 and no mock substitutes that surface. M4 S8 proves the notification clause: a notifier outage dead-letters visibly and leaves the Run outcome and gate untouched (SQLite and PostgreSQL).",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
           "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
-          "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed"
+          "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed",
+          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched"
         ],
         "negative": [
           "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
-          "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed"
+          "packages/reporting/src/reporting.test.ts::partial evidence fails the gate while the persisted passed outcome stays passed",
+          "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ"
         ],
         "criticalAssertions": [
           {
@@ -770,19 +779,17 @@
           {
             "path": "packages/reporting/src/reporting.test.ts",
             "assertion": "expect(JSON.parse(exportJson(input)).runs[0].result).toMatchObject({"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runRow(h, runId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/notifications/notifications.pg.test.ts",
+            "assertion": "  expect(runRow()).toEqual(before);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "notification delivery/export failure acceptance: a notifier outage must not change the assertion verdict or the gate",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "M4-08 — Notificações e workers de equipe"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "ARCH-005",
@@ -2449,11 +2456,59 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+        "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
+        "packages/application/src/testing/j13-notify.test.ts::INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run",
+        "packages/application/src/notifications/resilience.test.ts::INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once"
+      ],
+      "oracle": [
+        "With the destination down a delivery retries with backoff, dead-letters visibly and keeps a redeliverable record while the Run, its gate and the Run count stay untouched; requeue after recovery resends the same delivery ID and bytes without a new Run. A 429 waits at least Retry-After and a 4xx rejection dead-letters at once. The same holds on PostgreSQL and in the J13 notify scenario."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/service.ts",
+        "packages/application/src/notifications/controllers.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+          "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
+          "packages/application/src/testing/j13-notify.test.ts::INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run"
+        ],
+        "negative": [
+          "packages/application/src/notifications/resilience.test.ts::INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runRow(h, runId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(after.deliveryId).toBe(dead.deliveryId);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runCount(h)).toBe(runs);"
+          },
+          {
+            "path": "packages/application/src/notifications/notifications.pg.test.ts",
+            "assertion": "  expect(runRow()).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/testing/j13-notify.test.ts",
+            "assertion": "  expect(report.runAfter).toEqual(report.runBefore);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-004",
@@ -3258,11 +3313,59 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/rules.test.ts::INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field",
+        "packages/application/src/notifications/rules.test.ts::INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite",
+        "packages/application/src/notifications/rules.test.ts::INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary",
+        "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies",
+        "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters"
+      ],
+      "oracle": [
+        "The default payload carries IDs, a verdict summary and a link and has no title, log, screenshot, token or secret field; minimal redaction also drops counts and the reason code. A canary secret in a failing Run's title, message and log never appears in the Slack, webhook or email body. Rules narrow deliveries, a paused integration holds them and a revoked one dead-letters."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/payload.ts",
+        "packages/application/src/notifications/service.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/rules.test.ts::INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field",
+          "packages/application/src/notifications/rules.test.ts::INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite"
+        ],
+        "negative": [
+          "packages/application/src/notifications/rules.test.ts::INT-025 minimal redaction drops counts and the reason code while the default keeps the verdict summary",
+          "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies",
+          "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(JSON.stringify(payload)).not.toContain(\"CANARY\");"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(payload?.link).toBe(`https://tm.example.test/runs/${runId}`);"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(minimalBatch?.summary).toMatchObject({ counts: null, reasonCode: null });"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "      expect(body).not.toContain(canary);"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(revoked.state).toBe(\"revoked\");"
+          }
+        ]
+      }
     },
     {
       "id": "INT-026",
@@ -3270,11 +3373,72 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/resilience.test.ts::INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-026 OPS-011 PostgreSQL: fan-out from two dispatchers creates one delivery per event and integration",
+        "validation/journeys/notifications-workers.portal.test.ts::INT-026 OPS-011 a dead letter shows its DLQ state, Requeue moves it to pending through the UI and no Run is rerun",
+        "packages/application/src/notifications/rules.test.ts::INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending",
+        "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
+        "validation/journeys/notifications-workers.portal.test.ts::INT-026 an uncertain attempt says the outcome is uncertain and no page ever says the message was not sent"
+      ],
+      "oracle": [
+        "A timeout after the request was sent marks the delivery uncertain, retries with the same event ID, delivery ID and bytes, and never states that nothing was sent; the portal says the outcome is uncertain. A stored payload that no longer matches its hash dead-letters as payload_tampered, a second PostgreSQL dispatcher never sends what the first one holds, and the deliveries routes expose attempts without an exactly-once claim."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/service.ts",
+        "packages/application/src/notifications/providers.ts",
+        "apps/server/src/routes/deliveries.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/resilience.test.ts::INT-026 a timeout after the request was sent marks the delivery uncertain, retries with the same IDs and never claims not-sent",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-026 OPS-011 PostgreSQL: fan-out from two dispatchers creates one delivery per event and integration",
+          "validation/journeys/notifications-workers.portal.test.ts::INT-026 OPS-011 a dead letter shows its DLQ state, Requeue moves it to pending through the UI and no Run is rerun"
+        ],
+        "negative": [
+          "packages/application/src/notifications/rules.test.ts::INT-026 a stored payload that no longer matches its hash dead-letters as payload_tampered without sending",
+          "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
+          "validation/journeys/notifications-workers.portal.test.ts::INT-026 an uncertain attempt says the outcome is uncertain and no page ever says the message was not sent"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(done.attemptLog[0]).toMatchObject({ uncertain: true });"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(second?.body.equals(first?.body ?? Buffer.alloc(0))).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "      lastReasonCode: \"payload_tampered\","
+          },
+          {
+            "path": "packages/application/src/notifications/notifications.pg.test.ts",
+            "assertion": "  expect(raced.attempted).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/notifications/notifications.pg.test.ts",
+            "assertion": "  expect(created).toEqual([2, 0, 0, 0]);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(typed.map((item: { id: string }) => item.id.slice(0, 4))).toEqual([\"ntd_\"]);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(detail.json().data.attemptLog).toHaveLength(10);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-027",
@@ -3282,11 +3446,57 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body",
+        "packages/application/src/notifications/delivery.test.ts::INT-027 a rotation signs with both secrets only inside the controlled window",
+        "packages/application/src/notifications/delivery.test.ts::INT-027 signNotification and verifyNotification agree on the documented HMAC construction",
+        "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery"
+      ],
+      "oracle": [
+        "A reference consumer verifies the exact stored bytes under HMAC-SHA256 over timestamp, delivery ID and body, dedupes on the delivery ID and rejects a tampered body, a wrong secret and a stale timestamp. A rotation signs with both secrets only until the window closes, and the documented construction is asserted byte for byte."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/signature.ts",
+        "packages/application/src/notifications/providers.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body",
+          "packages/application/src/notifications/delivery.test.ts::INT-027 a rotation signs with both secrets only inside the controlled window",
+          "packages/application/src/notifications/delivery.test.ts::INT-027 signNotification and verifyNotification agree on the documented HMAC construction"
+        ],
+        "negative": [
+          "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(consumer.handle(request)).toMatchObject({ status: 200, outcome: \"duplicate\" });"
+          },
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(late.handle(request)).toMatchObject({ status: 401, reason: \"stale_timestamp\" });"
+          },
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(inside.headers[\"testmaster-signature\"]?.match(/v1=/gu)).toHaveLength(2);"
+          },
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(outside.headers[\"testmaster-signature\"]?.match(/v1=/gu)).toHaveLength(1);"
+          },
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(header).toBe(`t=1780000000,v1=${expected}`);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-028",
@@ -3294,11 +3504,70 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/rules.test.ts::INT-028 email over STARTTLS authenticates after the upgrade and delivers while a server without STARTTLS is refused",
+        "packages/application/src/notifications/resilience.test.ts::INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing",
+        "packages/application/src/notifications/resilience.test.ts::INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing",
+        "packages/application/src/notifications/resilience.test.ts::INT-028 a retry re-evaluates egress policy: a destination blocked between attempts is not contacted again",
+        "packages/application/src/notifications/resilience.test.ts::INT-028 an HTTP redirect is never followed",
+        "packages/application/src/notifications/rules.test.ts::INT-028 an email integration cannot be configured for plaintext SMTP"
+      ],
+      "oracle": [
+        "A loopback or private destination without an exception, a redirect target, CRLF in an email header value, a foreign recipient domain, a non-https URL and plaintext SMTP all send nothing and dead-letter or are refused at configuration, while the authorized recipient and a STARTTLS server deliver. A retry re-evaluates egress policy, so a destination blocked between attempts is not contacted again."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/https.ts",
+        "packages/application/src/notifications/providers.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/rules.test.ts::INT-028 email over STARTTLS authenticates after the upgrade and delivers while a server without STARTTLS is refused",
+          "packages/application/src/notifications/resilience.test.ts::INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing"
+        ],
+        "negative": [
+          "packages/application/src/notifications/resilience.test.ts::INT-028 a loopback destination without an explicit exception is refused by egress policy and the receiver sees nothing",
+          "packages/application/src/notifications/resilience.test.ts::INT-028 a retry re-evaluates egress policy: a destination blocked between attempts is not contacted again",
+          "packages/application/src/notifications/resilience.test.ts::INT-028 an HTTP redirect is never followed",
+          "packages/application/src/notifications/resilience.test.ts::INT-028 CRLF in the email subject prefix, a foreign recipient domain or a non-https destination sends nothing",
+          "packages/application/src/notifications/rules.test.ts::INT-028 an email integration cannot be configured for plaintext SMTP"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(receiver.requests).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(target.requests).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "      lastReasonCode: \"egress_denied\","
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "      lastReasonCode: \"redirect_refused\","
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(smtp.messages).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(foreign.service.list()[0]).toMatchObject({ lastReasonCode: \"recipient_domain_denied\" });"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(unencrypted.messages).toHaveLength(0);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-029",
@@ -5818,10 +6087,32 @@
       "milestone": "M4",
       "ownerRole": "Quality",
       "status": "planned",
-      "scenario": [],
+      "scenario": [
+        "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies",
+        "packages/application/src/notifications/rules.test.ts::INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field"
+      ],
       "oracle": [],
-      "evidence": [],
-      "code": []
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/payload.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies"
+        ],
+        "negative": [
+          "packages/application/src/notifications/rules.test.ts::INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "      expect(body).not.toContain(canary);"
+          }
+        ]
+      },
+      "note": "M4 S8 proves a known secret pattern in a failing Run never reaches Slack, email or webhook bodies."
     },
     {
       "id": "J11",
@@ -8836,11 +9127,82 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+        "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
+        "packages/application/src/worker-pool.test.ts::M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job",
+        "packages/application/src/worker-pool.pg.test.ts::M4-08 REQ-038 PostgreSQL: a worker revoked under another OS process receives no further claim and its lease is fenced",
+        "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 drain then revoke change the state badge, revoke asks for confirmation and a double confirm sends one request",
+        "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read"
+      ],
+      "oracle": [
+        "A delivery retry never reruns a Run and an unavailable notifier changes neither the Run nor the gate, in SQLite and PostgreSQL; a revoked or draining worker receives no claim, revoke fences its lease, and the same holds when the revocation happens under another OS process. Workers and notifications are administered through the portal and the catalog routes only."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/",
+        "packages/contracts/src/m4/notifications.ts",
+        "packages/persistence/migrations/sqlite/0015_notifications.sql",
+        "packages/persistence/migrations/postgres/0015_notifications.sql",
+        "apps/server/src/routes/deliveries.ts",
+        "apps/server/src/routes/integrations.ts",
+        "packages/application/src/worker-pool.ts",
+        "packages/application/src/worker.ts",
+        "packages/persistence/src/repositories.ts",
+        "packages/contracts/src/m4/workers.ts",
+        "apps/server/src/routes/workers.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/workers.ts",
+        "apps/web/src/routes/workers.tsx",
+        "apps/web/src/routes/notifications.tsx",
+        "apps/web/src/features/admin/",
+        "apps/web/src/features/notifications/"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+          "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
+          "packages/application/src/worker-pool.test.ts::M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job",
+          "packages/application/src/worker-pool.pg.test.ts::M4-08 REQ-038 PostgreSQL: a worker revoked under another OS process receives no further claim and its lease is fenced",
+          "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload",
+          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 drain then revoke change the state badge, revoke asks for confirmation and a double confirm sends one request"
+        ],
+        "negative": [
+          "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
+          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runRow(h, runId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runCount(h)).toBe(runs);"
+          },
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(fenced?.state).toBe(\"reconciliation_required\");"
+          },
+          {
+            "path": "packages/application/src/worker-pool.pg.test.ts",
+            "assertion": "  expect(doomedResult.out).toContain(\"after=0\");"
+          },
+          {
+            "path": "packages/application/src/worker-pool.pg.test.ts",
+            "assertion": "  expect(healthyResult.out).toContain(\"total=5\");"
+          }
+        ]
+      }
     },
     {
       "id": "M5-01",
@@ -10573,7 +10935,12 @@
         "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
         "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event committed before SIGKILL pending for the next process under the same id",
         "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event pending when SIGKILL lands after dispatch but before delivered",
-        "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs"
+        "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs",
+        "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body",
+        "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
+        "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
+        "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID"
       ],
       "oracle": [
         "GitHub check deliveries are atomic with the outbox event and keep a stable event ID; the delivery-level reschedule is exponential with equal jitter (1 s base, 300 s cap); a delivery is dead-lettered after 10 attempts or 24 h; dead letters are listed read-only and requeued only with write authority, audited, without rerunning the local test; delivered and dead-letter rows stay frozen except the authorized reopening; a crash after commit and before send delivers later; a crash after send and before ack reconciles by external id and keeps the event ID."
@@ -10583,15 +10950,18 @@
         "packages/persistence/src/outbox-crash.test.ts",
         "apps/cli/src/ci-deliveries.test.ts",
         "packages/persistence/src/persistence.test.ts",
-        "validation/results/j17-worker-recovery.json"
+        "validation/results/j17-worker-recovery.json",
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "packages/persistence/src/repositories.ts",
         "packages/persistence/migrations/sqlite/0009_delivery_requeue.sql",
-        "apps/cli/src/ci.ts"
+        "apps/cli/src/ci.ts",
+        "packages/application/src/notifications/"
       ],
-      "note": "GitHub check deliveries only: bounded exponential equal-jitter retries, 10 attempts or 24 h to a queryable dead letter, authorized audited requeue (CLI ci deliveries and ci deliveries-requeue; REST is M4). Migration 0009 lets only dead_letter reopen to pending. In-request HTTP retries and the Retry-After 30 s cap are unchanged. The maintenance outbox sweep marks outbox rows delivered without sending, so outbox delivered means swept, not sent; check delivery state lives in the Delivery entity. Webhooks, notifications and non-GitHub DLQ are M4 scope.",
+      "note": "GitHub check deliveries only: bounded exponential equal-jitter retries, 10 attempts or 24 h to a queryable dead letter, authorized audited requeue (CLI ci deliveries and ci deliveries-requeue; REST is M4). Migration 0009 lets only dead_letter reopen to pending. In-request HTTP retries and the Retry-After 30 s cap are unchanged. The maintenance outbox sweep marks outbox rows delivered without sending, so outbox delivered means swept, not sent; check delivery state lives in the Delivery entity. Webhooks, notifications and non-GitHub DLQ are M4 scope. M4 S8 proves signed webhook deliveries, consumer dedupe and the notification DLQ with backoff, requeue and a second-dispatcher lease check.",
       "coverage": {
         "positive": [
           "packages/application/src/delivery.test.ts::computes exponential jittered delivery backoff capped at 300 s",
@@ -10603,7 +10973,10 @@
           "packages/application/src/delivery.test.ts::reconciles a check created before SIGKILL instead of posting it twice and keeps the event id",
           "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event committed before SIGKILL pending for the next process under the same id",
           "packages/persistence/src/outbox-crash.test.ts::keeps an outbox event pending when SIGKILL lands after dispatch but before delivered",
-          "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs"
+          "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs",
+          "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer validates the original bytes, dedupes on the delivery ID and rejects a tampered body",
+          "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
+          "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::requeues a dead letter only with write authority and never reruns the local result",
@@ -10611,7 +10984,9 @@
           "packages/application/src/delivery.test.ts::keeps delivered rows frozen and lets a dead letter change only by reopening to pending",
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "packages/persistence/src/persistence.test.ts::outbox and state mutation roll back together",
-          "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs"
+          "apps/cli/src/ci-deliveries.test.ts::lists dead-lettered deliveries and requeues one through the CLI without touching Runs",
+          "packages/application/src/notifications/delivery.test.ts::INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-026 OPS-011 PostgreSQL: a second dispatcher never sends a delivery the first one holds and the retry keeps one delivery ID"
         ],
         "criticalAssertions": [
           {
@@ -10637,27 +11012,21 @@
           {
             "path": "packages/persistence/src/outbox-crash.test.ts",
             "assertion": "expect(new OutboxRepository(db).pending(ws).map((row) => row.id)).toContain(result.stdout);"
+          },
+          {
+            "path": "packages/application/src/notifications/delivery.test.ts",
+            "assertion": "    expect(consumer.handle(request)).toMatchObject({ status: 200, outcome: \"duplicate\" });"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(after.deliveryId).toBe(dead.deliveryId);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(detail.json().data.attemptLog).toHaveLength(10);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "webhook outbound deliveries: signing with timestamp/event ID, consumer dedupe, webhook DLQ",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "VAL-033 webhook scopes remain M4/M5 obligations"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "notification/worker outbox backoff and DLQ for non-GitHub destinations",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "M4-08 — Notificações e workers de equipe"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-012",
@@ -11676,7 +12045,9 @@
         "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
         "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
         "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
-        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released"
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
+        "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
+        "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters"
       ],
       "oracle": [
         "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted."
@@ -11690,16 +12061,18 @@
         "validation/journeys/m1-recovery.docker.test.ts",
         "packages/persistence/src/persistence.test.ts",
         "packages/application/src/release.test.ts",
-        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log"
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
       ],
       "code": [
         "packages/application/src/backups.ts",
         "packages/persistence/src/database.ts",
         "apps/cli/src/backups.ts",
         "packages/application/src/scheduling/scheduler.ts",
-        "packages/application/src/operations-state.ts"
+        "packages/application/src/operations-state.ts",
+        "packages/application/src/notifications/controllers.ts"
       ],
-      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released.",
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set.",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
@@ -11708,7 +12081,8 @@
           "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
           "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
           "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
-          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released"
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
+          "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared"
         ],
         "negative": [
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
@@ -11716,7 +12090,8 @@
           "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
           "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
           "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
-          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released"
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
+          "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters"
         ],
         "criticalAssertions": [
           {
@@ -11750,6 +12125,10 @@
           {
             "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
             "assertion": "expect(held).toMatchObject({ isolated: true, leader: false, claimed: 0, dispatched: 0 });"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(await h.tick()).toEqual({ created: 0, attempted: 0 });"
           }
         ]
       },
@@ -12139,11 +12518,78 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/worker-pool.test.ts::OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes",
+        "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: a flooding tenant is held to its share, the other tenant is served and the cap lifts once nobody competes",
+        "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: admission answers each tenant with its own queue only and a full tenant never blocks another",
+        "apps/server/src/workers-deliveries.test.ts::OPS-033 the HTTP admission receipt explains the wait and a full tenant queue answers 429 with Retry-After",
+        "apps/server/src/workers-deliveries.test.ts::OPS-033 the per-actor and the per-tenant budgets refuse mutations with Retry-After while reads stay free",
+        "packages/application/src/worker-pool.pg.test.ts::OPS-033 M4-08 INT-026 PostgreSQL: the worker, notification and delivery tables enforce tenant row-level security"
+      ],
+      "oracle": [
+        "A tenant with a thousand queued jobs is held to its fair share of worker slots while another tenant is served, and the cap lifts once nobody competes; a full tenant queue answers 429 queue_overflow with Retry-After and the admission receipt shows only the caller's own queue. Per-actor and per-tenant mutation budgets refuse with Retry-After while reads stay free. Distributed scale and fairness move to M5."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/worker-pool.ts",
+        "packages/application/src/runs.ts",
+        "packages/persistence/src/repositories.ts",
+        "apps/server/src/server.ts",
+        "packages/contracts/src/m4/workers.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/worker-pool.test.ts::OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes",
+          "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: a flooding tenant is held to its share, the other tenant is served and the cap lifts once nobody competes",
+          "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: admission answers each tenant with its own queue only and a full tenant never blocks another",
+          "apps/server/src/workers-deliveries.test.ts::OPS-033 the HTTP admission receipt explains the wait and a full tenant queue answers 429 with Retry-After"
+        ],
+        "negative": [
+          "apps/server/src/workers-deliveries.test.ts::OPS-033 the per-actor and the per-tenant budgets refuse mutations with Retry-After while reads stay free",
+          "packages/application/src/worker-pool.pg.test.ts::OPS-033 M4-08 INT-026 PostgreSQL: the worker, notification and delivery tables enforce tenant row-level security"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(flooder).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/worker-pool.pg.test.ts",
+            "assertion": "  expect(capFor(flooder)).toBe(2);"
+          },
+          {
+            "path": "packages/application/src/worker-pool.pg.test.ts",
+            "assertion": "  expect(claimFlood()).toBeNull();"
+          },
+          {
+            "path": "packages/application/src/worker-pool.pg.test.ts",
+            "assertion": "  expect(receipt.queue).toMatchObject({ position: 1, queued: 1, limit: 1000 });"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(full.statusCode).toBe(429);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(tenantRefused.json().error.details).toMatchObject({ scope: \"tenant\" });"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "Distributed fair-share and fairness across hosts",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "Escala/fairness distribuída completa é M5"
+          }
+        }
+      ]
     },
     {
       "id": "OPS-034",
@@ -12173,7 +12619,10 @@
         "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree",
         "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider",
         "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
-        "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request"
+        "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+        "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+        "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
+        "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ"
       ],
       "oracle": [
         "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only.",
@@ -12186,7 +12635,8 @@
         "packages/application/src/audit.test.ts",
         "validation/journeys/runtime-control.docker.test.ts",
         "validation/journeys/recovery-controls.docker.test.ts",
-        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
       ],
       "code": [
         "docs/operations/local-operations.md",
@@ -12196,9 +12646,11 @@
         "packages/application/src/secrets.ts",
         "apps/web/src/team/tokens.tsx",
         "apps/web/src/team/members.tsx",
-        "apps/web/src/routes/team.tsx"
+        "apps/web/src/routes/team.tsx",
+        "apps/server/src/routes/workers.ts",
+        "apps/server/src/routes/deliveries.ts"
       ],
-      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts).",
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal.",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -12206,13 +12658,16 @@
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
           "apps/cli/src/runbook.test.ts::every runbook command and option resolves in the implemented CLI tree",
           "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
-          "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request"
+          "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
+          "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+          "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter"
         ],
         "negative": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
           "packages/application/src/governance-runtime.test.ts::refuses a viewer image revocation and secret removal without changing revocation state",
           "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider",
-          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer"
+          "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
+          "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ"
         ],
         "criticalAssertions": [
           {
@@ -12242,6 +12697,14 @@
           {
             "path": "validation/journeys/team.portal.test.ts",
             "assertion": "    expect(overGrant.status).toBe(403);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(listed.body).not.toContain(enrollmentToken);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(h.service.get(dead.id).state).toBe(\"dead_letter\");"
           }
         ]
       },
@@ -12301,7 +12764,10 @@
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
         "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
         "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
-        "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem"
+        "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
+        "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+        "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
       ],
       "oracle": [
         "Local JUnit/JSON/HTML exports never call GitHub; GitHub 401 dead-letters without changing the local result; a newer SHA is refused; the execute job has no checks permission and no token in the download step; absent committed bytes produce partial without fake evidence.",
@@ -12316,13 +12782,16 @@
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-healthy.json",
         "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json",
         "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json",
-        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log"
+        "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "packages/application/src/artifacts.ts",
         "apps/cli/src/ci-workflow.ts",
-        "packages/application/src/server-config.ts"
+        "packages/application/src/server-config.ts",
+        "packages/application/src/notifications/service.ts"
       ],
       "coverage": {
         "positive": [
@@ -12331,14 +12800,17 @@
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
           "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
-          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem"
+          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
+          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
           "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
           "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
-          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem"
+          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
+          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
         ],
         "criticalAssertions": [
           {
@@ -12372,26 +12844,18 @@
           {
             "path": "packages/application/src/server-s3-refusal.test.ts",
             "assertion": "  expect(() => filesystemRoot({ kind: \"s3\" })).toThrowError(refused);"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runRow(h, runId)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(h.service.list()).toHaveLength(1);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "notification deduplication and notification-owned verdict isolation",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "M4-08 — Notificações e workers de equipe"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "webhook failure preserves the Run and creates a DLQ (webhook surface)",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "VAL-033 webhook scopes remain M4/M5 obligations"
-          }
-        },
         {
           "milestone": "M4",
           "scope": "revoked GitHub App integration is not reactivated by restoring an old config",
@@ -12409,7 +12873,7 @@
           }
         }
       ],
-      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016)."
+      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016). M4 S8 proves notification fan-out dedupe and that a failing webhook preserves the Run and dead-letters."
     },
     {
       "id": "OPS-038",
@@ -14959,11 +15423,96 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/worker-pool.test.ts::REQ-038 an enrollment token enrolls one worker, resumes it on re-presentation and is refused when wrong or revoked",
+        "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat renews the held lease, records liveness and answers the worker document",
+        "packages/application/src/worker-pool.test.ts::REQ-038 a ready worker whose heartbeat stopped is marked offline once and announced on the outbox",
+        "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+        "apps/server/src/workers-deliveries.test.ts::REQ-038 the heartbeat route renews a lease with the worker credential and refuses every other caller",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload",
+        "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential",
+        "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
+        "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
+        "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called"
+      ],
+      "oracle": [
+        "A one-use enrollment token enrolls one worker, resumes it on re-presentation and is refused when unknown, expired or revoked; the heartbeat route renews the held lease, records liveness and never undoes an administrator's drain, and refuses a lost lease, a stale version and a foreign, unenrolled or revoked credential. Silent workers go offline and are announced. Only administrators manage workers, and the portal shows the token once. Outbound enrollment over the network moves to M5."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/worker-pool.ts",
+        "packages/application/src/worker.ts",
+        "packages/persistence/src/repositories.ts",
+        "packages/contracts/src/m4/workers.ts",
+        "apps/server/src/routes/workers.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/workers.ts",
+        "apps/web/src/routes/workers.tsx",
+        "apps/web/src/routes/notifications.tsx",
+        "apps/web/src/features/admin/",
+        "apps/web/src/features/notifications/"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/worker-pool.test.ts::REQ-038 an enrollment token enrolls one worker, resumes it on re-presentation and is refused when wrong or revoked",
+          "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat renews the held lease, records liveness and answers the worker document",
+          "packages/application/src/worker-pool.test.ts::REQ-038 a ready worker whose heartbeat stopped is marked offline once and announced on the outbox",
+          "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
+          "apps/server/src/workers-deliveries.test.ts::REQ-038 the heartbeat route renews a lease with the worker credential and refuses every other caller",
+          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload"
+        ],
+        "negative": [
+          "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential",
+          "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
+          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
+          "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(first).toEqual({ workspaceId, workerId: created.worker.id, resumed: false });"
+          },
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(codeOf(() => controller.enroll(late.enrollmentToken))).toBe(\"UNAUTHENTICATED\");"
+          },
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(app.workerPool.sweepOffline()).toEqual([worker.id]);"
+          },
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(beat(\"ready\")).toMatchObject({ state: \"draining\" });"
+          },
+          {
+            "path": "packages/application/src/worker-pool.test.ts",
+            "assertion": "    expect(codeOf(() => reader.workerPool.list())).toBe(\"FORBIDDEN\");"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(listed.body).not.toContain(enrollmentToken);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect(lost.json().error.details.reasonCode).toBe(\"lease_lost\");"
+          }
+        ]
+      },
+      "deferred": [
+        {
+          "milestone": "M5",
+          "scope": "Outbound worker enrollment over the network (pools, labels and remote workers)",
+          "specQuote": {
+            "path": "ROADMAP.md",
+            "text": "M5-01 — Workers distribuídos** (`Operations`, `Execution`). Pools/labels/outbound enrollment"
+          }
+        }
+      ]
     },
     {
       "id": "REQ-039",
@@ -15111,11 +15660,62 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/notifications/rules.test.ts::INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+        "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies"
+      ],
+      "oracle": [
+        "Signed deliveries with retries, a DLQ and delivery-ID dedupe announce run failures, recoveries, orphaned resources and dead letters exactly once per event and integration, and a rescan never duplicates one. Bodies never contain secrets."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+      ],
+      "code": [
+        "packages/application/src/notifications/service.ts",
+        "packages/application/src/notifications/payload.ts",
+        "packages/contracts/src/m4/notifications.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/notifications/rules.test.ts::INT-025 REQ-042 rules narrow deliveries per project, event type, environment and suite",
+          "packages/application/src/notifications/rules.test.ts::REQ-042 a pass after a failure of the same test and environment is announced as recovered, a first pass is not",
+          "packages/application/src/notifications/rules.test.ts::REQ-042 an orphaned resource is announced against its Run and a rescan never duplicates it",
+          "packages/application/src/notifications/rules.test.ts::REQ-042 INT-003 a dead-lettered delivery is announced to the other integrations and never to the failing one"
+        ],
+        "negative": [
+          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+          "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(bodies(receiver)[0]).toMatchObject({ type: \"run.recovered\", runId });"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "      type: \"resource.orphaned\","
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(types(onlyFailures)).toEqual([\"run.failed\"]);"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(bodies(watcher).map((payload) => payload.type)).toEqual([\"delivery.dead_letter\"]);"
+          },
+          {
+            "path": "packages/application/src/notifications/rules.test.ts",
+            "assertion": "    expect(h.service.list()).toHaveLength(1);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-043",
@@ -23250,7 +23850,9 @@
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
         "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
         "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+        "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+        "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
       ],
       "oracle": [
         "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict."
@@ -23260,25 +23862,29 @@
         "validation/journeys/m3-ci.docker.test.ts",
         "tools/src/github-action/inputs.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
-        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "tools/src/github-action/inputs.ts",
-        "packages/application/src/ci.ts"
+        "packages/application/src/ci.ts",
+        "packages/application/src/notifications/service.ts"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
           "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
-          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit"
+          "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
+          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
         ],
         "criticalAssertions": [
           {
@@ -23296,6 +23902,10 @@
           {
             "path": "tools/src/github-action/inputs.test.ts",
             "assertion": "expect(parseActionInputs(base)).toMatchObject({\n    all: true,\n    commitSha: \"a\".repeat(40),\n    quarantinePolicy: \"exclude\",\n  });"
+          },
+          {
+            "path": "packages/application/src/notifications/resilience.test.ts",
+            "assertion": "    expect(runRow(h, runId)).toEqual(before);"
           }
         ]
       },
@@ -23309,7 +23919,7 @@
           }
         }
       ],
-      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5)."
+      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5). M4 S8 added notification failure isolation and fan-out dedupe."
     },
     {
       "id": "VAL-034",
