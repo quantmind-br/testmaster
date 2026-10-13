@@ -10,4 +10,5 @@ export interface PortalRoute {
   readonly title: string;
   readonly element: ReactNode;
   readonly nav?: { readonly label: string; readonly section: string };
+  readonly projectNav?: { readonly label: string; readonly order: number };
 }

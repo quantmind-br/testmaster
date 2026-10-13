@@ -40,6 +40,8 @@ export interface FlowNode {
   } | null;
   /** True when the step captures a sensitive value, so its observed data is withheld. */
   readonly sensitive: boolean;
+  /** Recorded state of the resource a resource or cleanup node stands for; `null` when unknown. */
+  readonly resourceState: string | null;
 }
 export interface FlowEdge {
   readonly id: string;
@@ -59,6 +61,10 @@ export interface OrphanResource {
   readonly id: string;
   readonly resourceType: string;
   readonly state: string;
+}
+/** A recorded resource, tied to the plan step whose cleanup declaration owns it. */
+export interface FlowResource extends OrphanResource {
+  readonly stepId: string | null;
 }
 
 interface CaptureLike {
@@ -87,8 +93,26 @@ export function variableRefs(value: unknown): string[] {
   return found;
 }
 
-export function buildDataFlow(plan: PlanLike, steps: readonly StepRecord[] = []): DataFlowGraph {
+/** Steps in plan order, with the children of a frame listed right after it. */
+export function flattenSteps(steps: readonly PlanStepLike[]): PlanStepLike[] {
+  return steps.flatMap((step) => {
+    const children = record(step.input).childSteps;
+    return step.operation === "frame" && Array.isArray(children)
+      ? [step, ...flattenSteps(children as PlanStepLike[])]
+      : [step];
+  });
+}
+
+export function buildDataFlow(
+  plan: PlanLike,
+  steps: readonly StepRecord[] = [],
+  resources: readonly FlowResource[] = [],
+): DataFlowGraph {
   const results = new Map(steps.map((step) => [step.planStepId, step]));
+  const resourceStates = new Map<string, string>();
+  for (const resource of resources)
+    if (resource.stepId) resourceStates.set(resource.stepId, resource.state);
+  const planSteps = flattenSteps(plan.steps);
   const producers = new Map<string, { node: string; sensitive: boolean }>();
   const nodes: FlowNode[] = [];
   const edges: FlowEdge[] = [];
@@ -120,10 +144,11 @@ export function buildDataFlow(plan: PlanLike, steps: readonly StepRecord[] = [])
       consumes: [],
       run: null,
       sensitive: binding.sensitive,
+      resourceState: null,
     });
     producers.set(binding.consumerInput, { node: id, sensitive: binding.sensitive });
   }
-  for (const step of plan.steps) {
+  for (const step of planSteps) {
     const input = record(step.input);
     const captures = Array.isArray(input.capture) ? (input.capture as CaptureLike[]) : [];
     for (const capture of captures) {
@@ -135,14 +160,14 @@ export function buildDataFlow(plan: PlanLike, steps: readonly StepRecord[] = [])
     if (step.operation === "request" && input.resource)
       producers.set(`${step.id}.handle`, { node: step.id, sensitive: false });
   }
-  for (const step of plan.steps) {
+  for (const step of planSteps) {
     const input = record(step.input);
     const captures = Array.isArray(input.capture) ? (input.capture as CaptureLike[]) : [];
     const produced = captures.flatMap((capture) =>
       typeof capture.name === "string" ? [capture.name] : [],
     );
     const resource = record(input.resource);
-    const consumed = [...new Set(variableRefs(step.input))];
+    const consumed = [...new Set(variableRefs(step.operation === "frame" ? null : step.input))];
     const result = results.get(step.id);
     nodes.push({
       id: step.id,
@@ -159,6 +184,7 @@ export function buildDataFlow(plan: PlanLike, steps: readonly StepRecord[] = [])
           }
         : null,
       sensitive: captures.some((capture) => capture.sensitive === true),
+      resourceState: null,
     });
     for (const name of consumed) {
       const producer = producers.get(name);
@@ -174,12 +200,13 @@ export function buildDataFlow(plan: PlanLike, steps: readonly StepRecord[] = [])
         consumes: [],
         run: null,
         sensitive: false,
+        resourceState: resourceStates.get(step.id) ?? null,
       });
       link("resource", resource.resourceType, step.id, `resource:${step.id}`, false);
     }
   }
   for (const [index, cleanup] of (plan.cleanup ?? []).entries()) {
-    const owner = plan.steps.find(
+    const owner = planSteps.find(
       (step) => cleanup.resourceRef === `${step.id}.handle` || cleanup.resourceRef === step.id,
     );
     const target = owner ? `resource:${owner.id}` : null;
@@ -193,6 +220,7 @@ export function buildDataFlow(plan: PlanLike, steps: readonly StepRecord[] = [])
       consumes: [],
       run: null,
       sensitive: false,
+      resourceState: owner ? (resourceStates.get(owner.id) ?? null) : null,
     });
     link("resource", cleanup.resourceRef, target, id, false);
   }
@@ -205,10 +233,10 @@ export interface FlowLayout {
   readonly positions: Readonly<Record<string, { x: number; y: number }>>;
 }
 
-const columnWidth = 220;
-const rowHeight = 84;
-const margin = 24;
-export const nodeSize = { width: 180, height: 52 } as const;
+const columnWidth = 240;
+const rowHeight = 96;
+const margin = 28;
+export const nodeSize = { width: 190, height: 68 } as const;
 
 /** Columns follow dependency depth, so every edge points from a lower column to a higher one. */
 export function layoutDataFlow(graph: DataFlowGraph): FlowLayout {
@@ -242,9 +270,160 @@ export function layoutDataFlow(graph: DataFlowGraph): FlowLayout {
 }
 
 /** Resources a Run left behind: anything not cleaned is reported, never assumed gone. */
-export function orphanedResources(
-  resources: readonly { id: string; resourceType: string; state: string }[],
-): OrphanResource[] {
+export function orphanedResources<T extends OrphanResource>(resources: readonly T[]): T[] {
   const open = ["orphaned", "uncertain", "cleanup_pending", "created", "planned"];
   return resources.filter((resource) => open.includes(resource.state));
+}
+
+export interface FlowTableRow {
+  readonly key: string;
+  /** Variable or resource name, as written in the plan. */
+  readonly name: string;
+  readonly producedBy: string | null;
+  readonly consumedBy: string | null;
+  /** Sensitive values are only ever described, never carried: the table masks them. */
+  readonly sensitive: boolean;
+  /** Result of the producer in the selected Attempt, or the resource state for a resource. */
+  readonly producerStatus: { readonly kind: "step" | "resource"; readonly status: string } | null;
+  readonly latencyMs: number | null;
+  readonly notes: readonly string[];
+}
+
+export const maskedValue = "••• hidden";
+
+/**
+ * The table equivalent of the graph: one row per edge, one per variable that is captured but never
+ * used, and one per left-over resource that no plan step explains. Nothing the graph shows is
+ * missing here, and no row carries a value.
+ */
+export function describeFlowTable(
+  graph: DataFlowGraph,
+  resources: readonly FlowResource[] = [],
+): FlowTableRow[] {
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  const labelOf = (id: string | null): string | null =>
+    id === null ? null : (byId.get(id)?.label ?? id);
+  const statusOf = (node: FlowNode | undefined): FlowTableRow["producerStatus"] => {
+    if (!node) return null;
+    if (node.resourceState) return { kind: "resource", status: node.resourceState };
+    return node.run ? { kind: "step", status: node.run.status } : null;
+  };
+  const rows: FlowTableRow[] = [];
+  for (const edge of graph.edges) {
+    const producer = edge.from === null ? undefined : byId.get(edge.from);
+    const consumer = byId.get(edge.to);
+    const notes: string[] = [];
+    if (edge.unresolved)
+      notes.push(
+        edge.kind === "variable"
+          ? "Unresolved reference: nothing in this revision produces this variable."
+          : "Unresolved reference: no step in this revision creates this resource.",
+      );
+    if (edge.sensitive)
+      notes.push(
+        "Sensitive: the value is never shown and observed data of the producing step is withheld.",
+      );
+    const state = consumer?.kind === "resource" ? consumer.resourceState : null;
+    if (state && ["orphaned", "uncertain", "cleanup_pending", "created", "planned"].includes(state))
+      notes.push(`Resource is ${state.replace(/_/g, " ")}: cleanup is not confirmed.`);
+    rows.push({
+      key: edge.id,
+      name: edge.name,
+      producedBy: labelOf(edge.from),
+      consumedBy: labelOf(edge.to),
+      sensitive: edge.sensitive,
+      producerStatus: statusOf(producer),
+      latencyMs: producer?.run?.durationMs ?? null,
+      notes,
+    });
+  }
+  for (const node of graph.nodes) {
+    for (const name of node.produces) {
+      // A resource handle is consumed by the resource node and its cleanup, which have their own rows.
+      const covered = name === `${node.id}.handle` && byId.has(`resource:${node.id}`);
+      const used =
+        covered ||
+        graph.edges.some(
+          (edge) =>
+            edge.from === node.id && (edge.name === name || edge.name === `${node.id}.${name}`),
+        );
+      if (used) continue;
+      rows.push({
+        key: `unused:${node.id}:${name}`,
+        name,
+        producedBy: node.label,
+        consumedBy: null,
+        sensitive: node.sensitive,
+        producerStatus: statusOf(node),
+        latencyMs: node.run?.durationMs ?? null,
+        notes: node.sensitive
+          ? [
+              "Produced but never referenced by a later step.",
+              "Sensitive: the value is never shown and observed data of this step is withheld.",
+            ]
+          : ["Produced but never referenced by a later step."],
+      });
+    }
+  }
+  const explained = new Set(
+    graph.nodes.flatMap((node) => (node.kind === "resource" ? [node.id] : [])),
+  );
+  for (const resource of orphanedResources(resources)) {
+    if (resource.stepId !== null && explained.has(`resource:${resource.stepId}`)) continue;
+    rows.push({
+      key: `orphan:${resource.id}`,
+      name: resource.resourceType,
+      producedBy: resource.stepId,
+      consumedBy: null,
+      sensitive: false,
+      producerStatus: { kind: "resource", status: resource.state },
+      latencyMs: null,
+      notes: [
+        `Resource ${resource.id} is ${resource.state.replace(/_/g, " ")} and no step of this revision declares it.`,
+      ],
+    });
+  }
+  return rows;
+}
+
+export interface StepTableRow {
+  readonly id: string;
+  readonly label: string;
+  readonly operation: string;
+  /** `METHOD path` with variables shown by name, never by value; `null` for non-request steps. */
+  readonly request: string | null;
+  readonly result: { readonly status: string; readonly durationMs: number } | null;
+  /** The step captures a sensitive value, so what it observed is withheld. */
+  readonly observedWithheld: boolean;
+}
+
+function pathSegment(segment: unknown): string {
+  const value = record(segment);
+  if (typeof value.literal === "string") return value.literal;
+  if (typeof value.variableRef === "string") return `{${value.variableRef}}`;
+  if (typeof value.secretRef === "string") return "{secret}";
+  return "{?}";
+}
+
+/** `GET /orders/{order-id}` for a request step; variables appear by name only. */
+export function describeRequestLine(input: unknown): string | null {
+  const request = record(input);
+  if (typeof request.method !== "string" || !Array.isArray(request.pathSegments)) return null;
+  return `${request.method} /${request.pathSegments.map(pathSegment).join("/")}`;
+}
+
+/** Request, result and latency per plan step, in plan order, for the Attempt on screen. */
+export function describeStepTable(plan: PlanLike, graph: DataFlowGraph): StepTableRow[] {
+  const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
+  return flattenSteps(plan.steps).map((step) => {
+    const node = nodes.get(step.id);
+    return {
+      id: step.id,
+      label: step.description ?? step.id,
+      operation: step.operation,
+      request: step.operation === "request" ? describeRequestLine(step.input) : null,
+      result: node?.run ? { status: node.run.status, durationMs: node.run.durationMs } : null,
+      observedWithheld: node?.sensitive ?? false,
+    };
+  });
 }

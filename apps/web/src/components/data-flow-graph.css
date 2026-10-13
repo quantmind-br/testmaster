@@ -1,0 +1,173 @@
+/* Data-flow graph (REQ-053). Theme tokens only; line style, never colour alone, tells edges apart. */
+.flow-scroll {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+svg.flow-graph {
+  display: block;
+  height: auto;
+  max-width: none;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.flow-node rect {
+  fill: var(--surface-raised);
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.flow-node text {
+  fill: currentColor;
+}
+
+.flow-node .flow-node-title {
+  font-weight: 700;
+}
+
+.flow-node svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.flow-tone-success {
+  color: var(--success-text);
+}
+
+.flow-tone-warning {
+  color: var(--warning-text);
+}
+
+.flow-tone-danger {
+  color: var(--danger-text);
+}
+
+.flow-tone-info {
+  color: var(--info-text);
+}
+
+.flow-tone-neutral {
+  color: var(--neutral-text);
+}
+
+.flow-tone-success rect {
+  fill: var(--success-bg);
+}
+
+.flow-tone-warning rect {
+  fill: var(--warning-bg);
+}
+
+.flow-tone-danger rect {
+  fill: var(--danger-bg);
+}
+
+.flow-tone-info rect {
+  fill: var(--info-bg);
+}
+
+.flow-tone-neutral rect {
+  fill: var(--neutral-bg);
+}
+
+.flow-node.flow-sensitive rect {
+  stroke-dasharray: 6 3;
+}
+
+.flow-edge {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.flow-edge.flow-edge-sensitive {
+  stroke: var(--warning-text);
+  stroke-dasharray: 8 4;
+}
+
+.flow-edge.flow-edge-unresolved {
+  stroke: var(--danger-text);
+  stroke-dasharray: 2 4;
+  stroke-width: 3;
+}
+
+.flow-marker {
+  fill: var(--border);
+}
+
+.flow-marker-sensitive {
+  fill: var(--warning-text);
+}
+
+.flow-marker-unresolved {
+  fill: var(--danger-text);
+}
+
+.flow-edge-label {
+  fill: var(--text);
+  stroke: var(--bg);
+  stroke-width: 4;
+  paint-order: stroke;
+  font-size: 11px;
+}
+
+.flow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.flow-legend svg {
+  flex: none;
+  width: 3rem;
+  height: 0.75rem;
+}
+
+.flow-legend line {
+  stroke: var(--border);
+  stroke-width: 3;
+}
+
+.flow-legend .flow-edge-sensitive {
+  stroke: var(--warning-text);
+  stroke-dasharray: 8 4;
+}
+
+.flow-legend .flow-edge-unresolved {
+  stroke: var(--danger-text);
+  stroke-dasharray: 2 4;
+}
+
+.flow-legend .flow-edge-solid {
+  stroke-dasharray: none;
+}
+
+.plain-list {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.field-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+[data-masked] {
+  font-family: var(--font-mono);
+}

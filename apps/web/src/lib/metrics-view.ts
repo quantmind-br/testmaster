@@ -115,7 +115,10 @@ export function describeRate(metric: RateMetric | undefined): {
   if (metric.state === "available" && metric.value !== null)
     return { display: formatPercent(metric.value), fraction, available: true };
   return {
-    display: metric.state === "notApplicable" ? "Not applicable (no Runs)" : "Insufficient data",
+    display:
+      metric.state === "notApplicable"
+        ? "Not applicable (no Runs in the denominator)"
+        : "Insufficient data",
     fraction,
     available: false,
   };
