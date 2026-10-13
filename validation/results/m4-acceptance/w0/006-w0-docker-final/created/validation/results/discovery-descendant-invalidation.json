@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "discovery-descendant-invalidation",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:50:03.277Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "discovery-descendant-invalidation",
+        "--base-url",
+        "http://127.0.0.1:35409",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b268e463-0777-436f-905e-f612a2a2c00d",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "name": "pinned-run-survives-invalidation",
+      "admittedRunId": "run_01a135bd-eb74-71dd-b65d-82dd93463fb1",
+      "replayRunId": "run_01a135bd-ef31-71de-82be-a1a041e624ea",
+      "staleBatchId": "pbt_01a135bd-eb7f-7407-aa63-210540496af5",
+      "beforeFingerprint": "072989bb05059192ba95d165c5f72108773a1cab10bac21fcf4aa4b7c01ab90c",
+      "afterFingerprint": "bf13336d9a08049940b88cc9f5c283b3756b20c454022e673e6ab1397b265443"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

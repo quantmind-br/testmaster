@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-trace-residue-acceptance",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:34:14.712Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-trace-residue-acceptance",
+        "--base-url",
+        "http://127.0.0.1:34129",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0488f62c-c115-47ed-b4e4-abe63219c5c2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135af-6c1c-735b-a14c-86e091e85ab1",
+    "run_01a135af-7375-729e-99e6-d4a8332475b2"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "traceAllChannelResiduesRestrictedAndMinimized",
+      "runId": "run_01a135af-6c1c-735b-a14c-86e091e85ab1",
+      "rawTokenChannels": [
+        "embedded-html-source",
+        "network-request-and-response",
+        "DOM-snapshot"
+      ],
+      "sanitizedContainsToken": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

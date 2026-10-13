@@ -1,0 +1,228 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-selective-test-list",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:45:35.954Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-selective-test-list",
+        "--base-url",
+        "http://127.0.0.1:46423",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_173fe887-c8c1-48b7-9481-d0f95363a5a0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-8D2gfL/repo/one.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_10a89c26-efa5-47b0-92dd-bbc11f919cdf",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-8D2gfL/repo/two.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e073ced2-06f5-41c9-af56-e543a68957db",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-8D2gfL/repo/quarantined.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5a9fb1f0-46a9-4ab4-bff7-e32ce69ee8a2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-8D2gfL/repo/archived.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5af1444b-ae64-4305-ad34-f0508d42ad7e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-b426-73b0-8cea-32cfb880a659",
+        "tst_01a135b9-b758-72f5-8689-cdf2026435c8",
+        "tst_01a135b9-ba5e-70c1-94c8-9bc9e1f63360",
+        "tst_01a135b9-bd6b-7376-881e-856d4ce397d6",
+        "--wait",
+        "--env",
+        "env_01a135b9-b1ee-731d-835d-912ba606674d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a4a27bcc-2e8f-48c6-8167-ef27373a79d1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "quarantine",
+        "tst_01a135b9-ba5e-70c1-94c8-9bc9e1f63360",
+        "--reason",
+        "owner investigating flaky fixture",
+        "--expires-at",
+        "2026-10-13T15:45:32.356Z",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_15828fb6-2d94-4a45-af1a-9f7231044089",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "archive",
+        "tst_01a135b9-bd6b-7376-881e-856d4ce397d6",
+        "--expected-version",
+        "2",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d7775512-2e8b-4315-8f31-faf172b9b67b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-b426-73b0-8cea-32cfb880a659",
+        "tst_01a135b9-b758-72f5-8689-cdf2026435c8",
+        "tst_01a135b9-ba5e-70c1-94c8-9bc9e1f63360",
+        "tst_01a135b9-bd6b-7376-881e-856d4ce397d6",
+        "--wait",
+        "--env",
+        "env_01a135b9-b1ee-731d-835d-912ba606674d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d50ef73c-faa1-4c30-a168-99210351c5f2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b9-c436-72fc-a233-321016aff9f1",
+    "run_01a135b9-c438-72fc-a8c0-2b988a5ece10",
+    "run_01a135b9-c43a-7209-a0e1-1ebea89f1b4c",
+    "run_01a135b9-c43c-72c4-84c3-439e1ba6a64b",
+    "run_01a135b9-d784-70db-ba55-2125163c1038",
+    "run_01a135b9-d786-771d-9b46-a3f2accecc54"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "explicitListExclusions",
+      "healthyBatchId": "bat_01a135b9-c434-746e-a778-8bec82947b0c",
+      "selectedBatchId": "bat_01a135b9-d782-7263-a773-c2796fbec100",
+      "exclusions": [
+        {
+          "testId": "tst_01a135b9-ba5e-70c1-94c8-9bc9e1f63360",
+          "reason": "quarantined",
+          "owner": "usr_01a135b9-b1e0-76eb-b996-5110b3e02c84",
+          "detail": "owner investigating flaky fixture",
+          "expiresAt": "2026-10-13T15:45:32.356Z"
+        },
+        {
+          "testId": "tst_01a135b9-bd6b-7376-881e-856d4ce397d6",
+          "reason": "archived",
+          "owner": null,
+          "detail": null,
+          "expiresAt": null
+        }
+      ],
+      "paths": [
+        "/one",
+        "/two",
+        "/quarantined",
+        "/archived",
+        "/one",
+        "/two"
+      ]
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

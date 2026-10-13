@@ -1,0 +1,255 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j01-j06-healthy",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:43:58.862Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j01-j06-healthy",
+        "--base-url",
+        "http://127.0.0.1:33999",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_78d0e5fb-ef9f-40c8-90ba-83dfbad4cfd1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-uhpTxi/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_86313c96-37f5-4afb-bb41-db9bcaafb1af",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135b8-438e-7281-9820-8cbc603d3113",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_025b0e39-1e6b-48f0-b592-dd8ac882210f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7aa2e770-f4a8-40cf-ba0a-adfe9271642d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ad327f09-ac45-48ab-89e1-2162fccaa665",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+        "--raw",
+        "--out",
+        "/tmp/tm-m1-uhpTxi/repo/evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d6beced7-90bf-480c-a57c-3e11328d504c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-uhpTxi/repo/http.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8105f66b-890a-4b7b-893e-03baf0a3dff4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135b8-56e7-77f5-94ab-01930e79050b",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_06db6f83-2c24-4558-b98f-ba5a7f9ff29c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-uhpTxi/repo/report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_92ead865-bd27-4f5f-a0fe-a133d5b9d0fa",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+        "--raw",
+        "--out",
+        "/tmp/tm-m1-uhpTxi/repo/tampered-export",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 10,
+      "signal": null,
+      "requestId": "cli_a1c88650-4fe2-4ccc-b9d7-c6fa5df6e6f2",
+      "error": {
+        "code": "INTERNAL",
+        "message": "Command failed",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+    "run_01a135b8-5ce9-739c-a843-8291496e4817"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "browserCheckoutDatabasePersistence",
+      "healthy": true,
+      "observed": {
+        "persistedOrders": 1
+      },
+      "runId": "run_01a135b8-4956-703a-9df8-8776a1d14a69"
+    },
+    {
+      "check": "orderPersistence",
+      "healthy": true,
+      "defective": false,
+      "observed": {
+        "orderId": "03671731-621c-4a53-ba13-437d070d5afc",
+        "persistedRows": 1
+      }
+    },
+    {
+      "check": "serviceHealth",
+      "healthy": true,
+      "defective": false,
+      "observed": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "date": "Tue, 13 Oct 2026 14:43:58 GMT",
+          "connection": "keep-alive",
+          "keep-alive": "timeout=5",
+          "transfer-encoding": "chunked"
+        },
+        "body": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "check": "tamperedEvidenceDenied",
+      "healthy": true,
+      "runId": "run_01a135b8-4956-703a-9df8-8776a1d14a69",
+      "exitCode": 10
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

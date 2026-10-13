@@ -1,0 +1,653 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "surface-invalid-corpus",
+  "class": "surface-conformance",
+  "runner": "built-cli-and-real-http-mcp",
+  "externalDependency": "local-docker-doctor",
+  "observedAt": "2026-10-13T14:42:28.019Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "surface-invalid-corpus",
+        "--base-url",
+        "http://127.0.0.1:46171",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9de11084-2772-4fc7-8b26-2bf676d19329",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/valid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fb142006-e16b-482e-82ca-511e0c5a6137",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/valid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_89a651fa-bbf7-4b0f-849c-33af21cdf929",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/valid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f676b13b-76be-4842-9d9e-11389d3c87b5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_f0fb58e7-3078-4df1-bf36-24c919056612",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/fabricated",
+              "rule": "additionalProperties",
+              "message": "must NOT have additional properties"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_8df99b69-48dc-4ed5-a281-7098198a623e",
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "Document exceeds byte limit",
+        "details": {
+          "limit": 1048576,
+          "sizeBytes": 1049298
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_44ec7930-740b-468c-8ae6-7960b1412bc4",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/schemaVersion",
+              "rule": "const",
+              "message": "must be equal to constant"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_651aa3f1-57e3-4be9-87f6-f6d0ed6cf732",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/fabricated",
+              "rule": "additionalProperties",
+              "message": "must NOT have additional properties"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_d87c9a5e-5d1f-42fd-97bc-ccaa0d597ad7",
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "Document exceeds byte limit",
+        "details": {
+          "limit": 1048576,
+          "sizeBytes": 1048648
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_fc7b5561-623f-4dea-8f11-ffeefb8bba5f",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/schemaVersion",
+              "rule": "const",
+              "message": "must be equal to constant"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_fd9aea96-4499-454d-a5d6-70ef8c364e3f",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid RunRequest",
+        "details": {
+          "issues": [
+            {
+              "path": "/fabricated",
+              "rule": "additionalProperties",
+              "message": "must NOT have additional properties"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_40bec5b0-6643-4bd5-a7da-a711f30bce4f",
+      "error": {
+        "code": "PAYLOAD_TOO_LARGE",
+        "message": "Document exceeds byte limit",
+        "details": {
+          "limit": 1048576,
+          "sizeBytes": 1048721
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_234134cc-ec7b-40bf-a2fb-d39e08f155b7",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/runner",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/runner",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/runner",
+              "rule": "anyOf",
+              "message": "must match a schema in anyOf"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_bde04b97-3e72-41e2-80ab-9da7e3270735",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/execution/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/execution/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/execution/mode",
+              "rule": "anyOf",
+              "message": "must match a schema in anyOf"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_c030ee43-2465-4ea4-b915-48bc8dabb5fa",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid RunRequest",
+        "details": {
+          "issues": [
+            {
+              "path": "/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/mode",
+              "rule": "const",
+              "message": "must be equal to constant"
+            },
+            {
+              "path": "/mode",
+              "rule": "anyOf",
+              "message": "must match a schema in anyOf"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "RunRequest",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_fc57fae0-9794-4c16-89ce-e987af825fde",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid RunRequest",
+        "details": {
+          "issues": [
+            {
+              "path": "/testId",
+              "rule": "pattern",
+              "message": "must match pattern \"^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\""
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ProjectConfig",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_c8215e64-7e64-4b0c-b77b-048d06a0c53b",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ProjectConfig",
+        "details": {
+          "issues": [
+            {
+              "path": "/project/id",
+              "rule": "pattern",
+              "message": "must match pattern \"^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\""
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_4dd0898c-0186-485b-9ceb-eaedeb987991",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Plan semantic validation failed",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps/3/id",
+              "rule": "unique",
+              "message": "Duplicate step ID"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "contract",
+        "validate",
+        "--schema",
+        "ExecutablePlan",
+        "--document",
+        "/tmp/tm-m1-hvmoe9/repo/invalid.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_04347d81-4f7e-42f7-a859-46945dd3be98",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Plan semantic validation failed",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps",
+              "rule": "requiredAssertion",
+              "message": "At least one required assertion is required"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "server",
+        "start",
+        "--port",
+        "44947",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82e20ea5-a5bf-4345-a573-1fa3f89c2511",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "sameErrorCodeRulePath",
+      "surfaces": [
+        "built-cli",
+        "server-start",
+        "stdio-mcp",
+        "http-mcp"
+      ],
+      "cases": [
+        "ExecutablePlan-unknown-field",
+        "ExecutablePlan-oversize",
+        "ExecutablePlan-future-major",
+        "ProjectConfig-unknown-field",
+        "ProjectConfig-oversize",
+        "ProjectConfig-future-major",
+        "RunRequest-unknown-field",
+        "RunRequest-oversize",
+        "plan-enum",
+        "config-enum",
+        "request-enum",
+        "request-bad-id",
+        "config-bad-id",
+        "plan-duplicate-step",
+        "plan-missing-assertion"
+      ],
+      "authoringWrites": 0
+    }
+  ],
+  "limitations": [
+    "Read-only validation has no audit-free promise: denials are audited; no tests, sources or runs are created."
+  ]
+}

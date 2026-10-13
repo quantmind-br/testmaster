@@ -1,0 +1,209 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "W4-A-resource-cleanup",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:48:04.291Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "W4-A-resource-cleanup",
+        "--base-url",
+        "http://127.0.0.1:43315",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3e7b7b08-1a79-4c0d-958b-ea719aa84425",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "cleanup-auth",
+        "--from-env",
+        "CLEANUP_AUTH",
+        "--allowed-origin",
+        "http://127.0.0.1:43315",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8c01df14-71e2-4632-8e92-98af257a57d0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-DLaKTA/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_80c3604e-bfbc-4cfd-baff-174d2d0cd298",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135bc-072e-732a-8975-bc6bfb44c7ca",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_80c481e9-0f7e-43b2-9bb7-572f0a3fac2f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "resource",
+        "list",
+        "--run",
+        "run_01a135bc-0cda-744c-8d6e-613052f787e3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a37b4c69-2774-445f-b7e9-d3ffbc1ef236",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--action",
+        "cleanup:res_01a135bc-1241-7651-a1db-af6370d5b560",
+        "--revision-hash",
+        "ab3f5aedad5269536596ec9c719ecd499c9f4bc126a56a6b42c904dac1229999",
+        "--environment-revision",
+        "evr_01a135bc-02b8-74fa-9345-c5f1ba3af5d1",
+        "--origin",
+        "http://127.0.0.1:43315",
+        "--policy-hash",
+        "78e848ef08760927741f8d343dd1fa708031f7435733fb9dae187fa199f5f25c",
+        "--reason",
+        "Compensate orphaned resource res_01a135bc-1241-7651-a1db-af6370d5b560",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4e21d452-0aa3-40fb-9e5c-ad5bf8805589",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "resource",
+        "cleanup",
+        "res_01a135bc-1241-7651-a1db-af6370d5b560",
+        "--approval",
+        "apr_01a135bc-17a8-7208-ac2a-5a5e78227e91",
+        "--expected-version",
+        "4",
+        "--idempotency-key",
+        "7a697dc2-7538-4aef-bed2-72b1d6733f90",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_34669319-95f2-48aa-8501-743039934911",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "resource",
+        "cleanup",
+        "res_01a135bc-1241-7651-a1db-af6370d5b560",
+        "--approval",
+        "apr_01a135bc-17a8-7208-ac2a-5a5e78227e91",
+        "--expected-version",
+        "4",
+        "--idempotency-key",
+        "7a697dc2-7538-4aef-bed2-72b1d6733f90",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ea5515bf-40fc-4606-8cc6-b22419c2e746",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135bc-0cda-744c-8d6e-613052f787e3",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_aa2fa14c-d005-4d64-811b-067eaa320d05",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135bc-0cda-744c-8d6e-613052f787e3"
+  ],
+  "oracleVerdicts": [
+    {
+      "resourceId": "res_01a135bc-1241-7651-a1db-af6370d5b560",
+      "operationId": "job_01a135bc-1a1a-77da-b9be-d8b44b387712",
+      "userPresentBefore": true,
+      "userPresentAfter": false,
+      "originalGate": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-drain-after-claim",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:36:40.418Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-drain-after-claim",
+        "--base-url",
+        "http://127.0.0.1:37831",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b7dce22e-1dac-40c5-8c1e-2807a78c51f1",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b1-aed5-7289-a605-0046eec12594",
+    "run_01a135b1-af09-7537-8e6c-7b48eccafa28"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "drainStopsNewClaims",
+      "healthy": true,
+      "completedRun": "run_01a135b1-aed5-7289-a605-0046eec12594",
+      "queuedRun": "run_01a135b1-af09-7537-8e6c-7b48eccafa28",
+      "targetHits": 1
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -290,6 +290,41 @@ it("ADR-017 matches grants by resource type and never lets a grant widen a denie
   );
 });
 
+it("ADR-017 lets a human cookie session approve by role while a bearer token needs the named grant and viewers never approve", async () => {
+  const { app, init, member, session } = await fixture();
+  const maintainer = await member("maintainer");
+  const viewer = await member("viewer");
+  const approve = (scoped: Application) =>
+    scoped.context.authorizeNamed("approve", "HealingProposal", init.projectId);
+  const maintainerSession = (await session(maintainer.login)).scoped;
+  const viewerSession = (await session(viewer.login)).scoped;
+  expect(() => approve(maintainerSession)).not.toThrow();
+  expect(() => approve(viewerSession)).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
+  const bearer = (grants: PermissionGrant[]) =>
+    app.forIdentity({
+      principalId: maintainer.view.principalId,
+      scopes: ["R", "W", "X", "A"],
+      grants,
+      workspaceId: init.workspaceId,
+      credential: { kind: "api", id: "tok_named" },
+    });
+  expect(() => approve(bearer([]))).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
+  expect(() =>
+    approve(
+      bearer([
+        {
+          resourceType: "HealingProposal",
+          actions: ["approve"],
+          projectIds: [init.projectId],
+          environmentIds: [],
+          expiresAt: null,
+          grantedBy: init.principalId,
+        },
+      ]),
+    ),
+  ).not.toThrow();
+});
+
 it("ADR-017 exposes the role matrix as the permissions each role observes", async () => {
   const { app, init, member, session } = await fixture();
   const columns = ["read", "write", "execute", "secret", "export", "admin"] as const;
