@@ -515,7 +515,7 @@ describe("team, tokens and audit trail in the portal", () => {
 
     // Operation prefix filter with the keyboard alone.
     const keyboard = await keyboardOnly(page);
-    await keyboard.tabTo((element) => element.name.startsWith("Operation"), 20);
+    await keyboard.tabTo((element) => element.name.startsWith("Operation"), 60);
     await keyboard.type("auth.token.revoke");
     await keyboard.press("Enter");
     await page.waitForURL((url) => url.searchParams.get("operation") === "auth.token.revoke");

@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestDatabase, type TestDatabase } from "@testmaster/persistence/testing";
@@ -31,6 +32,7 @@ async function serverLab() {
   const database: TestDatabase = await createTestDatabase();
   cleanups.push(() => database.drop());
   const root = await mkdtemp(join(tmpdir(), "tm-auth-pg-"));
+  await writeFile(join(root, "master.key"), randomBytes(32), { mode: 0o600 });
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const home = join(root, "home");
   await mkdir(home);

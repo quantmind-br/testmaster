@@ -12,7 +12,7 @@ export const routes: PortalRoute[] = [
     element: <ProposalsPage />,
     projectNav: { label: "Proposals", order: 60 },
   },
-  { path: "/proposal-batches/:batchId", title: "Proposal batch", element: <BatchPage /> },
+  { path: "/proposal-batches/:proposalBatchId", title: "Proposal batch", element: <BatchPage /> },
   {
     path: "/projects/:projectId/tests",
     title: "Tests",

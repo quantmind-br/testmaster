@@ -24,6 +24,7 @@ import { type ServerStack, type StackUser, startServerStack } from "./server-sta
 let stack: ServerStack;
 let world: AutomationWorld;
 let qa: StackUser;
+let planner: StackUser;
 let viewer: StackUser;
 const open: OpenPortal[] = [];
 
@@ -31,6 +32,10 @@ beforeAll(async () => {
   stack = await startServerStack({ worker: true });
   world = await seedAutomationWorld(stack.ownerClient());
   qa = await stack.addMember("maintainer", {
+    projectRestrictions: [world.a.projectId, world.b.projectId],
+  });
+  // The server budgets writes per actor; the schedule journeys act as their own member so the seeding above never drains their budget.
+  planner = await stack.addMember("maintainer", {
     projectRestrictions: [world.a.projectId, world.b.projectId],
   });
   viewer = await stack.addMember("viewer");
@@ -248,7 +253,7 @@ describe("schedules in the portal", () => {
   let scheduleId = "";
 
   it("REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision", async () => {
-    const { page } = await portal(stack.owner);
+    const { page } = await portal(planner);
     await page.goto("/schedules/new");
     await page.getByRole("heading", { level: 1, name: "New schedule" }).waitFor();
     await page.locator("#schedule-name").fill("Weekday smoke");
@@ -289,7 +294,7 @@ describe("schedules in the portal", () => {
   });
 
   it("OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it", async () => {
-    const { page } = await portal(stack.owner);
+    const { page } = await portal(planner);
     await page.goto(`/schedules/${scheduleId}`);
     await page.getByRole("heading", { level: 1, name: "Weekday smoke" }).waitFor();
     await page.getByRole("button", { name: "Pause", exact: true }).click();

@@ -94,7 +94,7 @@ async function seedTest(context: SweepContext): Promise<string> {
 
 const seed: SweepSeed = {
   params: {
-    batchId: seedBatch,
+    proposalBatchId: seedBatch,
     testId: seedTest,
   },
   journeySteps: {

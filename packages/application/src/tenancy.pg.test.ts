@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
@@ -25,6 +26,7 @@ async function serverApplication() {
   const database: TestDatabase = await createTestDatabase();
   cleanups.push(() => database.drop());
   const root = await mkdtemp(join(tmpdir(), "tm-tenancy-pg-"));
+  await writeFile(join(root, "master.key"), randomBytes(32), { mode: 0o600 });
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const home = join(root, "home");
   await mkdir(home);
@@ -216,9 +218,13 @@ describe("tenant isolation on PostgreSQL", () => {
       projectId: t.dataB.project.id,
       version: 1,
       createdAt: new Date().toISOString(),
+      name: "foreign-profile",
       kind: "bearer",
       originBindings: ["http://127.0.0.1:9"],
       secretRefs: [t.dataB.secret.id],
+      secrets: { token: t.dataB.secret.id },
+      managedSecrets: {},
+      config: {},
       refreshPolicy: {},
     };
     t.application

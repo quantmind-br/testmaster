@@ -18,7 +18,7 @@ route catalog. Text from sources, models, plans, DOM and reports is always rende
 
 ## Reviewing a batch
 
-`/proposal-batches/:batchId` lists the proposals with provenance (model call, human edits, refinement
+`/proposal-batches/:proposalBatchId` lists the proposals with provenance (model call, human edits, refinement
 origin), validation, the revision acceptance would create, an estimate of the duration and similar tests.
 
 - **Selection is explicit.** `POST /v1/proposal-batches/{id}/preview` returns what each selected proposal

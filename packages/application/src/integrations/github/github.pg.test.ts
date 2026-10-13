@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { githubDefaultScopes, githubEventTypes } from "@testmaster/contracts";
@@ -27,6 +28,7 @@ afterEach(async () => {
 async function twoTenants() {
   const database = await createTestDatabase();
   const directory = await mkdtemp(join(tmpdir(), "tm-github-pg-"));
+  await writeFile(join(directory, "master.key"), randomBytes(32), { mode: 0o600 });
   await mkdir(join(directory, "evidence"), { recursive: true });
   const server: ServerConfig = {
     mode: "server",

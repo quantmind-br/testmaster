@@ -294,7 +294,7 @@ function BatchView({
 }
 
 export function BatchPage(): ReactNode {
-  const { batchId = "" } = useParams();
+  const { proposalBatchId: batchId = "" } = useParams();
   const batch = useResource<BatchDetail>(`/proposal-batches/${enc(batchId)}`);
   usePageTitle("Proposal batch");
   if (batch.status === "not-found" || batch.status === "forbidden") return <NotFoundPage />;

@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ServerConfig } from "@testmaster/application";
@@ -40,6 +41,7 @@ const requestLog: string[] = [];
 
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), "tm-github-portal-"));
+  await writeFile(join(directory, "master.key"), randomBytes(32), { mode: 0o600 });
   await mkdir(join(directory, "evidence"), { recursive: true });
   database = await createTestDatabase();
   ca = await createTestCa(join(directory, "ca"));
