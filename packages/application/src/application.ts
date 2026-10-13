@@ -72,7 +72,7 @@ import {
   type ResolvedConfig,
   resolveConfig,
 } from "./config.js";
-import { entity, type Scope, type ServiceContext } from "./context.js";
+import { entity, type RunActor, type Scope, type ServiceContext } from "./context.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
 import { correlationId } from "./observability.js";
@@ -98,7 +98,7 @@ import {
   TokensService,
   WorkspacesService,
 } from "./team.js";
-import type { TokenKind } from "./tokens.js";
+import type { TokenData, TokenKind } from "./tokens.js";
 
 const columnScope: Readonly<Record<RbacColumn, Scope>> = {
   read: "R",
@@ -229,6 +229,12 @@ export class Application {
       workspaceId: String(workspaceId ?? ""),
       principalId: identity?.principalId ?? String(principal?.id ?? ""),
       correlationId: correlation,
+      actor: {
+        principalId: identity?.principalId ?? String(principal?.id ?? ""),
+        credentialKind: identity && "credential" in identity ? identity.credential.kind : null,
+        credentialId: identity && "credential" in identity ? identity.credential.id : null,
+      },
+      reauthorizeActor: (actor, projectId) => this.reauthorizeActor(actor, projectId),
       authorize: (scope, projectId) => this.authorize(scope, projectId),
       authorizeColumn: (column, projectId) => this.authorizeColumn(column, projectId),
       authorizeRaw: (projectId, environmentId) => {
@@ -594,6 +600,47 @@ export class Application {
    * identity; remote identities need a matching unexpired, non-denied resource grant that also
    * matches `resourceType`. The matrix still caps what a grant can widen.
    */
+  /**
+   * Re-evaluates the execute permission of the principal that admitted a Run, with the grants and
+   * scopes their credential carries today. A revoked credential, removed member or demoted role fails.
+   */
+  private reauthorizeActor(actor: RunActor, projectId: string): boolean {
+    const workspaceId = this.context.workspaceId;
+    let scopes: Scope[] = ["R", "W", "X", "A"];
+    let grants: PermissionGrant[] = [];
+    if (actor.credentialKind === "session") {
+      const row = this.database.get(
+        "SELECT revoked_at FROM sessions WHERE workspace_id=? AND id=?",
+        workspaceId,
+        actor.credentialId,
+      );
+      if (!row || row.revoked_at) return false;
+    } else if (actor.credentialKind && actor.credentialKind !== "system") {
+      const row = this.database.get(
+        "SELECT data_json,revoked_at FROM server_tokens WHERE workspace_id=? AND id=?",
+        workspaceId,
+        actor.credentialId,
+      );
+      if (!row || row.revoked_at) return false;
+      const data = JSON.parse(String(row.data_json)) as TokenData;
+      scopes = data.scopes;
+      grants = data.grants;
+    }
+    const current = this.forIdentity({
+      principalId: actor.principalId,
+      scopes,
+      grants,
+      workspaceId,
+      credential: { kind: "system", id: actor.credentialId ?? "reauthorize" },
+    });
+    try {
+      current.context.authorize("X", projectId);
+      return true;
+    } catch (error) {
+      if (error instanceof ContractError) return false;
+      throw error;
+    }
+  }
   private authorizeNamed(
     action: "approve" | "delete",
     resourceType: "HealingProposal" | "Artifact",
