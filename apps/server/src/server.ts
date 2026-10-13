@@ -468,6 +468,9 @@ export function createServer(options: ServerOptions): FastifyInstance {
         if (reply.sent) return reply;
         if (data && typeof data === "object" && "version" in data)
           reply.header("ETag", `"${data.version}"`);
+        // Bodies are per credential: no shared cache may replay one tenant's response to another.
+        if (!reply.hasHeader("cache-control")) reply.header("Cache-Control", "private, no-store");
+        reply.header("Vary", "Authorization, Cookie");
         reply.code(entry.status);
         return { schemaVersion: "1.0.0", requestId: request.id, data, warnings: [] };
       },
