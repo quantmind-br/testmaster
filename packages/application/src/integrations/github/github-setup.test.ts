@@ -39,16 +39,13 @@ describe("INT-014 SEC-047 App creation through the manifest flow", () => {
       "https://testmaster.example.test/v1/integrations/github/webhooks",
     );
     expect(manifest.public).toBe(false);
-    expect(manifest.default_events).toEqual(
-      expect.arrayContaining([
-        "installation",
-        "installation_repositories",
-        "push",
-        "pull_request",
-        "deployment_status",
-        "check_run",
-      ]),
-    );
+    // GitHub rejects the always-delivered installation events in default_events.
+    expect(manifest.default_events).toEqual([
+      "push",
+      "pull_request",
+      "deployment_status",
+      "check_run",
+    ]);
     expect(plain.scopes).not.toContain("github:contents:write");
     expect(plain.createUrl).toBe(`https://github.com/settings/apps/new?state=${plain.state}`);
     const agent = w.app.github.manifest(
