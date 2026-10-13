@@ -252,3 +252,22 @@ it("M4-03 a revoked session refuses new Runs before any secret is released", asy
   await lab.run();
   expect(lab.executions).toHaveLength(2);
 });
+
+it("M4-03 SEC-023 a target that rejects the managed credential makes the next Run sign in again instead of replaying it", async () => {
+  const lab = await runLab();
+  await lab.run();
+  await lab.run();
+  // Positive control: while the target accepts the credential it is reused, never re-requested.
+  expect(lab.site.counters.logins).toBe(1);
+  vi.mocked(AttemptExecutor.prototype.execute).mockImplementationOnce(async (input) => {
+    lab.executions.push(input as unknown as DockerAttempt);
+    return { outcome: "blocked", reasonCode: "manual_auth_required", logDropped: 0, events: [] };
+  });
+  await lab.run();
+  const view = lab.current.app.authProfiles.get(lab.profileId);
+  expect(view.session.state).toBe("expired");
+  expect(view.session.reason).toBe("target_rejected");
+  await lab.run();
+  expect(lab.site.counters.logins).toBe(2);
+  expect(lab.current.app.authProfiles.get(lab.profileId).session.state).toBe("authenticated");
+});

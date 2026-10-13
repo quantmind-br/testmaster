@@ -781,6 +781,24 @@ export class AuthEngine {
       true,
     );
   }
+  /**
+   * The target rejected a credential this profile produced (for example it expired the session
+   * server-side). The stored credentials stop counting as fresh, so the next Run signs in again
+   * through the bounded, cooldown-protected path instead of replaying a rejected credential.
+   */
+  markTargetRejected(profile: StoredAuthProfile): void {
+    const state = this.store.get(profile.id);
+    const now = new Date(this.clock()).toISOString();
+    const credentials = Object.fromEntries(
+      Object.entries(state.credentials).map(([role, meta]) => [role, { ...meta, expiresAt: now }]),
+    );
+    if (Object.keys(credentials).length === 0) return;
+    this.store.patch(profile.id, {
+      sessionState: "expired",
+      reason: "target_rejected",
+      credentials,
+    });
+  }
   /** A browser login that did not finish: count it, and leave a pendency a human can resolve. */
   recordBrowserLoginFailure(
     profile: StoredAuthProfile,

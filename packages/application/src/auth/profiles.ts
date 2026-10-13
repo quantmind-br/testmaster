@@ -856,13 +856,19 @@ export class AuthProfilesService {
         await this.engine.acceptStorageState(captured, storageState, undefined, false);
       },
       finish: (result) => {
-        if (!captured || !runnerAuth?.login) return;
-        if (result.reasonCode === "manual_auth_required")
+        if (result.reasonCode !== "manual_auth_required") return;
+        if (captured && runnerAuth?.login) {
           this.engine.recordBrowserLoginFailure(captured, input.environment, {
             id: input.run.id,
             attemptId: input.attemptId,
             requestedBy: input.run.requestedBy,
           });
+          return;
+        }
+        for (const profileId of input.environment.authProfileRefs)
+          this.engine.markTargetRejected(
+            requireEntity(this.ctx, "AuthProfile", profileId) as StoredAuthProfile,
+          );
       },
     };
   }
