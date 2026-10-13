@@ -675,6 +675,10 @@ export class SecretsService {
     this.ctx.authorizeColumn("secret");
     validateValue(value);
     const previous = this.lookup(idOrName);
+    if (previous.managedBy)
+      throw new ContractError("INVALID_ARGUMENT", "Secret is maintained by an auth profile", {
+        managedBy: previous.managedBy,
+      });
     if (previous.revokedAt) throw new ContractError("POLICY_DENIED", "Secret is revoked");
     const next = {
       ...previous,
@@ -708,6 +712,10 @@ export class SecretsService {
     this.ctx.authorize("W");
     this.ctx.authorizeColumn("secret");
     const previous = this.lookup(idOrName);
+    if (previous.managedBy)
+      throw new ContractError("INVALID_ARGUMENT", "Secret is maintained by an auth profile", {
+        managedBy: previous.managedBy,
+      });
     if (previous.revokedAt && !idempotencyKey) return previous;
     const next = {
       ...previous,
@@ -741,6 +749,121 @@ export class SecretsService {
     await erase(this.config, previous).catch(() => {});
     return receipt;
   }
+  /**
+   * Creates the vault slot an auth profile fills (access token, session, storage state, …).
+   * Nothing is stored until the first `writeManaged`; resolving an empty slot reports `missing_secret`.
+   */
+  async createManaged(
+    owner: { profileId: string; role: string },
+    allowedOrigins: string[],
+  ): Promise<SecretMetadata> {
+    this.ctx.authorize("W");
+    const reference = entity(this.ctx, "sec", {
+      provider: "managed",
+      locator: `auth:${owner.profileId}:${owner.role}`,
+      secretVersion: 1,
+      allowedOrigins: origins(allowedOrigins),
+      managedBy: owner.profileId,
+      managedRole: owner.role,
+    }) as SecretMetadata;
+    this.ctx.entities.insert("SecretReference", reference);
+    return reference;
+  }
+  /** Widens or narrows the origins of a managed slot after the profile's bindings changed. */
+  rebindManaged(id: string, allowedOrigins: string[]): SecretMetadata {
+    this.ctx.authorize("W");
+    const previous = this.lookup(id);
+    if (!previous.managedBy)
+      throw new ContractError("INVALID_ARGUMENT", "Secret is not maintained by an auth profile");
+    const next = {
+      ...previous,
+      allowedOrigins: origins(allowedOrigins),
+      version: previous.version + 1,
+    };
+    this.ctx.entities.update(
+      "SecretReference",
+      this.ctx.workspaceId,
+      previous.id,
+      previous.version,
+      next,
+    );
+    return next;
+  }
+  /**
+   * Stores a new value version for a managed slot. The previous version stays readable so a Run that
+   * already released it finishes; the one before that is erased. A revoked slot refuses writes
+   * until an explicit re-authentication passes `rearm`.
+   */
+  async writeManaged(
+    id: string,
+    value: string,
+    options: { rearm?: boolean } = {},
+  ): Promise<SecretMetadata> {
+    this.ctx.authorize("X");
+    validateValue(value);
+    const previous = this.lookup(id);
+    if (!previous.managedBy)
+      throw new ContractError("INVALID_ARGUMENT", "Secret is not maintained by an auth profile");
+    if (previous.revokedAt && !options.rearm)
+      throw new ContractError("POLICY_DENIED", "Secret is revoked", {
+        reasonCode: "credential_revoked",
+      });
+    const first = previous.provider === "managed";
+    const next: SecretMetadata = {
+      ...previous,
+      secretVersion: first ? previous.secretVersion : previous.secretVersion + 1,
+      version: previous.version + 1,
+      revokedAt: null,
+    };
+    next.provider = await this.persist(next, value, false);
+    try {
+      this.ctx.entities.update(
+        "SecretReference",
+        this.ctx.workspaceId,
+        previous.id,
+        previous.version,
+        next,
+      );
+    } catch (error) {
+      await erase(this.config, next).catch(() => {});
+      throw error;
+    }
+    if (!first && previous.secretVersion > 1)
+      await erase(this.config, { ...previous, secretVersion: previous.secretVersion - 1 }).catch(
+        () => {},
+      );
+    return next;
+  }
+  /** Deletes every stored version of a managed slot; `revoke` also blocks use until re-authentication. */
+  async eraseManaged(id: string, options: { revoke: boolean }): Promise<SecretMetadata> {
+    this.ctx.authorize("W");
+    const previous = this.lookup(id);
+    if (!previous.managedBy)
+      throw new ContractError("INVALID_ARGUMENT", "Secret is not maintained by an auth profile");
+    if (previous.provider === "managed" && (!options.revoke || previous.revokedAt)) return previous;
+    const next: SecretMetadata = {
+      ...previous,
+      provider: "managed",
+      secretVersion: previous.secretVersion + 1,
+      version: previous.version + 1,
+      revokedAt: options.revoke ? new Date().toISOString() : (previous.revokedAt ?? null),
+    };
+    this.ctx.entities.update(
+      "SecretReference",
+      this.ctx.workspaceId,
+      previous.id,
+      previous.version,
+      next,
+    );
+    if (previous.provider !== "managed") {
+      await erase(this.config, previous).catch(() => {});
+      if (previous.secretVersion > 1)
+        await erase(this.config, { ...previous, secretVersion: previous.secretVersion - 1 }).catch(
+          () => {},
+        );
+    }
+    return next;
+  }
   async release(id: string): Promise<SecretRelease> {
     return auditedOperation(this.ctx, "secret.release", this.auditResource(id), () =>
       this.releaseValue(id),
@@ -754,6 +877,10 @@ export class SecretsService {
       throw new ContractError("POLICY_DENIED", "Secret is revoked", {
         reasonCode: "credential_revoked",
       });
+    if (reference.provider === "managed")
+      throw new ContractError("POLICY_DENIED", "Managed credential has not been issued", {
+        reasonCode: "missing_secret",
+      });
     if (!reference.allowedOrigins.length)
       throw new ContractError("POLICY_DENIED", "Secret has no authorized target origins");
     const revoked = async (): Promise<boolean> => {
@@ -763,9 +890,15 @@ export class SecretsService {
         this.ctx.workspaceId,
         reference.id,
       );
-      return (
-        !current || Boolean(current.revokedAt) || current.secretVersion !== reference.secretVersion
-      );
+      if (!current || current.revokedAt) return true;
+      // A managed slot rotates under a running Run: the released version and its successor stay valid.
+      if (reference.managedBy)
+        return (
+          current.provider === "managed" ||
+          current.secretVersion < reference.secretVersion ||
+          current.secretVersion > reference.secretVersion + 1
+        );
+      return current.secretVersion !== reference.secretVersion;
     };
     return {
       secretRef: reference.id,
