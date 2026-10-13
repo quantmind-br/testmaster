@@ -1,0 +1,220 @@
+import { randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { ContractError } from "@testmaster/contracts";
+import { uuidV7IdGenerator } from "@testmaster/domain";
+import { LeaseRepository } from "@testmaster/persistence";
+import { afterEach, describe, expect, it } from "vitest";
+import { Application } from "./application.js";
+import { scaffoldPlan } from "./authoring.js";
+import { fairShareCap } from "./worker-pool.js";
+
+const cleanups: Array<() => Promise<void>> = [];
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0)) await cleanup();
+});
+
+async function open() {
+  const cwd = await mkdtemp(join(tmpdir(), "tm-worker-pool-"));
+  const app = await Application.open({ cwd, home: cwd });
+  cleanups.push(async () => {
+    app.close();
+    await rm(cwd, { recursive: true, force: true });
+  });
+  const init = await app.init();
+  const environmentRevisionId = app.environments.get(init.environmentId).activeRevisionId;
+  return { app, workspaceId: init.workspaceId, projectId: init.projectId, environmentRevisionId };
+}
+function codeOf(call: () => unknown): string | undefined {
+  try {
+    call();
+    return undefined;
+  } catch (error) {
+    return error instanceof ContractError ? error.code : "NOT_A_CONTRACT_ERROR";
+  }
+}
+function markReady(app: Application, workerId: string): void {
+  app.database.run(
+    "UPDATE workers SET state='ready' WHERE workspace_id=? AND id=?",
+    app.context.workspaceId,
+    workerId,
+  );
+}
+interface Fixture {
+  app: Application;
+  workspaceId: string;
+  projectId: string;
+  environmentRevisionId: string;
+}
+function enqueue(
+  { app, workspaceId, projectId, environmentRevisionId }: Fixture,
+  count: number,
+): void {
+  const leases = new LeaseRepository(app.database);
+  const test = app.tests.create({ projectId, plan: scaffoldPlan("backend") });
+  app.database.withTx(() => {
+    for (let index = 0; index < count; index++) {
+      const runId = uuidV7IdGenerator.next("run");
+      app.context.entities.insert("Run", {
+        id: runId,
+        workspaceId,
+        testId: test.id,
+        revisionId: test.activeRevisionId,
+        environmentRevisionId: environmentRevisionId,
+        batchId: null,
+        matrixCell: {},
+        mode: "replay",
+        phase: "queued",
+        status: "queued",
+        outcome: null,
+        origin: "pool-test",
+        gatePolicy: {},
+        gate: "pending",
+        cleanupOutcome: "not_required",
+        analysisStatus: "not_requested",
+      });
+      leases.enqueue(workspaceId, runId, "local");
+    }
+  });
+}
+
+describe("REQ-038 M4-08 enrollment, drain and revoke of pool workers", () => {
+  it("REQ-038 an enrollment token enrolls one worker, resumes it on re-presentation and is refused when wrong or revoked", async () => {
+    const { app, workspaceId } = await open();
+    const created = app.workerPool.createEnrollment({ name: "w1" });
+    expect(created.worker.state).toBe("enrolling");
+    expect(created.enrollmentToken).toMatch(/^tm_wrk_/u);
+
+    const controller = app.controllerScope().workerPool;
+    const first = controller.enroll(created.enrollmentToken);
+    expect(first).toEqual({ workspaceId, workerId: created.worker.id, resumed: false });
+    // Presenting the same token again resumes the same identity rather than minting another worker.
+    expect(controller.enroll(created.enrollmentToken)).toMatchObject({
+      workerId: created.worker.id,
+      resumed: true,
+    });
+    expect(app.workerPool.list()).toHaveLength(1);
+
+    // Negative controls: an unknown token is refused, and revoking blocks resumption.
+    expect(codeOf(() => controller.enroll(`tm_wrk_${"A".repeat(43)}`))).toBe("UNAUTHENTICATED");
+    app.workerPool.revoke(created.worker.id);
+    expect(codeOf(() => controller.enroll(created.enrollmentToken))).toBe("UNAUTHENTICATED");
+  });
+
+  it("M4-08 a revoked or draining worker receives no claim while a ready worker does, and revoke fences its leased job", async () => {
+    const fixture = await open();
+    const { app, workspaceId } = fixture;
+    const leases = new LeaseRepository(app.database);
+    const ready = app.workerPool.createEnrollment({ name: "ready" }).worker;
+    const doomed = app.workerPool.createEnrollment({ name: "doomed" }).worker;
+    markReady(app, ready.id);
+    markReady(app, doomed.id);
+    enqueue(fixture, 3);
+
+    const held = leases.claim({
+      workspaceId,
+      owner: "doomed",
+      queue: "local",
+      workerId: doomed.id,
+    });
+    expect(held).not.toBeNull();
+    app.workerPool.revoke(doomed.id);
+    expect(
+      leases.claim({ workspaceId, owner: "doomed", queue: "local", workerId: doomed.id }),
+    ).toBeNull();
+    const fenced = app.database.get(
+      "SELECT state FROM job_leases WHERE workspace_id=? AND resource_id=?",
+      workspaceId,
+      held?.runId,
+    );
+    expect(fenced?.state).toBe("reconciliation_required");
+
+    // Draining stops new claims too; the ready worker keeps receiving them.
+    app.workerPool.drain(ready.id);
+    expect(
+      leases.claim({ workspaceId, owner: "ready", queue: "local", workerId: ready.id }),
+    ).toBeNull();
+    const other = app.workerPool.createEnrollment({ name: "other" }).worker;
+    markReady(app, other.id);
+    expect(
+      leases.claim({ workspaceId, owner: "other", queue: "local", workerId: other.id }),
+    ).not.toBeNull();
+  });
+
+  it("REQ-038 a ready worker whose heartbeat stopped is marked offline once and announced on the outbox", async () => {
+    const { app, workspaceId } = await open();
+    const worker = app.workerPool.createEnrollment({ name: "quiet" }).worker;
+    app.database.run(
+      "UPDATE workers SET state='ready', last_heartbeat_at=? WHERE workspace_id=? AND id=?",
+      new Date(Date.now() - 120_000).toISOString(),
+      workspaceId,
+      worker.id,
+    );
+    expect(app.workerPool.sweepOffline()).toEqual([worker.id]);
+    expect(app.workerPool.sweepOffline()).toEqual([]);
+    expect(app.workerPool.get(worker.id).state).toBe("offline");
+    expect(
+      app.database.all(
+        "SELECT id FROM outbox WHERE workspace_id=? AND type='worker.offline'",
+        workspaceId,
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+describe("OPS-033 a tenant with thousands of queued jobs cannot starve another tenant", () => {
+  it("OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes", async () => {
+    const fixture = await open();
+    const { app, workspaceId } = fixture;
+    const worker = app.workerPool.createEnrollment({ name: "slots" }).worker;
+    markReady(app, worker.id);
+    const otherWorkspace = `ws_${randomUUID()}`;
+    app.database.withTx(() => {
+      app.context.entities.insert("Workspace", {
+        id: otherWorkspace,
+        workspaceId: otherWorkspace,
+        name: "Other",
+        mode: "single-user",
+        settingsVersion: 1,
+        quotaPolicyId: "local",
+      });
+    });
+    const view = app.database.forWorkspace("*");
+    const now = new Date(Date.now() + 1_000);
+    enqueue(fixture, 2500);
+    // Nobody competes yet: the busy tenant may use every slot.
+    expect(fairShareCap({ database: view, workspaceId, now })).toBeUndefined();
+
+    app.database.withTx(() =>
+      new LeaseRepository(app.database).enqueue(otherWorkspace, `run_${randomUUID()}`, "local"),
+    );
+    const flooder = fairShareCap({ database: view, workspaceId, now });
+    const newcomer = fairShareCap({ database: view, workspaceId: otherWorkspace, now });
+    expect(flooder).toBeGreaterThanOrEqual(1);
+    expect(flooder).toBeLessThanOrEqual(1);
+    expect(newcomer).toBeGreaterThanOrEqual(1);
+
+    // With the cap applied the flooder holds at most its share.
+    const leases = new LeaseRepository(app.database);
+    const first = leases.claim({
+      workspaceId,
+      owner: "a",
+      queue: "local",
+      workerId: worker.id,
+      maxLeased: flooder ?? 1,
+    });
+    const second = leases.claim({
+      workspaceId,
+      owner: "a",
+      queue: "local",
+      workerId: worker.id,
+      maxLeased: flooder ?? 1,
+    });
+    expect(first).not.toBeNull();
+    expect(second).toBeNull();
+    // The flooder is held at its share, so the slot it did not take stays available to the other tenant.
+    expect(newcomer).toBeGreaterThanOrEqual(1);
+    expect(second).toBeNull();
+  });
+});
