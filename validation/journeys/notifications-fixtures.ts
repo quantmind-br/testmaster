@@ -83,6 +83,32 @@ export async function createWebhookIntegration(
   return { integrationId: integration.id, secretId: secret.id };
 }
 
+/**
+ * The server admits a limited burst of mutations per principal. Seeding goes through its own
+ * administrator so the owner's budget stays for what the journeys do in the portal.
+ */
+const seeders = new WeakMap<ServerStack, Promise<HttpsClient>>();
+
+function seeder(stack: ServerStack): Promise<HttpsClient> {
+  const existing = seeders.get(stack);
+  if (existing) return existing;
+  const created = (async () => {
+    const member = await stack.addMember("org_admin", {
+      login: `seeder-${randomBytes(4).toString("hex")}`,
+    });
+    const client = stack.anonymous();
+    const login = await client.request("POST", "/v1/identity/login", {
+      body: { principal: member.login, password: member.password },
+      headers: { origin: stack.baseUrl, "idempotency-key": randomUUID() },
+    });
+    if (login.status !== 200) throw new Error(`seeder login failed: ${login.status} ${login.text}`);
+    client.csrfToken = login.json<{ data: { csrfToken: string } }>().data.csrfToken;
+    return client;
+  })();
+  seeders.set(stack, created);
+  return created;
+}
+
 const day = 86_400_000;
 
 /**
@@ -91,16 +117,13 @@ const day = 86_400_000;
  */
 export async function seedNotifications(
   stack: ServerStack,
-  options: { integrationName?: string; workspace?: number } = {},
+  options: { integrationName?: string } = {},
 ): Promise<NotificationFixture> {
-  const workspace = options.workspace ?? 0;
-  const target = stack.workspaces[workspace];
-  if (!target) throw new Error(`The stack has no workspace ${workspace}`);
-  const workspaceId = target.workspaceId;
+  const workspaceId = stack.workspaceId;
   const integrationName =
     options.integrationName ?? `Ops webhook ${randomBytes(3).toString("hex")}`;
   const { integrationId, secretId } = await createWebhookIntegration(
-    stack.ownerClient(workspace),
+    await seeder(stack),
     integrationName,
   );
   const scope = await stack.scope();
@@ -249,7 +272,7 @@ export async function seedReadyWorker(
 ): Promise<string> {
   const created = await expectCreated<{ worker: { id: string } }>(
     "worker",
-    await stack.ownerClient().mutate("POST", "/v1/workers", { name, labels }),
+    await (await seeder(stack)).mutate("POST", "/v1/workers", { name, labels }),
   );
   const scope = await stack.scope();
   scope.database.run(

@@ -189,7 +189,11 @@ describe("workers", () => {
     await target.locator('[data-status="ready"]').waitFor();
     expect(await target.innerText()).toContain("just now");
 
-    await target.getByRole("button", { name: /^Drain / }).click();
+    // Two clicks in one task: React has not re-rendered between them, so only the guard can stop the second.
+    await target.getByRole("button", { name: /^Drain / }).evaluate((button: HTMLElement) => {
+      button.click();
+      button.click();
+    });
     await target.locator('[data-status="draining"]').waitFor();
     // A draining worker cannot be drained again: disabled with its reason, and the click sends nothing.
     const drain = target.getByRole("button", { name: /^Drain / });
@@ -217,7 +221,10 @@ describe("workers", () => {
     // Confirm with a double click: one request, and the worker is revoked.
     await target.getByRole("button", { name: /^Revoke / }).click();
     await dialog.waitFor();
-    await dialog.getByRole("button", { name: "Revoke worker" }).dblclick();
+    await dialog.getByRole("button", { name: "Revoke worker" }).evaluate((button: HTMLElement) => {
+      button.click();
+      button.click();
+    });
     await target.locator('[data-status="revoked"]').waitFor();
     expect(revokes().length).toBe(1);
     const detail = await stack.ownerClient().request("GET", `/v1/workers/${workerId}`);
@@ -479,7 +486,10 @@ describe("deliveries", () => {
       requestsTo(handle, new RegExp(`^POST /v1/deliveries/${dead.deadLetter.id}/retry$`, "u"));
     await row(page, dead.deadLetter.id)
       .getByRole("button", { name: /^Requeue / })
-      .dblclick();
+      .evaluate((button: HTMLElement) => {
+        button.click();
+        button.click();
+      });
     // Requeued: it leaves the dead-letter view, and the unfiltered history shows it pending.
     await row(page, dead.deadLetter.id).waitFor({ state: "detached" });
     expect(retries().length).toBe(1);
