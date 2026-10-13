@@ -36,6 +36,24 @@ export interface SecretRelease {
   revoked?: () => Promise<boolean>;
   resolve: () => Promise<string>;
 }
+/** Every cookie and web-storage value of a Playwright storage state; used to scrub evidence. */
+export function storageStateValues(storageState: string): string[] {
+  try {
+    const state = JSON.parse(storageState) as {
+      cookies?: { value?: unknown }[];
+      origins?: { localStorage?: { value?: unknown }[] }[];
+    };
+    const found = [
+      ...(state.cookies ?? []).map((cookie) => cookie.value),
+      ...(state.origins ?? []).flatMap((origin) =>
+        (origin.localStorage ?? []).map((entry) => entry.value),
+      ),
+    ];
+    return found.filter((value): value is string => typeof value === "string" && value.length >= 6);
+  } catch {
+    return [];
+  }
+}
 export interface AttemptInput {
   workspaceId: string;
   runId: string;
@@ -62,6 +80,11 @@ export interface AttemptInput {
     capture: Extract<RunnerEvent, { type: "variable.captured" }>["payload"],
   ) => Promise<Extract<RunnerEvent, { type: "variable.captured" }>["payload"]>;
   onEvent?: (event: RunnerEvent) => Promise<void>;
+  /**
+   * Receives the browser storage state a login phase captured. It is handed to the host vault and
+   * never becomes an event, artifact or log line; every cookie and token value joins the scrub set.
+   */
+  onAuthState?: (storageState: string) => Promise<void>;
   resolveAction?: (stepId: string, observation: unknown) => Promise<PlanStep | null>;
 }
 export interface AttemptResult {
@@ -205,6 +228,16 @@ export class AttemptExecutor {
           throw new Error("sensitive_capture_storage_unavailable");
         }
         if (event.payload.value) throw new Error("sensitive_capture_plaintext_retained");
+      }
+      if (event.type === "auth.state") {
+        if (!input.onAuthState) throw new Error("auth_state_unavailable");
+        for (const value of storageStateValues(event.payload.data)) values.add(value);
+        try {
+          await input.onAuthState(event.payload.data);
+        } catch {
+          throw new Error("auth_state_storage_unavailable");
+        }
+        return;
       }
       if (event.type === "secret.request") {
         const request = event.payload;

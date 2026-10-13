@@ -1,4 +1,5 @@
 import { routes as audit } from "./audit";
+import { routes as auth } from "./auth";
 import { routes as authoring } from "./authoring";
 import { routes as comparisons } from "./comparisons";
 import { routes as dashboard } from "./dashboard";
@@ -48,4 +49,5 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...runs,
   ...notifications,
   ...workers,
+  ...auth,
 ];

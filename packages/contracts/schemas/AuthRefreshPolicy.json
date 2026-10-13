@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "skewSeconds",
+    "maxRefreshesPerHour",
+    "cooldownSeconds",
+    "maxConsecutiveFailures",
+    "stateTtlSeconds"
+  ],
+  "properties": {
+    "skewSeconds": {
+      "minimum": 0,
+      "maximum": 600,
+      "type": "integer"
+    },
+    "maxRefreshesPerHour": {
+      "minimum": 1,
+      "maximum": 60,
+      "type": "integer"
+    },
+    "cooldownSeconds": {
+      "minimum": 0,
+      "maximum": 3600,
+      "type": "integer"
+    },
+    "maxConsecutiveFailures": {
+      "minimum": 1,
+      "maximum": 10,
+      "type": "integer"
+    },
+    "stateTtlSeconds": {
+      "minimum": 60,
+      "maximum": 86400,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthRefreshPolicy",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -5,9 +5,13 @@
     "id",
     "version",
     "projectId",
+    "name",
     "kind",
     "originBindings",
     "secretRefs",
+    "secrets",
+    "managedSecrets",
+    "config",
     "refreshPolicy"
   ],
   "properties": {
@@ -30,6 +34,11 @@
     },
     "projectId": {
       "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
       "type": "string"
     },
     "kind": {
@@ -82,6 +91,54 @@
         "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
       }
+    },
+    "secrets": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      }
+    },
+    "managedSecrets": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      }
+    },
+    "config": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
     },
     "refreshPolicy": {
       "anyOf": [

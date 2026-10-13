@@ -264,6 +264,8 @@ export function canRetry(attempt: AttemptObservation, maxAttempts: number): bool
       "egress_denied",
       "missing_secret",
       "credential_revoked",
+      "manual_auth_required",
+      "auth_checkpoint_expired",
       "retry_unsafe_external_effect",
     ].includes(attempt.reasonCode ?? "") &&
     !attempt.externalEffectUncertain &&

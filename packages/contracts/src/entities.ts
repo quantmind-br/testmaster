@@ -1,4 +1,5 @@
 import { type TSchema, Type } from "@sinclair/typebox";
+import { authCheckpointKinds } from "./m4/auth.js";
 import { SuiteSelection, suiteStates } from "./m4/lists.js";
 import {
   ArtifactManifest,
@@ -110,6 +111,9 @@ export const entities = {
     secretVersion: Version,
     allowedOrigins: names,
     revokedAt: Type.Optional(nullable(Timestamp)),
+    /** Set when an auth profile maintains the value (access token, storage state, …). */
+    managedBy: Type.Optional(id("aup")),
+    managedRole: Type.Optional(Name),
   }),
   Source: entity("src", {
     projectId: id("prj"),
@@ -460,9 +464,15 @@ export const entities = {
   AuthProfile: entity("aup", {
     projectId: id("prj"),
     version: Version,
+    name: Name,
     kind: Enum(["form", "basic", "bearer", "api-key", "cookie", "oauth", "oidc", "manual"]),
     originBindings: names,
+    /** Static secret ids (the values of `secrets`); managed credentials are not part of an approval binding. */
     secretRefs: Type.Array(id("sec")),
+    secrets: Type.Record(Type.String(), id("sec")),
+    /** Role → vault reference the engine writes (access token, storage state, …). */
+    managedSecrets: Type.Record(Type.String(), id("sec")),
+    config: Json,
     refreshPolicy: Json,
   }),
   AuthCheckpoint: entity("acp", {
@@ -472,6 +482,14 @@ export const entities = {
     challengeRef: Name,
     expiresAt: Timestamp,
     state: Enum(["pending", "completed", "cancelled", "expired"]),
+    kind: Type.Optional(Enum(authCheckpointKinds)),
+    /** Principal that asked for the Run; only they or an admin may continue the checkpoint. */
+    requestedBy: Type.Optional(Name),
+    resolvedBy: Type.Optional(nullable(Name)),
+    resolvedAt: Type.Optional(nullable(Timestamp)),
+    /** Pending authorization (OAuth/OIDC) a re-authorization checkpoint is waiting for. */
+    authorizationId: Type.Optional(nullable(Name)),
+    authorizeUrl: Type.Optional(nullable(Type.String({ format: "uri", maxLength: 2048 }))),
   }),
   Worker: entity("wrk", {
     identityRef: Name,

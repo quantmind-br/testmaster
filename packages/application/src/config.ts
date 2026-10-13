@@ -55,7 +55,6 @@ export function exportEffectiveConfig(
     },
     unavailable: {
       signedArtifactLinks: "M4",
-      manualAuthCheckpoint: "M4",
       tunnel: "M4",
       automatedServerBackup: "M4",
       schedule: "M4",

@@ -1,6 +1,15 @@
 import { ContractError } from "@testmaster/contracts";
 import type { Command } from "commander";
-import { integer, type Options, type Runtime, required, string, version } from "./runtime.js";
+import {
+  collect,
+  integer,
+  type Options,
+  type Runtime,
+  required,
+  string,
+  strings,
+  version,
+} from "./runtime.js";
 
 function environmentPatch(opts: Options) {
   const name = string(opts, "name");
@@ -8,12 +17,14 @@ function environmentPatch(opts: Options) {
   const profile = string(opts, "networkProfile");
   const locale = string(opts, "locale");
   const timezone = string(opts, "timezone");
+  const authRefs = strings(opts, "authRef");
   if (profile && !["public", "private", "local-loopback"].includes(profile))
     throw new ContractError("INVALID_ARGUMENT", "Invalid network profile");
   return {
     ...(name ? { name } : {}),
     ...(baseUrl ? { baseUrl } : {}),
     ...(profile ? { networkProfile: profile as "public" | "private" | "local-loopback" } : {}),
+    ...(authRefs.length ? { authRefs } : {}),
     ...(locale ? { locale } : {}),
     ...(timezone ? { timezone } : {}),
     ...(typeof opts.production === "boolean" ? { production: opts.production } : {}),
@@ -26,6 +37,7 @@ function environmentOptions(command: Command): Command {
     .option("--network-profile <profile>")
     .option("--locale <locale>")
     .option("--timezone <timezone>")
+    .option("--auth-ref <id>", "Auth profile bound to this environment (repeatable)", collect, [])
     .option("--production");
 }
 export function environmentCommands(program: Command, runtime: Runtime): void {

@@ -1,0 +1,175 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "adapter",
+    "issuer",
+    "clientId",
+    "scopes",
+    "allowedScopes",
+    "redirectUris",
+    "redirectUri"
+  ],
+  "properties": {
+    "adapter": {
+      "anyOf": [
+        {
+          "const": "generic",
+          "type": "string"
+        },
+        {
+          "const": "cognito",
+          "type": "string"
+        }
+      ]
+    },
+    "issuer": {
+      "format": "uri",
+      "maxLength": 2048,
+      "type": "string"
+    },
+    "clientId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "audience": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "scopes": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "allowedScopes": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "redirectUris": {
+      "minItems": 1,
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "maxLength": 2048,
+        "type": "string"
+      }
+    },
+    "redirectUri": {
+      "format": "uri",
+      "maxLength": 2048,
+      "type": "string"
+    },
+    "endpoints": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "authorization": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string"
+        },
+        "token": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string"
+        },
+        "jwks": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string"
+        },
+        "revocation": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string"
+        }
+      }
+    },
+    "cognito": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "region"
+      ],
+      "properties": {
+        "region": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "endpoint": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string"
+        },
+        "userPoolId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    "otp": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "anyOf": [
+            {
+              "const": "SHA1",
+              "type": "string"
+            },
+            {
+              "const": "SHA256",
+              "type": "string"
+            },
+            {
+              "const": "SHA512",
+              "type": "string"
+            }
+          ]
+        },
+        "digits": {
+          "minimum": 6,
+          "maximum": 8,
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "minimum": 15,
+          "maximum": 120,
+          "type": "integer"
+        },
+        "maxFailures": {
+          "minimum": 1,
+          "maximum": 10,
+          "type": "integer"
+        },
+        "windowSeconds": {
+          "minimum": 60,
+          "maximum": 3600,
+          "type": "integer"
+        }
+      }
+    },
+    "tokenScheme": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthOAuthConfig",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -70,6 +70,91 @@
         }
       ]
     },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "captcha",
+          "type": "string"
+        },
+        {
+          "const": "webauthn",
+          "type": "string"
+        },
+        {
+          "const": "push",
+          "type": "string"
+        },
+        {
+          "const": "email-otp",
+          "type": "string"
+        },
+        {
+          "const": "reauthorization",
+          "type": "string"
+        },
+        {
+          "const": "adapter-unavailable",
+          "type": "string"
+        },
+        {
+          "const": "expired-state",
+          "type": "string"
+        }
+      ]
+    },
+    "requestedBy": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "resolvedBy": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resolvedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authorizationId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authorizeUrl": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "extensions": {
       "type": "object",
       "patternProperties": {

@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "challenge"
+  ],
+  "properties": {
+    "challenge": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "resolution"
+      ],
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "const": "captcha",
+              "type": "string"
+            },
+            {
+              "const": "webauthn",
+              "type": "string"
+            },
+            {
+              "const": "push",
+              "type": "string"
+            },
+            {
+              "const": "email-otp",
+              "type": "string"
+            }
+          ]
+        },
+        "resolution": {
+          "anyOf": [
+            {
+              "const": "storage-state",
+              "type": "string"
+            },
+            {
+              "const": "otp",
+              "type": "string"
+            },
+            {
+              "const": "retry",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "ttlSeconds": {
+      "minimum": 60,
+      "maximum": 86400,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthManualConfig",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

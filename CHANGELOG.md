@@ -61,3 +61,4 @@ and rollback means restoring a backup taken before the upgrade.
 | 13 | `authoring_portal` | `515de580d447` | Server-side `test_drafts` per principal and `refinement_turns` for the proposal refinement chat |
 | 14 | `lists_schedules` | `a5689df59326` | `schedules`, `schedule_revisions`, `schedule_firings` and `scheduler_leases` for cross-project lists and fenced scheduling |
 | 15 | `notifications` | `a4a5b6a0f2de` | `notification_deliveries` and `notification_attempts` with the outbox index for durable per-integration notification delivery (ADR-021) |
+| 16 | `auth_dynamic` | `c9f78f8e427b` | `auth_profile_state`, `auth_authorizations` and `auth_checkpoints` for dynamic target authentication, with managed-secret ownership |

@@ -18,6 +18,7 @@ export * from "./approvals.js";
 export * from "./artifact-links.js";
 export * from "./artifacts.js";
 export * from "./audit.js";
+export * from "./auth/index.js";
 export * from "./authoring.js";
 export * from "./backups.js";
 export * from "./ci.js";

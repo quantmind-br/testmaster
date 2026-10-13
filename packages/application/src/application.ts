@@ -59,6 +59,8 @@ import { ApprovalsService } from "./approvals.js";
 import { ArtifactLinksService } from "./artifact-links.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
 import { AuditService, auditSecurity } from "./audit.js";
+import { createBrowserLoginProbe } from "./auth/browser-login.js";
+import { AuthCheckpointsService, AuthProfilesService } from "./auth/index.js";
 import {
   EnvironmentsService,
   ProjectsService,
@@ -226,6 +228,8 @@ export class Application {
   readonly workspaces: WorkspacesService;
   readonly members: MembersService;
   readonly tokens: TokensService;
+  readonly authProfiles: AuthProfilesService;
+  readonly authCheckpoints: AuthCheckpointsService;
   /** Host-trust bootstrap and recovery; callers are trusted by controlling the deployment. */
   readonly operator: OperatorService;
   /** Background loops run by `server start`; shared by every scoped instance. */
@@ -341,6 +345,7 @@ export class Application {
       retention: this.retention,
       analysis: { settlePending: () => this.analysis.settlePending() },
       healing: { settlePending: () => this.healing.settlePending() },
+      auth: () => this.authProfiles,
       ...(this.dockerCommand ? { dockerCommand: this.dockerCommand } : {}),
     });
     this.comparisons = new ComparisonsService(this.context, this.runs, this.batches);
@@ -424,6 +429,18 @@ export class Application {
     );
     this.members = new MembersService(this.context);
     this.tokens = new TokensService(this.context, () => this);
+    this.authProfiles = new AuthProfilesService(this.context, {
+      secrets: this.secrets,
+      stepUp: (password, operation) => this.identityService.confirmPassword(password, operation),
+      browserLogin: createBrowserLoginProbe(this.context, {
+        config,
+        secrets: this.secrets,
+        seccompPath: this.seccompPath,
+        images: () => this.images(),
+        ...(this.dockerCommand ? { dockerCommand: this.dockerCommand } : {}),
+      }),
+    });
+    this.authCheckpoints = new AuthCheckpointsService(this.context, this.authProfiles);
     this.operator = new OperatorService(root.forWorkspace("*"));
     const publicOrigin = serverConfig?.server.publicOrigin ?? defaultPublicOrigin;
     this.integrations.useDelivery({ secrets: this.platformSecrets(), publicOrigin });
@@ -785,8 +802,8 @@ export class Application {
     }
   }
   private authorizeNamed(
-    action: "approve" | "delete",
-    resourceType: "HealingProposal" | "Artifact",
+    action: "approve" | "delete" | "export",
+    resourceType: "HealingProposal" | "Artifact" | "SecretReference",
     projectId: string,
     environmentId: string | null,
   ): void {
@@ -803,8 +820,10 @@ export class Application {
       const aliases: Record<typeof resourceType, string[]> = {
         HealingProposal: ["HealingProposal", "healing", "*"],
         Artifact: ["Artifact", "artifacts", "*"],
+        SecretReference: ["SecretReference", "secrets", "*"],
       };
-      const column: RbacColumn = action === "approve" ? "write" : "admin";
+      const column: RbacColumn =
+        action === "approve" ? "write" : action === "export" ? "export" : "admin";
       const decision = this.decide(
         column,
         role,
@@ -823,7 +842,7 @@ export class Application {
         : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
-          scope: `${resourceType === "HealingProposal" ? "healing" : "artifacts"}:${action}`,
+          scope: `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets" }[resourceType]}:${action}`,
         });
       auditSecurity(this.context, "grant", projectId, "allowed");
     } catch (error) {

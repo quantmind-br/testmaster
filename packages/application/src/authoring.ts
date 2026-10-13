@@ -48,6 +48,7 @@ export interface EnvironmentInput {
   locale?: string;
   timezone?: string;
   production?: boolean;
+  authRefs?: string[];
 }
 export type EnvironmentPatch = Partial<Omit<EnvironmentInput, "projectId">>;
 export type TestPatch = Partial<Pick<TestCase, "name" | "tags" | "priority">>;
@@ -306,6 +307,7 @@ export class EnvironmentsService {
       "locale",
       "timezone",
       "production",
+      "authRefs",
     ]);
     return authoringTransaction(this.ctx, () => {
       const owner = project(this.ctx, input.projectId);
@@ -315,7 +317,7 @@ export class EnvironmentsService {
       const revision = entity(this.ctx, "evr", {
         targetOrigins: [target],
         networkProfile: input.networkProfile ?? networkProfile(target),
-        authProfileRefs: [],
+        authProfileRefs: this.authProfileRefs(input.projectId, input.authRefs ?? [], [target]),
         locale: input.locale ?? "en-US",
         timezone: input.timezone ?? "UTC",
         variables: {},
@@ -331,6 +333,30 @@ export class EnvironmentsService {
       this.ctx.entities.insert("EnvironmentRevision", revision, { environmentId: value.id });
       return value;
     });
+  }
+  /** Every attached profile must belong to the project and be bound to each origin the environment targets. */
+  private authProfileRefs(
+    projectId: string,
+    refs: readonly string[],
+    targetOrigins: readonly string[],
+  ): string[] {
+    const unique = [...new Set(refs)];
+    for (const id of unique) {
+      const profile = this.ctx.entities.get("AuthProfile", this.ctx.workspaceId, id);
+      if (!profile || profile.projectId !== projectId)
+        throw new ContractError("NOT_FOUND", "Auth profile does not exist in this project", {
+          authProfileId: id,
+        });
+      const bindings = profile.originBindings as string[];
+      const outside = targetOrigins.filter((target) => !bindings.includes(target));
+      if (outside.length)
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Auth profile is not bound to the environment's target origin",
+          { authProfileId: id, origins: outside, reasonCode: "security_precondition_failed" },
+        );
+    }
+    return unique;
   }
   private uniqueName(projectId: string, name: string, except?: string): void {
     if (
@@ -405,7 +431,15 @@ export class EnvironmentsService {
   }
   update(id: string, patch: EnvironmentPatch, expectedVersion: number): Stored<Environment> {
     this.ctx.authorize("W");
-    keys(patch, ["name", "baseUrl", "networkProfile", "locale", "timezone", "production"]);
+    keys(patch, [
+      "name",
+      "baseUrl",
+      "networkProfile",
+      "locale",
+      "timezone",
+      "production",
+      "authRefs",
+    ]);
     return authoringTransaction(this.ctx, () => {
       const current = requireEntity(this.ctx, "Environment", id) as Stored<Environment>;
       this.ctx.authorize("W", current.projectId);
@@ -418,11 +452,17 @@ export class EnvironmentsService {
         "EnvironmentRevision",
         current.activeRevisionId,
       ) as Stored<EnvironmentRevision>;
+      const targetOrigins =
+        patch.baseUrl === undefined ? previous.targetOrigins : [origin(patch.baseUrl)];
+      const refs = this.authProfileRefs(
+        current.projectId,
+        patch.authRefs ?? previous.authProfileRefs,
+        targetOrigins,
+      );
       const revision = entity(this.ctx, "evr", {
-        targetOrigins:
-          patch.baseUrl === undefined ? previous.targetOrigins : [origin(patch.baseUrl)],
+        targetOrigins,
         networkProfile: patch.networkProfile ?? previous.networkProfile,
-        authProfileRefs: previous.authProfileRefs,
+        authProfileRefs: refs,
         locale: patch.locale ?? previous.locale,
         timezone: patch.timezone ?? previous.timezone,
         variables: previous.variables,

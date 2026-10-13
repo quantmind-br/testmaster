@@ -1,6 +1,7 @@
 import { routeCatalog } from "@testmaster/contracts";
 import { artifactGatewayRoutes } from "./artifact-gateway.js";
 import { auditRoutes } from "./audit.js";
+import { authRoutes } from "./auth.js";
 import { authoringRoutes } from "./authoring.js";
 import { coreRoutes } from "./core.js";
 import { deliveryRoutes } from "./deliveries.js";
@@ -31,6 +32,7 @@ export const routeModules: RouteModule[] = [
   runViewRoutes,
   deliveryRoutes,
   workerRoutes,
+  authRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

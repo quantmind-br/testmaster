@@ -1,0 +1,65 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "runId",
+    "attemptId",
+    "authProfileId",
+    "kind",
+    "challengeRef"
+  ],
+  "properties": {
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "attemptId": {
+      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "authProfileId": {
+      "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "captcha",
+          "type": "string"
+        },
+        {
+          "const": "webauthn",
+          "type": "string"
+        },
+        {
+          "const": "push",
+          "type": "string"
+        },
+        {
+          "const": "email-otp",
+          "type": "string"
+        },
+        {
+          "const": "reauthorization",
+          "type": "string"
+        },
+        {
+          "const": "adapter-unavailable",
+          "type": "string"
+        },
+        {
+          "const": "expired-state",
+          "type": "string"
+        }
+      ]
+    },
+    "challengeRef": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthCheckpointInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

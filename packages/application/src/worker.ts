@@ -51,6 +51,7 @@ import {
 import { AgentModeService } from "./ai/agent-mode.js";
 import { CodeImportService } from "./ai/code-import.js";
 import { auditSecurity } from "./audit.js";
+import { type AuthProfilesService, authBlockReasons } from "./auth/index.js";
 import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
@@ -84,6 +85,7 @@ export interface WorkerHost {
   retention?: { maintenance(): Promise<unknown> };
   analysis?: { settlePending(): Promise<number> };
   healing?: { settlePending(): Promise<number> };
+  auth?: () => AuthProfilesService;
   dockerCommand?: DockerCommand;
   docker?: AttemptRuntimeExecutor;
 }
@@ -577,7 +579,33 @@ export class WorkerService {
         hostPlatform: process.platform,
         hostArchitecture: process.arch,
       };
-      const secretIds = new Set<string>();
+      // Dynamic authentication: bring every attached profile to a usable state before any
+      // credential is released; a human step or revoked credential blocks the Run here.
+      const authService =
+        (env.authProfileRefs as string[]).length > 0 ? this.host.auth?.() : undefined;
+      const prepared = authService
+        ? await authService.prepare({
+            run: {
+              id: run.id,
+              origin: run.origin,
+              requestedBy: String(
+                (cell.actor as { principalId?: string } | undefined)?.principalId,
+              ),
+            },
+            attemptId: fence.attemptId,
+            environment: {
+              id: String(cell.environmentId ?? env.id),
+              projectId: String(requireEntity(this.ctx, "TestCase", String(run.testId)).projectId),
+              targetOrigins: env.targetOrigins as string[],
+              networkProfile: env.networkProfile as "public" | "private" | "local-loopback",
+              authProfileRefs: env.authProfileRefs as string[],
+            },
+            signal: controller.signal,
+            deadlineAt: Date.now() + attemptDeadlineMs,
+            interactive: ["cli", "api", "mcp"].includes(run.origin) && process.env.CI !== "true",
+          })
+        : null;
+      const secretIds = new Set<string>(prepared?.secretIds);
       const inspect = (value: unknown) => {
         if (!value || typeof value !== "object") return;
         for (const [key, item] of Object.entries(value)) {
@@ -687,6 +715,7 @@ export class WorkerService {
                 : { imported: { files: [imported.bundle.entrypoint] } }
               : {}),
             baseUrl: String(cell.baseUrl),
+            ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),
             variables,
             artifacts: fixtureInputs.artifacts,
             bodyBytes: limits.bodyBytes ?? defaults.bodyBytes,
@@ -707,6 +736,7 @@ export class WorkerService {
             },
           },
           attemptTimeoutMs: attemptDeadlineMs,
+          ...(prepared ? { onAuthState: prepared.onAuthState } : {}),
           seccompPath: this.host.seccompPath,
           protectCapture: async (capture) => {
             if (!capture.sensitive) return capture;
@@ -936,6 +966,7 @@ export class WorkerService {
         },
         controller.signal,
       );
+      prepared?.finish({ outcome: result.outcome, reasonCode: result.reasonCode });
       const cleanupFailure = result.cleanupFailure;
       if (cleanupFailure) {
         this.quarantineWorker({
@@ -1074,12 +1105,17 @@ export class WorkerService {
         const reduced = reduceOutcome(attempts, assertions, requiredSteps);
         if (
           ((error instanceof ContractError &&
-            error.details.reasonCode === "security_precondition_failed") ||
+            typeof error.details.reasonCode === "string" &&
+            (error.details.reasonCode === "security_precondition_failed" ||
+              authBlockReasons.has(error.details.reasonCode))) ||
             error instanceof PolicyDenied) &&
           reduced.outcome !== "failed"
         ) {
           reduced.outcome = "blocked";
-          reduced.reasonCode = "security_precondition_failed";
+          reduced.reasonCode =
+            error instanceof ContractError && typeof error.details.reasonCode === "string"
+              ? error.details.reasonCode
+              : "security_precondition_failed";
         }
         recordTiming();
         const containerCleanupFailed =

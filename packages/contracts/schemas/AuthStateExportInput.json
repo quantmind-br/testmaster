@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "password"
+  ],
+  "properties": {
+    "password": {
+      "minLength": 1,
+      "maxLength": 1024,
+      "type": "string"
+    },
+    "ttlSeconds": {
+      "minimum": 60,
+      "maximum": 900,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthStateExportInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -262,6 +262,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
     "audit-api",
     "deliveries",
     "workers-registration",
+    "auth-dynamic",
   ],
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
