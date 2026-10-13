@@ -3,11 +3,15 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { constants } from "node:fs";
 import { type FileHandle, link, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { ContractError, type SecretReference } from "@testmaster/contracts";
+import {
+  ContractError,
+  type SecretReference,
+  type SecretVersionRecord,
+} from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { type EntityDocument, IdempotencyRepository } from "@testmaster/persistence";
 import type { SecretRelease } from "@testmaster/sandbox";
-import { auditedOperation } from "./audit.js";
+import { auditedOperation, auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, type ServiceContext } from "./context.js";
 
@@ -622,8 +626,8 @@ export class SecretsService {
         this.ctx.entities.insert("SecretReference", reference);
         return reference;
       };
-      if (options.idempotencyKey)
-        return new IdempotencyRepository(this.ctx.database).execute(
+      if (options.idempotencyKey) {
+        const execution = new IdempotencyRepository(this.ctx.database).execute(
           {
             workspaceId: this.ctx.workspaceId,
             actorScope: this.ctx.principalId,
@@ -632,13 +636,16 @@ export class SecretsService {
             body,
           },
           commit,
-        ).receipt;
-      this.ctx.database.withTx(commit);
+        );
+        if (execution.replayed) return execution.receipt;
+      } else this.ctx.database.withTx(commit);
     } catch (error) {
       this.ephemeral.delete(`${reference.id}:1`);
       await erase(this.config, reference).catch(() => {});
       throw error;
     }
+    // The created event of the version history is keyed by the reference id, not the shared label.
+    auditSecurity(this.ctx, "secret.set", reference.id, "allowed");
     return reference;
   }
   /** Trusted supervisor capture path; requires execution authority and never exports plaintext. */
@@ -665,16 +672,64 @@ export class SecretsService {
     }
     return reference;
   }
-  async rotate(idOrName: string, value: string): Promise<SecretMetadata> {
-    return auditedOperation(this.ctx, "secret.rotate", this.auditResource(idOrName), () =>
-      this.rotateValue(idOrName, value),
-    );
+  async rotate(
+    idOrName: string,
+    value: string,
+    options: { idempotencyKey?: string } = {},
+  ): Promise<SecretMetadata> {
+    const resource = this.auditResource(idOrName);
+    auditSecurity(this.ctx, "secret.rotate", resource, "requested");
+    try {
+      const rotation = await this.rotateValue(idOrName, value, options.idempotencyKey);
+      // A replayed request changed nothing, so it must not add a version event to the history.
+      if (!rotation.replayed) auditSecurity(this.ctx, "secret.rotate", resource, "allowed");
+      return rotation.reference;
+    } catch (error) {
+      auditSecurity(this.ctx, "secret.rotate", resource, "denied");
+      throw error;
+    }
   }
-  private async rotateValue(idOrName: string, value: string): Promise<SecretMetadata> {
+  /** The stored first response of an idempotent rotation, or null when the key is new or expired. */
+  private rotationReplay(operation: string, key: string, body: unknown): SecretMetadata | null {
+    if (key.length < 16 || key.length > 128)
+      throw new ContractError("INVALID_ARGUMENT", "Idempotency key must have 16–128 characters");
+    const row = this.ctx.database.get(
+      "SELECT request_hash,response_json,expires_at FROM idempotency_receipts WHERE workspace_id=? AND actor_scope=? AND operation=? AND key=?",
+      this.ctx.workspaceId,
+      this.ctx.principalId,
+      operation,
+      key,
+    );
+    if (!row || String(row.expires_at) <= new Date().toISOString()) return null;
+    if (row.request_hash !== semanticHash(body))
+      throw new ContractError(
+        "IDEMPOTENCY_CONFLICT",
+        "Idempotency key has another secret rotation",
+      );
+    return JSON.parse(String(row.response_json)) as SecretMetadata;
+  }
+  private async rotateValue(
+    idOrName: string,
+    value: string,
+    idempotencyKey?: string,
+  ): Promise<{ reference: SecretMetadata; replayed: boolean }> {
     this.ctx.authorize("W");
     this.ctx.authorizeColumn("secret");
     validateValue(value);
     const previous = this.lookup(idOrName);
+    const request = idempotencyKey
+      ? {
+          workspaceId: this.ctx.workspaceId,
+          actorScope: this.ctx.principalId,
+          operation: `secret.rotate:${previous.id}`,
+          key: idempotencyKey,
+          body: { valueHash: semanticHash(value) },
+        }
+      : null;
+    if (request) {
+      const first = this.rotationReplay(request.operation, request.key, request.body);
+      if (first) return { reference: first, replayed: true };
+    }
     if (previous.revokedAt) throw new ContractError("POLICY_DENIED", "Secret is revoked");
     const next = {
       ...previous,
@@ -682,7 +737,7 @@ export class SecretsService {
       version: previous.version + 1,
     };
     next.provider = await this.persist(next, value, previous.provider === "ephemeral");
-    try {
+    const commit = () => {
       this.ctx.entities.update(
         "SecretReference",
         this.ctx.workspaceId,
@@ -690,14 +745,78 @@ export class SecretsService {
         previous.version,
         next,
       );
+      return next;
+    };
+    let replayed = false;
+    let reference = next;
+    try {
+      if (request) {
+        // The receipt and the new version commit together, so a retry can never rotate twice.
+        const execution = new IdempotencyRepository(this.ctx.database).execute(request, commit);
+        replayed = execution.replayed;
+        reference = execution.receipt;
+      } else commit();
     } catch (error) {
       this.ephemeral.delete(`${next.id}:${next.secretVersion}`);
       await erase(this.config, next).catch(() => {});
       throw error;
     }
+    // A concurrent identical request already owns this version slot; nothing was superseded here.
+    if (replayed) return { reference, replayed };
     this.ephemeral.delete(`${previous.id}:${previous.secretVersion}`);
     await erase(this.config, previous).catch(() => {});
-    return next;
+    return { reference, replayed };
+  }
+  /**
+   * Lifecycle events of one secret, newest first, derived from the audit trail. The trail holds
+   * no values, so neither does the history; versions count back from the current one and never
+   * fall below 1 when part of the chain predates auditing against the reference id.
+   */
+  history(idOrName: string): SecretVersionRecord[] {
+    this.ctx.authorize("R");
+    const reference = this.lookup(idOrName);
+    const rows = this.ctx.database.all<{
+      id: string;
+      created_at: string;
+      actor: string;
+      action: string;
+      request_id: string;
+    }>(
+      "SELECT id,created_at,actor,action,request_id FROM audit_events WHERE workspace_id=? AND resource_id=? AND action IN (?,?,?) ORDER BY created_at,id",
+      this.ctx.workspaceId,
+      reference.id,
+      "secret.set.allowed",
+      "secret.rotate.allowed",
+      "secret.revoke.allowed",
+    );
+    const names = {
+      "secret.set.allowed": "created",
+      "secret.rotate.allowed": "rotated",
+      "secret.revoke.allowed": "revoked",
+    } as const;
+    const seen = new Set<string>();
+    const events = rows.flatMap((row) => {
+      const event = names[row.action as keyof typeof names];
+      // Creation and revocation happen once; a repeated revoke request changes nothing.
+      if (event !== "rotated" && seen.has(event)) return [];
+      seen.add(event);
+      return [{ row, event }];
+    });
+    let version = reference.secretVersion;
+    const records: SecretVersionRecord[] = [];
+    for (const { row, event } of events.reverse()) {
+      const current = event === "created" ? 1 : Math.max(1, version);
+      if (event === "rotated") version = Math.max(1, version - 1);
+      records.push({
+        id: row.id,
+        createdAt: row.created_at,
+        version: current,
+        event,
+        actor: row.actor,
+        requestId: row.request_id,
+      } as SecretVersionRecord);
+    }
+    return records;
   }
   async remove(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
     return auditedOperation(this.ctx, "secret.revoke", this.auditResource(idOrName), () =>
