@@ -8,7 +8,7 @@ import {
   type ServerConfig,
   scaffoldPlan,
 } from "@testmaster/application";
-import { type Role, rbacMatrix } from "@testmaster/contracts";
+import { type Role, rbacMatrix, routeCatalog } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import type { LightMyRequestResponse } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -354,7 +354,10 @@ describe("audit trail over HTTP", () => {
       admin,
     );
     expect(stolen.statusCode).toBe(400);
-    // The audit trail needs the admin column.
+    // The audit trail needs the admin column, declared by the catalog and enforced by the service.
+    expect(
+      routeCatalog.find((route) => route.method === "GET" && route.path === "/audit-events")?.scope,
+    ).toBe("audit:A");
     const refused = await f.call("GET", "/v1/audit-events", viewer);
     expect(refused.statusCode).toBe(403);
     expect((await f.call("GET", "/v1/audit-events?limit=101", f.ownerToken)).statusCode).toBe(400);
