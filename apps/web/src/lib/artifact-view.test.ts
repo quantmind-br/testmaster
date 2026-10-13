@@ -114,6 +114,18 @@ describe("artifact metadata", () => {
     expect(describeIntegrity(entry({ state: "partial" })).label).toBe("Partial");
   });
 
+  it("UX-030 an artifact without a recorded hash, a capture or full availability never reads as plain available", () => {
+    for (const patch of [
+      { sha256: null },
+      { state: "missing" as const },
+      { state: "expired" as const },
+      { state: "partial" as const },
+    ])
+      expect(describeIntegrity(entry(patch)).label, JSON.stringify(patch)).not.toBe("Available");
+    expect(describeIntegrity(entry({ sha256: null })).tone).not.toBe("success");
+    expect(describeAccessClass(entry({ redactionStatus: "restrictedRaw" }))).not.toBe("Redacted");
+  });
+
   it("UX-030 a partial or subset manifest carries a warning and a complete one does not", () => {
     expect(describeManifestCompleteness({ entries: [entry({})] })).toBeNull();
     expect(
