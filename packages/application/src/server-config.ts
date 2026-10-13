@@ -22,6 +22,20 @@ export interface ServerConfig {
     atRestEncryption: { database: "operator-volume"; evidence: "operator-volume" };
   };
   telemetry?: { metrics: boolean; logExport: "none" | "stdout-json" };
+  /**
+   * Operator backups (ADR-019). `destination` may be an off-host mount; `pgDump`/`pgRestore` are argv
+   * prefixes for the PostgreSQL client tools (for example a docker wrapper). The backup agent is a
+   * separate process: the server refuses to start when it can read the backup key or write the
+   * destination unless `allowSharedAccess` says the operator accepts one shared identity.
+   */
+  backup?: {
+    destination: string;
+    pgDump?: string[];
+    pgRestore?: string[];
+    schedule?: "daily" | "disabled";
+    retention?: { daily: number; weekly: number; monthly: number };
+    allowSharedAccess?: boolean;
+  };
 }
 type Json = Record<string, unknown>;
 const problems = (list: string[]): never => {
@@ -92,7 +106,12 @@ export function filesystemRoot(storage: ServerConfig["storage"]): string {
 export function parseServerConfig(input: unknown): ServerConfig {
   const issues: string[] = [];
   const root = object(input, "$", issues);
-  known(root, ["mode", "database", "storage", "server", "security", "telemetry"], "$", issues);
+  known(
+    root,
+    ["mode", "database", "storage", "server", "security", "telemetry", "backup"],
+    "$",
+    issues,
+  );
   if (root.mode !== "server") issues.push('$.mode must be "server"');
   const db = object(root.database, "$.database", issues);
   known(db, ["engine", "url", "passwordFile", "caFile", "applicationName"], "$.database", issues);
@@ -160,6 +179,52 @@ export function parseServerConfig(input: unknown): ServerConfig {
       logExport: value.logExport === "stdout-json" ? "stdout-json" : "none",
     };
   }
+  let backup: ServerConfig["backup"];
+  if (root.backup !== undefined) {
+    const value = object(root.backup, "$.backup", issues);
+    known(
+      value,
+      ["destination", "pgDump", "pgRestore", "schedule", "retention", "allowSharedAccess"],
+      "$.backup",
+      issues,
+    );
+    const destination = absolute(value.destination, "$.backup.destination", issues);
+    const pgDump =
+      value.pgDump === undefined ? undefined : list(value.pgDump, "$.backup.pgDump", issues);
+    const pgRestore =
+      value.pgRestore === undefined
+        ? undefined
+        : list(value.pgRestore, "$.backup.pgRestore", issues);
+    if (pgDump?.length === 0) issues.push("$.backup.pgDump must not be empty");
+    if (pgRestore?.length === 0) issues.push("$.backup.pgRestore must not be empty");
+    if (value.schedule !== undefined && value.schedule !== "daily" && value.schedule !== "disabled")
+      issues.push('$.backup.schedule must be "daily" or "disabled"');
+    let retention: { daily: number; weekly: number; monthly: number } | undefined;
+    if (value.retention !== undefined) {
+      const found = object(value.retention, "$.backup.retention", issues);
+      known(found, ["daily", "weekly", "monthly"], "$.backup.retention", issues);
+      for (const key of ["daily", "weekly", "monthly"] as const) {
+        const count = found[key];
+        if (typeof count !== "number" || !Number.isInteger(count) || count < 0 || count > 3650)
+          issues.push(`$.backup.retention.${key} must be an integer from 0 to 3650`);
+      }
+      retention = {
+        daily: Number(found.daily),
+        weekly: Number(found.weekly),
+        monthly: Number(found.monthly),
+      };
+    }
+    if (value.allowSharedAccess !== undefined && typeof value.allowSharedAccess !== "boolean")
+      issues.push("$.backup.allowSharedAccess must be a boolean");
+    backup = {
+      destination,
+      ...(pgDump ? { pgDump } : {}),
+      ...(pgRestore ? { pgRestore } : {}),
+      ...(value.schedule === "disabled" ? { schedule: "disabled" as const } : {}),
+      ...(retention ? { retention } : {}),
+      ...(value.allowSharedAccess === true ? { allowSharedAccess: true } : {}),
+    };
+  }
   if (issues.length) problems(issues);
   return {
     mode: "server",
@@ -183,6 +248,7 @@ export function parseServerConfig(input: unknown): ServerConfig {
       atRestEncryption: { database: "operator-volume", evidence: "operator-volume" },
     },
     ...(telemetry ? { telemetry } : {}),
+    ...(backup ? { backup } : {}),
   };
 }
 /**
