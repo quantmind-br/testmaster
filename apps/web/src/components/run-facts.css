@@ -1,0 +1,106 @@
+/* Run history and Run detail (theme tokens only). */
+ol.timeline {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+ol.timeline li {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--divider);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+ol.timeline li[data-state="done"] {
+  border-left-color: var(--success-text);
+}
+
+ol.timeline li[data-state="active"] {
+  border-left-color: var(--info-text);
+}
+
+ol.timeline li[data-state="pending"] {
+  border-left-style: dotted;
+  border-left-color: var(--border);
+}
+
+.timeline-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.timeline-title svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+
+.timeline-meta {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+ul.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.actions-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.run-section {
+  margin-block: var(--space-6);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+.filters .field {
+  min-width: 10rem;
+  flex: 1 1 10rem;
+}
+
+.artifact-panel {
+  margin-block: var(--space-4);
+  padding: var(--space-4);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.artifact-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
