@@ -2,6 +2,7 @@ import {
   ContractError,
   type Environment,
   type EnvironmentRevision,
+  type EnvironmentRevisionView,
   type ExecutablePlan,
   type Project,
   parseAndValidate,
@@ -353,6 +354,33 @@ export class EnvironmentsService {
       );
     this.ctx.authorize("R", value.projectId);
     return value;
+  }
+  /** Revision history, newest first, without `variables`, which may hold captured values. */
+  revisions(idOrName: string): EnvironmentRevisionView[] {
+    const environment = this.get(idOrName);
+    return this.ctx.database
+      .all<{ id: string }>(
+        "SELECT id FROM environment_revisions WHERE workspace_id=? AND environment_id=? ORDER BY created_at DESC,id DESC",
+        this.ctx.workspaceId,
+        environment.id,
+      )
+      .map(({ id }) => {
+        const revision = requireEntity(
+          this.ctx,
+          "EnvironmentRevision",
+          id,
+        ) as Stored<EnvironmentRevision>;
+        return {
+          id: revision.id,
+          createdAt: revision.createdAt,
+          targetOrigins: revision.targetOrigins,
+          networkProfile: revision.networkProfile,
+          authProfileRefs: revision.authProfileRefs,
+          locale: revision.locale,
+          timezone: revision.timezone,
+          production: revision.production,
+        } as EnvironmentRevisionView;
+      });
   }
   update(id: string, patch: EnvironmentPatch, expectedVersion: number): Stored<Environment> {
     this.ctx.authorize("W");
