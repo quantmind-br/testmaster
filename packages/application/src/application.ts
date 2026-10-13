@@ -796,14 +796,19 @@ export class Application {
     };
     try {
       const migrations = this.database.status();
-      const journalMode = String(this.database.get("PRAGMA journal_mode")?.journal_mode);
+      // The journal mode is a SQLite property; PostgreSQL durability is the server's concern.
+      const journalMode =
+        this.database.engine === "sqlite"
+          ? String(this.database.get("PRAGMA journal_mode")?.journal_mode)
+          : undefined;
+      const journalHealthy = journalMode === undefined || journalMode === "wal";
       database = {
-        status: migrations.pending.length === 0 && journalMode === "wal" ? "PASS" : "FAIL",
+        status: migrations.pending.length === 0 && journalHealthy ? "PASS" : "FAIL",
         schemaVersion: migrations.currentVersion,
-        journalMode,
+        ...(journalMode === undefined ? {} : { journalMode }),
         ...(migrations.pending.length
           ? { diagnostics: ["migrations_pending"] }
-          : journalMode === "wal"
+          : journalHealthy
             ? {}
             : { diagnostics: ["database_unavailable"] }),
       };

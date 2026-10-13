@@ -15,7 +15,7 @@ import { allEntities, entity, requireEntity, type ServiceContext } from "./conte
 
 type Stored<T> = T & EntityDocument;
 export function authoringTransaction<T>(ctx: ServiceContext, action: () => T): T {
-  return ctx.database.db.isTransaction ? action() : ctx.database.withTx(action);
+  return ctx.database.inTransaction ? action() : ctx.database.withTx(action);
 }
 export type ProjectPatch = Partial<Pick<Project, "name" | "slug" | "defaultEnvironmentId">>;
 export interface EnvironmentInput {

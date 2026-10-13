@@ -1,12 +1,11 @@
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, readdirSync, readFileSync } from "node:fs";
 import {
   chmod,
   copyFile,
   lstat,
   mkdir,
   open,
-  readdir,
   readFile,
   rename,
   rm,
@@ -17,6 +16,14 @@ import { backup, DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { ContractError, validate } from "@testmaster/contracts";
 import { ensureControlPlaneReserve, releaseControlPlaneReserve } from "./disk-reserve.js";
+import {
+  type BridgeRequest,
+  type BridgeRows,
+  type BridgeStep,
+  PostgresBridge,
+  type PostgresConfig,
+} from "./postgres/bridge.js";
+import { isReadStatement, splitStatements, translateSql } from "./postgres/dialect.js";
 
 export type SqlRow = Record<string, unknown>;
 export interface MigrationStatus {
@@ -45,16 +52,18 @@ export class MigrationChecksumError extends Error {
     super(`Migration ${version} checksum mismatch (expected ${expected}, found ${actual})`);
   }
 }
-export async function loadMigrations(
-  engine: "sqlite" | "postgres" = "sqlite",
+export function loadMigrationsSync(
+  engine: DatabaseEngine = "sqlite",
   directory = fileURLToPath(new URL(`../migrations/${engine}/`, import.meta.url)),
-): Promise<Migration[]> {
-  const names = (await readdir(directory)).filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
+): Migration[] {
+  const names = readdirSync(directory)
+    .filter((name) => /^\d{4}_.+\.sql$/u.test(name))
+    .sort();
   const result: Migration[] = [];
   for (const name of names) {
     const match = /^(\d{4})_(.+)\.sql$/u.exec(name);
     if (!match?.[1] || !match[2]) continue;
-    const sql = await readFile(join(directory, name), "utf8");
+    const sql = readFileSync(join(directory, name), "utf8");
     const version = Number(match[1]);
     if (version !== result.length + 1)
       throw new Error("Migration versions must be contiguous and unique");
@@ -68,13 +77,68 @@ export async function loadMigrations(
   if (!result.length) throw new Error("No database migrations available");
   return result;
 }
-export type TxDatabase = DatabaseSync;
+export async function loadMigrations(
+  engine: DatabaseEngine = "sqlite",
+  directory?: string,
+): Promise<Migration[]> {
+  return loadMigrationsSync(engine, directory);
+}
+export type DatabaseEngine = "sqlite" | "postgres";
+export type TxDatabase = PersistenceDatabase;
+
+/** Advisory lock that serializes every PostgreSQL write transaction (ADR-015). */
+const writerLockKey = 7_340_041;
+/** Advisory lock that serializes PostgreSQL schema migrations (ADR-015). */
+const migrationLockKey = 7_340_042;
+const migrationTimeoutMs = 600_000;
+const bypassRefusal = "Database role bypasses row-level security";
+
+interface SqliteCore {
+  engine: "sqlite";
+  db: DatabaseSync;
+  path: string;
+  migrations: Migration[];
+}
+interface PostgresCore {
+  engine: "postgres";
+  bridge: PostgresBridge;
+  path: string;
+  migrations: Migration[];
+  inTransaction: boolean;
+  /** Scope the open transaction was started with. */
+  transactionScope: string | null;
+}
+type Core = SqliteCore | PostgresCore;
+
+function unavailable(capability: string): ContractError {
+  return new ContractError(
+    "CAPABILITY_UNAVAILABLE",
+    `${capability} is not available on the PostgreSQL engine`,
+    { capability },
+  );
+}
+
 export class PersistenceDatabase {
-  private migrations: Migration[] = [];
   private constructor(
-    readonly db: DatabaseSync,
-    readonly path: string,
+    private readonly core: Core,
+    /** Workspace scope applied to PostgreSQL statements; `"*"` is the controller scope. */
+    private readonly scope: string,
+    private readonly owner: boolean,
   ) {}
+  get engine(): DatabaseEngine {
+    return this.core.engine;
+  }
+  get path(): string {
+    return this.core.path;
+  }
+  get inTransaction(): boolean {
+    return this.core.engine === "sqlite" ? this.core.db.isTransaction : this.core.inTransaction;
+  }
+  get isOpen(): boolean {
+    return this.core.engine === "sqlite"
+      ? this.core.db.isOpen
+      : !this.core.bridge.isBroken && !this.core.bridge.isClosed;
+  }
   static async open(
     path: string,
     options: { migrate?: boolean; migrationsDir?: string } = {},
@@ -106,7 +170,11 @@ export class PersistenceDatabase {
           "PRECONDITION_FAILED",
           "SQLite storage must support WAL with normal locking",
         );
-      const instance = new PersistenceDatabase(db, actual);
+      const instance = new PersistenceDatabase(
+        { engine: "sqlite", db, path: actual, migrations: [] },
+        "*",
+        true,
+      );
       if (options.migrate !== false) await instance.migrate(options.migrationsDir);
       else instance.verifyCompatibility(await loadMigrations("sqlite", options.migrationsDir));
       return instance;
@@ -118,14 +186,164 @@ export class PersistenceDatabase {
   static memory(): PersistenceDatabase {
     const db = new DatabaseSync(":memory:");
     db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;");
-    return new PersistenceDatabase(db, ":memory:");
+    return new PersistenceDatabase(
+      { engine: "sqlite", db, path: ":memory:", migrations: [] },
+      "*",
+      true,
+    );
+  }
+  /**
+   * Opens a PostgreSQL database through the synchronous bridge (ADR-015). The returned instance has
+   * the controller scope (`"*"`); request handlers narrow it with `forWorkspace`. Opening verifies
+   * the connecting role cannot bypass row-level security, the byte-order collation and the
+   * compatibility of the applied schema, but never migrates: run `testmaster db migrate`.
+   */
+  static openPostgres(config: PostgresConfig): PersistenceDatabase {
+    const bridge = PostgresBridge.open(config);
+    const core: PostgresCore = {
+      engine: "postgres",
+      bridge,
+      path: "postgres",
+      migrations: [],
+      inTransaction: false,
+      transactionScope: null,
+    };
+    const instance = new PersistenceDatabase(core, "*", true);
+    try {
+      const role = instance.get<{ rolsuper: boolean; rolbypassrls: boolean }>(
+        "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user",
+      );
+      if (!role || role.rolsuper || role.rolbypassrls)
+        throw new ContractError("PRECONDITION_FAILED", bypassRefusal, {
+          reasonCode: "database_role_bypasses_rls",
+        });
+      const collation = String(
+        instance.get("SELECT datcollate FROM pg_database WHERE datname=current_database()")
+          ?.datcollate,
+      );
+      if (!["C", "POSIX", "C.UTF-8", "C.utf8"].includes(collation))
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Database collation must be a byte-order collation (C) so ordering matches SQLite",
+          { reasonCode: "database_collation", collation },
+        );
+      instance.verifyCompatibility(loadMigrationsSync("postgres"));
+      return instance;
+    } catch (error) {
+      bridge.close();
+      throw error;
+    }
+  }
+  /**
+   * A view over the same connection restricted to one workspace (`"*"` for controller loops).
+   * On PostgreSQL the scope is applied lazily through `set_config` and enforced by row-level
+   * security; on SQLite the view has no extra effect.
+   */
+  forWorkspace(workspaceId: string): PersistenceDatabase {
+    if (!workspaceId) throw new ContractError("INTERNAL", "Workspace scope must not be empty");
+    return new PersistenceDatabase(this.core, workspaceId, false);
   }
   close(): void {
-    this.db.close();
+    if (!this.owner) return;
+    if (this.core.engine === "sqlite") this.core.db.close();
+    else this.core.bridge.close();
   }
-  withTx<T>(fn: (db: DatabaseSync) => T): T {
+  private sqlite(capability: string): DatabaseSync {
+    if (this.core.engine !== "sqlite") throw unavailable(capability);
+    return this.core.db;
+  }
+  private postgres(): PostgresCore {
+    const core = this.core;
+    if (core.engine !== "postgres")
+      throw new ContractError("INTERNAL", "Not a PostgreSQL database");
+    return core;
+  }
+  /** Runs one batch on the PostgreSQL connection, tracking connection loss inside a transaction. */
+  private bridge(core: PostgresCore, request: BridgeRequest): BridgeRows[] {
     try {
-      this.db.exec("BEGIN IMMEDIATE");
+      return core.bridge.execute({ ...request, scope: this.scope, transaction: core.inTransaction })
+        .results;
+    } catch (error) {
+      if (error instanceof ContractError && error.details.connectionLost)
+        core.inTransaction = false;
+      throw error;
+    }
+  }
+  private pgQuery(sql: string, params: readonly unknown[]): BridgeRows {
+    const core = this.postgres();
+    const translated = translateSql(sql);
+    if (translated.parameters !== params.length)
+      throw new ContractError(
+        "INTERNAL",
+        `SQL expects ${translated.parameters} parameters but received ${params.length}`,
+      );
+    const statement: BridgeStep = { sql: translated.sql, params, result: true };
+    const read = isReadStatement(translated.sql);
+    let request: BridgeRequest;
+    if (core.inTransaction) {
+      if (core.transactionScope !== this.scope)
+        throw new ContractError("INTERNAL", "Workspace scope switch inside a transaction");
+      // SQLite aborts only the failing statement; a savepoint gives PostgreSQL the same behaviour.
+      request = read
+        ? { steps: [statement] }
+        : {
+            steps: [
+              { sql: "SAVEPOINT tm_statement" },
+              statement,
+              { sql: "RELEASE SAVEPOINT tm_statement" },
+            ],
+            recover: ["ROLLBACK TO SAVEPOINT tm_statement", "RELEASE SAVEPOINT tm_statement"],
+          };
+    } else if (read) request = { steps: [statement] };
+    else
+      request = {
+        steps: [
+          { sql: "BEGIN" },
+          { sql: `SELECT pg_advisory_xact_lock(${writerLockKey})` },
+          statement,
+          { sql: "COMMIT" },
+        ],
+        recover: ["ROLLBACK"],
+      };
+    const [result] = this.bridge(core, request);
+    return result as BridgeRows;
+  }
+  private begin(): void {
+    const core = this.postgres();
+    if (core.inTransaction) throw new Error("cannot start a transaction within a transaction");
+    this.bridge(core, {
+      steps: [{ sql: "BEGIN" }, { sql: `SELECT pg_advisory_xact_lock(${writerLockKey})` }],
+      recover: ["ROLLBACK"],
+    });
+    core.inTransaction = true;
+    core.transactionScope = this.scope;
+  }
+  private finish(sql: "COMMIT" | "ROLLBACK"): void {
+    const core = this.postgres();
+    if (!core.inTransaction) return;
+    try {
+      this.bridge(core, { steps: [{ sql }], recover: ["ROLLBACK"] });
+    } finally {
+      core.inTransaction = false;
+      core.transactionScope = null;
+    }
+  }
+  withTx<T>(fn: (db: PersistenceDatabase) => T): T {
+    if (this.core.engine === "postgres") {
+      this.begin();
+      try {
+        const value = fn(this);
+        if (value instanceof Promise) throw new Error("withTx callback must be synchronous");
+        this.finish("COMMIT");
+        return value;
+      } catch (error) {
+        this.finish("ROLLBACK");
+        throw error;
+      }
+    }
+    const { db } = this.core;
+    try {
+      db.exec("BEGIN IMMEDIATE");
     } catch (error) {
       // BEGIN IMMEDIATE is the only statement that waits for the writer lock, so a busy error
       // here means the transaction never started and the caller can retry safely.
@@ -137,34 +355,55 @@ export class PersistenceDatabase {
       throw error;
     }
     try {
-      const value = fn(this.db);
+      const value = fn(this);
       if (value instanceof Promise) throw new Error("withTx callback must be synchronous");
-      this.db.exec("COMMIT");
+      db.exec("COMMIT");
       return value;
     } catch (error) {
       if (error instanceof Error && /database or disk is full|SQLITE_FULL/.test(error.message))
-        releaseControlPlaneReserve(this.path);
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
+        releaseControlPlaneReserve(this.core.path);
+      if (db.isTransaction) db.exec("ROLLBACK");
       throw error;
     }
   }
   get<T = SqlRow>(sql: string, ...params: unknown[]): T | undefined {
-    return this.db.prepare(sql).get(...(params as SQLInputValue[])) as T | undefined;
+    if (this.core.engine === "postgres") return this.pgQuery(sql, params).rows[0] as T | undefined;
+    return this.core.db.prepare(sql).get(...(params as SQLInputValue[])) as T | undefined;
   }
   all<T = SqlRow>(sql: string, ...params: unknown[]): T[] {
-    return this.db.prepare(sql).all(...(params as SQLInputValue[])) as T[];
+    if (this.core.engine === "postgres") return this.pgQuery(sql, params).rows as T[];
+    return this.core.db.prepare(sql).all(...(params as SQLInputValue[])) as T[];
   }
-  run(
-    sql: string,
-    ...params: unknown[]
-  ): { changes: number | bigint; lastInsertRowid: number | bigint } {
-    return this.db.prepare(sql).run(...(params as SQLInputValue[]));
+  run(sql: string, ...params: unknown[]): { changes: number } {
+    if (this.core.engine === "postgres") return { changes: this.pgQuery(sql, params).rowCount };
+    const outcome = this.core.db.prepare(sql).run(...(params as SQLInputValue[]));
+    return { changes: Number(outcome.changes) };
+  }
+  /** Runs a script of statements without parameters, e.g. DDL and transaction control in tests. */
+  exec(script: string): void {
+    if (this.core.engine === "sqlite") {
+      this.core.db.exec(script);
+      return;
+    }
+    for (const statement of splitStatements(script)) {
+      if (/^(begin|start\s+transaction)\b/iu.test(statement)) this.begin();
+      else if (/^(commit|end)\b/iu.test(statement)) this.finish("COMMIT");
+      else if (/^rollback\s*$/iu.test(statement)) this.finish("ROLLBACK");
+      else this.pgQuery(statement, []);
+    }
+  }
+  private tableExists(name: string): boolean {
+    return Boolean(
+      this.core.engine === "sqlite"
+        ? this.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?", name)
+        : this.get(
+            "SELECT 1 AS present FROM pg_tables WHERE schemaname=current_schema() AND tablename=?",
+            name,
+          ),
+    );
   }
   private verifyCompatibility(available: Migration[]): void {
-    const exists = this.get(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'",
-    );
-    const applied = exists
+    const applied = this.tableExists("schema_migrations")
       ? this.all<{ version: number; name: string; checksum: string }>(
           "SELECT version,name,checksum FROM schema_migrations ORDER BY version",
         )
@@ -180,14 +419,29 @@ export class PersistenceDatabase {
       if (migration.name !== row.name || migration.checksum !== row.checksum)
         throw new MigrationChecksumError(row.version, row.checksum, migration.checksum);
     }
-    this.migrations = available;
+    this.core.migrations = available;
+  }
+  /** Refuses to continue while migrations are pending; PostgreSQL never migrates implicitly. */
+  assertCurrent(): void {
+    const status = this.status();
+    if (status.pending.length)
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Database schema is behind; run testmaster db migrate",
+        { reasonCode: "schema_behind", pending: status.pending },
+      );
   }
   async migrate(directory?: string): Promise<void> {
-    const available = await loadMigrations("sqlite", directory);
-    if (this.db.isTransaction) throw new Error("Database migrations require their own transaction");
+    const available = await loadMigrations(this.core.engine, directory);
+    if (this.core.engine === "postgres") {
+      this.migratePostgres(available);
+      return;
+    }
+    const sqlite = this.core.db;
+    if (sqlite.isTransaction) throw new Error("Database migrations require their own transaction");
     this.verifyCompatibility(available);
     const currentVersion =
-      this.migrations.length &&
+      this.core.migrations.length &&
       this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'")
         ? Number(
             this.get("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations")?.version,
@@ -198,22 +452,22 @@ export class PersistenceDatabase {
       (migration) =>
         migration.version > currentVersion && migration.name === "authored_code_artifacts",
     );
-    if (rebuildsArtifacts) this.db.exec("PRAGMA foreign_keys=OFF");
-    this.db.exec("PRAGMA busy_timeout=0");
+    if (rebuildsArtifacts) sqlite.exec("PRAGMA foreign_keys=OFF");
+    sqlite.exec("PRAGMA busy_timeout=0");
     try {
       try {
-        this.db.exec("BEGIN EXCLUSIVE");
+        sqlite.exec("BEGIN EXCLUSIVE");
       } catch {
         throw new ContractError("PRECONDITION_FAILED", "Another instance owns the migration lock");
       }
       this.verifyCompatibility(available);
-      this.db.exec(
+      sqlite.exec(
         "CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL)",
       );
       const applied = Number(this.get("SELECT COUNT(*) AS n FROM schema_migrations")?.n);
       for (const migration of available.slice(applied)) {
-        this.db.exec(migration.sql);
-        this.db
+        sqlite.exec(migration.sql);
+        sqlite
           .prepare(
             "INSERT INTO schema_migrations(version,name,checksum,applied_at) VALUES(?,?,?,?)",
           )
@@ -221,24 +475,80 @@ export class PersistenceDatabase {
       }
       if (rebuildsArtifacts && this.all("PRAGMA foreign_key_check").length)
         throw new Error("Migration produced a foreign key violation");
-      this.db.exec("COMMIT");
+      sqlite.exec("COMMIT");
     } catch (error) {
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
+      if (sqlite.isTransaction) sqlite.exec("ROLLBACK");
       throw error;
     } finally {
-      this.db.exec("PRAGMA busy_timeout=5000");
-      if (rebuildsArtifacts) this.db.exec("PRAGMA foreign_keys=ON");
+      sqlite.exec("PRAGMA busy_timeout=5000");
+      if (rebuildsArtifacts) sqlite.exec("PRAGMA foreign_keys=ON");
+    }
+  }
+  /**
+   * PostgreSQL migrations: a session advisory lock serializes migrators, each migration file runs
+   * in its own transaction and records its checksum, and migrations always run with the controller
+   * scope because they may move rows across workspaces.
+   */
+  private migratePostgres(available: Migration[]): void {
+    const core = this.postgres();
+    if (core.inTransaction) throw new Error("Database migrations require their own transaction");
+    const migrator = new PersistenceDatabase(core, "*", false);
+    const request = (steps: BridgeStep[], recover?: string[]): BridgeRows[] =>
+      migrator.bridge(core, {
+        steps,
+        ...(recover ? { recover } : {}),
+        timeoutMs: migrationTimeoutMs,
+      });
+    request([
+      { sql: "SET lock_timeout='60s'" },
+      { sql: `SELECT pg_advisory_lock(${migrationLockKey})` },
+      { sql: "RESET lock_timeout" },
+    ]);
+    try {
+      request([
+        {
+          sql: "CREATE TABLE IF NOT EXISTS schema_migrations(version BIGINT PRIMARY KEY,name TEXT NOT NULL,checksum TEXT NOT NULL,applied_at TEXT NOT NULL)",
+        },
+      ]);
+      migrator.verifyCompatibility(available);
+      const applied = Number(migrator.get("SELECT COUNT(*) AS n FROM schema_migrations")?.n);
+      for (const migration of available.slice(applied))
+        request(
+          [
+            { sql: "BEGIN" },
+            { sql: migration.sql },
+            {
+              sql: "INSERT INTO schema_migrations(version,name,checksum,applied_at) VALUES($1,$2,$3,$4)",
+              params: [
+                migration.version,
+                migration.name,
+                migration.checksum,
+                new Date().toISOString(),
+              ],
+            },
+            { sql: "COMMIT" },
+          ],
+          ["ROLLBACK"],
+        );
+    } finally {
+      try {
+        request([{ sql: `SELECT pg_advisory_unlock(${migrationLockKey})` }]);
+      } catch {
+        // The session lock disappears with the connection if the unlock cannot be delivered.
+      }
     }
   }
   status(): DatabaseStatus {
-    const rows = this.all<MigrationStatus>(
-      "SELECT version,name,checksum,applied_at AS appliedAt FROM schema_migrations ORDER BY version",
-    );
+    const rows = this.tableExists("schema_migrations")
+      ? this.all<MigrationStatus>(
+          "SELECT version,name,checksum,applied_at AS appliedAt FROM schema_migrations ORDER BY version",
+        )
+      : [];
     const currentVersion = rows.at(-1)?.version ?? 0;
     return {
       currentVersion,
       migrations: rows,
-      pending: this.migrations
+      pending: this.core.migrations
         .filter((migration) => migration.version > currentVersion)
         .map((migration) => migration.version),
     };
@@ -247,7 +557,9 @@ export class PersistenceDatabase {
     const destination = resolve(destinationDir);
     await mkdir(destination, { mode: 0o700 });
     const dbPath = join(destination, "testmaster.db");
-    await backup(this.db, dbPath, { rate: 100 });
+    await backup(this.sqlite("Backup and restore of the metadata database (use pg_dump)"), dbPath, {
+      rate: 100,
+    });
     await chmod(dbPath, 0o600);
     const snapshot = new DatabaseSync(dbPath, { readOnly: true });
     let index: EvidenceIndex;

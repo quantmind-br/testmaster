@@ -889,7 +889,7 @@ export class RunsService {
       }
       return { runId: id, result: "requested" as const, status: this.get(id).status };
     };
-    return this.ctx.database.db.isTransaction ? cancel() : this.ctx.database.withTx(cancel);
+    return this.ctx.database.inTransaction ? cancel() : this.ctx.database.withTx(cancel);
   }
   async rerun(
     id: string,

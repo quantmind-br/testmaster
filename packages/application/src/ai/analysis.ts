@@ -457,7 +457,7 @@ export class AnalysisService {
       if (fence) this.jobs.finish(fence, "completed", { analysisId: result.id });
       return result as unknown as Analysis;
     };
-    return this.ctx.database.db.isTransaction ? apply() : this.ctx.database.withTx(apply);
+    return this.ctx.database.inTransaction ? apply() : this.ctx.database.withTx(apply);
   }
   private source(run: Run, discoveryId?: string): DiscoveryDetail | null {
     if (!discoveryId) return null;

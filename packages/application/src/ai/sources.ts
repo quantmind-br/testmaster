@@ -169,7 +169,7 @@ export class UploadsService {
       );
       saveAiState(this.ctx, `upload:${uploadId}`, record);
     };
-    if (this.ctx.database.db.isTransaction) reserve();
+    if (this.ctx.database.inTransaction) reserve();
     else this.ctx.database.withTx(reserve);
     return { ...this.receipt(record), target: `/uploads/${uploadId}/bytes`, token };
   }

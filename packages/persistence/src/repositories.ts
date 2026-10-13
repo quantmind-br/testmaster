@@ -35,7 +35,7 @@ export class EntityRepository {
     value: EntityDocument,
     relations: Record<string, SQLInputValue> = {},
   ): void {
-    if (!this.database.db.isTransaction) {
+    if (!this.database.inTransaction) {
       this.database.withTx(() => this.insert(kind, value, relations));
       return;
     }
@@ -66,7 +66,7 @@ export class EntityRepository {
     );
     if (kind === "Artifact" && ["available", "partial"].includes(String(value.state))) {
       this.database.run(
-        "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,1,?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=references_count+1,checked_at=excluded.checked_at",
+        "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,1,?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=blob_reference_counts.references_count+1,checked_at=excluded.checked_at",
         value.workspaceId,
         value.storageKey,
         new Date().toISOString(),
@@ -131,7 +131,7 @@ export class EntityRepository {
     next: EntityDocument,
     relations: Record<string, SQLInputValue> = {},
   ): void {
-    if (!this.database.db.isTransaction) {
+    if (!this.database.inTransaction) {
       this.database.withTx(() =>
         this.update(kind, workspaceId, id, expectedVersion, next, relations),
       );
@@ -174,8 +174,7 @@ export class OutboxRepository {
     type: string,
     payload: unknown,
   ): { id: string; seq: number } {
-    if (!this.database.db.isTransaction)
-      throw new Error("Outbox append requires a state transaction");
+    if (!this.database.inTransaction) throw new Error("Outbox append requires a state transaction");
     const correlatedRun = this.database.get(
       "SELECT data_json FROM runs WHERE workspace_id=? AND id=? UNION SELECT r.data_json FROM runs r JOIN job_leases j ON j.workspace_id=r.workspace_id AND j.resource_id=r.id WHERE j.workspace_id=? AND j.id=? LIMIT 1",
       workspaceId,
@@ -307,7 +306,7 @@ export class LeaseRepository {
     availableAt = new Date().toISOString(),
     priority = 0,
   ): string {
-    if (!this.database.db.isTransaction) throw new Error("Enqueue requires admission transaction");
+    if (!this.database.inTransaction) throw new Error("Enqueue requires admission transaction");
     const id = uuidV7IdGenerator.next("job");
     this.database.run(
       "INSERT INTO job_leases(workspace_id,id,created_at,queue,resource_id,available_at,priority) VALUES(?,?,?,?,?,?,?)",
@@ -394,7 +393,7 @@ export class LeaseRepository {
         number,
       };
     };
-    return this.database.db.isTransaction ? claim() : this.database.withTx(claim);
+    return this.database.inTransaction ? claim() : this.database.withTx(claim);
   }
   assertCurrent(fence: Fence, now = new Date().toISOString()): void {
     const current = this.database.get(
@@ -598,7 +597,7 @@ export class AuxiliaryLeaseRepository {
       );
       return { job: this.get(workspaceId, id) as AuxiliaryJob, created: true };
     };
-    return this.database.db.isTransaction ? run() : this.database.withTx(run);
+    return this.database.inTransaction ? run() : this.database.withTx(run);
   }
   get(workspaceId: string, jobId: string): AuxiliaryJob | null {
     const row = this.database.get(
@@ -711,7 +710,7 @@ export class AuxiliaryLeaseRepository {
         fence.fence,
       );
     };
-    if (this.database.db.isTransaction) apply();
+    if (this.database.inTransaction) apply();
     else this.database.withTx(apply);
   }
   finish(
@@ -730,7 +729,7 @@ export class AuxiliaryLeaseRepository {
         fence.fence,
       );
     };
-    if (this.database.db.isTransaction) apply();
+    if (this.database.inTransaction) apply();
     else this.database.withTx(apply);
   }
   /** Retries deterministic work only; a job whose paid effect started stays settled-required. */
@@ -788,7 +787,7 @@ export class AuxiliaryLeaseRepository {
       );
       return this.get(workspaceId, jobId) as AuxiliaryJob;
     };
-    return this.database.db.isTransaction ? apply() : this.database.withTx(apply);
+    return this.database.inTransaction ? apply() : this.database.withTx(apply);
   }
   /** Reopens a dead-lettered delivery job for one new cycle; the stored payload is never changed. */
   requeueDeadLetter(workspaceId: string, jobId: string, availableAt: string): void {
@@ -807,7 +806,7 @@ export class AuxiliaryLeaseRepository {
       if (!changed.changes)
         throw new ContractError("PRECONDITION_FAILED", "Job is not dead-lettered");
     };
-    if (this.database.db.isTransaction) apply();
+    if (this.database.inTransaction) apply();
     else this.database.withTx(apply);
   }
 }
@@ -896,7 +895,7 @@ export class ExecutionRepository {
         throw new StaleFenceError();
       new EntityRepository(this.database).insert(kind, value);
     };
-    if (this.database.db.isTransaction) publish();
+    if (this.database.inTransaction) publish();
     else this.database.withTx(publish);
   }
   finalize(fence: Fence, next: EntityDocument): boolean {
@@ -948,7 +947,7 @@ export class AuditRepository {
   append(value: Omit<EntityDocument, "id"> & { workspaceId: string }): string {
     const id = uuidV7IdGenerator.next("aud" as EntityPrefix);
     const document = { ...value, id };
-    if (this.database.db.isTransaction)
+    if (this.database.inTransaction)
       new EntityRepository(this.database).insert("AuditEvent", document);
     else
       this.database.withTx(() =>

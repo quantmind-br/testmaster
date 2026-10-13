@@ -142,7 +142,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
       )?.tokens ?? null;
     const used =
       this.database.get<{ tokens: number }>(
-        "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,CASE WHEN json_type(usage_json,'$.inputTokens')='integer' AND json_type(usage_json,'$.outputTokens')='integer' THEN json_extract(usage_json,'$.inputTokens')+json_extract(usage_json,'$.outputTokens') ELSE CASE WHEN reserved_tokens=0 THEN 100000 ELSE reserved_tokens END END) END),0) AS tokens FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
+        "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,CASE WHEN json_type(usage_json,'$.inputTokens')='integer' AND json_type(usage_json,'$.outputTokens')='integer' THEN CAST(json_extract(usage_json,'$.inputTokens') AS INTEGER)+CAST(json_extract(usage_json,'$.outputTokens') AS INTEGER) ELSE CASE WHEN reserved_tokens=0 THEN 100000 ELSE reserved_tokens END END) END),0) AS tokens FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
         workspaceId,
         projectId,
       )?.tokens ?? 0;
