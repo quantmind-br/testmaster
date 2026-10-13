@@ -54,7 +54,7 @@ async function record(name: string, body: () => Promise<Record<string, unknown>>
   }
 }
 
-it("J12 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green", async () => {
+it("J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green", async () => {
   await record("docker-preview-run", async () => {
     const w = await world();
     await w.install();

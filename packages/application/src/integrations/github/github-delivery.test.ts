@@ -356,7 +356,7 @@ describe("SEC-047 agent branches and pull requests need the integration switch, 
 });
 
 describe("OPS-037 revocation survives a restore from an older backup", () => {
-  it("OPS-037 a revoked installation stays revoked after restoring a backup taken while it was active", async () => {
+  it("OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active", async () => {
     const w = await world();
     await w.install();
     await w.openPr(7, SHA_A);

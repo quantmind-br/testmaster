@@ -266,7 +266,7 @@ describe("GitHub integration pages on the server profile", () => {
     expectCatalogOnly(diagnostics.requests, "checks page");
   });
 
-  it("INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result", async () => {
+  it("OPS-035 INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result", async () => {
     const { page, diagnostics } = await portal();
     await page.goto(integrationPath);
     const form = page.getByRole("form", { name: "Settings for acme/shop" });
@@ -311,7 +311,7 @@ describe("GitHub integration pages on the server profile", () => {
     world.configureRepository({ includeDrafts: false, preview: { environmentPattern: "*" } });
   });
 
-  it("INT-015 records a manual preview URL after field validation and runs the pull request against it once", async () => {
+  it("INT-015 records a manual preview URL after field validation and hands the pull request to the network policy once", async () => {
     world.configureRepository({ preview: { provider: "manual", environmentPattern: "*" } });
     await world.openPr(9, SHA_C);
     const { page, diagnostics } = await portal();
@@ -333,6 +333,7 @@ describe("GitHub integration pages on the server profile", () => {
     await page.getByRole("status").filter({ hasText: "Preview recorded" }).waitFor();
     // The page attests the origin, and the network policy decides whether it is reachable; it never bypasses it.
     expect(String(world.pull(SHA_C).preview_url)).toContain("https://");
+    expect(String(world.pull(SHA_C).state)).not.toBe("awaiting_preview");
     expect(
       diagnostics.requests.filter((entry) => entry === "POST /v1/preview-deployments"),
     ).toHaveLength(1);

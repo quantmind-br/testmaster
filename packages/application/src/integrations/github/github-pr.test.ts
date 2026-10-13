@@ -448,7 +448,7 @@ describe("INT-020 INT-022 comment and check summary", () => {
     expect(result?.summary).not.toMatch(/\/var\/|\/tmp\//u);
   });
 
-  it("INT-021 a selection that matches nothing, a failed run or an unbound verdict never becomes success", async () => {
+  it("INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success", async () => {
     const w = await world();
     await w.install();
     w.configureRepository({ selection: { kind: "tests", testIds: [`tst_${randomUUID()}`] } });

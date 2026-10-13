@@ -150,7 +150,7 @@ async function recorded(name: string, body: () => Promise<Record<string, unknown
   }
 }
 
-it("J12 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing", async () => {
+it("J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing", async () => {
   await recorded("push-a-b", async () => {
     const { world, pr, deployment } = await stack();
     await world.install();
@@ -208,7 +208,7 @@ it("J12 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B wait
   });
 }, 300_000);
 
-it("J12 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing", async () => {
+it("J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing", async () => {
   await recorded("duplicate-and-tampered", async () => {
     const { world, hook, pr, get } = await stack();
     await world.install();
@@ -299,7 +299,7 @@ it("J12 INT-014 INT-002 a duplicate delivery is answered from the record, a tamp
   });
 }, 300_000);
 
-it("J12 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network", async () => {
+it("J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network", async () => {
   await recorded("malicious-fork", async () => {
     const { world, hook, pr, deployment } = await stack();
     await world.install();
