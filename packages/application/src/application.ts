@@ -90,7 +90,7 @@ import { ControllerRegistry } from "./controllers.js";
 import { IdentityService } from "./identity.js";
 import type { ServerConfig } from "./server-config.js";
 import { filesystemRoot } from "./server-config.js";
-import { isPostgres, openServerDatabase, scopeDatabase } from "./tenancy.js";
+import { openServerDatabase, scopeDatabase } from "./tenancy.js";
 import {
   MembersService,
   OperatorService,
@@ -209,8 +209,8 @@ export class Application {
     const database = scopeDatabase(root, bound ?? "*");
     this.database = database;
     this.controllers = shared.controllers;
-    // Only the single-user SQLite profile may infer its workspace and principal.
-    const implicit = bound === null && !isPostgres(root);
+    // Only the local profile (no deployment configuration) may infer its workspace and principal.
+    const implicit = bound === null && !serverConfig;
     const workspaceId =
       bound ??
       (implicit
@@ -500,7 +500,7 @@ export class Application {
   /** Presence, principal state, membership and project restrictions; returns the member's role. */
   private requireMember(projectId?: string): Role {
     if (!this.context.workspaceId || !this.context.principalId) {
-      if (isPostgres(this.root))
+      if (this.serverConfig)
         throw new ContractError("UNAUTHENTICATED", "Authentication is required");
       throw new ContractError("PRECONDITION_FAILED", "Initialize this repository first", {
         nextActions: ["init"],
@@ -685,7 +685,7 @@ export class Application {
     sessionOnly: boolean;
     notice?: string;
   }> {
-    if (isPostgres(this.root))
+    if (this.serverConfig)
       throw new ContractError(
         "PRECONDITION_FAILED",
         "The server profile is initialized with `testmaster server bootstrap`",
