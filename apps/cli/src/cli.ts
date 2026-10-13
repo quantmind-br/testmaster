@@ -6,6 +6,7 @@ import { explorationCommands } from "./ai-execution.js";
 import { approvalCommands } from "./approvals.js";
 import { artifactCommands } from "./artifacts.js";
 import { auditCommands } from "./audit.js";
+import { authProfileCommands } from "./auth-profiles.js";
 import { backupCommands } from "./backups.js";
 import { ciCommands } from "./ci.js";
 import { contractCommands } from "./contracts.js";
@@ -54,6 +55,7 @@ export function createCli(runtime: Runtime): Command {
   projectCommands(program, runtime);
   environmentCommands(program, runtime);
   secretCommands(program, runtime);
+  authProfileCommands(program, runtime);
   testCommands(program, runtime);
   runCommands(program, runtime);
   artifactCommands(program, runtime);
