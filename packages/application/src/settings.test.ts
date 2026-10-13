@@ -684,6 +684,66 @@ it("UX-047 refuses unsupported data classes, providers the profile does not allo
   expect(grant("fake", ["documents"])).not.toThrow();
 });
 
+it("UX-047 refuses to revoke a provider that is not configured and writes no audit row for it", async () => {
+  const f = await consentFixture();
+  const revoked = () =>
+    Number(
+      f.app.database.get(
+        "SELECT COUNT(*) AS n FROM audit_events WHERE workspace_id=? AND action='consent.revoked'",
+        f.init.workspaceId,
+      )?.n,
+    );
+  expect(revoked()).toBe(0);
+  expect(() => f.app.model.revokeConsent(f.init.projectId, "ghost")).toThrowError(
+    expect.objectContaining({ code: "NOT_FOUND" }),
+  );
+  expect(revoked()).toBe(0);
+  // Positive control: a configured provider is revoked and audited exactly once.
+  f.app.model.grantConsent(f.init.projectId, "fake", ["documents"]);
+  f.app.model.revokeConsent(f.init.projectId, "fake");
+  expect(revoked()).toBe(1);
+  // A consent that still exists is revocable even when its provider is no longer configured.
+  f.app.database.run(
+    "UPDATE consents SET provider_id='retired' WHERE workspace_id=? AND provider_id='fake'",
+    f.init.workspaceId,
+  );
+  f.app.model.revokeConsent(f.init.projectId, "retired");
+  expect(revoked()).toBe(2);
+});
+
+it("UX-047 keeps the grantor on the consent record and never reports an unknown grantor", async () => {
+  const f = await consentFixture();
+  const admin = await f.member("org_admin");
+  admin.scoped.model.grantConsent(f.init.projectId, "fake", ["documents"]);
+  const stored = f.app.database.get(
+    "SELECT data_json FROM consents WHERE workspace_id=? AND provider_id='fake'",
+    f.init.workspaceId,
+  );
+  expect(JSON.parse(String(stored?.data_json))).toEqual({ grantedBy: admin.identity.principalId });
+  const grantor = () => f.app.model.settings(f.init.projectId).providers[0]?.consent?.grantedBy;
+  expect(grantor()).toBe(admin.identity.principalId);
+  // A later grant by someone else replaces the grantor together with the classes.
+  f.app.model.grantConsent(f.init.projectId, "fake", ["plans"]);
+  expect(grantor()).toBe(f.app.context.principalId);
+  // A consent written before the actor was kept on the row falls back to its own grant event.
+  f.app.database.run(
+    "UPDATE consents SET data_json='{}' WHERE workspace_id=? AND provider_id='fake'",
+    f.init.workspaceId,
+  );
+  expect(grantor()).toBe(f.app.context.principalId);
+  // When no actor can be established the view fails closed instead of inventing one.
+  f.app.database.run(
+    "UPDATE consents SET granted_at='2000-01-01T00:00:00.000Z' WHERE workspace_id=? AND provider_id='fake'",
+    f.init.workspaceId,
+  );
+  expect(() => f.app.model.settings(f.init.projectId)).toThrowError(
+    expect.objectContaining({
+      code: "PRECONDITION_FAILED",
+      details: { reason: "consent_actor_missing" },
+    }),
+  );
+});
+
 it("UX-047 lets every role read the consent settings but only the admin column change them", async () => {
   const f = await consentFixture();
   const roles = denied("admin");

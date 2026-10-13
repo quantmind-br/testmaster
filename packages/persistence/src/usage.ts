@@ -340,7 +340,7 @@ export class SqliteConsentStore implements ConsentStore {
     this.atomic(() => {
       const now = new Date().toISOString();
       this.database.run(
-        "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,revoked_at,allow_unknown_cost) VALUES(?,?,?,?,?,?,?,NULL,?) ON CONFLICT(workspace_id,project_id,provider_id) DO UPDATE SET data_classes_json=excluded.data_classes_json,granted_at=excluded.granted_at,revoked_at=NULL,allow_unknown_cost=excluded.allow_unknown_cost",
+        "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,revoked_at,allow_unknown_cost,data_json) VALUES(?,?,?,?,?,?,?,NULL,?,?) ON CONFLICT(workspace_id,project_id,provider_id) DO UPDATE SET data_classes_json=excluded.data_classes_json,granted_at=excluded.granted_at,revoked_at=NULL,allow_unknown_cost=excluded.allow_unknown_cost,data_json=excluded.data_json",
         query.workspaceId,
         randomUUID(),
         now,
@@ -349,6 +349,7 @@ export class SqliteConsentStore implements ConsentStore {
         canonicalJson(dataClasses),
         now,
         Number(allowUnknownCost),
+        canonicalJson({ grantedBy: actor }),
       );
       new AuditRepository(this.database).append({
         workspaceId: query.workspaceId,

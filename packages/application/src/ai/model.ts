@@ -89,6 +89,17 @@ export class ModelService {
   revokeConsent(projectId: string, providerId: string): void {
     this.ctx.authorize("A", projectId);
     requireEntity(this.ctx, "Project", projectId);
+    // Only a configured provider, or one that still holds a consent record, has anything to revoke.
+    if (
+      !this.config.modelProviders.some((provider) => provider.id === providerId) &&
+      !this.ctx.database.get(
+        "SELECT 1 FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
+        this.ctx.workspaceId,
+        projectId,
+        providerId,
+      )
+    )
+      throw new ContractError("NOT_FOUND", "Model provider is not configured");
     this.consents.revoke(
       { workspaceId: this.ctx.workspaceId, projectId, providerId },
       this.ctx.principalId,
@@ -133,8 +144,9 @@ export class ModelService {
       granted_at: string;
       revoked_at: string | null;
       allow_unknown_cost: number;
+      data_json: string;
     }>(
-      "SELECT data_classes_json,granted_at,revoked_at,allow_unknown_cost FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
+      "SELECT data_classes_json,granted_at,revoked_at,allow_unknown_cost,data_json FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
       this.ctx.workspaceId,
       projectId,
       providerId,
@@ -142,18 +154,27 @@ export class ModelService {
     if (!row) return null;
     const dataClasses = JSON.parse(row.data_classes_json) as string[];
     const allowUnknownCost = row.allow_unknown_cost === 1;
-    // The consent row keeps no actor; the grant event for exactly this grant does.
-    const grant = this.ctx.database.get<{ actor: string }>(
-      "SELECT actor FROM audit_events WHERE workspace_id=? AND action='consent.granted' AND resource_id=? AND timestamp=? AND after_hash=? ORDER BY created_at DESC,id DESC",
-      this.ctx.workspaceId,
-      projectId,
-      row.granted_at,
-      sha256(canonicalJson({ providerId, dataClasses, allowUnknownCost })),
-    );
+    const grantedBy =
+      (JSON.parse(row.data_json) as { grantedBy?: string }).grantedBy ??
+      // Consents granted before the actor was kept on the row: the grant event for exactly this grant.
+      this.ctx.database.get<{ actor: string }>(
+        "SELECT actor FROM audit_events WHERE workspace_id=? AND action='consent.granted' AND resource_id=? AND timestamp=? AND after_hash=? ORDER BY created_at DESC,id DESC",
+        this.ctx.workspaceId,
+        projectId,
+        row.granted_at,
+        sha256(canonicalJson({ providerId, dataClasses, allowUnknownCost })),
+      )?.actor;
+    // Never invent a grantor: a consent whose actor cannot be established is not reported.
+    if (!grantedBy)
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "The consent record has no recorded grantor; grant it again",
+        { reason: "consent_actor_missing" },
+      );
     return {
       dataClasses,
       allowUnknownCost,
-      grantedBy: grant?.actor ?? "unknown",
+      grantedBy,
       grantedAt: row.granted_at,
       revokedAt: row.revoked_at,
     };
