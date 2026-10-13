@@ -11,6 +11,14 @@ export function manifestPermissions(allowAgentPullRequests: boolean): Record<str
   };
 }
 export const webhookPath = "/v1/integrations/github/webhooks";
+/**
+ * GitHub delivers `installation` and `installation_repositories` to every App and rejects a manifest
+ * that lists them in `default_events` ("Default events unsupported"), so only the others are requested.
+ */
+const alwaysDelivered: readonly string[] = ["installation", "installation_repositories"];
+export const githubSubscribableEvents: string[] = githubEventTypes.filter(
+  (event) => !alwaysDelivered.includes(event),
+);
 
 function originOf(value: string, field: string, allowLoopbackHttp: boolean): URL {
   let url: URL;
@@ -43,7 +51,7 @@ export function buildManifest(input: GithubManifestInput): Record<string, unknow
     redirect_url: redirect.href,
     public: false,
     default_permissions: manifestPermissions(input.allowAgentPullRequests === true),
-    default_events: [...githubEventTypes],
+    default_events: githubSubscribableEvents,
   };
 }
 export function manifestCreateUrl(state: string, organization?: string): string {
