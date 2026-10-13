@@ -172,7 +172,7 @@ export const RunRequest = Obj({
   environmentId: id("env"),
   mode: Type.Optional(Mode),
   healingPolicy: Type.Optional(Enum(["off", "propose", "apply"])),
-  origin: Type.Optional(Enum(["cli", "api", "mcp", "schedule", "webhook", "verification"])),
+  origin: Type.Optional(Enum(["cli", "api", "mcp", "schedule", "webhook", "github", "verification"])),
   seed: Type.Optional(Type.Integer()),
   limits: Type.Optional(ExecutionLimits),
   provenance: Type.Optional(

@@ -8184,6 +8184,648 @@
         }
       }
     },
+    "/integrations/github/manifests": {
+      "post": {
+        "operationId": "post__integrations_github_manifests",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [],
+        "x-scope": "integrations:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubManifestReceipt"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubManifestInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/github/manifests/{state}/conversion": {
+      "post": {
+        "operationId": "post__integrations_github_manifests_state_conversion",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/IntegrationMetadata"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubManifestConversionInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/{id}/github/installations": {
+      "get": {
+        "operationId": "get__integrations_id_github_installations",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubInstallation"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/{id}/github/repositories/{repositoryId}": {
+      "patch": {
+        "operationId": "patch__integrations_id_github_repositories_repositoryId_",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repositoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubRepository"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubRepositoryPatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/{id}/github/pulls": {
+      "get": {
+        "operationId": "get__integrations_id_github_pulls",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubPull"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/{id}/github/checks": {
+      "get": {
+        "operationId": "get__integrations_id_github_checks",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubCheck"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/{id}/github/checks/{checkId}/retry": {
+      "post": {
+        "operationId": "post__integrations_id_github_checks_checkId_retry",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubCheck"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/{id}/github/rotate-webhook-secret": {
+      "post": {
+        "operationId": "post__integrations_id_github_rotate_webhook_secret",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "integrations:A",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/IntegrationMetadata"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubRotateWebhookSecretInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/preview-deployments": {
+      "post": {
+        "operationId": "post__preview_deployments",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [],
+        "x-scope": "integrations:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GithubPull"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewDeploymentInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/exports": {
       "post": {
         "operationId": "post__exports",
@@ -28172,6 +28814,10 @@
                       "type": "string"
                     },
                     {
+                      "const": "github",
+                      "type": "string"
+                    },
+                    {
                       "const": "verification",
                       "type": "string"
                     }
@@ -30348,6 +30994,10 @@
                 "anyOf": [
                   {
                     "const": "local-checkout",
+                    "type": "string"
+                  },
+                  {
+                    "const": "github-deployment",
                     "type": "string"
                   },
                   {
@@ -48790,6 +49440,10 @@
                     "type": "string"
                   }
                 ]
+              },
+              "bindingSource": {
+                "const": "github-deployment",
+                "type": "string"
               }
             }
           },
@@ -50052,6 +50706,1309 @@
             ]
           }
         }
+      },
+      "GithubCheck": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "pullId",
+          "repositoryFullName",
+          "headSha",
+          "name",
+          "status",
+          "conclusion",
+          "state",
+          "sequence",
+          "deliveredSequence",
+          "attempts",
+          "nextAttemptAt",
+          "lastError",
+          "remoteId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "pullId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "repositoryFullName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "headSha": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "const": "TestMaster / result",
+                "type": "string"
+              },
+              {
+                "const": "TestMaster / required-gate",
+                "type": "string"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "const": "queued",
+                "type": "string"
+              },
+              {
+                "const": "in_progress",
+                "type": "string"
+              },
+              {
+                "const": "completed",
+                "type": "string"
+              }
+            ]
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "success",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failure",
+                    "type": "string"
+                  },
+                  {
+                    "const": "neutral",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "action_required",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "pending",
+                "type": "string"
+              },
+              {
+                "const": "delivered",
+                "type": "string"
+              },
+              {
+                "const": "rate_limited",
+                "type": "string"
+              },
+              {
+                "const": "permission_revoked",
+                "type": "string"
+              },
+              {
+                "const": "host_unavailable",
+                "type": "string"
+              },
+              {
+                "const": "dead_letter",
+                "type": "string"
+              }
+            ]
+          },
+          "sequence": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deliveredSequence": {
+            "minimum": -1,
+            "type": "integer"
+          },
+          "attempts": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "nextAttemptAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remoteId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "GithubInstallation": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "installationId",
+          "integrationId",
+          "accountLogin",
+          "accountType",
+          "repositorySelection",
+          "state",
+          "revokedReason",
+          "permissions",
+          "repositories",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "installationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "integrationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "accountLogin": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "accountType": {
+            "anyOf": [
+              {
+                "const": "User",
+                "type": "string"
+              },
+              {
+                "const": "Organization",
+                "type": "string"
+              }
+            ]
+          },
+          "repositorySelection": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "const": "selected",
+                "type": "string"
+              }
+            ]
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "active",
+                "type": "string"
+              },
+              {
+                "const": "revoked",
+                "type": "string"
+              }
+            ]
+          },
+          "revokedReason": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "permissions": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {
+                "type": "string"
+              }
+            }
+          },
+          "repositories": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "repositoryId",
+                "fullName",
+                "private",
+                "granted",
+                "enabled",
+                "projectId"
+              ],
+              "properties": {
+                "repositoryId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "fullName": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "private": {
+                  "type": "boolean"
+                },
+                "granted": {
+                  "type": "boolean"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "projectId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "GithubIntegrationSettings": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "appId",
+          "appSlug",
+          "publicOrigin",
+          "allowAgentPullRequests",
+          "credentials"
+        ],
+        "properties": {
+          "appId": {
+            "pattern": "^[0-9]{1,20}$",
+            "type": "string"
+          },
+          "appSlug": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publicOrigin": {
+            "anyOf": [
+              {
+                "minLength": 8,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allowAgentPullRequests": {
+            "type": "boolean"
+          },
+          "credentials": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "privateKeyRef",
+              "webhookSecretRef",
+              "previousWebhookSecretRef",
+              "previousWebhookSecretExpiresAt",
+              "clientSecretRef"
+            ],
+            "properties": {
+              "privateKeyRef": {
+                "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "webhookSecretRef": {
+                "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "previousWebhookSecretRef": {
+                "anyOf": [
+                  {
+                    "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "previousWebhookSecretExpiresAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "clientSecretRef": {
+                "anyOf": [
+                  {
+                    "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "GithubManifestConversionInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "projectIds"
+        ],
+        "properties": {
+          "code": {
+            "minLength": 4,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "type": "string"
+          },
+          "projectIds": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "GithubManifestInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "publicOrigin",
+          "redirectUrl"
+        ],
+        "properties": {
+          "name": {
+            "minLength": 3,
+            "maxLength": 34,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 _-]*$",
+            "type": "string"
+          },
+          "publicOrigin": {
+            "minLength": 8,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "redirectUrl": {
+            "minLength": 8,
+            "maxLength": 300,
+            "type": "string"
+          },
+          "allowAgentPullRequests": {
+            "type": "boolean"
+          },
+          "organization": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "GithubManifestReceipt": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "expiresAt",
+          "createUrl",
+          "manifest",
+          "scopes"
+        ],
+        "properties": {
+          "state": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "createUrl": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "manifest": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GithubManifestReceipt/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/GithubManifestReceipt/$defs/T0"
+                  }
+                }
+              }
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GithubManifestReceipt/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/GithubManifestReceipt/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "GithubPull": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "integrationId",
+          "installationId",
+          "repositoryId",
+          "repositoryFullName",
+          "prNumber",
+          "headSha",
+          "baseSha",
+          "mergeSha",
+          "fork",
+          "draft",
+          "state",
+          "reasonCode",
+          "projectId",
+          "previewUrl",
+          "deploymentId",
+          "previewDeadlineAt",
+          "batchId",
+          "supersededBy",
+          "gate",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "integrationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "installationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "repositoryId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "repositoryFullName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "prNumber": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "headSha": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          },
+          "baseSha": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          },
+          "mergeSha": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fork": {
+            "type": "boolean"
+          },
+          "draft": {
+            "type": "boolean"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "awaiting_preview",
+                "type": "string"
+              },
+              {
+                "const": "running",
+                "type": "string"
+              },
+              {
+                "const": "completed",
+                "type": "string"
+              },
+              {
+                "const": "superseded",
+                "type": "string"
+              },
+              {
+                "const": "timed_out",
+                "type": "string"
+              },
+              {
+                "const": "denied",
+                "type": "string"
+              },
+              {
+                "const": "skipped",
+                "type": "string"
+              },
+              {
+                "const": "closed",
+                "type": "string"
+              }
+            ]
+          },
+          "reasonCode": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previewUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deploymentId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previewDeadlineAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "batchId": {
+            "anyOf": [
+              {
+                "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "supersededBy": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gate": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "pending",
+                    "type": "string"
+                  },
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "not_applicable",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "GithubRepository": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "repositoryId",
+          "installationId",
+          "fullName",
+          "private",
+          "granted",
+          "settings",
+          "version"
+        ],
+        "properties": {
+          "repositoryId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "installationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "fullName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "granted": {
+            "type": "boolean"
+          },
+          "settings": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "enabled",
+              "projectId",
+              "includeDrafts",
+              "forkPolicy",
+              "selection",
+              "baseEnvironmentId",
+              "fixtureEnvironmentId",
+              "preview"
+            ],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "projectId": {
+                "anyOf": [
+                  {
+                    "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "includeDrafts": {
+                "type": "boolean"
+              },
+              "forkPolicy": {
+                "anyOf": [
+                  {
+                    "const": "deny",
+                    "type": "string"
+                  },
+                  {
+                    "const": "fixture-only",
+                    "type": "string"
+                  }
+                ]
+              },
+              "selection": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "all",
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "testIds"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "tests",
+                        "type": "string"
+                      },
+                      "testIds": {
+                        "minItems": 1,
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                          "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "baseEnvironmentId": {
+                "anyOf": [
+                  {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fixtureEnvironmentId": {
+                "anyOf": [
+                  {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "preview": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "provider",
+                  "environmentPattern",
+                  "timeoutMs"
+                ],
+                "properties": {
+                  "provider": {
+                    "anyOf": [
+                      {
+                        "const": "github-deployments",
+                        "type": "string"
+                      },
+                      {
+                        "const": "manual",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "environmentPattern": {
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[A-Za-z0-9*?._/ -]+$",
+                    "type": "string"
+                  },
+                  "timeoutMs": {
+                    "minimum": 1000,
+                    "maximum": 86400000,
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "$defs": {}
+      },
+      "GithubRepositoryPatch": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "includeDrafts": {
+            "type": "boolean"
+          },
+          "forkPolicy": {
+            "anyOf": [
+              {
+                "const": "deny",
+                "type": "string"
+              },
+              {
+                "const": "fixture-only",
+                "type": "string"
+              }
+            ]
+          },
+          "selection": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "all",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "testIds"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "tests",
+                    "type": "string"
+                  },
+                  "testIds": {
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "baseEnvironmentId": {
+            "anyOf": [
+              {
+                "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fixtureEnvironmentId": {
+            "anyOf": [
+              {
+                "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "provider": {
+                "anyOf": [
+                  {
+                    "const": "github-deployments",
+                    "type": "string"
+                  },
+                  {
+                    "const": "manual",
+                    "type": "string"
+                  }
+                ]
+              },
+              "environmentPattern": {
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[A-Za-z0-9*?._/ -]+$",
+                "type": "string"
+              },
+              "timeoutMs": {
+                "minimum": 1000,
+                "maximum": 86400000,
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "GithubRepositorySettings": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled",
+          "projectId",
+          "includeDrafts",
+          "forkPolicy",
+          "selection",
+          "baseEnvironmentId",
+          "fixtureEnvironmentId",
+          "preview"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "includeDrafts": {
+            "type": "boolean"
+          },
+          "forkPolicy": {
+            "anyOf": [
+              {
+                "const": "deny",
+                "type": "string"
+              },
+              {
+                "const": "fixture-only",
+                "type": "string"
+              }
+            ]
+          },
+          "selection": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "all",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "testIds"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "tests",
+                    "type": "string"
+                  },
+                  "testIds": {
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "baseEnvironmentId": {
+            "anyOf": [
+              {
+                "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fixtureEnvironmentId": {
+            "anyOf": [
+              {
+                "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "provider",
+              "environmentPattern",
+              "timeoutMs"
+            ],
+            "properties": {
+              "provider": {
+                "anyOf": [
+                  {
+                    "const": "github-deployments",
+                    "type": "string"
+                  },
+                  {
+                    "const": "manual",
+                    "type": "string"
+                  }
+                ]
+              },
+              "environmentPattern": {
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[A-Za-z0-9*?._/ -]+$",
+                "type": "string"
+              },
+              "timeoutMs": {
+                "minimum": 1000,
+                "maximum": 86400000,
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "GithubRotateWebhookSecretInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "secretRef"
+        ],
+        "properties": {
+          "secretRef": {
+            "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
       },
       "HealingInput": {
         "additionalProperties": false,
@@ -56002,6 +57959,43 @@
             ]
           }
         }
+      },
+      "PreviewDeploymentInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "integrationId",
+          "repositoryId",
+          "prNumber",
+          "headSha",
+          "url"
+        ],
+        "properties": {
+          "integrationId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "repositoryId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "prNumber": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "headSha": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          },
+          "url": {
+            "minLength": 8,
+            "maxLength": 2000,
+            "type": "string"
+          }
+        },
+        "$defs": {}
       },
       "Principal": {
         "anyOf": [
@@ -73643,6 +75637,10 @@
               },
               {
                 "const": "webhook",
+                "type": "string"
+              },
+              {
+                "const": "github",
                 "type": "string"
               },
               {

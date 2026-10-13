@@ -1,6 +1,7 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import { identityContracts } from "./m4/identity.js";
+import { githubContracts } from "./m4/github.js";
 import { integrationContracts } from "./m4/integrations.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
@@ -453,7 +454,7 @@ const supplemental = {
       checkoutSha: Type.Union([P.Name, Type.Null()]),
       binding: P.Enum(["verified", "unbound"]),
       /** "local-checkout" only for a loopback target served from the verified clean checkout. */
-      targetBinding: P.Enum(["local-checkout", "unbound"]),
+      targetBinding: P.Enum(["local-checkout", "github-deployment", "unbound"]),
     }),
     selection: P.Obj({
       requested: P.Nonnegative,
@@ -619,6 +620,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...supplemental,
   ...httpInputs,
   ...integrationContracts,
+  ...githubContracts,
   ...identityContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),

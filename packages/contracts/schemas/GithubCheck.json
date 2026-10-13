@@ -1,0 +1,191 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "pullId",
+    "repositoryFullName",
+    "headSha",
+    "name",
+    "status",
+    "conclusion",
+    "state",
+    "sequence",
+    "deliveredSequence",
+    "attempts",
+    "nextAttemptAt",
+    "lastError",
+    "remoteId",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "pullId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "repositoryFullName": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "headSha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "const": "TestMaster / result",
+          "type": "string"
+        },
+        {
+          "const": "TestMaster / required-gate",
+          "type": "string"
+        }
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "queued",
+          "type": "string"
+        },
+        {
+          "const": "in_progress",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "type": "string"
+        }
+      ]
+    },
+    "conclusion": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "success",
+              "type": "string"
+            },
+            {
+              "const": "failure",
+              "type": "string"
+            },
+            {
+              "const": "neutral",
+              "type": "string"
+            },
+            {
+              "const": "cancelled",
+              "type": "string"
+            },
+            {
+              "const": "action_required",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "pending",
+          "type": "string"
+        },
+        {
+          "const": "delivered",
+          "type": "string"
+        },
+        {
+          "const": "rate_limited",
+          "type": "string"
+        },
+        {
+          "const": "permission_revoked",
+          "type": "string"
+        },
+        {
+          "const": "host_unavailable",
+          "type": "string"
+        },
+        {
+          "const": "dead_letter",
+          "type": "string"
+        }
+      ]
+    },
+    "sequence": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "deliveredSequence": {
+      "minimum": -1,
+      "type": "integer"
+    },
+    "attempts": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nextAttemptAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lastError": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "remoteId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:GithubCheck",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

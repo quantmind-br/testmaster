@@ -1,0 +1,156 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "createdAt",
+    "installationId",
+    "integrationId",
+    "accountLogin",
+    "accountType",
+    "repositorySelection",
+    "state",
+    "revokedReason",
+    "permissions",
+    "repositories",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "installationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "integrationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "accountLogin": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "accountType": {
+      "anyOf": [
+        {
+          "const": "User",
+          "type": "string"
+        },
+        {
+          "const": "Organization",
+          "type": "string"
+        }
+      ]
+    },
+    "repositorySelection": {
+      "anyOf": [
+        {
+          "const": "all",
+          "type": "string"
+        },
+        {
+          "const": "selected",
+          "type": "string"
+        }
+      ]
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "active",
+          "type": "string"
+        },
+        {
+          "const": "revoked",
+          "type": "string"
+        }
+      ]
+    },
+    "revokedReason": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "type": "string"
+        }
+      }
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "repositoryId",
+          "fullName",
+          "private",
+          "granted",
+          "enabled",
+          "projectId"
+        ],
+        "properties": {
+          "repositoryId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "fullName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "granted": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:GithubInstallation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
