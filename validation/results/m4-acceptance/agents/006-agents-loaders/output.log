@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "observedAt": "2026-10-13T22:02:19.111Z",
+  "testmasterCommit": "f6c941beded39e189b53bdf2ad2da4728c7db9b9",
+  "pi": {
+    "package": "@earendil-works/pi-coding-agent",
+    "version": "1.2.0",
+    "phases": {
+      "beforeInstall": {
+        "trusted": {
+          "skillLoaded": false,
+          "instructionsLoaded": false
+        }
+      },
+      "installed": {
+        "trusted": {
+          "skillLoaded": true,
+          "instructionsLoaded": true
+        },
+        "untrusted": {
+          "skillLoaded": false,
+          "instructionsLoaded": false
+        }
+      },
+      "afterRemove": {
+        "trusted": {
+          "skillLoaded": false,
+          "instructionsLoaded": false
+        }
+      }
+    }
+  },
+  "omp": {
+    "version": "omp/18.10.4",
+    "phases": {
+      "beforeInstall": {
+        "skillLoaded": false,
+        "instructionsLoaded": false
+      },
+      "installed": {
+        "skillLoaded": true,
+        "instructionsLoaded": true
+      },
+      "afterRemove": {
+        "skillLoaded": false,
+        "instructionsLoaded": false
+      }
+    }
+  },
+  "limitations": [
+    "Loader discovery only; no model request was made and agent compliance is not claimed.",
+    "pi used an empty temporary agent directory; omp used the operator's ~/.omp configuration."
+  ],
+  "passed": true
+}

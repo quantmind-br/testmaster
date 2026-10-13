@@ -1,0 +1,36 @@
+
+ RUN  v5.0.3 /home/diogo/dev/testmaster
+
+ ❯ |unit| packages/application/src/agent-skills/installer.test.ts (86 tests | 1 failed | 85 skipped) 16ms
+   × keeps each target's files independent when every target is installed in one workspace 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/agent-skills/installer.test.ts > keeps each target's files independent when every target is installed in one workspace
+AssertionError: expected { ok: true, target: 'codex', …(4) } to match object { status: 'installed' }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "status": "installed",
++   "status": "outdated",
+  }
+
+ ❯ packages/application/src/agent-skills/installer.test.ts:263:70
+    261|     expect(await getAgentSkillStatus({ root, target })).toMatchObject(…
+    262|     for (const remaining of AGENT_TARGETS.slice(index + 1))
+    263|       expect(await getAgentSkillStatus({ root, target: remaining })).t…
+       |                                                                      ^
+    264|         status: "installed",
+    265|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 85 skipped (86)
+   Start at  18:59:39
+   Duration  261ms (transform 54%, import 38%, tests 8%, worker 1%)
+
