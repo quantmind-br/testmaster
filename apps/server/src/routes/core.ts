@@ -476,7 +476,8 @@ export const coreRoutes: RouteModule = {
     "POST /healing-proposals/{id}/reject",
     "PUT /tests/{id}/quarantine",
     "DELETE /tests/{id}/quarantine",
-    "DELETE /artifacts/{id}",
+    // DELETE /artifacts/{id} is idempotent by its own deletion key and opens its own transaction,
+    // so it must not run inside the idempotency wrapper's transaction.
   ],
   status: {
     "POST /runs": 202,

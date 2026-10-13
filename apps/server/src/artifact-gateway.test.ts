@@ -200,3 +200,36 @@ it("UX-032 restricted raw evidence and non-readable credentials never receive a 
   });
   expect(none.statusCode).toBe(401);
 }, 60_000);
+
+it("UX-032 M4-01 DELETE /v1/artifacts/{id} over HTTP tombstones the artifact and ends issued links, and needs the delete grant", async () => {
+  const f = await fixture();
+  const dom = f.artifact("dom/page.html");
+  const url = linkOf(await f.mint(dom.id));
+  expect((await f.app.inject({ url })).statusCode).toBe(200);
+  const remove = (headers: Record<string, string>) =>
+    f.app.inject({
+      method: "DELETE",
+      url: `/v1/artifacts/${dom.id}`,
+      headers: { ...headers, "idempotency-key": randomUUID() },
+    });
+  // Negative control: a token without a delete grant cannot tombstone, and the link keeps working.
+  expect((await remove(f.headers)).statusCode).toBe(403);
+  expect((await f.app.inject({ url })).statusCode).toBe(200);
+  const granted = await issueLocalToken(f.application, {
+    tokenPath: join(f.application.config.home, "delete.token"),
+    grants: [
+      {
+        resourceType: "Artifact",
+        actions: ["delete"],
+        projectIds: [f.init.projectId],
+        environmentIds: [f.init.environmentId],
+        expiresAt: null,
+        grantedBy: f.init.principalId,
+      },
+    ],
+  });
+  const done = await remove({ authorization: `Bearer ${granted.token}` });
+  expect(done.statusCode).toBe(200);
+  expect((await f.app.inject({ url })).statusCode).toBe(404);
+  expect((await f.mint(dom.id)).statusCode).toBe(404);
+});
