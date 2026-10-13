@@ -15,14 +15,24 @@ import { fileURLToPath } from "node:url";
 import {
   ContractError,
   capabilityRegistry,
+  columnGrantAction,
   type EnvironmentRevision,
   type Membership,
+  type RbacColumn,
+  type Role,
   type Run,
+  rbacColumns,
+  rbacMatrix,
+  scopeColumn,
   type TestCase,
   validate,
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
-import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
+import {
+  type EntityDocument,
+  EntityRepository,
+  PersistenceDatabase,
+} from "@testmaster/persistence";
 import {
   type DockerCommand,
   DockerExecutor,
@@ -76,7 +86,28 @@ import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
 import { SecretsService } from "./secrets.js";
 import { SelectionService } from "./selection.js";
 import { WorkerService } from "./worker.js";
+import { ControllerRegistry } from "./controllers.js";
+import { IdentityService } from "./identity.js";
+import type { ServerConfig } from "./server-config.js";
+import { filesystemRoot } from "./server-config.js";
+import { isPostgres, openServerDatabase, scopeDatabase } from "./tenancy.js";
+import {
+  MembersService,
+  OperatorService,
+  systemPrincipalId,
+  TokensService,
+  WorkspacesService,
+} from "./team.js";
+import type { TokenKind } from "./tokens.js";
 
+const columnScope: Readonly<Record<RbacColumn, Scope>> = {
+  read: "R",
+  write: "W",
+  execute: "X",
+  secret: "W",
+  export: "R",
+  admin: "A",
+};
 export interface PermissionGrant {
   resourceType: string;
   actions: ("read" | "write" | "execute" | "admin" | "approve" | "raw" | "export" | "delete")[];
@@ -93,11 +124,24 @@ export interface AuthorizationIdentity {
   /** Capability-token ceiling carried across delegation; absent for local session identities. */
   expiresAt?: string;
 }
+/** `system` is a workspace's controller principal; the other kinds are bearer tokens or cookies. */
+export type CredentialKind = TokenKind | "session" | "system";
+/** Identity resolved from a token or cookie; it carries the workspace it is bound to. */
+export interface AuthenticatedIdentity extends AuthorizationIdentity {
+  workspaceId: string;
+  credential: { kind: CredentialKind; id: string };
+}
 export interface ApplicationOptions extends ResolveConfigOptions {
   identity?: AuthorizationIdentity;
   correlationId?: string;
   imageLockPath?: string;
   dockerCommand?: DockerCommand;
+  /** Opens the PostgreSQL server profile (ADR-016) instead of the local SQLite file. */
+  server?: ServerConfig;
+}
+interface SharedRuntime {
+  controllers: ControllerRegistry;
+  controllerScope?: Application;
 }
 export class Application {
   readonly context: ServiceContext;
@@ -135,40 +179,61 @@ export class Application {
   readonly resources: ResourcesService;
   readonly audit: AuditService;
   readonly selection: SelectionService;
+  readonly database: PersistenceDatabase;
+  readonly identityService: IdentityService;
+  readonly workspaces: WorkspacesService;
+  readonly members: MembersService;
+  readonly tokens: TokensService;
+  /** Host-trust bootstrap and recovery; callers are trusted by controlling the deployment. */
+  readonly operator: OperatorService;
+  /** Background loops run by `server start`; shared by every scoped instance. */
+  readonly controllers: ControllerRegistry;
   readonly seccompPath = fileURLToPath(
     new URL("../../../containers/seccomp_profile.json", import.meta.url),
   );
   private verifiedImages: ImageLock | null = null;
   private constructor(
     readonly config: ResolvedConfig,
-    readonly database: PersistenceDatabase,
-    readonly identity?: AuthorizationIdentity,
+    private readonly root: PersistenceDatabase,
+    readonly identity?: AuthorizationIdentity | AuthenticatedIdentity,
     readonly correlation = correlationId(),
     private readonly lockPath = fileURLToPath(
       new URL("../../../containers/images.lock.json", import.meta.url),
     ),
     readonly dockerCommand?: DockerCommand,
+    /** Workspace this instance is bound to; `null` spans all (controllers) or the lone SQLite one. */
+    private readonly bound: string | null = null,
+    private readonly shared: SharedRuntime = { controllers: new ControllerRegistry() },
+    readonly serverConfig?: ServerConfig,
   ) {
-    const workspace = database.get("SELECT id FROM workspaces ORDER BY created_at LIMIT 1");
-    const principal = database.get(
-      "SELECT id FROM principals WHERE workspace_id=? AND kind='human' AND disabled_at IS NULL ORDER BY created_at LIMIT 1",
-      workspace?.id ?? "",
-    );
+    const database = scopeDatabase(root, bound ?? "*");
+    this.database = database;
+    this.controllers = shared.controllers;
+    // Only the single-user SQLite profile may infer its workspace and principal.
+    const implicit = bound === null && !isPostgres(root);
+    const workspaceId =
+      bound ??
+      (implicit
+        ? database.get("SELECT id FROM workspaces ORDER BY created_at LIMIT 1")?.id
+        : undefined);
+    const principal =
+      !identity && workspaceId
+        ? database.get(
+            "SELECT id FROM principals WHERE workspace_id=? AND kind='human' AND disabled_at IS NULL ORDER BY created_at LIMIT 1",
+            workspaceId,
+          )
+        : undefined;
     this.context = {
       database,
       entities: new EntityRepository(database),
-      workspaceId: String(workspace?.id ?? ""),
+      workspaceId: String(workspaceId ?? ""),
       principalId: identity?.principalId ?? String(principal?.id ?? ""),
       correlationId: correlation,
       authorize: (scope, projectId) => this.authorize(scope, projectId),
+      authorizeColumn: (column, projectId) => this.authorizeColumn(column, projectId),
       authorizeRaw: (projectId, environmentId) => {
         this.authorize("R", projectId);
-        const membership = database.get(
-          "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
-          this.context.workspaceId,
-          this.context.principalId,
-        );
-        const role = String(membership?.role);
+        const role = this.requireMember(projectId);
         const matching = (identity?.grants ?? []).filter(
           (grant) =>
             ["Artifact", "artifacts", "*"].includes(grant.resourceType) &&
@@ -178,11 +243,9 @@ export class Application {
             (!grant.environmentIds.length || grant.environmentIds.includes(environmentId)),
         );
         if (
-          role === "viewer" ||
+          rbacMatrix[role].export === "deny" ||
           matching.some((grant) => grant.deny) ||
-          (identity
-            ? !matching.some((grant) => !grant.deny)
-            : !["org_owner", "org_admin"].includes(role))
+          (identity ? !matching.some((grant) => !grant.deny) : rbacMatrix[role].admin !== "allow")
         )
           throw new ContractError("FORBIDDEN", "Raw evidence requires artifacts:raw permission");
       },
@@ -276,35 +339,143 @@ export class Application {
       images: () => this.images(),
       seccompPath: this.seccompPath,
     });
+    this.identityService = new IdentityService(
+      this.context,
+      scopeDatabase(root, "*"),
+      identity && "credential" in identity && identity.credential.kind === "session"
+        ? identity.credential.id
+        : null,
+    );
+    this.workspaces = new WorkspacesService(
+      this.context,
+      scopeDatabase(root, "*"),
+      identity && "credential" in identity ? identity.credential : null,
+    );
+    this.members = new MembersService(this.context);
+    this.tokens = new TokensService(this.context, () => this);
+    this.operator = new OperatorService(scopeDatabase(root, "*"));
   }
   readonly backups: BackupsService;
   readonly retention: RetentionService;
   static async open(options: ApplicationOptions = {}): Promise<Application> {
-    const config = await resolveConfig(options);
+    const resolved = await resolveConfig(options);
+    // The server profile keeps evidence under its configured root, not the project directory.
+    const config = options.server
+      ? { ...resolved, dataDir: filesystemRoot(options.server.storage) }
+      : resolved;
     await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
     await chmod(config.dataDir, 0o700);
     return new Application(
       config,
-      await PersistenceDatabase.open(join(config.dataDir, "testmaster.db")),
+      options.server
+        ? await openServerDatabase(options.server.database)
+        : await PersistenceDatabase.open(join(config.dataDir, "testmaster.db")),
       options.identity,
       correlationId(options.correlationId),
       options.imageLockPath,
       options.dockerCommand,
+      null,
+      undefined,
+      options.server,
     );
   }
-  /** Request-scoped services borrowing this application's database; do not close the view. */
-  withIdentity(identity: AuthorizationIdentity, correlation = this.correlation): Application {
+  close(): void {
+    this.root.close();
+  }
+  /**
+   * Request-scoped services bound to the identity's workspace. Without a `workspaceId` (a plain
+   * local identity) the single SQLite workspace is used; PostgreSQL refuses to guess.
+   */
+  forIdentity(
+    identity: AuthorizationIdentity | AuthenticatedIdentity,
+    correlation = this.correlation,
+  ): Application {
     return new Application(
       this.config,
-      this.database,
+      this.root,
       identity,
       correlationId(correlation),
       this.lockPath,
       this.dockerCommand,
+      "workspaceId" in identity ? identity.workspaceId : null,
+      this.shared,
+      this.serverConfig,
     );
   }
-  close(): void {
-    this.database.close();
+  /** Spans every workspace; for controller loops, migrations, backups and signed webhook intake. */
+  controllerScope(): Application {
+    if (this.bound === null && !this.identity) return this;
+    this.shared.controllerScope ??= new Application(
+      this.config,
+      this.root,
+      undefined,
+      correlationId(),
+      this.lockPath,
+      this.dockerCommand,
+      null,
+      this.shared,
+      this.serverConfig,
+    );
+    return this.shared.controllerScope;
+  }
+  /** Acts inside one workspace as its credential-less controller principal. */
+  forWorkspaceSystem(workspaceId: string, correlation = this.correlation): Application {
+    return this.forIdentity(
+      {
+        principalId: systemPrincipalId(this.root, workspaceId),
+        scopes: ["R", "W", "X", "A"],
+        workspaceId,
+        credential: { kind: "system", id: `system:${workspaceId}` },
+      },
+      correlation,
+    );
+  }
+  /** The authenticated caller, their workspace and what their role and grants allow. */
+  me(): {
+    principal: EntityDocument;
+    workspace: EntityDocument;
+    membership: EntityDocument;
+    permissions: Record<RbacColumn, boolean>;
+  } {
+    this.context.authorize("R");
+    const row = this.database.get(
+      "SELECT id FROM memberships WHERE workspace_id=? AND principal_id=?",
+      this.context.workspaceId,
+      this.context.principalId,
+    );
+    const found = {
+      principal: this.context.entities.get(
+        "Principal",
+        this.context.workspaceId,
+        this.context.principalId,
+      ),
+      workspace: this.context.entities.get(
+        "Workspace",
+        this.context.workspaceId,
+        this.context.workspaceId,
+      ),
+      membership: this.context.entities.get(
+        "Membership",
+        this.context.workspaceId,
+        String(row?.id),
+      ),
+    };
+    if (!found.principal || !found.workspace || !found.membership)
+      throw new ContractError("UNAUTHENTICATED", "Principal is unavailable");
+    const role = this.requireMember();
+    const permissions = Object.fromEntries(
+      rbacColumns.map((column) => [
+        column,
+        (!this.identity || this.identity.scopes.includes(columnScope[column])) &&
+          this.decide(column, role, undefined, ["*"]).allowed,
+      ]),
+    ) as Record<RbacColumn, boolean>;
+    return {
+      principal: found.principal,
+      workspace: found.workspace,
+      membership: found.membership,
+      permissions,
+    };
   }
   private authorize(scope: Scope, projectId?: string): void {
     try {
@@ -320,11 +491,15 @@ export class Application {
       throw error;
     }
   }
-  private authorizePermission(scope: Scope, projectId?: string): void {
-    if (!this.context.workspaceId || !this.context.principalId)
+  /** Presence, principal state, membership and project restrictions; returns the member's role. */
+  private requireMember(projectId?: string): Role {
+    if (!this.context.workspaceId || !this.context.principalId) {
+      if (isPostgres(this.root))
+        throw new ContractError("UNAUTHENTICATED", "Authentication is required");
       throw new ContractError("PRECONDITION_FAILED", "Initialize this repository first", {
         nextActions: ["init"],
       });
+    }
     const principal = this.context.entities.get(
       "Principal",
       this.context.workspaceId,
@@ -338,16 +513,6 @@ export class Application {
       this.context.principalId,
     );
     if (!membership) throw new ContractError("FORBIDDEN", "Workspace membership is required");
-    const role = String(membership.role);
-    const defaults: Record<string, Scope[]> = {
-      org_owner: ["R", "W", "X", "A"],
-      org_admin: ["R", "W", "X", "A"],
-      maintainer: ["R", "W", "X"],
-      runner: ["R", "X"],
-      reviewer: ["R", "W"],
-      viewer: ["R"],
-      service_account: [],
-    };
     const member = validate<Membership>("Membership", JSON.parse(String(membership.data_json)));
     if (
       projectId &&
@@ -355,31 +520,79 @@ export class Application {
       !member.projectRestrictions.includes(projectId)
     )
       throw new ContractError("FORBIDDEN", "Project is outside membership restrictions");
-    if (this.identity && !this.identity.scopes.includes(scope))
-      throw new ContractError("FORBIDDEN", "Session scope is insufficient", { scope });
-    const action = { R: "read", W: "write", X: "execute", A: "admin" }[scope];
+    return String(membership.role) as Role;
+  }
+  /**
+   * Applies one RBAC column (ADR-017): `allow` is a role default, `deny` can never be widened by a
+   * grant, `grant-only` needs a matching non-denied grant. A deny grant always wins.
+   */
+  private decide(
+    column: RbacColumn,
+    role: Role,
+    projectId: string | undefined,
+    resourceTypes: readonly string[],
+    environmentId?: string | null,
+  ): { allowed: boolean; granted: boolean; grants: number } {
     const grants = this.identity?.grants ?? [];
     for (const grant of grants) validate("PermissionGrant", grant);
+    const action = columnGrantAction[column] as PermissionGrant["actions"][number];
     const matching = grants.filter(
       (grant) =>
+        resourceTypes.includes(grant.resourceType) &&
+        grant.actions.includes(action) &&
         (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()) &&
-        grant.actions.includes(action as PermissionGrant["actions"][number]) &&
-        (!projectId || !grant.projectIds.length || grant.projectIds.includes(projectId)),
+        (!projectId || !grant.projectIds.length || grant.projectIds.includes(projectId)) &&
+        (environmentId === undefined ||
+          !grant.environmentIds.length ||
+          (environmentId !== null && grant.environmentIds.includes(environmentId))),
     );
-    if (
-      matching.some((grant) => grant.deny) ||
-      (!(defaults[role] ?? []).includes(scope) && !matching.some((grant) => !grant.deny))
-    ) {
-      if (grants.length)
+    const granted = matching.some((grant) => !grant.deny);
+    const value = rbacMatrix[role][column];
+    const allowed =
+      !matching.some((grant) => grant.deny) &&
+      (value === "allow" || (value === "grant-only" && granted));
+    return { allowed, granted, grants: grants.length };
+  }
+  private authorizePermission(scope: Scope, projectId?: string): void {
+    const role = this.requireMember(projectId);
+    if (this.identity && !this.identity.scopes.includes(scope))
+      throw new ContractError("FORBIDDEN", "Session scope is insufficient", { scope });
+    const decision = this.decide(scopeColumn[scope], role, projectId, ["*"]);
+    if (!decision.allowed) {
+      if (decision.grants)
         auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "denied");
       throw new ContractError("FORBIDDEN", "Action is not authorized", { scope });
     }
-    if (matching.some((grant) => !grant.deny))
+    if (decision.granted)
       auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "allowed");
   }
+  /** The `secret` and `export` columns apply on top of the write and read scopes (ADR-017). */
+  private authorizeColumn(column: "secret" | "export", projectId?: string): void {
+    try {
+      const role = this.requireMember(projectId);
+      if (this.identity && !this.identity.scopes.includes(columnScope[column]))
+        throw new ContractError("FORBIDDEN", "Session scope is insufficient", { scope: column });
+      const decision = this.decide(column, role, projectId, ["*", "SecretReference", "secrets"]);
+      if (!decision.allowed) {
+        if (decision.grants)
+          auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "denied");
+        throw new ContractError("FORBIDDEN", "Action is not authorized", { scope: column });
+      }
+    } catch (error) {
+      if (this.context.workspaceId)
+        auditSecurity(
+          this.context,
+          "authorization",
+          projectId ?? this.context.workspaceId,
+          "denied",
+        );
+      throw error;
+    }
+  }
   /**
-   * Named authority is never implied by generic W/X. Local role defaults apply only without a
-   * bearer identity; remote identities need a matching unexpired, non-denied resource grant.
+   * Named authority is never implied by generic W/X. Role defaults apply only without a bearer
+   * identity; remote identities need a matching unexpired, non-denied resource grant that also
+   * matches `resourceType`. The matrix still caps what a grant can widen.
    */
   private authorizeNamed(
     action: "approve" | "delete",
@@ -396,35 +609,17 @@ export class Application {
       );
       if (action === "approve" && principal?.kind !== "human")
         throw new ContractError("FORBIDDEN", "Approval requires an enabled human principal");
-      const membership = this.database.get(
-        "SELECT role FROM memberships WHERE workspace_id=? AND principal_id=?",
-        this.context.workspaceId,
-        this.context.principalId,
-      );
-      const role = String(membership?.role);
-      const roleDefaults: Record<typeof action, string[]> = {
-        approve: ["org_owner", "org_admin", "maintainer", "reviewer"],
-        delete: ["org_owner", "org_admin"],
-      };
+      const role = this.requireMember(projectId);
       const aliases: Record<typeof resourceType, string[]> = {
         HealingProposal: ["HealingProposal", "healing", "*"],
         Artifact: ["Artifact", "artifacts", "*"],
       };
-      const grants = this.identity?.grants ?? [];
-      for (const grant of grants) validate("PermissionGrant", grant);
-      const matching = grants.filter(
-        (grant) =>
-          aliases[resourceType].includes(grant.resourceType) &&
-          grant.actions.includes(action) &&
-          (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()) &&
-          (!grant.projectIds.length || grant.projectIds.includes(projectId)) &&
-          (!grant.environmentIds.length ||
-            (environmentId !== null && grant.environmentIds.includes(environmentId))),
-      );
+      const column: RbacColumn = action === "approve" ? "write" : "admin";
+      const decision = this.decide(column, role, projectId, aliases[resourceType], environmentId);
       const allowed = this.identity
-        ? matching.some((grant) => !grant.deny)
-        : roleDefaults[action].includes(role);
-      if (role === "viewer" || matching.some((grant) => grant.deny) || !allowed)
+        ? decision.allowed && decision.granted
+        : rbacMatrix[role][column] === "allow";
+      if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
           scope: `${resourceType === "HealingProposal" ? "healing" : "artifacts"}:${action}`,
         });
@@ -443,6 +638,11 @@ export class Application {
     sessionOnly: boolean;
     notice?: string;
   }> {
+    if (isPostgres(this.root))
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "The server profile is initialized with `testmaster server bootstrap`",
+      );
     if (this.context.workspaceId) {
       this.context.authorize("W");
       const project = this.projects.list()[0];
@@ -654,7 +854,9 @@ export class Application {
       const admission = this.database.get(
         "SELECT value FROM operational_state WHERE key='admission'",
       );
-      policy = admission?.value === "enabled" && Boolean(this.context.workspaceId);
+      policy =
+        admission?.value === "enabled" &&
+        Boolean(this.database.get("SELECT id FROM workspaces LIMIT 1"));
     } catch {}
     const runtime = await new DockerExecutor().doctor();
     const runners: Record<string, { status: "ready" | "unavailable" }> = {};

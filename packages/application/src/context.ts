@@ -15,6 +15,8 @@ export interface ServiceContext {
   principalId: string;
   correlationId?: string;
   authorize(scope: Scope, projectId?: string): void;
+  /** RBAC `secret` (write, rotate) and `export` columns, applied on top of the W and R scopes. */
+  authorizeColumn(column: "secret" | "export", projectId?: string): void;
   authorizeRaw?(projectId: string, environmentId: string): void;
   /**
    * Named resource authority (`healing:approve`, `artifacts:delete`) evaluated against role

@@ -3,20 +3,30 @@ import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ContractError, validate } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
-import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
+import {
+  AuditRepository,
+  type EntityDocument,
+  type PersistenceDatabase,
+} from "@testmaster/persistence";
 import type { ServiceContext } from "./context.js";
 
-/** Outcomes are explicit in action suffixes; only hashes, never request payloads, are stored. */
-export function auditSecurity(
-  ctx: ServiceContext,
+export interface AuditActor {
+  database: PersistenceDatabase;
+  workspaceId: string;
+  /** Principal id, or an `unauthenticated:*` label before identity is known. */
+  actor: string;
+}
+/** Records one outcome for an actor that is not the service context's principal (login, recovery). */
+export function auditAs(
+  who: AuditActor,
   action: string,
   resourceId: string,
   outcome: "allowed" | "denied" | "requested",
-  requestId: string = ctx.correlationId ?? randomUUID(),
+  requestId: string = randomUUID(),
 ): void {
-  new AuditRepository(ctx.database).append({
-    workspaceId: ctx.workspaceId,
-    actor: ctx.principalId || "unauthenticated:local",
+  new AuditRepository(who.database).append({
+    workspaceId: who.workspaceId,
+    actor: who.actor,
     action: `${action}.${outcome}`,
     resourceId,
     requestId,
@@ -24,6 +34,30 @@ export function auditSecurity(
     beforeHash: null,
     afterHash: null,
   });
+}
+/**
+ * Outcomes are explicit in action suffixes; only hashes, never request payloads, are stored.
+ * An unbound context (server profile before authentication) has no workspace to record under.
+ */
+export function auditSecurity(
+  ctx: ServiceContext,
+  action: string,
+  resourceId: string,
+  outcome: "allowed" | "denied" | "requested",
+  requestId: string = ctx.correlationId ?? randomUUID(),
+): void {
+  if (!ctx.workspaceId) return;
+  auditAs(
+    {
+      database: ctx.database,
+      workspaceId: ctx.workspaceId,
+      actor: ctx.principalId || "unauthenticated:local",
+    },
+    action,
+    resourceId,
+    outcome,
+    requestId,
+  );
 }
 
 export async function auditedOperation<T>(

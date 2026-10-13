@@ -130,7 +130,7 @@ export class TestMasterMcp {
           const value = request.params._meta?.["testmaster:correlationId"];
           const base = this.options.application;
           if (!base.identity) throw new ContractError("UNAUTHENTICATED", "MCP identity required");
-          const scoped = base.withIdentity(
+          const scoped = base.forIdentity(
             base.identity,
             correlationId(value ?? `mcp_${extra.requestId}`),
           );

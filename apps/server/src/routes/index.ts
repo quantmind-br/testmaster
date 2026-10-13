@@ -1,10 +1,11 @@
 import { routeCatalog } from "@testmaster/contracts";
 import { coreRoutes } from "./core.js";
 import { eventRoutes } from "./events.js";
+import { identityRoutes } from "./identity.js";
 import type { RouteHandler, RouteModule } from "./types.js";
 
 export type { RouteContext, RouteHandler, RouteModule } from "./types.js";
-export const routeModules: RouteModule[] = [coreRoutes, eventRoutes];
+export const routeModules: RouteModule[] = [coreRoutes, eventRoutes, identityRoutes];
 export interface ResolvedRoute {
   handler: RouteHandler;
   synchronous: boolean;

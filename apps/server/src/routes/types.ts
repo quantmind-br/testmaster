@@ -1,6 +1,6 @@
 import type {
   Application,
-  AuthorizationIdentity,
+  AuthenticatedIdentity,
   SignedCursorCodec,
 } from "@testmaster/application";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -8,7 +8,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 export interface RouteContext {
   /** `forIdentity(...)` result; the base application only for public and signature routes. */
   readonly service: Application;
-  readonly identity: AuthorizationIdentity | null;
+  readonly identity: AuthenticatedIdentity | null;
   readonly params: Readonly<Record<string, string>>;
   readonly query: Readonly<Record<string, string | undefined>>;
   /** Already validated against the catalog request schema. */

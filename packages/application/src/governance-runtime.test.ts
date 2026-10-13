@@ -129,7 +129,7 @@ it("propagates one correlation through durable admission and attempt logs withou
     principalId: init.principalId,
     scopes: ["R", "W", "X", "A"] as ("R" | "W" | "X" | "A")[],
   };
-  const scoped = app.withIdentity(identity, "incident-test-123");
+  const scoped = app.forIdentity(identity, "incident-test-123");
   vi.spyOn(scoped, "preflight").mockResolvedValue();
   const receipt = await scoped.runs.admit(
     { testId: test.id, environmentId: init.environmentId },
@@ -172,7 +172,7 @@ it("allows the local admin to drain and stop while refusing a viewer without cha
     lastHeartbeatAt: new Date().toISOString(),
   };
   app.context.entities.insert("Worker", worker);
-  const viewer = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const viewer = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   expect(() => viewer.worker.drain()).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
   expect(() => viewer.worker.stop()).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
   expect(app.database.get("SELECT state FROM workers WHERE id=?", worker.id)?.state).toBe("ready");
@@ -189,7 +189,7 @@ it("allows the local admin to drain and stop while refusing a viewer without cha
 it("refuses a viewer image revocation and secret removal without changing revocation state", async () => {
   const { app, init } = await fixture();
   await app.secrets.set("canary", "NEVER-EXPORT-THIS", { ephemeral: true });
-  const viewer = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const viewer = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   const imageId = `sha256:${"a".repeat(64)}`;
   expect(() => viewer.revokeImage(imageId, "viewer attempt")).toThrowError(
     expect.objectContaining({ code: "FORBIDDEN" }),
