@@ -657,8 +657,8 @@ export class Application {
     }
   }
   private authorizeNamed(
-    action: "approve" | "delete",
-    resourceType: "HealingProposal" | "Artifact",
+    action: "approve" | "delete" | "export",
+    resourceType: "HealingProposal" | "Artifact" | "SecretReference",
     projectId: string,
     environmentId: string | null,
   ): void {
@@ -675,8 +675,10 @@ export class Application {
       const aliases: Record<typeof resourceType, string[]> = {
         HealingProposal: ["HealingProposal", "healing", "*"],
         Artifact: ["Artifact", "artifacts", "*"],
+        SecretReference: ["SecretReference", "secrets", "*"],
       };
-      const column: RbacColumn = action === "approve" ? "write" : "admin";
+      const column: RbacColumn =
+        action === "approve" ? "write" : action === "export" ? "export" : "admin";
       const decision = this.decide(
         column,
         role,
@@ -690,7 +692,7 @@ export class Application {
         : rbacMatrix[role][column] === "allow";
       if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
-          scope: `${resourceType === "HealingProposal" ? "healing" : "artifacts"}:${action}`,
+          scope: `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets" }[resourceType]}:${action}`,
         });
       auditSecurity(this.context, "grant", projectId, "allowed");
     } catch (error) {

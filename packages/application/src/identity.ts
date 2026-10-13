@@ -532,6 +532,30 @@ export class IdentityService {
       expiresAt: null,
     };
   }
+  /**
+   * Step-up for a sensitive operation: the caller re-enters their own password. A wrong password
+   * counts toward the same lockout as login and returns the same generic error.
+   */
+  async confirmPassword(password: string, operation: string): Promise<void> {
+    this.ctx.authorize("R");
+    const row = this.system.get(
+      `SELECT ${credentialColumns} FROM password_credentials WHERE workspace_id=? AND principal_id=?`,
+      this.ctx.workspaceId,
+      this.ctx.principalId,
+    );
+    const credential = row ? toCredential(row) : null;
+    const verified =
+      credential !== null &&
+      !this.isLocked(credential) &&
+      credential.passwordHash !== null &&
+      (await verifyPassword(password, credential.passwordHash));
+    if (!credential || !verified) {
+      if (credential && !this.isLocked(credential)) this.recordFailure(credential);
+      this.audit(credential, `auth.stepup.${operation}`, "denied", this.ctx.principalId);
+      throw invalidCredentials();
+    }
+    this.audit(credential, `auth.stepup.${operation}`, "allowed", credential.principalId);
+  }
   /** Changes the caller's own password; every other session of the member ends. */
   async changePassword(input: { currentPassword: string; newPassword: string }): Promise<void> {
     this.ctx.authorize("R");

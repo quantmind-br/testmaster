@@ -33,8 +33,8 @@ export interface ServiceContext {
    * defaults and resource-scoped PermissionGrants; generic W/X never implies it.
    */
   authorizeNamed(
-    action: "approve" | "delete",
-    resourceType: "HealingProposal" | "Artifact",
+    action: "approve" | "delete" | "export",
+    resourceType: "HealingProposal" | "Artifact" | "SecretReference",
     projectId: string,
     environmentId?: string | null,
   ): void;
