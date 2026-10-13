@@ -1,0 +1,728 @@
+$ vitest run --project docker-rootless
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+(node:2914397) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 31)
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ |docker-rootless| validation/journeys/browser-matrix.docker.test.ts (9 tests | 9 failed) 61052ms
+   × captures real frame, popup, upload/download, hook/wait and opt-in evidence channels 66ms
+   × captures delayed password identity without values and refuses sensitive or missing controls 14ms
+   × fails real ambiguous hooks and denies unauthorized frames without raw collection 19ms
+   × closes the real browser container when cancelled during a deterministic wait 16ms
+   × executes all six static authentication bindings against independent HTTP oracles 24ms
+   × distinguishes expected401, missing-auth oracle mismatch, expired-token auth, HTTP500 and transport loss 13ms
+   × never reuses cookie/profile state between attempts or staging and production targets 15ms
+   × expires ownership during a real browser navigation and reaps the stale browser without running the next assertion 60867ms
+   × keeps browser and HTTP bodies private by default while separately authorizing explicit full-body evidence 17ms
+ ❯ |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts (13 tests | 7 failed) 475ms
+   × blocks service-worker registration rather than permitting a worker fetch bypass 15ms
+   × invalid TLS certificate is rejected before the page can perform login 29ms
+   × rejects Docker runner foreign-run messages and preserves previous accepted observations 13ms
+   × rejects Docker runner oversized messages and preserves previous accepted observations 13ms
+   × rejects Docker runner uri messages and preserves previous accepted observations 12ms
+   × rejects Docker runner duplicate messages and preserves previous accepted observations 11ms
+   × controller withholds compromised runner PII corpus and malformed JSON with no raw fallback 13ms
+ ❯ |docker-rootless| validation/journeys/m1-boundaries.docker.test.ts (4 tests | 1 failed) 67626ms
+   × CLI-004 secret canary crosses the authorized HTTP boundary but is absent from argv, logs, reports and public artifacts 62712ms
+ ❯ |docker-rootless| validation/journeys/rolling-upgrade.docker.test.ts (1 test | 1 failed) 123787ms
+   ❯ OPS-038 rolling upgrade (1)
+     × OPS-038 an older worker finishes its fenced leases and claims nothing new while a next-release worker takes over 123786ms
+ ❯ |docker-rootless| packages/sandbox/src/docker/isolation.docker.test.ts (5 tests | 5 failed) 92ms
+   × doctor starts the hardened image even when its default entrypoint requires a runner session 41ms
+   × reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access 18ms
+   × enforces the memory envelope under allocation pressure 12ms
+   × contains process proliferation at the PID envelope 11ms
+   × cancellation kills within grace and removes the container 10ms
+ ❯ |docker-rootless| validation/journeys/j17-server.docker.test.ts (1 test | 1 failed) 143628ms
+   ❯ J17 server profile (1)
+     × M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result 143627ms
+ ❯ |docker-rootless| validation/journeys/recovery-controls.docker.test.ts (3 tests | 3 failed) 70437ms
+   × OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds 3987ms
+   × OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects 61860ms
+   × OPS-025 isolated restore opens no outbound connection and dispatches no outbox message 4589ms
+ ❯ |docker-rootless| validation/journeys/cleanup-quarantine.docker.test.ts (1 test | 1 failed) 1010ms
+   × SEC-025: quarantines worker upon cleanup failure, persists incident and outbox, blocks dispatch across restart, denies unauthorized clear, safely clears, and proves fresh session 1010ms
+ ❯ |docker-rootless| packages/sandbox/src/docker/adversarial.docker.test.ts (1 test | 1 failed) 42ms
+   × browser/CDP/broker, worker, redirects, iframe and reconnect bypasses produce only approved packets 41ms
+ ❯ |docker-rootless| validation/journeys/resource-cleanup.docker.test.ts (1 test | 1 failed) 4868ms
+   × manually compensates an orphan through the sandbox and preserves the owning run verdict 4867ms
+stderr | packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes frontend example against undefined
+attempt result {
+  outcome: 'blocked',
+  reasonCode: 'security_precondition_failed',
+  bundle: {
+    bundleDir: '/tmp/tm-attempt-Kok1qo/evidence/runs/ws_01a13710-9993-740e-bd65-07dcddc19526/run_01a13710-9994-732e-8fee-f46a85925c08/att_01a13710-9994-732e-8fee-fab950bf5bc6',
+    manifestSha256: '573af17534e3fa335b7f91d42ac35cd0dbc3d08151d0448dad75752057372078'
+  },
+  logDropped: 0,
+  events: []
+}
+
+stderr | packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes frontend example against no-password-validation
+attempt result {
+  outcome: 'blocked',
+  reasonCode: 'security_precondition_failed',
+  bundle: {
+    bundleDir: '/tmp/tm-attempt-tarmqT/evidence/runs/ws_01a13710-99b8-764a-8af8-c441939ce397/run_01a13710-99b8-764a-8af8-c9bb40958e48/att_01a13710-99b8-764a-8af8-cd7980c7f06a',
+    manifestSha256: 'e0f6843a6d475679c45c0a9b1471a6f2483f8dc93d92094a0d3f6689e8595c29'
+  },
+  logDropped: 0,
+  events: []
+}
+
+stderr | packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes backend example against undefined
+attempt result {
+  outcome: 'blocked',
+  reasonCode: 'security_precondition_failed',
+  bundle: {
+    bundleDir: '/tmp/tm-attempt-J1DeGj/evidence/runs/ws_01a13710-99c8-70a5-863b-5574c731eb4c/run_01a13710-99c8-70a5-863b-584ad17b13f2/att_01a13710-99c8-70a5-863b-5fd94d951449',
+    manifestSha256: 'dc914a721064876145033bf49dd02615ab49630eca2d25dbb53d1217b98c6b02'
+  },
+  logDropped: 0,
+  events: []
+}
+
+stderr | packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes backend example against health-degraded
+attempt result {
+  outcome: 'blocked',
+  reasonCode: 'security_precondition_failed',
+  bundle: {
+    bundleDir: '/tmp/tm-attempt-SJEvn5/evidence/runs/ws_01a13710-99d7-76e9-88ae-328e757f24e8/run_01a13710-99d7-76e9-88ae-340a52b6cdc0/att_01a13710-99d7-76e9-88ae-38b44208250e',
+    manifestSha256: '831f7cee661ff46ff42b68e2c57d2d652c30c560e0bc2de169ae9deaaa50d6f2'
+  },
+  logDropped: 0,
+  events: []
+}
+
+ ❯ |docker-rootless| packages/sandbox/src/attempt/attempt.docker.test.ts (5 tests | 5 failed) 347ms
+   ❯ sealed runner attempts (5)
+     × executes frontend example against undefined 285ms
+     × executes frontend example against no-password-validation 17ms
+     × executes backend example against undefined 15ms
+     × executes backend example against health-degraded 16ms
+     × redacts a protocol-released canary 14ms
+(node:2964386) [DEP0123] DeprecationWarning: Setting the TLS ServerName to an IP address is not permitted by RFC 6066. This will be ignored in a future version.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:2964386) [DEP0123] DeprecationWarning: Setting the TLS ServerName to an IP address is not permitted by RFC 6066. This will be ignored in a future version.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ❯ |docker-rootless| validation/journeys/network-boundary.docker.test.ts (1 test | 1 failed) 1831ms
+   × NFR-002/UX-002/M1-08 real CLI replay tree connects only to the authorized shop without keys, telemetry overrides or offline flags 1830ms
+ ❯ |docker-rootless| validation/journeys/limits-recovery.docker.test.ts (3 tests | 2 failed) 6455ms
+   × OPS-004 actual Docker log flood retains only the bounded tail and counts discarded bytes 15ms
+   × OPS-004 infinite HTTP stream is disconnected at the byte ceiling and never reports a pass 3822ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 38 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > captures real frame, popup, upload/download, hook/wait and opt-in evidence channels
+AssertionError: []: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:225:60
+    223|         (event) => event.type === "step.finished" || event.type === "r…
+    224|       );
+    225|       expect(run.result.outcome, JSON.stringify(finished)).toBe("passe…
+       |                                                            ^
+    226|       expect(await run.read("browser/downloads/profile.bin")).toEqual(…
+    227|       const manifest = JSON.parse((await run.read("manifest.json")).to…
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/browser-matrix.docker.test.ts:137:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > captures delayed password identity without values and refuses sensitive or missing controls
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:353:37
+    351|   try {
+    352|     baseline = await attempt(url, plan, { secret: "private-password-va…
+    353|     expect(baseline.result.outcome).toBe("passed");
+       |                                     ^
+    354|     const before = await read(baseline, "before");
+    355|     expect(before.cardinality).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > fails real ambiguous hooks and denies unauthorized frames without raw collection
+AssertionError: expected 'blocked' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:413:36
+    411|       const run = await attempt(shop.url, executable(operation, "playw…
+    412|       try {
+    413|         expect(run.result.outcome).toBe(expected);
+       |                                    ^
+    414|         const manifest = JSON.parse((await run.read("manifest.json")).…
+    415|         expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > closes the real browser container when cancelled during a deterministic wait
+AssertionError: expected [ 'cancelled', 'inconclusive' ] to include 'blocked'
+ ❯ validation/journeys/browser-matrix.docker.test.ts:443:43
+    441|   );
+    442|   try {
+    443|     expect(["cancelled", "inconclusive"]).toContain(run.result.outcome…
+       |                                           ^
+    444|     expect(
+    445|       run.result.events.some(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > executes all six static authentication bindings against independent HTTP oracles
+AssertionError: none: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:506:42
+    504|       );
+    505|       try {
+    506|         expect(run.result.outcome, kind).toBe("passed");
+       |                                          ^
+    507|         if (credential)
+    508|           expect((await run.read("http/request.json")).toString()).not…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > distinguishes expected401, missing-auth oracle mismatch, expired-token auth, HTTP500 and transport loss
+AssertionError: /acceptance/auth/bearer: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:546:42
+    544|       );
+    545|       try {
+    546|         expect(run.result.outcome, path).toBe(outcome);
+       |                                          ^
+    547|         expect(run.result.reasonCode).toBe(reason);
+    548|         if (path.endsWith("server-error")) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > never reuses cookie/profile state between attempts or staging and production targets
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:590:36
+    588|       );
+    589|       try {
+    590|         expect(run.result.outcome).toBe("passed");
+       |                                    ^
+    591|         for (const file of await files(run.root)) {
+    592|           expect(file).not.toMatch(/(?:storageState|profile|cookies)\.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > expires ownership during a real browser navigation and reaps the stale browser without running the next assertion
+ContractError: Pinned runner image is unavailable
+ ❯ packages/application/src/application.ts:1129:17
+    1127|         );
+    1128|         if (result.code !== 0)
+    1129|           throw new ContractError("POLICY_DENIED", "Pinned runner imag…
+       |                 ^
+    1130|         return result.stdout.toString().trim();
+    1131|       },
+ ❯ verifyImageLock packages/sandbox/src/images/lock.ts:93:10
+ ❯ Application.images packages/application/src/application.ts:1121:18
+ ❯ WorkerService.run packages/application/src/worker.ts:1756:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/browser-matrix.docker.test.ts > keeps browser and HTTP bodies private by default while separately authorizing explicit full-body evidence
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/browser-matrix.docker.test.ts:690:38
+    688|     );
+    689|     try {
+    690|       expect(browser.result.outcome).toBe("passed");
+       |                                      ^
+    691|       for (const file of await files(browser.result.bundle?.bundleDir …
+    692|         const text = (await readFile(file)).toString();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/cleanup-quarantine.docker.test.ts > SEC-025: quarantines worker upon cleanup failure, persists incident and outbox, blocks dispatch across restart, denies unauthorized clear, safely clears, and proves fresh session
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ validation/journeys/cleanup-quarantine.docker.test.ts:68:28
+     66|       const run1 = app.runs.get(firstRun.runId);
+     67|       expect(run1.phase).toBe("completed");
+     68|       expect(run1.outcome).toBe("passed");
+       |                            ^
+     69|       expect(run1.status).toBe("passed");
+     70|       expect(run1.gate).toBe("failed");
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/cleanup-quarantine.docker.test.ts:22:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/j17-server.docker.test.ts > J17 server profile > M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result
+Error: Journey boundary did not become ready within 120000ms: {"status":"ready","components":{"persistence":"ready","admission":"ready","schema":"ready","tenantIsolation":"ready","storage":"ready","masterKey":"ready"},"reasons":[],"schema":{"databaseVersion":18,"supportedVersion":18,"state":"current"},"atRestEncryption":"operator_attested","worker":{"status":"degraded","ready":0}}
+ ❯ eventually validation/journeys/harness.ts:96:13
+     94|     if (accepts(value)) return value;
+     95|     if (performance.now() >= deadline)
+     96|       throw new Error(
+       |             ^
+     97|         `Journey boundary did not become ready within ${timeoutMs}ms: …
+     98|       );
+ ❯ validation/journeys/j17-server.docker.test.ts:122:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/limits-recovery.docker.test.ts > OPS-004 actual Docker log flood retains only the bounded tail and counts discarded bytes
+AssertionError: expected 125 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 125
+
+ ❯ validation/journeys/limits-recovery.docker.test.ts:68:23
+     66|     "const b=Buffer.alloc(65536,120);for(let n=0;n<384;n++)require('no…
+     67|   ]);
+     68|   expect(result.code).toBe(0);
+       |                       ^
+     69|   expect(result.stdout.length + result.stderr.length).toBeLessThanOrEq…
+     70|   expect(result.droppedBytes + result.stdout.length + result.stderr.le…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/limits-recovery.docker.test.ts > OPS-004 infinite HTTP stream is disconnected at the byte ceiling and never reports a pass
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/limits-recovery.docker.test.ts:108:22
+    106|       ]).result;
+    107|       expect(result.exitCode).not.toBe(0);
+    108|       expect(closed).toBe(true);
+       |                      ^
+    109|       const run = object(object(result.json).data ?? object(object(res…
+    110|       expect(JSON.stringify(run)).not.toContain('"gate":"passed"');
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/limits-recovery.docker.test.ts:75:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/m1-boundaries.docker.test.ts > CLI-004 secret canary crosses the authorized HTTP boundary but is absent from argv, logs, reports and public artifacts
+Error: Journey boundary did not become ready within 60000ms: {"items":[]}
+ ❯ eventually validation/journeys/harness.ts:96:13
+     94|     if (accepts(value)) return value;
+     95|     if (performance.now() >= deadline)
+     96|       throw new Error(
+       |             ^
+     97|         `Journey boundary did not become ready within ${timeoutMs}ms: …
+     98|       );
+ ❯ Journey.worker validation/journeys/harness.ts:342:5
+ ❯ validation/journeys/m1-boundaries.docker.test.ts:182:22
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/m1-boundaries.docker.test.ts:147:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/network-boundary.docker.test.ts > NFR-002/UX-002/M1-08 real CLI replay tree connects only to the authorized shop without keys, telemetry overrides or offline flags
+AssertionError: doctor stderr= stdout={"schemaVersion":"1.0.0","requestId":"cli_3fd82d76-931f-4f74-a0cb-abf0fdb2e956","data":{"status":"FAIL","blocking":["images"],"recommendations":[],"checks":{"node":{"status":"PASS","required":">=24 <25","actual":"24.21.0"},"runtime":{"status":"PASS","available":true,"mode":"rootless","seccomp":true,"cgroupVersion":"2","diagnostics":[]},"images":{"status":"FAIL"},"storage":{"status":"PASS","availableBytes":23392468992},"writablePaths":{"status":"PASS"},"database":{"status":"PASS","schemaVersion":18,"journalMode":"wal"},"server":{"status":"NOT_APPLICABLE"},"timezone":{"status":"PASS","configured":"UTC","host":"America/Sao_Paulo"},"network":{"status":"PASS","telemetry":"disabled","nonLoopbackEnvironmentRevisions":0},"browserSandbox":{"status":"NOT_CHECKED","reason":"Docker runtime or image lock is unavailable"},"secrets":{"status":"PASS","backend":"secret-tool","writable":true},"config":{"status":"PASS","effectiveConfig":{"config":{"schemaVersion":"1.0.0","project":{"name":"Local project","id":"prj_01a13710-a3f9-702a-b328-14e4fcd5b04d"},"execution":{"executor":"docker","mode":"replay","concurrency":2,"executionTimeoutMs":1800000,"attemptTimeoutMs":300000,"stepTimeoutMs":30000,"networkRequestTimeoutMs":30000,"preparationTimeoutMs":120000,"collectionGraceMs":60000,"analysisGraceMs":60000,"maxAttempts":2,"bodyBytes":10485760,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"logBytes":10485760},"environment":{"baseUrl":"http://127.0.0.1:3000","networkProfile":"local-loopback","locale":"en-US","timezone":"UTC"},"browser":{"name":"chromium","viewport":{"width":1280,"height":720},"testIdAttributes":["data-testid"]},"healing":{"mode":"off"},"artifacts":{"trace":"off","video":"off","httpBodies":"off","retentionDays":30},"telemetry":{"enabled":false}},"origins":{"schemaVersion":"project","project.name":"project","execution.executor":"project","execution.mode":"project","execution.concurrency":"project","execution.executionTimeoutMs":"project","execution.attemptTimeoutMs":"project","execution.stepTimeoutMs":"project","execution.networkRequestTimeoutMs":"project","execution.preparationTimeoutMs":"project","execution.collectionGraceMs":"project","execution.analysisGraceMs":"project","execution.maxAttempts":"project","execution.bodyBytes":"project","execution.artifactBytes":"project","execution.attemptArtifactBytes":"project","execution.logBytes":"project","environment.baseUrl":"project","environment.networkProfile":"project","environment.locale":"project","environment.timezone":"project","browser.name":"project","browser.viewport.width":"project","browser.viewport.height":"project","browser.testIdAttributes":"project","healing.mode":"environment","artifacts.trace":"project","artifacts.video":"project","artifacts.httpBodies":"project","artifacts.retentionDays":"project","telemetry.enabled":"project","project.id":"project"},"policyHash":"22f7400f1ff9d10d9139eec33cc02f6c6e772790dc565edebd6cb8c75cf9b845","operationalDefaults":{"controllerBind":"127.0.0.1","httpRequestsPerAttempt":4,"llmTransportRetries":1,"browserCpu":2,"browserMemoryBytes":2147483648,"browserPids":256,"httpCpu":1,"httpMemoryBytes":536870912,"httpPids":128,"pythonCpu":1,"pythonMemoryBytes":1073741824,"pythonPids":128,"rawArtifactBytes":268435456,"storageWarningPercent":80,"storageSuspendPercent":90,"tenantActiveJobs":1000,"actorAdmissionsPerMinute":60,"actorAdmissionBurst":20,"maxPageSize":100,"signedLinkMs":300000,"tunnelMs":900000,"tunnelMaxMs":3600000,"tunnelStreams":32,"tunnelBytesPerSecond":10485760,"tunnelTotalBytes":536870912,"localBackup":"manual","serverBackup":"daily","backupDailyCopies":7,"backupWeeklyCopies":4,"backupMonthlyCopies":3,"scheduleMisfire":"skip","scheduleGraceMs":300000,"scheduleOverlap":"forbid","logRetentionDays":14,"executionTimeoutMs":1800000,"attemptTimeoutMs":300000,"stepTimeoutMs":30000,"networkRequestTimeoutMs":30000,"preparationTimeoutMs":120000,"collectionGraceMs":60000,"analysisGraceMs":60000,"maxAttempts":2,"browserConcurrency":2,"httpConcurrency":4,"pythonConcurrency":1,"batchCells":500,"workerHeartbeatMs":10000,"workerLeaseMs":30000,"reconcilerIntervalMs":30000,"cancellationGraceMs":10000,"tempBytes":1073741824,"bodyBytes":10485760,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"logBytes":10485760,"pageSize":50,"manualAuthCheckpointMs":300000,"approvalMs":1800000,"artifactRetentionDays":30,"metadataRetentionDays":90,"auditRetentionDays":365,"llmEnabled":false,"telemetryEnabled":false},"logging":{"retentionDays":14,"minimumRetentionDays":1,"maxFileBytes":10485760,"dailyFilesPerComponent":2},"unavailable":{"signedArtifactLinks":"M4","tunnel":"M4","schedule":"M4","distributed":"M5"}}},"target":{"status":"NOT_CHECKED"},"model":{"status":"ABSENT","diagnostics":["model_not_configured"],"requiredForReplay":false}}},"warnings":[]}
+: expected 9 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 9
+
+ ❯ Journey.command validation/journeys/harness.ts:260:7
+    258|       result.exitCode,
+    259|       `${args.join(" ")} stderr=${result.stderr} stdout=${result.stdou…
+    260|     ).toBe(expectedExit);
+       |       ^
+    261|     expect(result.json, `Exactly one JSON document required: ${result.…
+    262|     return expectedExit === 0 ? data(result.json) : object(result.json…
+ ❯ command validation/journeys/network-boundary.docker.test.ts:33:24
+ ❯ validation/journeys/network-boundary.docker.test.ts:39:7
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/network-boundary.docker.test.ts:23:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/recovery-controls.docker.test.ts > OPS-021/024 real concurrent GC and publication survive discrepant refcounts and backup holds
+AssertionError: test run tst_01a1370f-3b26-74ed-9446-f31d3f8e65c5 --wait --timeout 120 stderr= stdout={"schemaVersion":"1.0.0","requestId":"cli_4c2d87ad-4555-47e0-8054-70adc8b5cf0d","data":{"receipt":{"runId":"run_01a1370f-3ead-72c5-af77-9793bc3eaf40","status":"blocked","revisionId":"rev_01a1370f-3b2b-7788-8715-d24efc4a9269","environmentRevisionId":"evr_01a1370f-38a7-76b4-942e-a0f277cf5ca2","acceptedAt":"2026-10-13T20:58:28.397Z","links":{"self":"/v1/runs/run_01a1370f-3ead-72c5-af77-9793bc3eaf40","events":"/v1/runs/run_01a1370f-3ead-72c5-af77-9793bc3eaf40/events","bundle":"/v1/runs/run_01a1370f-3ead-72c5-af77-9793bc3eaf40/bundle"},"idempotencyKey":"71f2356e-8c80-4969-918f-0f8b141a8817","ownership":"ephemeral"},"run":{"analysisStatus":"not_requested","batchId":null,"cleanupOutcome":"not_required","createdAt":"2026-10-13T20:58:28.397Z","environmentRevisionId":"evr_01a1370f-38a7-76b4-942e-a0f277cf5ca2","gate":"failed","gatePolicy":{"cleanupRequired":false,"executor":"docker","ownership":"ephemeral","policyHash":"ddf5a8e4473f23d9d8df12cba14adc456f42a163ad87d3a86eba43a0f4c02ecf","policySatisfied":false,"requiredDependenciesPassed":true,"requiredEvidenceComplete":true},"id":"run_01a1370f-3ead-72c5-af77-9793bc3eaf40","matrixCell":{"actor":{"credentialId":null,"credentialKind":null,"principalId":"usr_01a1370f-3899-7375-be3c-52647b0006ba"},"admissionSnapshot":{"browserImageDigest":null,"buildInputsHash":null,"capabilityManifestHash":"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57","configuredModelHash":null,"dependenciesLockHash":null,"environmentHash":"dd8d0afa38180ddafe25178509d820bb1a27b1dac2a4b605df8787f15413eb9e","generationModel":null,"generationModelCallId":null,"images":null,"inputFixtureHashes":{},"inputHash":"39aef6c76f6777b78c19abb1dd4ef278a082a06f6c0b4d9078107cf26023f959","limitations":["mutable-external-target","mutable-external-payload","browser-platform-rendering","repository-commit-unavailable","browser-version-unavailable","source-binding-unavailable","runner-image-digest-unavailable","browser-image-digest-unavailable","build-input-hash-unavailable","seccomp-hash-unavailable","source-dependency-lock-unavailable"],"modelConfigHash":null,"modelProviders":[],"policyHash":"ddf5a8e4473f23d9d8df12cba14adc456f42a163ad87d3a86eba43a0f4c02ecf","profilePolicy":{"allowCiHealing":false,"allowUpload":false,"allowedModelProviders":[],"limits":{"attemptTimeoutMs":900000,"executionTimeoutMs":7200000,"maxAttempts":2},"offline":true,"projectId":"prj_01a1370f-38a4-7160-a9b6-a1dad99cd600","security":{"allowUnsafeProcessExecution":false}},"repository":{"baseSha":null,"binding":"unbound","checkoutSha":null,"commitSha":null,"deploymentId":null,"dirtyHash":null,"limitations":["repository-commit-unavailable"],"repositoryId":null},"requiredCapabilities":["http"],"revisionHash":"53f03e3ecfc748f949162a652072b9773b3729b5c81b792032496e8dff1c162b","runnerImageDigest":null,"runtimeIdentity":null,"seccompHash":null,"seed":0,"sourceRevisions":[]},"admissionSnapshotHash":"04f5a3283d32de586853183a3fb06dc88cedd018ed3ea19e57cdda10c0ac41f9","baseUrl":"http://127.0.0.1:39929","correlationId":"cli_4c2d87ad-4555-47e0-8054-70adc8b5cf0d","effectiveConfig":{"config":{"artifacts":{"httpBodies":"off","retentionDays":30,"trace":"on","video":"off"},"browser":{"name":"chromium","testIdAttributes":["data-testid"],"viewport":{"height":720,"width":1280}},"environment":{"baseUrl":"http://127.0.0.1:3000","locale":"en-US","networkProfile":"local-loopback","timezone":"UTC"},"execution":{"analysisGraceMs":60000,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"attemptTimeoutMs":120000,"bodyBytes":10485760,"collectionGraceMs":60000,"concurrency":1,"executionTimeoutMs":150000,"executor":"docker","logBytes":10485760,"maxAttempts":1,"mode":"replay","networkRequestTimeoutMs":90000,"preparationTimeoutMs":120000,"stepTimeoutMs":5000},"healing":{"mode":"off"},"project":{"id":"prj_01a1370f-38a4-7160-a9b6-a1dad99cd600","name":"ops-021-publication-gc-backup-holds"},"schemaVersion":"1.0.0","telemetry":{"enabled":false}},"origins":{"artifacts.httpBodies":"default","artifacts.retentionDays":"project","artifacts.trace":"project","artifacts.video":"project","browser.name":"project","browser.testIdAttributes":"project","browser.viewport.height":"project","browser.viewport.width":"project","environment.baseUrl":"project","environment.locale":"project","environment.networkProfile":"project","environment.timezone":"project","execution.analysisGraceMs":"project","execution.artifactBytes":"project","execution.attemptArtifactBytes":"project","execution.attemptTimeoutMs":"project","execution.bodyBytes":"project","execution.collectionGraceMs":"project","execution.concurrency":"project","execution.executionTimeoutMs":"project","execution.executor":"project","execution.logBytes":"project","execution.maxAttempts":"project","execution.mode":"project","execution.networkRequestTimeoutMs":"project","execution.preparationTimeoutMs":"project","execution.stepTimeoutMs":"project","healing.mode":"environment","project.id":"project","project.name":"project","schemaVersion":"project","telemetry.enabled":"environment"},"policyHash":"ddf5a8e4473f23d9d8df12cba14adc456f42a163ad87d3a86eba43a0f4c02ecf"},"environmentId":"env_01a1370f-38a8-7423-b7d7-c0d2baf0cd83","environmentName":"local","executor":"docker","healingPolicy":"off","limits":{"analysisGraceMs":60000,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"attemptTimeoutMs":120000,"bodyBytes":10485760,"collectionGraceMs":60000,"executionTimeoutMs":150000,"logBytes":10485760,"maxAttempts":1,"networkRequestTimeoutMs":90000,"preparationTimeoutMs":120000,"stepTimeoutMs":5000},"maxConcurrency":1,"ownership":"ephemeral","planHash":"53f03e3ecfc748f949162a652072b9773b3729b5c81b792032496e8dff1c162b","seed":0},"mode":"replay","origin":"cli","outcome":"blocked","phase":"completed","revisionId":"rev_01a1370f-3b2b-7788-8715-d24efc4a9269","status":"blocked","testId":"tst_01a1370f-3b26-74ed-9446-f31d3f8e65c5","version":1,"workspaceId":"ws_01a1370f-3898-7147-946c-511b933d36e7"}},"warnings":[]}
+: expected 9 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 9
+
+ ❯ Journey.command validation/journeys/harness.ts:260:7
+    258|       result.exitCode,
+    259|       `${args.join(" ")} stderr=${result.stderr} stdout=${result.stdou…
+    260|     ).toBe(expectedExit);
+       |       ^
+    261|     expect(result.json, `Exactly one JSON document required: ${result.…
+    262|     return expectedExit === 0 ? data(result.json) : object(result.json…
+ ❯ validation/journeys/recovery-controls.docker.test.ts:23:21
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/recovery-controls.docker.test.ts:18:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/recovery-controls.docker.test.ts > OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects
+Error: Journey boundary did not become ready within 60000ms: {"items":[]}
+ ❯ eventually validation/journeys/harness.ts:96:13
+     94|     if (accepts(value)) return value;
+     95|     if (performance.now() >= deadline)
+     96|       throw new Error(
+       |             ^
+     97|         `Journey boundary did not become ready within ${timeoutMs}ms: …
+     98|       );
+ ❯ Journey.worker validation/journeys/harness.ts:342:5
+ ❯ validation/journeys/recovery-controls.docker.test.ts:127:22
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/recovery-controls.docker.test.ts:122:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/recovery-controls.docker.test.ts > OPS-025 isolated restore opens no outbound connection and dispatches no outbox message
+AssertionError: test run tst_01a13710-3d1d-72be-9fa4-5a841d09de97 --wait --timeout 120 stderr= stdout={"schemaVersion":"1.0.0","requestId":"cli_3a086363-645c-4740-8c3d-c7d15e69aae5","data":{"receipt":{"runId":"run_01a13710-4119-73f0-a03f-43877cbeeca4","status":"blocked","revisionId":"rev_01a13710-3d23-7755-a3ac-279fc0fc5e4a","environmentRevisionId":"evr_01a13710-3a34-726b-a177-79b08009d563","acceptedAt":"2026-10-13T20:59:34.553Z","links":{"self":"/v1/runs/run_01a13710-4119-73f0-a03f-43877cbeeca4","events":"/v1/runs/run_01a13710-4119-73f0-a03f-43877cbeeca4/events","bundle":"/v1/runs/run_01a13710-4119-73f0-a03f-43877cbeeca4/bundle"},"idempotencyKey":"afe0aaf5-6812-459a-9f7e-6ba877f33da2","ownership":"ephemeral"},"run":{"analysisStatus":"not_requested","batchId":null,"cleanupOutcome":"not_required","createdAt":"2026-10-13T20:59:34.553Z","environmentRevisionId":"evr_01a13710-3a34-726b-a177-79b08009d563","gate":"failed","gatePolicy":{"cleanupRequired":false,"executor":"docker","ownership":"ephemeral","policyHash":"1803a0d5ecd143b927731af0d17cc85af0a49a6612c75704159c1e3b2ded7eb5","policySatisfied":false,"requiredDependenciesPassed":true,"requiredEvidenceComplete":true},"id":"run_01a13710-4119-73f0-a03f-43877cbeeca4","matrixCell":{"actor":{"credentialId":null,"credentialKind":null,"principalId":"usr_01a13710-3a26-7273-bf19-24269187c7b1"},"admissionSnapshot":{"browserImageDigest":null,"buildInputsHash":null,"capabilityManifestHash":"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57","configuredModelHash":null,"dependenciesLockHash":null,"environmentHash":"c45b6fa51436f50c356bfff31861b7a1ee781599372c867536e91d45bd0dcc87","generationModel":null,"generationModelCallId":null,"images":null,"inputFixtureHashes":{},"inputHash":"2acd0d914cf53b927964d68f24ac48d9dd00239617e6669eec9f2e3d1b4d80be","limitations":["mutable-external-target","mutable-external-payload","browser-platform-rendering","repository-commit-unavailable","browser-version-unavailable","source-binding-unavailable","runner-image-digest-unavailable","browser-image-digest-unavailable","build-input-hash-unavailable","seccomp-hash-unavailable","source-dependency-lock-unavailable"],"modelConfigHash":null,"modelProviders":[],"policyHash":"1803a0d5ecd143b927731af0d17cc85af0a49a6612c75704159c1e3b2ded7eb5","profilePolicy":{"allowCiHealing":false,"allowUpload":false,"allowedModelProviders":[],"limits":{"attemptTimeoutMs":900000,"executionTimeoutMs":7200000,"maxAttempts":2},"offline":true,"projectId":"prj_01a13710-3a31-75bd-a567-c70e5e61c456","security":{"allowUnsafeProcessExecution":false}},"repository":{"baseSha":null,"binding":"unbound","checkoutSha":null,"commitSha":null,"deploymentId":null,"dirtyHash":null,"limitations":["repository-commit-unavailable"],"repositoryId":null},"requiredCapabilities":["http"],"revisionHash":"53f03e3ecfc748f949162a652072b9773b3729b5c81b792032496e8dff1c162b","runnerImageDigest":null,"runtimeIdentity":null,"seccompHash":null,"seed":0,"sourceRevisions":[]},"admissionSnapshotHash":"526421f75d7996f133c429a85ea856e1d3165e176ebe218482c11c4e3c47819a","baseUrl":"http://127.0.0.1:44485","correlationId":"cli_3a086363-645c-4740-8c3d-c7d15e69aae5","effectiveConfig":{"config":{"artifacts":{"httpBodies":"off","retentionDays":30,"trace":"on","video":"off"},"browser":{"name":"chromium","testIdAttributes":["data-testid"],"viewport":{"height":720,"width":1280}},"environment":{"baseUrl":"http://127.0.0.1:3000","locale":"en-US","networkProfile":"local-loopback","timezone":"UTC"},"execution":{"analysisGraceMs":60000,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"attemptTimeoutMs":120000,"bodyBytes":10485760,"collectionGraceMs":60000,"concurrency":1,"executionTimeoutMs":150000,"executor":"docker","logBytes":10485760,"maxAttempts":1,"mode":"replay","networkRequestTimeoutMs":90000,"preparationTimeoutMs":120000,"stepTimeoutMs":5000},"healing":{"mode":"off"},"project":{"id":"prj_01a13710-3a31-75bd-a567-c70e5e61c456","name":"ops-025-restore-zero-egress"},"schemaVersion":"1.0.0","telemetry":{"enabled":false}},"origins":{"artifacts.httpBodies":"default","artifacts.retentionDays":"project","artifacts.trace":"project","artifacts.video":"project","browser.name":"project","browser.testIdAttributes":"project","browser.viewport.height":"project","browser.viewport.width":"project","environment.baseUrl":"project","environment.locale":"project","environment.networkProfile":"project","environment.timezone":"project","execution.analysisGraceMs":"project","execution.artifactBytes":"project","execution.attemptArtifactBytes":"project","execution.attemptTimeoutMs":"project","execution.bodyBytes":"project","execution.collectionGraceMs":"project","execution.concurrency":"project","execution.executionTimeoutMs":"project","execution.executor":"project","execution.logBytes":"project","execution.maxAttempts":"project","execution.mode":"project","execution.networkRequestTimeoutMs":"project","execution.preparationTimeoutMs":"project","execution.stepTimeoutMs":"project","healing.mode":"environment","project.id":"project","project.name":"project","schemaVersion":"project","telemetry.enabled":"environment"},"policyHash":"1803a0d5ecd143b927731af0d17cc85af0a49a6612c75704159c1e3b2ded7eb5"},"environmentId":"env_01a13710-3a34-726b-a177-7d6e98e5dd8c","environmentName":"local","executor":"docker","healingPolicy":"off","limits":{"analysisGraceMs":60000,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"attemptTimeoutMs":120000,"bodyBytes":10485760,"collectionGraceMs":60000,"executionTimeoutMs":150000,"logBytes":10485760,"maxAttempts":1,"networkRequestTimeoutMs":90000,"preparationTimeoutMs":120000,"stepTimeoutMs":5000},"maxConcurrency":1,"ownership":"ephemeral","planHash":"53f03e3ecfc748f949162a652072b9773b3729b5c81b792032496e8dff1c162b","seed":0},"mode":"replay","origin":"cli","outcome":"blocked","phase":"completed","revisionId":"rev_01a13710-3d23-7755-a3ac-279fc0fc5e4a","status":"blocked","testId":"tst_01a13710-3d1d-72be-9fa4-5a841d09de97","version":1,"workspaceId":"ws_01a13710-3a25-74fb-9df9-a77f856372e7"}},"warnings":[]}
+: expected 9 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 9
+
+ ❯ Journey.command validation/journeys/harness.ts:260:7
+    258|       result.exitCode,
+    259|       `${args.join(" ")} stderr=${result.stderr} stdout=${result.stdou…
+    260|     ).toBe(expectedExit);
+       |       ^
+    261|     expect(result.json, `Exactly one JSON document required: ${result.…
+    262|     return expectedExit === 0 ? data(result.json) : object(result.json…
+ ❯ validation/journeys/recovery-controls.docker.test.ts:210:7
+ ❯ journey validation/journeys/harness.ts:484:5
+ ❯ validation/journeys/recovery-controls.docker.test.ts:204:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/resource-cleanup.docker.test.ts > manually compensates an orphan through the sandbox and preserves the owning run verdict
+AssertionError: test run tst_01a13710-8def-7613-a0bb-018cc8692915 --wait stderr= stdout={"schemaVersion":"1.0.0","requestId":"cli_60f20c6d-bce8-45fd-a8db-cb6c3448a7b9","data":{"receipt":{"runId":"run_01a13710-913a-7375-9711-ddeadedc07b0","status":"blocked","revisionId":"rev_01a13710-8df5-70dc-8e1e-754ec370e019","environmentRevisionId":"evr_01a13710-8734-7758-9d6f-d0a78adc43b7","acceptedAt":"2026-10-13T20:59:55.066Z","links":{"self":"/v1/runs/run_01a13710-913a-7375-9711-ddeadedc07b0","events":"/v1/runs/run_01a13710-913a-7375-9711-ddeadedc07b0/events","bundle":"/v1/runs/run_01a13710-913a-7375-9711-ddeadedc07b0/bundle"},"idempotencyKey":"a638fa7f-0995-41b5-8483-771e8ed67baf","ownership":"ephemeral"},"run":{"analysisStatus":"not_requested","batchId":null,"cleanupOutcome":"not_required","createdAt":"2026-10-13T20:59:55.066Z","environmentRevisionId":"evr_01a13710-8734-7758-9d6f-d0a78adc43b7","gate":"failed","gatePolicy":{"cleanupRequired":false,"executor":"docker","ownership":"ephemeral","policyHash":"3abf1826e4941c9297c6e701339524601489b0dd64bed70d986c5a82a3cd9c5f","policySatisfied":false,"requiredDependenciesPassed":true,"requiredEvidenceComplete":true},"id":"run_01a13710-913a-7375-9711-ddeadedc07b0","matrixCell":{"actor":{"credentialId":null,"credentialKind":null,"principalId":"usr_01a13710-8727-706f-a84f-b21146a94093"},"admissionSnapshot":{"browserImageDigest":null,"buildInputsHash":null,"capabilityManifestHash":"c5658675d7872a858698520cba267351af33172aca0ade7782bc55f0d1f27f57","configuredModelHash":null,"dependenciesLockHash":null,"environmentHash":"40b5a07197c5b6facf213eabfbf535c88272b5b74c826ccbdcbdc9a400f187c8","generationModel":null,"generationModelCallId":null,"images":null,"inputFixtureHashes":{},"inputHash":"26c883c665e7f00c18214f329f29895b4562b7c15d925e038ded5f51b2f05b60","limitations":["mutable-external-target","mutable-external-payload","browser-platform-rendering","repository-commit-unavailable","browser-version-unavailable","source-binding-unavailable","runner-image-digest-unavailable","browser-image-digest-unavailable","build-input-hash-unavailable","seccomp-hash-unavailable","source-dependency-lock-unavailable"],"modelConfigHash":null,"modelProviders":[],"policyHash":"3abf1826e4941c9297c6e701339524601489b0dd64bed70d986c5a82a3cd9c5f","profilePolicy":{"allowCiHealing":false,"allowUpload":false,"allowedModelProviders":[],"limits":{"attemptTimeoutMs":900000,"executionTimeoutMs":7200000,"maxAttempts":2},"offline":true,"projectId":"prj_01a13710-8731-74f5-b125-8ebf6d1076c8","security":{"allowUnsafeProcessExecution":false}},"repository":{"baseSha":null,"binding":"unbound","checkoutSha":null,"commitSha":null,"deploymentId":null,"dirtyHash":null,"limitations":["repository-commit-unavailable"],"repositoryId":null},"requiredCapabilities":["http"],"revisionHash":"c9279e40c133faa2c4cba5a3b1717a20d34342a9c244b47794b8c9c2d5415f39","runnerImageDigest":null,"runtimeIdentity":null,"seccompHash":null,"seed":0,"sourceRevisions":[]},"admissionSnapshotHash":"2eb8b2ddaa058b7fe7467db1d2bd201546a3d577cce545bbfb16676d50dd15ab","baseUrl":"http://127.0.0.1:33585","correlationId":"cli_60f20c6d-bce8-45fd-a8db-cb6c3448a7b9","effectiveConfig":{"config":{"artifacts":{"httpBodies":"off","retentionDays":30,"trace":"on","video":"off"},"browser":{"name":"chromium","testIdAttributes":["data-testid"],"viewport":{"height":720,"width":1280}},"environment":{"baseUrl":"http://127.0.0.1:3000","locale":"en-US","networkProfile":"local-loopback","timezone":"UTC"},"execution":{"analysisGraceMs":60000,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"attemptTimeoutMs":120000,"bodyBytes":10485760,"collectionGraceMs":60000,"concurrency":1,"executionTimeoutMs":150000,"executor":"docker","logBytes":10485760,"maxAttempts":1,"mode":"replay","networkRequestTimeoutMs":90000,"preparationTimeoutMs":120000,"stepTimeoutMs":5000},"healing":{"mode":"off"},"project":{"id":"prj_01a13710-8731-74f5-b125-8ebf6d1076c8","name":"W4-A-resource-cleanup"},"schemaVersion":"1.0.0","telemetry":{"enabled":false}},"origins":{"artifacts.httpBodies":"default","artifacts.retentionDays":"project","artifacts.trace":"project","artifacts.video":"project","browser.name":"project","browser.testIdAttributes":"project","browser.viewport.height":"project","browser.viewport.width":"project","environment.baseUrl":"project","environment.locale":"project","environment.networkProfile":"project","environment.timezone":"project","execution.analysisGraceMs":"project","execution.artifactBytes":"project","execution.attemptArtifactBytes":"project","execution.attemptTimeoutMs":"project","execution.bodyBytes":"project","execution.collectionGraceMs":"project","execution.concurrency":"project","execution.executionTimeoutMs":"project","execution.executor":"project","execution.logBytes":"project","execution.maxAttempts":"project","execution.mode":"project","execution.networkRequestTimeoutMs":"project","execution.preparationTimeoutMs":"project","execution.stepTimeoutMs":"project","healing.mode":"environment","project.id":"project","project.name":"project","schemaVersion":"project","telemetry.enabled":"environment"},"policyHash":"3abf1826e4941c9297c6e701339524601489b0dd64bed70d986c5a82a3cd9c5f"},"environmentId":"env_01a13710-8734-7758-9d6f-d61e183f7873","environmentName":"local","executor":"docker","healingPolicy":"off","limits":{"analysisGraceMs":60000,"artifactBytes":67108864,"attemptArtifactBytes":268435456,"attemptTimeoutMs":120000,"bodyBytes":10485760,"collectionGraceMs":60000,"executionTimeoutMs":150000,"logBytes":10485760,"maxAttempts":1,"networkRequestTimeoutMs":90000,"preparationTimeoutMs":120000,"stepTimeoutMs":5000},"maxConcurrency":1,"ownership":"ephemeral","planHash":"c9279e40c133faa2c4cba5a3b1717a20d34342a9c244b47794b8c9c2d5415f39","seed":0},"mode":"replay","origin":"cli","outcome":"blocked","phase":"completed","revisionId":"rev_01a13710-8df5-70dc-8e1e-754ec370e019","status":"blocked","testId":"tst_01a13710-8def-7613-a0bb-018cc8692915","version":1,"workspaceId":"ws_01a13710-8726-70e8-ad55-7fd7cf704278"}},"warnings":[]}
+: expected 9 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 9
+
+ ❯ Journey.command validation/journeys/harness.ts:260:7
+    258|       result.exitCode,
+    259|       `${args.join(" ")} stderr=${result.stderr} stdout=${result.stdou…
+    260|     ).toBe(expectedExit);
+       |       ^
+    261|     expect(result.json, `Exactly one JSON document required: ${result.…
+    262|     return expectedExit === 0 ? data(result.json) : object(result.json…
+ ❯ validation/journeys/resource-cleanup.docker.test.ts:108:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/38]⎯
+
+ FAIL  |docker-rootless| validation/journeys/rolling-upgrade.docker.test.ts > OPS-038 rolling upgrade > OPS-038 an older worker finishes its fenced leases and claims nothing new while a next-release worker takes over
+Error: Journey boundary did not become ready within 120000ms: {"status":"ready","components":{"persistence":"ready","admission":"ready","schema":"ready","tenantIsolation":"ready","storage":"ready","masterKey":"ready"},"reasons":[],"schema":{"databaseVersion":18,"supportedVersion":18,"state":"current"},"atRestEncryption":"operator_attested","worker":{"status":"degraded","ready":0}}
+ ❯ eventually validation/journeys/harness.ts:96:13
+     94|     if (accepts(value)) return value;
+     95|     if (performance.now() >= deadline)
+     96|       throw new Error(
+       |             ^
+     97|         `Journey boundary did not become ready within ${timeoutMs}ms: …
+     98|       );
+ ❯ validation/journeys/rolling-upgrade.docker.test.ts:150:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > blocks service-worker registration rather than permitting a worker fetch bypass
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/adversarial.docker.test.ts:144:28
+    142|       plan: plan("/adversarial/worker?target=http%3A%2F%2F169.254.169.…
+    143|     });
+    144|     expect(result.outcome).toBe("passed");
+       |                            ^
+    145|     const network =
+    146|       contents.get("browser/network.ndjson")?.toString() ??
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > invalid TLS certificate is rejected before the page can perform login
+AssertionError: expected '[]' to contain 'ERR_CERT_AUTHORITY_INVALID'
+
+Expected: "ERR_CERT_AUTHORITY_INVALID"
+Received: "[]"
+
+ ❯ packages/sandbox/src/attempt/adversarial.docker.test.ts:215:43
+    213|     expect(logins).toBe(0);
+    214|     expect(requests).toBe(0);
+    215|     expect(JSON.stringify(result.events)).toContain("ERR_CERT_AUTHORIT…
+       |                                           ^
+    216|   } finally {
+    217|     await new Promise<void>((done) => target.close(() => done()));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > rejects Docker runner foreign-run messages and preserves previous accepted observations
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > rejects Docker runner oversized messages and preserves previous accepted observations
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > rejects Docker runner uri messages and preserves previous accepted observations
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > rejects Docker runner duplicate messages and preserves previous accepted observations
+AssertionError: expected 'blocked' to be 'inconclusive' // Object.is equality
+
+Expected: "inconclusive"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/adversarial.docker.test.ts:239:28
+    237| await new Promise(done=>socket.once('close',done));`;
+    238|     const { result, contents } = await attempt({ url: "http://fixture.…
+    239|     expect(result.outcome).toBe("inconclusive");
+       |                            ^
+    240|     expect(
+    241|       result.events.some(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/adversarial.docker.test.ts > controller withholds compromised runner PII corpus and malformed JSON with no raw fallback
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/adversarial.docker.test.ts:265:26
+    263| send('runner.finished',{outcome:'passed',reasonCode:'assertions_satisf…
+    264|   const { result, manifest, contents } = await attempt({ url: "http://…
+    265|   expect(result.outcome).toBe("passed");
+       |                          ^
+    266|   for (const path of ["pii.txt", "bad.json"])
+    267|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes frontend example against undefined
+AssertionError: {"outcome":"blocked","reasonCode":"security_precondition_failed","bundle":{"bundleDir":"/tmp/tm-attempt-Kok1qo/evidence/runs/ws_01a13710-9993-740e-bd65-07dcddc19526/run_01a13710-9994-732e-8fee-f46a85925c08/att_01a13710-9994-732e-8fee-fab950bf5bc6","manifestSha256":"573af17534e3fa335b7f91d42ac35cd0dbc3d08151d0448dad75752057372078"},"logDropped":0,"events":[]}: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/attempt.docker.test.ts:91:56
+     89|       try {
+     90|         console.error("attempt result", result);
+     91|         expect(result.outcome, JSON.stringify(result)).toBe(outcome);
+       |                                                        ^
+     92|         if (outcome === "failed")
+     93|           expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes frontend example against no-password-validation
+AssertionError: {"outcome":"blocked","reasonCode":"security_precondition_failed","bundle":{"bundleDir":"/tmp/tm-attempt-tarmqT/evidence/runs/ws_01a13710-99b8-764a-8af8-c441939ce397/run_01a13710-99b8-764a-8af8-c9bb40958e48/att_01a13710-99b8-764a-8af8-cd7980c7f06a","manifestSha256":"e0f6843a6d475679c45c0a9b1471a6f2483f8dc93d92094a0d3f6689e8595c29"},"logDropped":0,"events":[]}: expected 'blocked' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/attempt.docker.test.ts:91:56
+     89|       try {
+     90|         console.error("attempt result", result);
+     91|         expect(result.outcome, JSON.stringify(result)).toBe(outcome);
+       |                                                        ^
+     92|         if (outcome === "failed")
+     93|           expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes backend example against undefined
+AssertionError: {"outcome":"blocked","reasonCode":"security_precondition_failed","bundle":{"bundleDir":"/tmp/tm-attempt-J1DeGj/evidence/runs/ws_01a13710-99c8-70a5-863b-5574c731eb4c/run_01a13710-99c8-70a5-863b-584ad17b13f2/att_01a13710-99c8-70a5-863b-5fd94d951449","manifestSha256":"dc914a721064876145033bf49dd02615ab49630eca2d25dbb53d1217b98c6b02"},"logDropped":0,"events":[]}: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/attempt.docker.test.ts:91:56
+     89|       try {
+     90|         console.error("attempt result", result);
+     91|         expect(result.outcome, JSON.stringify(result)).toBe(outcome);
+       |                                                        ^
+     92|         if (outcome === "failed")
+     93|           expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > executes backend example against health-degraded
+AssertionError: {"outcome":"blocked","reasonCode":"security_precondition_failed","bundle":{"bundleDir":"/tmp/tm-attempt-SJEvn5/evidence/runs/ws_01a13710-99d7-76e9-88ae-328e757f24e8/run_01a13710-99d7-76e9-88ae-340a52b6cdc0/att_01a13710-99d7-76e9-88ae-38b44208250e","manifestSha256":"831f7cee661ff46ff42b68e2c57d2d652c30c560e0bc2de169ae9deaaa50d6f2"},"logDropped":0,"events":[]}: expected 'blocked' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/attempt.docker.test.ts:91:56
+     89|       try {
+     90|         console.error("attempt result", result);
+     91|         expect(result.outcome, JSON.stringify(result)).toBe(outcome);
+       |                                                        ^
+     92|         if (outcome === "failed")
+     93|           expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/attempt/attempt.docker.test.ts > sealed runner attempts > redacts a protocol-released canary
+AssertionError: expected 'blocked' to be 'passed' // Object.is equality
+
+Expected: "passed"
+Received: "blocked"
+
+ ❯ packages/sandbox/src/attempt/attempt.docker.test.ts:144:30
+    142|     const { result, root } = await run(plan, undefined, { secret: cana…
+    143|     try {
+    144|       expect(result.outcome).toBe("passed");
+       |                              ^
+    145|       expect(JSON.stringify(result.events)).not.toContain(canary);
+    146|       const manifest = JSON.parse(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/docker/adversarial.docker.test.ts > browser/CDP/broker, worker, redirects, iframe and reconnect bypasses produce only approved packets
+Error: docker_command_failed:create
+ ❯ DockerExecutor.checked packages/sandbox/src/docker/executor.ts:256:34
+    254|   private async checked(args: readonly string[], timeoutMs?: number): …
+    255|     const result = await this.command(args, timeoutMs);
+    256|     if (result.code !== 0) throw new PolicyDenied(`docker_command_fail…
+       |                                  ^
+    257|     return result;
+    258|   }
+ ❯ DockerExecutor.execute packages/sandbox/src/docker/executor.ts:304:7
+ ❯ packages/sandbox/src/docker/adversarial.docker.test.ts:114:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/docker/isolation.docker.test.ts > doctor starts the hardened image even when its default entrypoint requires a runner session
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/sandbox/src/docker/isolation.docker.test.ts:55:28
+     53|   const { entrypoint: _entrypoint, ...probe } = context.options;
+     54|   const result = await context.executor.doctor(probe);
+     55|   expect(result.available).toBe(true);
+       |                            ^
+     56|   expect(result.diagnostics).toEqual([]);
+     57| }, 30000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/docker/isolation.docker.test.ts > reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access
+Error: docker_command_failed:create
+ ❯ DockerExecutor.checked packages/sandbox/src/docker/executor.ts:256:34
+    254|   private async checked(args: readonly string[], timeoutMs?: number): …
+    255|     const result = await this.command(args, timeoutMs);
+    256|     if (result.code !== 0) throw new PolicyDenied(`docker_command_fail…
+       |                                  ^
+    257|     return result;
+    258|   }
+ ❯ DockerExecutor.execute packages/sandbox/src/docker/executor.ts:304:7
+ ❯ packages/sandbox/src/docker/isolation.docker.test.ts:128:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/docker/isolation.docker.test.ts > enforces the memory envelope under allocation pressure
+Error: docker_command_failed:create
+ ❯ DockerExecutor.checked packages/sandbox/src/docker/executor.ts:256:34
+    254|   private async checked(args: readonly string[], timeoutMs?: number): …
+    255|     const result = await this.command(args, timeoutMs);
+    256|     if (result.code !== 0) throw new PolicyDenied(`docker_command_fail…
+       |                                  ^
+    257|     return result;
+    258|   }
+ ❯ DockerExecutor.execute packages/sandbox/src/docker/executor.ts:304:7
+ ❯ packages/sandbox/src/docker/isolation.docker.test.ts:143:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/docker/isolation.docker.test.ts > contains process proliferation at the PID envelope
+Error: docker_command_failed:create
+ ❯ DockerExecutor.checked packages/sandbox/src/docker/executor.ts:256:34
+    254|   private async checked(args: readonly string[], timeoutMs?: number): …
+    255|     const result = await this.command(args, timeoutMs);
+    256|     if (result.code !== 0) throw new PolicyDenied(`docker_command_fail…
+       |                                  ^
+    257|     return result;
+    258|   }
+ ❯ DockerExecutor.execute packages/sandbox/src/docker/executor.ts:304:7
+ ❯ packages/sandbox/src/docker/isolation.docker.test.ts:153:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/38]⎯
+
+ FAIL  |docker-rootless| packages/sandbox/src/docker/isolation.docker.test.ts > cancellation kills within grace and removes the container
+Error: docker_command_failed:create
+ ❯ DockerExecutor.checked packages/sandbox/src/docker/executor.ts:256:34
+    254|   private async checked(args: readonly string[], timeoutMs?: number): …
+    255|     const result = await this.command(args, timeoutMs);
+    256|     if (result.code !== 0) throw new PolicyDenied(`docker_command_fail…
+       |                                  ^
+    257|     return result;
+    258|   }
+ ❯ DockerExecutor.execute packages/sandbox/src/docker/executor.ts:304:7
+ ❯ packages/sandbox/src/docker/isolation.docker.test.ts:189:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/38]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+ContractError: Pinned runner image is unavailable
+ ❯ packages/application/src/application.ts:1129:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ verifyImageLock packages/sandbox/src/images/lock.ts:93:10
+ ❯ Application.images packages/application/src/application.ts:1121:18
+ ❯ WorkerService.run packages/application/src/worker.ts:1756:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'POLICY_DENIED', details: {}, issues: [] }
+This error originated in "validation/journeys/browser-matrix.docker.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "expires ownership during a real browser navigation and reaps the stale browser without running the next assertion". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  13 failed | 3 passed (16)
+      Tests  38 failed | 20 passed (58)
+     Errors  1 error
+   Start at  17:51:45
+   Duration  503.04s (tests 99%, import 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.

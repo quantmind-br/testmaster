@@ -1,0 +1,49 @@
+$ vitest run --project unit
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/client.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/int/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/inMemory.js" points to missing source files
+ ❯ |unit| packages/application/src/integrations/github/github-pr.test.ts (22 tests | 1 failed) 50642ms
+   ❯ INT-015 INT-019 REQ-033 pushes, previews and supersede (5)
+     × INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes 20008ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-pr.test.ts > INT-015 INT-019 REQ-033 pushes, previews and supersede > INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ packages/application/src/integrations/github/github-pr.test.ts:31:3
+     29|
+     30| describe("INT-015 INT-019 REQ-033 pushes, previews and supersede", () …
+     31|   it("INT-015 INT-019 keeps A's verdict on SHA A and gives B no green …
+       |   ^
+     32|     const w = await world();
+     33|     await w.install();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 224 passed (225)
+      Tests  1 failed | 1781 passed (1782)
+   Start at  17:17:31
+   Duration  59.88s (tests 77%, import 18%, transform 5%)
+
+[ELIFECYCLE] Test failed. See above for more details.
