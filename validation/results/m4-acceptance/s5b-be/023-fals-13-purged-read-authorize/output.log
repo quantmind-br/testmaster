@@ -1,0 +1,67 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90m/var/tmp/tm-m4/s5b-be[39m
+
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+ [32m✓[39m [30m[42m unit [49m[39m apps/server/src/settings.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1034[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-048 purges an archived project over HTTP with the slug, replays it and lists the operation by project[33m 341[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m packages/application/src/settings.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 2252[2mms[22m[39m
+   [32m✓[39m UX-046 rotates a secret, bumps its version and lists created and rotated events newest first without any value[32m 94[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-046 refuses rotation to roles without the secret column and lets the roles that hold it rotate[33m 379[2mms[22m[39m
+   [32m✓[39m UX-046 reads created, rotated, revoked as versions 1, 2, 2 and refuses to rotate a revoked secret[32m 18[2mms[22m[39m
+   [32m✓[39m UX-046 replays an idempotent rotation without rotating twice and refuses the key for another value[32m 15[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-048 refuses a missing or wrong confirmation token and an unarchived project without changing any state[33m 579[2mms[22m[39m
+   [32m✓[39m UX-048 purges an archived project: tombstones every live artifact and fixture under one operation and replays idempotently[32m 38[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-048 refuses purge to roles without the admin column and allows the roles that hold it[33m 466[2mms[22m[39m
+   [32m✓[39m UX-048 keeps a multi-reference operation unfinished until every artifact is physically deleted and never bypasses a hold[32m 37[2mms[22m[39m
+   [32m✓[39m UX-048 refuses a purge while a Run is unfinished before tombstoning anything and succeeds once it completes[32m 21[2mms[22m[39m
+[31m   [31m×[31m UX-048 completes an empty project purge at once and lists operations by project, omitting unreadable projects[39m[32m 106[2mms[22m[39m
+   [32m✓[39m UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials[32m 15[2mms[22m[39m
+   [32m✓[39m UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers[32m 13[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-047 lets every role read the consent settings but only the admin column change them[33m 431[2mms[22m[39m
+   [32m✓[39m M4-05 lists environment revisions newest first and never returns variables[32m 14[2mms[22m[39m
+   [32m✓[39m UX-056 refuses CI gates in a demonstration workspace without writing any gate artifact and resumes after the policy changes[32m 26[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m packages/application/src/settings.test.ts[2m > [22mUX-048 completes an empty project purge at once and lists operations by project, omitting unreadable projects
+[31m[1mAssertionError[22m: expected [ …(2) ] to deeply equal [ Array(1) ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  [[22m
+[2m    "del_01a135c5-3604-7547-a061-cc08affa7179",[22m
+[31m+   "del_01a135c5-3604-7547-a061-c684dadf453d",[39m
+[2m  ][22m
+
+[36m [2m❯[22m packages/application/src/settings.test.ts:[2m535:89[22m[39m
+    [90m533|[39m   // A project-restricted member sees only operations of the project t…
+    [90m534|[39m   const restricted = await f.member("viewer", [busy.id]);
+    [90m535|[39m   expect(restricted.scoped.retention.listDeletionOperations().map((ent…
+    [90m   |[39m                                                                                         [31m^[39m
+    [90m536|[39m     busyOperation.id,
+    [90m537|[39m   ]);
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m20 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 11:57:56
+[2m   Duration [22m 2.91s[2m (tests 71%, transform 18%, import 11%)[22m
+

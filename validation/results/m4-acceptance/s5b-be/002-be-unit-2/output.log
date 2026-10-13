@@ -1,0 +1,61 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b-be
+
+ ❯ |unit| packages/application/src/settings.test.ts (15 tests | 3 failed) 1657ms
+   × UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials 4ms
+   × UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers 1ms
+   × UX-047 lets every role read the consent settings but only the admin column change them 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials
+ContractError: Provider endpoint must be credential-free HTTP
+ ❯ resolveConfig packages/application/src/config.ts:321:19
+    319|             endpoint.password
+    320|           )
+    321|             throw new ContractError(
+       |                   ^
+    322|               "INVALID_ARGUMENT",
+    323|               "Provider endpoint must be credential-free HTTP",
+ ❯ Application.open packages/application/src/application.ts:372:22
+ ❯ fixture packages/application/src/settings.test.ts:51:15
+ ❯ packages/application/src/settings.test.ts:579:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers
+ContractError: Provider endpoint must be credential-free HTTP
+ ❯ resolveConfig packages/application/src/config.ts:321:19
+    319|             endpoint.password
+    320|           )
+    321|             throw new ContractError(
+       |                   ^
+    322|               "INVALID_ARGUMENT",
+    323|               "Provider endpoint must be credential-free HTTP",
+ ❯ Application.open packages/application/src/application.ts:372:22
+ ❯ fixture packages/application/src/settings.test.ts:51:15
+ ❯ packages/application/src/settings.test.ts:646:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > UX-047 lets every role read the consent settings but only the admin column change them
+ContractError: Provider endpoint must be credential-free HTTP
+ ❯ resolveConfig packages/application/src/config.ts:321:19
+    319|             endpoint.password
+    320|           )
+    321|             throw new ContractError(
+       |                   ^
+    322|               "INVALID_ARGUMENT",
+    323|               "Provider endpoint must be credential-free HTTP",
+ ❯ Application.open packages/application/src/application.ts:372:22
+ ❯ fixture packages/application/src/settings.test.ts:51:15
+ ❯ packages/application/src/settings.test.ts:668:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 12 passed (15)
+   Start at  11:50:49
+   Duration  2.35s (tests 72%, transform 18%, import 10%)
+

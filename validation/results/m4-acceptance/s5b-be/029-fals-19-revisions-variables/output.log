@@ -1,0 +1,92 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90m/var/tmp/tm-m4/s5b-be[39m
+
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/requestBody.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/sseKeepAlive.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js" points to missing source files
+Sourcemap for "/var/tmp/tm-m4/s5b-be/node_modules/.pnpm/@modelcontextprotocol+sdk@1.32.1_zod@4.6.5/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js" points to missing source files
+ [31m❯[39m [30m[42m unit [49m[39m apps/server/src/settings.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 895[2mms[22m[39m
+   [32m✓[39m UX-046 rotates a secret over HTTP, replays an idempotent request once, lists its history and never returns a value[32m 170[2mms[22m[39m
+   [32m✓[39m UX-046 refuses HTTP rotation to viewers and runners even with a write scope and answers other ids with not found[32m 151[2mms[22m[39m
+   [32m✓[39m UX-048 purges an archived project over HTTP with the slug, replays it and lists the operation by project[32m 292[2mms[22m[39m
+   [32m✓[39m UX-047 reads, grants and revokes model data sharing over HTTP without exposing credentials[32m 110[2mms[22m[39m
+   [32m✓[39m UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers[32m 106[2mms[22m[39m
+[31m   [31m×[31m M4-05 lists environment revisions over HTTP newest first and answers every portal settings route[39m[32m 66[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m packages/application/src/settings.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1967[2mms[22m[39m
+   [32m✓[39m UX-046 rotates a secret, bumps its version and lists created and rotated events newest first without any value[32m 74[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-046 refuses rotation to roles without the secret column and lets the roles that hold it rotate[33m 337[2mms[22m[39m
+   [32m✓[39m UX-046 reads created, rotated, revoked as versions 1, 2, 2 and refuses to rotate a revoked secret[32m 15[2mms[22m[39m
+   [32m✓[39m UX-046 replays an idempotent rotation without rotating twice and refuses the key for another value[32m 14[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-048 refuses a missing or wrong confirmation token and an unarchived project without changing any state[33m 469[2mms[22m[39m
+   [32m✓[39m UX-048 purges an archived project: tombstones every live artifact and fixture under one operation and replays idempotently[32m 37[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-048 refuses purge to roles without the admin column and allows the roles that hold it[33m 399[2mms[22m[39m
+   [32m✓[39m UX-048 keeps a multi-reference operation unfinished until every artifact is physically deleted and never bypasses a hold[32m 32[2mms[22m[39m
+   [32m✓[39m UX-048 refuses a purge while a Run is unfinished before tombstoning anything and succeeds once it completes[32m 20[2mms[22m[39m
+   [32m✓[39m UX-048 completes an empty project purge at once and lists operations by project, omitting unreadable projects[32m 95[2mms[22m[39m
+   [32m✓[39m UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials[32m 14[2mms[22m[39m
+   [32m✓[39m UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers[32m 12[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-047 lets every role read the consent settings but only the admin column change them[33m 402[2mms[22m[39m
+[31m   [31m×[31m M4-05 lists environment revisions newest first and never returns variables[39m[32m 19[2mms[22m[39m
+   [32m✓[39m UX-056 refuses CI gates in a demonstration workspace without writing any gate artifact and resumes after the policy changes[32m 28[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m apps/server/src/settings.test.ts[2m > [22mM4-05 lists environment revisions over HTTP newest first and answers every portal settings route
+[31m[1mAssertionError[22m: expected '{"schemaVersion":"1.0.0","requestId":…' not to contain 'variables'[39m
+
+Expected: [32m"variables"[39m
+Received: [31m"{"schemaVersion":"1.0.0","requestId":"f6c95f33-1807-461c-8b81-9190749cc970","data":{"items":[{"id":"evr_01a135c5-81e3-746e-a619-32a31dd10d0b","variables":{},"createdAt":"2026-10-13T14:58:18.723Z","targetOrigins":["https://staging.example.com"],"networkProfile":"local-loopback","authProfileRefs":[],"locale":"en-US","timezone":"UTC","production":true},{"id":"evr_01a135c5-81e2-70e6-bd6a-a8c28e976fd6","variables":{},"createdAt":"2026-10-13T14:58:18.722Z","targetOrigins":["https://staging.example.com"],"networkProfile":"local-loopback","authProfileRefs":[],"locale":"en-US","timezone":"UTC","production":false},{"id":"evr_01a135c5-81b2-7166-ac50-7a7eef46ac72","variables":{},"createdAt":"2026-10-13T14:58:18.674Z","targetOrigins":["http://127.0.0.1:3000"],"networkProfile":"local-loopback","authProfileRefs":[],"locale":"en-US","timezone":"UTC","production":false}],"hasMore":false,"nextCursor":null},"warnings":[]}"[39m
+
+[36m [2m❯[22m apps/server/src/settings.test.ts:[2m409:27[22m[39m
+    [90m407|[39m     [expect.any(String), false],
+    [90m408|[39m   ]);
+    [90m409|[39m   expect(listed.body).not.toContain("variables");
+    [90m   |[39m                           [31m^[39m
+    [90m410|[39m   const first = await f.call(
+    [90m411|[39m     "GET",
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m packages/application/src/settings.test.ts[2m > [22mM4-05 lists environment revisions newest first and never returns variables
+[31m[1mAssertionError[22m: expected [ Array(9) ] to deeply equal [ Array(8) ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -5,6 +5,7 @@[39m
+[2m    "locale",[22m
+[2m    "networkProfile",[22m
+[2m    "production",[22m
+[2m    "targetOrigins",[22m
+[2m    "timezone",[22m
+[31m+   "variables",[39m
+[2m  ][22m
+
+[36m [2m❯[22m packages/application/src/settings.test.ts:[2m709:50[22m[39m
+    [90m707|[39m     ["en-US", false],
+    [90m708|[39m   ]);
+    [90m709|[39m   expect(Object.keys(revisions[0] ?? {}).sort()).toEqual(
+    [90m   |[39m                                                  [31m^[39m
+    [90m710|[39m     [
+    [90m711|[39m       "authProfileRefs",
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m19 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 11:58:17
+[2m   Duration [22m 2.56s[2m (tests 70%, transform 18%, import 12%)[22m
+

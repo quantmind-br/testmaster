@@ -1,0 +1,29 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90m/var/tmp/tm-m4/s5b-be[39m
+
+ [31m❯[39m [30m[45m postgres [49m[39m packages/application/src/settings.pg.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1293[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-046 answers another workspace's secret with not found for history and rotation[33m 394[2mms[22m[39m
+   [33m[2m✓[22m[39m UX-048 answers another workspace's project and operations with not found and never lists them[33m 319[2mms[22m[39m
+[31m   [31m×[31m UX-047 answers another workspace's project with not found for consent settings and changes[39m[32m 276[2mms[22m[39m
+   [33m[2m✓[22m[39m M4-05 answers another workspace's environment with not found for revisions[33m 302[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[45m postgres [49m[39m packages/application/src/settings.pg.test.ts[2m > [22mUX-047 answers another workspace's project with not found for consent settings and changes
+[31m[1mAssertionError[22m: expected function to throw an error, but it didn't[39m
+[36m [2m❯[22m packages/application/src/settings.pg.test.ts:[2m111:64[22m[39m
+    [90m109|[39m   expect(() => globex.model.settings(project.id)).toThrowError(notFoun…
+    [90m110|[39m   expect(() => globex.model.grantConsent(project.id, "fake", ["documen…
+    [90m111|[39m   expect(() => globex.model.revokeConsent(project.id, "fake")).toThrow…
+    [90m   |[39m                                                                [31m^[39m
+    [90m112|[39m   // Positive control: the owner reads the settings.
+    [90m113|[39m   expect(acme.model.settings(project.id).projectId).toBe(project.id);
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 11:58:03
+[2m   Duration [22m 3.71s[2m (tests 69%, transform 20%, import 12%)[22m
+

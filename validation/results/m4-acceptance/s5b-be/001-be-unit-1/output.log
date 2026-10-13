@@ -1,0 +1,73 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b-be
+
+ ❯ |unit| packages/application/src/settings.test.ts (15 tests | 4 failed) 1634ms
+   × UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials 2ms
+   × UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers 0ms
+   × UX-047 lets every role read the consent settings but only the admin column change them 0ms
+   × M4-05 lists environment revisions newest first and never returns variables 14ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials
+ReferenceError: testProvider is not defined
+ ❯ consentFixture packages/application/src/settings.test.ts:554:14
+    552|       modelProviders: [
+    553|         {
+    554|           ...testProvider,
+       |              ^
+    555|           baseUrl:
+    556|             "http://user:PROVIDER-PASSWORD@127.0.0.1:4010/v1/private-p…
+ ❯ packages/application/src/settings.test.ts:578:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers
+ReferenceError: testProvider is not defined
+ ❯ consentFixture packages/application/src/settings.test.ts:554:14
+    552|       modelProviders: [
+    553|         {
+    554|           ...testProvider,
+       |              ^
+    555|           baseUrl:
+    556|             "http://user:PROVIDER-PASSWORD@127.0.0.1:4010/v1/private-p…
+ ❯ packages/application/src/settings.test.ts:645:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > UX-047 lets every role read the consent settings but only the admin column change them
+ReferenceError: testProvider is not defined
+ ❯ consentFixture packages/application/src/settings.test.ts:554:14
+    552|       modelProviders: [
+    553|         {
+    554|           ...testProvider,
+       |              ^
+    555|           baseUrl:
+    556|             "http://user:PROVIDER-PASSWORD@127.0.0.1:4010/v1/private-p…
+ ❯ packages/application/src/settings.test.ts:667:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |unit| packages/application/src/settings.test.ts > M4-05 lists environment revisions newest first and never returns variables
+ContractError: Invalid EnvironmentRevision
+ ❯ validate packages/contracts/src/validation.ts:115:11
+    113|       message: error.message ?? "Invalid value",
+    114|     }));
+    115|     throw new ContractError("INVALID_ARGUMENT", `Invalid ${name}`, { i…
+       |           ^
+    116|   }
+    117|   const validateNestedPlans = (candidate: unknown): void => {
+ ❯ EntityRepository.insert packages/persistence/src/repositories.ts:49:5
+ ❯ packages/persistence/src/repositories.ts:39:39
+ ❯ PersistenceDatabase.withTx packages/persistence/src/database.ts:358:21
+ ❯ EntityRepository.insert packages/persistence/src/repositories.ts:39:21
+ ❯ packages/application/src/settings.test.ts:733:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 11 passed (15)
+   Start at  11:50:30
+   Duration  2.31s (tests 73%, transform 17%, import 11%)
+

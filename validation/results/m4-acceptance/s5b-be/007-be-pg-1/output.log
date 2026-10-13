@@ -1,0 +1,26 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5b-be
+
+ ❯ |postgres| packages/application/src/settings.pg.test.ts (4 tests | 1 failed) 1305ms
+   × UX-047 answers another workspace's project with not found for consent settings and changes 291ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/settings.pg.test.ts > UX-047 answers another workspace's project with not found for consent settings and changes
+AssertionError: expected function to throw an error, but it didn't
+ ❯ packages/application/src/settings.pg.test.ts:111:64
+    109|   expect(() => globex.model.settings(project.id)).toThrowError(notFoun…
+    110|   expect(() => globex.model.grantConsent(project.id, "fake", ["documen…
+    111|   expect(() => globex.model.revokeConsent(project.id, "fake")).toThrow…
+       |                                                                ^
+    112|   // Positive control: the owner reads the settings.
+    113|   expect(acme.model.settings(project.id).projectId).toBe(project.id);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  11:55:44
+   Duration  3.46s (tests 63%, transform 24%, import 13%)
+
