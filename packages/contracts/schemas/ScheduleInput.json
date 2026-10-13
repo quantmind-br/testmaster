@@ -1,0 +1,364 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "name",
+    "selection",
+    "trigger"
+  ],
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "selection": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "suiteId"
+          ],
+          "properties": {
+            "kind": {
+              "const": "suite",
+              "type": "string"
+            },
+            "suiteId": {
+              "pattern": "^sui_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "revisionPolicy": {
+              "anyOf": [
+                {
+                  "const": "pinned",
+                  "type": "string"
+                },
+                {
+                  "const": "latest_approved",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "members"
+          ],
+          "properties": {
+            "kind": {
+              "const": "revisions",
+              "type": "string"
+            },
+            "members": {
+              "minItems": 1,
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "testId",
+                  "revisionId",
+                  "environmentId"
+                ],
+                "properties": {
+                  "testId": {
+                    "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "revisionId": {
+                    "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "environmentId": {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "trigger": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "cron"
+          ],
+          "properties": {
+            "kind": {
+              "const": "cron",
+              "type": "string"
+            },
+            "cron": {
+              "minLength": 9,
+              "maxLength": 120,
+              "type": "string"
+            },
+            "timezone": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            },
+            "dstGap": {
+              "anyOf": [
+                {
+                  "const": "skip",
+                  "type": "string"
+                },
+                {
+                  "const": "after_gap",
+                  "type": "string"
+                }
+              ]
+            },
+            "dstFold": {
+              "anyOf": [
+                {
+                  "const": "once",
+                  "type": "string"
+                },
+                {
+                  "const": "once_last",
+                  "type": "string"
+                },
+                {
+                  "const": "both",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "everySeconds",
+            "anchor"
+          ],
+          "properties": {
+            "kind": {
+              "const": "interval",
+              "type": "string"
+            },
+            "everySeconds": {
+              "minimum": 60,
+              "maximum": 31536000,
+              "type": "integer"
+            },
+            "anchor": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "misfire": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "policy"
+      ],
+      "properties": {
+        "policy": {
+          "anyOf": [
+            {
+              "const": "skip",
+              "type": "string"
+            },
+            {
+              "const": "fire_once",
+              "type": "string"
+            },
+            {
+              "const": "catch_up",
+              "type": "string"
+            }
+          ]
+        },
+        "graceSeconds": {
+          "minimum": 1,
+          "maximum": 86400,
+          "type": "integer"
+        },
+        "maxCatchUp": {
+          "minimum": 1,
+          "maximum": 24,
+          "type": "integer"
+        },
+        "catchUpWindowSeconds": {
+          "minimum": 60,
+          "maximum": 604800,
+          "type": "integer"
+        }
+      }
+    },
+    "description": {
+      "maxLength": 8000,
+      "type": "string"
+    },
+    "overlap": {
+      "anyOf": [
+        {
+          "const": "forbid",
+          "type": "string"
+        },
+        {
+          "const": "allow",
+          "type": "string"
+        },
+        {
+          "const": "replace",
+          "type": "string"
+        }
+      ]
+    },
+    "replaceTimeoutSeconds": {
+      "minimum": 1,
+      "maximum": 86400,
+      "type": "integer"
+    },
+    "dependsOn": {
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scheduleId",
+          "condition",
+          "timeoutSeconds"
+        ],
+        "properties": {
+          "scheduleId": {
+            "pattern": "^sch_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "const": "passed",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              },
+              {
+                "const": "terminal",
+                "type": "string"
+              }
+            ]
+          },
+          "timeoutSeconds": {
+            "minimum": 1,
+            "maximum": 86400,
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "budget": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "maxFiresPerDay": {
+          "minimum": 1,
+          "maximum": 1440,
+          "type": "integer"
+        },
+        "maxRunsPerDay": {
+          "minimum": 1,
+          "maximum": 100000,
+          "type": "integer"
+        },
+        "autoPauseAfterFailures": {
+          "minimum": 1,
+          "maximum": 100,
+          "type": "integer"
+        }
+      }
+    },
+    "secrets": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "onChange"
+      ],
+      "properties": {
+        "onChange": {
+          "anyOf": [
+            {
+              "const": "use_current",
+              "type": "string"
+            },
+            {
+              "const": "pause",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "healingPolicy": {
+      "anyOf": [
+        {
+          "const": "off",
+          "type": "string"
+        },
+        {
+          "const": "propose",
+          "type": "string"
+        }
+      ]
+    },
+    "expiresAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "destinations": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "integrationIds"
+      ],
+      "properties": {
+        "integrationIds": {
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "pattern": "^int_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ScheduleInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -2,28 +2,72 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
+    "id",
     "scheduleId",
+    "revision",
     "scheduledAt",
-    "eventId",
+    "createdAt",
+    "localTime",
+    "decidedAt",
     "state",
-    "batchId"
+    "detail",
+    "batchId",
+    "dst",
+    "missedCount",
+    "missedUntil",
+    "tzdataVersion",
+    "memberCount"
   ],
   "properties": {
+    "id": {
+      "pattern": "^sfr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
     "scheduleId": {
       "pattern": "^sch_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "type": "integer"
     },
     "scheduledAt": {
       "format": "date-time",
       "pattern": "Z$",
       "type": "string"
     },
-    "eventId": {
-      "pattern": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
       "type": "string"
+    },
+    "localTime": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "decidedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "state": {
       "anyOf": [
+        {
+          "const": "claimed",
+          "type": "string"
+        },
+        {
+          "const": "waiting",
+          "type": "string"
+        },
         {
           "const": "dispatched",
           "type": "string"
@@ -39,17 +83,10 @@
         {
           "const": "overlap",
           "type": "string"
-        }
-      ]
-    },
-    "batchId": {
-      "anyOf": [
-        {
-          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-          "type": "string"
         },
         {
-          "type": "null"
+          "const": "blocked",
+          "type": "string"
         }
       ]
     },
@@ -212,6 +249,77 @@
           "type": "string"
         }
       ]
+    },
+    "detail": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "batchId": {
+      "anyOf": [
+        {
+          "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dst": {
+      "anyOf": [
+        {
+          "const": "none",
+          "type": "string"
+        },
+        {
+          "const": "fold_first",
+          "type": "string"
+        },
+        {
+          "const": "fold_second",
+          "type": "string"
+        },
+        {
+          "const": "gap_shifted",
+          "type": "string"
+        },
+        {
+          "const": "gap_skipped",
+          "type": "string"
+        }
+      ]
+    },
+    "missedCount": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "missedUntil": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tzdataVersion": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "memberCount": {
+      "minimum": 0,
+      "type": "integer"
     }
   },
   "$defs": {},

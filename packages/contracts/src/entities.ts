@@ -8,6 +8,7 @@ import {
   StepResult,
   VariableCapture,
 } from "./operations.js";
+import { SuiteSelection, suiteStates } from "./m4/lists.js";
 import { CodeReference, ExecutablePlan, IntentPlan } from "./plans.js";
 import {
   AnalysisStatus,
@@ -35,6 +36,7 @@ import {
   roles,
   StepStatus,
   Timestamp,
+  uuidPattern,
   Version,
 } from "./primitives.js";
 import { reasonCodes } from "./registries.js";
@@ -211,9 +213,12 @@ export const entities = {
   Suite: entity("sui", {
     workspaceId: id("ws"),
     name: Name,
+    description: Description,
     version: Version,
-    members: Type.Array(id("tst")),
-    environmentBindings: Type.Record(Type.String(), id("env")),
+    selection: SuiteSelection,
+    state: Enum(suiteStates),
+    createdBy: Name,
+    updatedAt: Timestamp,
   }),
   BatchRun: entity("bat", {
     selectionSnapshot: Json,
@@ -222,6 +227,9 @@ export const entities = {
     rejectedMembers: Type.Array(Obj({ memberKey: Name, reasonCode: Enum(reasonCodes) })),
     commit: nullable(Name),
     aggregate: Obj({ counts: BatchCounts, gate: Gate }),
+    /** The list or schedule that produced this batch, when one did. */
+    suiteId: Type.Optional(nullable(id("sui"))),
+    scheduleId: Type.Optional(nullable(Type.String({ pattern: `^sch_${uuidPattern}$` }))),
   }),
   Run: entity("run", {
     testId: id("tst"),
@@ -391,23 +399,6 @@ export const entities = {
     verificationRunId: nullable(id("run")),
     modelCallId: nullable(id("mdl")),
     limitations: names,
-  }),
-  Schedule: entity("sch", {
-    targetId: Name,
-    cron: Name,
-    timezone: Name,
-    nextFireAt: nullable(Timestamp),
-    overlapPolicy: Enum(["forbid", "allow", "replace"]),
-    budget: Json,
-    state: Enum(["active", "paused", "archived"]),
-  }),
-  ScheduledFire: Obj({
-    scheduleId: id("sch"),
-    scheduledAt: Timestamp,
-    eventId: id("evt"),
-    state: Enum(["dispatched", "skipped", "misfire", "overlap"]),
-    batchId: nullable(id("bat")),
-    reasonCode: Type.Optional(Enum(reasonCodes)),
   }),
   ModelCall: entity("mdl", {
     purpose: Enum(["normalize", "plan", "resolve_action", "generate_code", "analyze", "heal"]),

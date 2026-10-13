@@ -1,0 +1,103 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "trigger"
+  ],
+  "properties": {
+    "trigger": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "cron"
+          ],
+          "properties": {
+            "kind": {
+              "const": "cron",
+              "type": "string"
+            },
+            "cron": {
+              "minLength": 9,
+              "maxLength": 120,
+              "type": "string"
+            },
+            "timezone": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            },
+            "dstGap": {
+              "anyOf": [
+                {
+                  "const": "skip",
+                  "type": "string"
+                },
+                {
+                  "const": "after_gap",
+                  "type": "string"
+                }
+              ]
+            },
+            "dstFold": {
+              "anyOf": [
+                {
+                  "const": "once",
+                  "type": "string"
+                },
+                {
+                  "const": "once_last",
+                  "type": "string"
+                },
+                {
+                  "const": "both",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "everySeconds",
+            "anchor"
+          ],
+          "properties": {
+            "kind": {
+              "const": "interval",
+              "type": "string"
+            },
+            "everySeconds": {
+              "minimum": 60,
+              "maximum": 31536000,
+              "type": "integer"
+            },
+            "anchor": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "from": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "count": {
+      "minimum": 1,
+      "maximum": 50,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SchedulePreviewInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
