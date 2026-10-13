@@ -34,7 +34,7 @@ export interface ServiceContext {
    */
   authorizeNamed(
     action: "approve" | "delete",
-    resourceType: "HealingProposal" | "Artifact",
+    resourceType: "HealingProposal" | "Artifact" | "AgentPullRequest",
     projectId: string,
     environmentId?: string | null,
   ): void;

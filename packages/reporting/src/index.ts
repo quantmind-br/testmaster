@@ -85,7 +85,7 @@ export interface ReportSnapshot {
     assessedSha: string | null;
     checkoutSha: string | null;
     binding: "verified" | "unbound";
-    targetBinding: "local-checkout" | "unbound";
+    targetBinding: "local-checkout" | "github-deployment" | "unbound";
   };
   runs: readonly ReportRun[];
   batch?: BatchRun;

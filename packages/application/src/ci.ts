@@ -37,7 +37,7 @@ export interface CiResult {
     assessedSha: string | null;
     checkoutSha: string | null;
     binding: "verified" | "unbound";
-    targetBinding: "local-checkout" | "unbound";
+    targetBinding: "local-checkout" | "github-deployment" | "unbound";
   };
   selection: {
     requested: number;

@@ -8,6 +8,8 @@ import {
 /** Adapters keyed by provider ID. An adapter must be compatible with the core contract to be used. */
 export class IntegrationProviderRegistry {
   private readonly providers = new Map<IntegrationProviderIdValue, IntegrationProvider>();
+  /** A parent supplies the shared adapters; this registry adds adapters that need per-Application state. */
+  constructor(private readonly parent: IntegrationProviderRegistry | null = null) {}
   register(provider: IntegrationProvider): void {
     assertWellFormedProvider(provider);
     if (this.providers.has(provider.id))
@@ -18,7 +20,7 @@ export class IntegrationProviderRegistry {
   }
   /** The registered adapter whether or not it is compatible; used to describe it. */
   peek(id: string): IntegrationProvider | null {
-    return this.providers.get(id as IntegrationProviderIdValue) ?? null;
+    return this.providers.get(id as IntegrationProviderIdValue) ?? this.parent?.peek(id) ?? null;
   }
   /** The adapter to run: unknown or incompatible adapters are refused before any of their code runs. */
   resolve(id: string): IntegrationProvider {
@@ -31,7 +33,7 @@ export class IntegrationProviderRegistry {
     return provider;
   }
   list(): IntegrationProvider[] {
-    return [...this.providers.values()];
+    return [...(this.parent?.list() ?? []), ...this.providers.values()];
   }
 }
 /** Process-wide registry. The core ships no adapter; GitHub, Slack, email and webhook register here. */

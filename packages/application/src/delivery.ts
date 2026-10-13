@@ -22,7 +22,8 @@ export function checkConclusion(
     result.kind === "batch" &&
     result.gate === "passed" &&
     result.provenance.binding === "verified" &&
-    result.provenance.targetBinding === "local-checkout"
+    (result.provenance.targetBinding === "local-checkout" ||
+      result.provenance.targetBinding === "github-deployment")
   )
     return "success";
   if (name === "TestMaster / required-gate") return "failure";
@@ -48,9 +49,11 @@ export interface CheckPayload {
   name: CheckName;
   head_sha: string;
   external_id: string;
-  status: "in_progress" | "completed";
-  conclusion?: "success" | "failure" | "neutral" | "cancelled";
+  status: "queued" | "in_progress" | "completed";
+  conclusion?: "success" | "failure" | "neutral" | "cancelled" | "action_required";
   output: { title: string; summary: string };
+  /** Authenticated portal page for this result (OPS-037); never a signed or public link. */
+  details_url?: string;
 }
 function payload(result: CiResult, sha: string, name: CheckName): CheckPayload {
   const conclusion = checkConclusion(result, name);
@@ -70,6 +73,8 @@ export class CheckHttpError extends Error {
   constructor(
     readonly status: number,
     readonly retryAfterMs: number | null,
+    /** 429, or 403 with an exhausted primary/secondary rate limit; distinguishes throttling from a revoked permission. */
+    readonly rateLimited: boolean = status === 429,
   ) {
     super(`GitHub Checks HTTP ${status}`);
   }
@@ -146,7 +151,13 @@ export class ChecksClient {
         await this.sleep(Math.max(backoff[attempt]!, bounded ?? 0));
         continue;
       }
-      throw new CheckHttpError(response.status, bounded);
+      throw new CheckHttpError(
+        response.status,
+        bounded,
+        response.status === 429 ||
+          (response.status === 403 &&
+            (response.headers.get("x-ratelimit-remaining") === "0" || retryHeader !== null)),
+      );
     }
   }
   async publish(

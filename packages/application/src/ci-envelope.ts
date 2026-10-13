@@ -125,7 +125,7 @@ export function parseCiEnvelope(value: unknown): CiEnvelope {
     throw new ContractError("POLICY_DENIED", "CI report provenance differs from envelope");
   if (
     result.provenance.binding === "verified" &&
-    (result.provenance.targetBinding !== "local-checkout" ||
+    (!["local-checkout", "github-deployment"].includes(result.provenance.targetBinding) ||
       !result.provenance.assessedSha ||
       !result.provenance.checkoutSha)
   )

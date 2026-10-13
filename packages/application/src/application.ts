@@ -77,7 +77,15 @@ import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
 import { IdentityService } from "./identity.js";
-import { IntegrationsService } from "./integrations/index.js";
+import {
+  createGithubProvider,
+  GithubRuntime,
+  type GithubRuntimeOptions,
+  GithubService,
+  IntegrationProviderRegistry,
+  IntegrationsService,
+  integrationProviders,
+} from "./integrations/index.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
@@ -138,9 +146,13 @@ export interface ApplicationOptions extends ResolveConfigOptions {
   dockerCommand?: DockerCommand;
   /** Opens the PostgreSQL server profile (ADR-016) instead of the local SQLite file. */
   server?: ServerConfig;
+  /** Overrides the GitHub API origin and clocks (tests, GitHub Enterprise Server). */
+  github?: GithubRuntimeOptions;
 }
 interface SharedRuntime {
   controllers: ControllerRegistry;
+  /** API client, installation-token cache and clocks of the GitHub App integration. */
+  github: GithubRuntime;
   controllerScope?: Application;
 }
 export class Application {
@@ -162,6 +174,7 @@ export class Application {
   readonly ci: CiService;
   readonly delivery: DeliveryService;
   readonly integrations: IntegrationsService;
+  readonly github: GithubService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
   readonly analysis: AnalysisService;
@@ -204,7 +217,10 @@ export class Application {
     readonly dockerCommand?: DockerCommand,
     /** Workspace this instance is bound to; `null` spans all (controllers) or the lone SQLite one. */
     private readonly bound: string | null = null,
-    private readonly shared: SharedRuntime = { controllers: new ControllerRegistry() },
+    private readonly shared: SharedRuntime = {
+      controllers: new ControllerRegistry(),
+      github: new GithubRuntime(),
+    },
     readonly serverConfig?: ServerConfig,
   ) {
     const database = root.forWorkspace(bound ?? "*");
@@ -333,7 +349,10 @@ export class Application {
       this.artifacts,
     );
     this.delivery = new DeliveryService(this.context);
-    this.integrations = new IntegrationsService(this.context);
+    const providers = new IntegrationProviderRegistry(integrationProviders);
+    this.github = new GithubService(this, shared.github);
+    providers.register(createGithubProvider(this.github));
+    this.integrations = new IntegrationsService(this.context, { providers });
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
     this.proposals = new ProposalsService(this.context, this.model, this.requirements);
     this.usage = new UsageService(this.context);
@@ -387,7 +406,7 @@ export class Application {
         database.close();
         throw error;
       }
-    return new Application(
+    const application = new Application(
       config,
       database,
       options.identity,
@@ -395,9 +414,18 @@ export class Application {
       options.imageLockPath,
       options.dockerCommand,
       null,
-      undefined,
+      { controllers: new ControllerRegistry(), github: new GithubRuntime(options.github) },
       options.server,
     );
+    // Server-only (no `local` flag): reconciles pull requests, check publication and comments.
+    application.controllers.register({
+      name: "github-reconciler",
+      intervalMs: 2000,
+      run: async (scope) => {
+        await scope.github.reconcile();
+      },
+    });
+    return application;
   }
   close(): void {
     this.root.close();
@@ -658,7 +686,7 @@ export class Application {
   }
   private authorizeNamed(
     action: "approve" | "delete",
-    resourceType: "HealingProposal" | "Artifact",
+    resourceType: "HealingProposal" | "Artifact" | "AgentPullRequest",
     projectId: string,
     environmentId: string | null,
   ): void {
@@ -675,6 +703,7 @@ export class Application {
       const aliases: Record<typeof resourceType, string[]> = {
         HealingProposal: ["HealingProposal", "healing", "*"],
         Artifact: ["Artifact", "artifacts", "*"],
+        AgentPullRequest: ["AgentPullRequest", "github", "*"],
       };
       const column: RbacColumn = action === "approve" ? "write" : "admin";
       const decision = this.decide(
@@ -695,7 +724,7 @@ export class Application {
         : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed)
         throw new ContractError("FORBIDDEN", "Action is not authorized", {
-          scope: `${resourceType === "HealingProposal" ? "healing" : "artifacts"}:${action}`,
+          scope: `${{ HealingProposal: "healing", Artifact: "artifacts", AgentPullRequest: "github" }[resourceType]}:${action}`,
         });
       auditSecurity(this.context, "grant", projectId, "allowed");
     } catch (error) {

@@ -18,6 +18,8 @@ export interface RepositoryProvenance {
   dirtyHash: string | null;
   deploymentId: string | null;
   binding: "verified" | "unbound";
+  /** Present only when the commit was bound through a webhook-observed deployment instead of a local checkout. */
+  bindingSource?: "github-deployment";
   limitations: string[];
 }
 export interface RuntimeIdentity {
@@ -199,6 +201,60 @@ export function resolveRepositoryProvenance(
     ],
   };
 }
+/**
+ * Provenance for a Run admission. A `deploymentId` claim is never taken at face value: it binds only when
+ * this workspace recorded a successful GitHub deployment status for that deployment and exactly that SHA in
+ * that repository (INV-014). Any other claim is `unbound`; a local checkout cannot vouch for a deployment.
+ */
+export function resolveRunProvenance(
+  ctx: ServiceContext,
+  cwd: string,
+  claims?: RunRequest["provenance"],
+): RepositoryProvenance {
+  if (!claims?.deploymentId) return resolveRepositoryProvenance(cwd, claims);
+  const unbound: RepositoryProvenance = {
+    repositoryId: claims.repositoryId ?? null,
+    commitSha: null,
+    checkoutSha: null,
+    baseSha: claims.baseSha ?? null,
+    dirtyHash: null,
+    deploymentId: claims.deploymentId,
+    binding: "unbound",
+    limitations: ["deployment-unverified"],
+  };
+  if (!claims.commitSha || !claims.repositoryId) return unbound;
+  const rows = ctx.database.all(
+    "SELECT full_name, sha, state, delivery_id FROM github_deployments WHERE workspace_id=? AND deployment_id=?",
+    ctx.workspaceId,
+    claims.deploymentId,
+  );
+  const match = rows.find(
+    (row) =>
+      row.sha === claims.commitSha &&
+      row.state === "success" &&
+      `github.com/${String(row.full_name)}` === claims.repositoryId,
+  );
+  const manual = String(match?.delivery_id ?? "").startsWith("manual:");
+  const bound = Boolean(match);
+  if (!bound) return unbound;
+  return {
+    repositoryId: claims.repositoryId,
+    commitSha: claims.commitSha,
+    checkoutSha: claims.checkoutSha ?? claims.commitSha,
+    baseSha: claims.baseSha ?? null,
+    dirtyHash: null,
+    deploymentId: claims.deploymentId,
+    binding: "verified",
+    bindingSource: "github-deployment",
+    limitations: [
+      "deployment-bound-without-local-checkout",
+      ...(manual ? ["deployment-attested-manually"] : []),
+      ...(claims.checkoutSha && claims.checkoutSha !== claims.commitSha
+        ? ["synthetic-merge-checkout-differs-from-assessed-head"]
+        : []),
+    ],
+  };
+}
 export interface AdmissionSnapshot {
   revisionHash: string;
   environmentHash: string;
@@ -269,7 +325,7 @@ export function admissionSnapshot(
     const source = requireEntity(ctx, "SourceRevision", id);
     return { id, contentHash: String(source.contentHash) };
   });
-  const repository = resolveRepositoryProvenance(config.cwd, claims);
+  const repository = resolveRunProvenance(ctx, config.cwd, claims);
   const limitations = [
     "mutable-external-target",
     "mutable-external-payload",
