@@ -21,6 +21,7 @@ import type { ArtifactsService, ReportsService } from "./artifacts.js";
 import { isEvidenceUnavailable } from "./artifacts.js";
 import { byteHash } from "./ci-envelope.js";
 import { requireEntity } from "./context.js";
+import { assertNotDemoWorkspace } from "./demo-workspace.js";
 import type { AdmissionSnapshot } from "./provenance.js";
 import type { BatchesService, RunsService } from "./runs.js";
 import type { SelectionInput, SelectionReceipt, SelectionService } from "./selection.js";
@@ -166,6 +167,8 @@ export class CiService {
     readonly artifacts: ArtifactsService,
   ) {}
   async run(input: CiInput): Promise<CiResult> {
+    // Refused before any output directory or gate artifact exists.
+    assertNotDemoWorkspace(this.batches.ctx);
     const root = await openCiOutput(input.outputDir);
     let receipt: SelectionReceipt | undefined;
     let snapshot: ReportSnapshot | undefined;
