@@ -2350,12 +2350,14 @@
         "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering",
         "apps/server/src/integrations.test.ts::INT-002 the signed webhook route verifies the raw bytes, content type and size before anything is recorded",
         "apps/server/src/integrations.test.ts::INT-002 the signed webhook route keeps the caller's rate limit",
-        "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
+        "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering"
       ],
       "oracle": [
         "A repeated inbound delivery returns the original receipt reference and runs the handler once; the same delivery ID with a different payload hash, installation, project, event or action is refused as IDEMPOTENCY_CONFLICT and recorded as a linked tampered row while the original stays untouched.",
         "Dedupe records are durable and workspace-scoped, content type, size, signature and schema are checked before any record exists, and paused, revoked or unattributed deliveries are recorded as ignored without running a handler.",
-        "Over HTTP the signed webhook route needs no token, cookie or Idempotency-Key, refuses a wrong signature, content type or oversized body before recording anything, keeps the caller's rate limit and answers a tampered delivery 409; on PostgreSQL concurrent deliveries of one ID process once."
+        "Over HTTP the signed webhook route needs no token, cookie or Idempotency-Key, refuses a wrong signature, content type or oversized body before recording anything, keeps the caller's rate limit and answers a tampered delivery 409; on PostgreSQL concurrent deliveries of one ID process once.",
+        "A redelivery of an already processed event after installation.deleted keeps the original dedupe scope and is answered as a duplicate, never recorded as tampered."
       ],
       "evidence": [
         "validation/results/m4-acceptance/fd/049-fd-final-verbose-unit/output.log",
@@ -2363,7 +2365,9 @@
         "validation/results/m4-acceptance/fd/051-fd-final-verbose-parity/output.log",
         "validation/results/m4-acceptance/fd/046-fd-final-unit/output.log",
         "validation/results/m4-acceptance/fd/047-fd-final-postgres/output.log",
-        "validation/results/m4-acceptance/fd/048-fd-final-parity/output.log"
+        "validation/results/m4-acceptance/fd/048-fd-final-parity/output.log",
+        "validation/results/m4-acceptance/hosted/11-post-uninstall-replay/summary.json",
+        "validation/results/m4-acceptance/w2c/003-w2c-redelivery-fixed/output.log"
       ],
       "code": [
         "packages/application/src/integrations/provider.ts",
@@ -2375,7 +2379,8 @@
         "apps/server/src/routes/integrations.ts",
         "apps/server/src/server.ts",
         "packages/persistence/migrations/postgres/0012_integrations.sql",
-        "packages/persistence/migrations/sqlite/0012_integrations.sql"
+        "packages/persistence/migrations/sqlite/0012_integrations.sql",
+        "packages/application/src/integrations/github/service.ts"
       ],
       "coverage": {
         "positive": [
@@ -2383,7 +2388,8 @@
           "packages/application/src/integrations/integrations.test.ts::INT-002 dedupe is scoped per workspace: another workspace's identical delivery ID is independent and invisible",
           "packages/application/src/integrations/integrations.test.ts::INT-002 signatures verify against either secret during rotation and reject tampered or malformed values",
           "apps/server/src/integrations.test.ts::INT-002 the signed webhook route needs neither token, cookie nor Idempotency-Key and dedupes by delivery ID",
-          "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering"
+          "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering"
         ],
         "negative": [
           "packages/application/src/integrations/integrations.test.ts::INT-002 the same delivery ID with a different payload is a tamper conflict recorded durably and never replaces the original",
@@ -2445,10 +2451,14 @@
           {
             "path": "packages/application/src/integrations/integrations.pg.test.ts",
             "assertion": "expect(processed.filter((entry) => entry.endsWith(\"d-race\"))).toHaveLength(1);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "    expect(replay).toMatchObject({ outcome: \"accepted\", duplicate: true });"
           }
         ]
       },
-      "note": "Provider signature verification lives in each adapter (verifyHmacSha256 supports a rotation window); the receiver proves ordering, dedupe and tamper handling with a test-local adapter."
+      "note": "Provider signature verification lives in each adapter (verifyHmacSha256 supports a rotation window); the receiver proves ordering, dedupe and tamper handling with a test-local adapter. Real GitHub redelivery after uninstall found a dedupe-scope drift, now fixed."
     },
     {
       "id": "INT-003",
@@ -3176,10 +3186,15 @@
         "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper refuses a wrong state, a foreign Host header and unknown paths, and creates nothing",
         "packages/application/src/integrations/github/github.pg.test.ts::INT-014 INT-002 PostgreSQL row-level security hides one workspace's GitHub installations, pulls, checks and deployments from another",
         "packages/application/src/integrations/github/github.pg.test.ts::INT-014 SEC-047 a tenant cannot claim another tenant's installation or read its management views by ID",
-        "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing"
+        "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 REQ-033 a real push delivery has no action field and is ignored as not handled instead of failing the webhook",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering"
       ],
       "oracle": [
-        "A GitHub App is created through the manifest flow with the minimum permissions and its credentials become GitHub-bound secrets that are never returned. A webhook is accepted only with the content type, size, HMAC signature (current or previous secret inside the 24 h window) and schema checks, in that order; a reused delivery ID answers from the record or is recorded as tampered, unknown or revoked installations create no Run, and one workspace never reads another's installations on PostgreSQL."
+        "A GitHub App is created through the manifest flow with the minimum permissions and its credentials become GitHub-bound secrets that are never returned. A webhook is accepted only with the content type, size, HMAC signature (current or previous secret inside the 24 h window) and schema checks, in that order; a reused delivery ID answers from the record or is recorded as tampered, unknown or revoked installations create no Run, and one workspace never reads another's installations on PostgreSQL.",
+        "Real GitHub deliveries were signature-checked and deduplicated: a real push delivery (no action field) is ignored as not handled instead of answering HTTP 500, and a genuine redelivery after installation.deleted is answered as the original outcome instead of 409 tampering."
       ],
       "evidence": [
         "packages/application/src/integrations/github/github-webhooks.test.ts",
@@ -3190,7 +3205,13 @@
         "validation/journeys/j12-github.pg.test.ts",
         "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
-        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/hosted/10-failed-push-redelivery/summary.json",
+        "validation/results/m4-acceptance/hosted/11-post-uninstall-replay/summary.json",
+        "validation/results/m4-acceptance/w2c/001-w2c-push-fixed/output.log",
+        "validation/results/m4-acceptance/w2c/003-w2c-redelivery-fixed/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -3210,7 +3231,10 @@
           "apps/server/src/github.routes.test.ts::INT-014 INT-002 the GitHub webhook route authenticates by signature only and answers each failure with its own status",
           "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
           "packages/application/src/integrations/github/github.pg.test.ts::INT-014 INT-002 PostgreSQL row-level security hides one workspace's GitHub installations, pulls, checks and deployments from another",
-          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts the previous webhook secret only inside its 24 hour rotation window"
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts the previous webhook secret only inside its 24 hour rotation window",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 REQ-033 a real push delivery has no action field and is ignored as not handled instead of failing the webhook",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering"
         ],
         "negative": [
           "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 refuses a wrong secret, an altered payload and a missing signature without creating a pull or Run",
@@ -3221,7 +3245,8 @@
           "apps/server/src/github.routes.test.ts::INT-014 the GitHub webhook route rejects other content types and oversize bodies before any signature work",
           "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper refuses a wrong state, a foreign Host header and unknown paths, and creates nothing",
           "packages/application/src/integrations/github/github.pg.test.ts::INT-014 SEC-047 a tenant cannot claim another tenant's installation or read its management views by ID",
-          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing"
+          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3251,9 +3276,26 @@
           {
             "path": "validation/journeys/j12-github.pg.test.ts",
             "assertion": "    expect(forged.statusCode).toBe(401);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "    expect(receipt).toMatchObject({ outcome: \"ignored\", ignoredReason: \"event_not_handled\" });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "    expect(replay).toMatchObject({ outcome: \"accepted\", duplicate: true });"
           }
         ]
-      }
+      },
+      "note": "Real GitHub.com deliveries exposed two webhook defects (push events without an action field, redelivery after uninstall); both are fixed with regression tests."
     },
     {
       "id": "INT-015",
@@ -3268,10 +3310,13 @@
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 cancels the wait when the pull request closes and ignores deployments of other environments",
         "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
-        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "A pull request waits for a deployment_status success whose deployment.sha equals the head SHA and whose environment matches the repository pattern; only then is a Run admitted against an ephemeral environment pointing at the preview origin. A missing preview concludes action_required with a failing gate at the deadline, a late or other-environment deployment starts nothing, and A's verdict is untouched by B."
+        "A pull request waits for a deployment_status success whose deployment.sha equals the head SHA and whose environment matches the repository pattern; only then is a Run admitted against an ephemeral environment pointing at the preview origin. A missing preview concludes action_required with a failing gate at the deadline, a late or other-environment deployment starts nothing, and A's verdict is untouched by B.",
+        "Observed on real GitHub.com (W2c): INT-015 behaviour on the head SHA with raw check-run, comment and TestMaster records validated by the hosted evidence validator."
       ],
       "evidence": [
         "packages/application/src/integrations/github/github-pr.test.ts",
@@ -3281,7 +3326,11 @@
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
         "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
-        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json",
+        "validation/results/m4-acceptance/hosted/04-push-waits/check-runs-B-waiting.json",
+        "validation/results/m4-acceptance/hosted/04-push-waits/check-runs-A-after-push.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -3291,18 +3340,22 @@
         "packages/application/src/integrations/github/manifest.ts",
         "packages/application/src/integrations/github/index.ts",
         "packages/application/src/integrations/provider.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
-          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 cancels the wait when the pull request closes and ignores deployments of other environments",
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3320,9 +3373,18 @@
           {
             "path": "validation/journeys/j12-github.docker.test.ts",
             "assertion": "    expect(verdict(w, SHA_A)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
-      }
+      },
+      "note": "Verified once more against real GitHub.com (W2c hosted proof)."
     },
     {
       "id": "INT-016",
@@ -3334,31 +3396,42 @@
       "scenario": [
         "packages/application/src/provenance.test.ts::keeps absent repositories unbound and verifies checkout, dirty and ancestor claims against actual Git state",
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
-        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head"
+        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "A merge-ref Run persists the assessed head and the distinct checkout merge SHA in its provenance; every published check is bound to the assessed head and publication to any other SHA is refused."
+        "A merge-ref Run persists the assessed head and the distinct checkout merge SHA in its provenance; every published check is bound to the assessed head and publication to any other SHA is refused.",
+        "Observed on real GitHub.com (W2c): INT-016 behaviour on the head SHA with raw check-run, comment and TestMaster records validated by the hosted evidence validator."
       ],
       "evidence": [
         "packages/application/src/provenance.test.ts",
         "packages/application/src/delivery.test.ts",
         "validation/results/m3-acceptance/hosted/public/17-same-repo-pr-healthy-fixed-action/summary.json",
-        "validation/results/m3-acceptance/hosted/public/18-same-repo-pr-defect-fixed-action/summary.json"
+        "validation/results/m3-acceptance/hosted/public/18-same-repo-pr-defect-fixed-action/summary.json",
+        "validation/results/m4-acceptance/hosted/05-superseded/check-runs-B-cancelled.json",
+        "validation/results/m4-acceptance/hosted/07-late-deployment/check-runs-C-after-late-deployment.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/provenance.ts",
         "packages/application/src/delivery.ts",
-        "tools/src/github-action/hosted-evidence.ts"
+        "tools/src/github-action/hosted-evidence.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
-      "note": "Verified for the generic CLI/Action commit binding: repository provenance stores commitSha (assessed head) and checkoutSha separately and flags a synthetic merge checkout; the publisher refuses any SHA other than the frozen assessed SHA; retained GitHub-hosted same-repository PR runs show the persisted assessed head differing from the merge checkout SHA with every published check on the head. Webhook/GitHub App, preview deployment and provider binding (INT-014, INT-015, INT-017) remain M4 and are not claimed.",
+      "note": "Verified for the generic CLI/Action commit binding: repository provenance stores commitSha (assessed head) and checkoutSha separately and flags a synthetic merge checkout; the publisher refuses any SHA other than the frozen assessed SHA; retained GitHub-hosted same-repository PR runs show the persisted assessed head differing from the merge checkout SHA with every published check on the head. Webhook/GitHub App, preview deployment and provider binding (INT-014, INT-015, INT-017) remain M4 and are not claimed. Verified once more against real GitHub.com (W2c hosted proof).",
       "coverage": {
         "positive": [
           "packages/application/src/provenance.test.ts::keeps absent repositories unbound and verifies checkout, dirty and ancestor claims against actual Git state",
-          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head"
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
-          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head"
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-BINDING a merge-ref pull request run keeps the assessed head and the checkout SHA distinct and binds checks to the head",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3376,6 +3449,14 @@
           {
             "path": "tools/src/github-action/hosted-evidence.test.ts",
             "assertion": "expect(findShaBindingViolations(copy), name).toContain(expected);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
       }
@@ -3525,17 +3606,24 @@
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-019 a failing preview run fails both checks on its own SHA while another SHA keeps its result",
-        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing"
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "Pushing A then B cancels every in-flight piece of work for A (state superseded, checks concluded cancelled on SHA A, Run never started) and B runs alone; a deployment for A that arrives after B starts nothing, a failing preview fails both checks of its own SHA only, and no check ever moves to another commit."
+        "Pushing A then B cancels every in-flight piece of work for A (state superseded, checks concluded cancelled on SHA A, Run never started) and B runs alone; a deployment for A that arrives after B starts nothing, a failing preview fails both checks of its own SHA only, and no check ever moves to another commit.",
+        "Observed on real GitHub.com (W2c): INT-019 behaviour on the head SHA with raw check-run, comment and TestMaster records validated by the hosted evidence validator."
       ],
       "evidence": [
         "packages/application/src/integrations/github/github-pr.test.ts",
         "validation/journeys/j12-github.pg.test.ts",
         "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
-        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/hosted/05-superseded/check-runs-B-cancelled.json",
+        "validation/results/m4-acceptance/hosted/07-late-deployment/deployment-B-late.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -3545,17 +3633,21 @@
         "packages/application/src/integrations/github/manifest.ts",
         "packages/application/src/integrations/github/index.ts",
         "packages/application/src/integrations/provider.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
-          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing"
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-019 a failing preview run fails both checks on its own SHA while another SHA keeps its result",
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3573,9 +3665,18 @@
           {
             "path": "validation/journeys/j12-github.pg.test.ts",
             "assertion": "    expect([...new Set(world.fake.checkRuns.map((check) => check.head_sha))].sort()).toEqual("
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
-      }
+      },
+      "note": "Verified once more against real GitHub.com (W2c hosted proof)."
     },
     {
       "id": "INT-020",
@@ -3586,14 +3687,21 @@
       "status": "verified",
       "scenario": [
         "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
-        "packages/application/src/integrations/github/github-pr.test.ts::INT-020 escapes Markdown, HTML, mentions and links in text that came from outside"
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-020 escapes Markdown, HTML, mentions and links in text that came from outside",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "The pull-request comment is upserted by one marker per installation, repository and pull request, edited in place and never adopts a comment forged by another author; every interpolated value is Markdown-, HTML-, mention- and link-escaped."
+        "The pull-request comment is upserted by one marker per installation, repository and pull request, edited in place and never adopts a comment forged by another author; every interpolated value is Markdown-, HTML-, mention- and link-escaped.",
+        "Observed on real GitHub.com (W2c): INT-020 behaviour on the head SHA with raw check-run, comment and TestMaster records validated by the hosted evidence validator."
       ],
       "evidence": [
         "packages/application/src/integrations/github/github-pr.test.ts",
-        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/hosted/03-redelivery/comments-after.json",
+        "validation/results/m4-acceptance/hosted/06-failing-preview/comments-C.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -3603,15 +3711,19 @@
         "packages/application/src/integrations/github/manifest.ts",
         "packages/application/src/integrations/github/index.ts",
         "packages/application/src/integrations/provider.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-020 escapes Markdown, HTML, mentions and links in text that came from outside",
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3625,9 +3737,18 @@
           {
             "path": "packages/application/src/integrations/github/github-pr.test.ts",
             "assertion": "    expect(w.fake.comments.find((comment) => comment.id === forged.id)?.body).toContain("
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
-      }
+      },
+      "note": "Verified once more against real GitHub.com (W2c hosted proof)."
     },
     {
       "id": "INT-021",
@@ -3642,10 +3763,13 @@
         "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate is success only for a passed, verified, deployment-bound, non-fork verdict",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate never concludes neutral, skipped or success for any non-completed state",
         "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
-        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "TestMaster / required-gate is success only for a completed, passed, deployment-bound, non-fork verdict with a non-empty selection; neutral, skipped or success are never published for any non-completed state, and an empty selection, a failed Run, an unbound verdict, a timeout, a supersede or a fork never produces success."
+        "TestMaster / required-gate is success only for a completed, passed, deployment-bound, non-fork verdict with a non-empty selection; neutral, skipped or success are never published for any non-completed state, and an empty selection, a failed Run, an unbound verdict, a timeout, a supersede or a fork never produces success.",
+        "Observed on real GitHub.com (W2c): INT-021 behaviour on the head SHA with raw check-run, comment and TestMaster records validated by the hosted evidence validator."
       ],
       "evidence": [
         "packages/application/src/integrations/github/github-pr.test.ts",
@@ -3655,7 +3779,11 @@
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
         "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
-        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json",
+        "validation/results/m4-acceptance/hosted/06-failing-preview/check-runs-C.json",
+        "validation/results/m4-acceptance/hosted/02-pr-healthy/check-runs-A.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -3665,18 +3793,22 @@
         "packages/application/src/integrations/github/manifest.ts",
         "packages/application/src/integrations/github/index.ts",
         "packages/application/src/integrations/provider.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link",
           "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate is success only for a passed, verified, deployment-bound, non-fork verdict",
-          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success",
           "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate never concludes neutral, skipped or success for any non-completed state",
-          "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey"
+          "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3698,10 +3830,18 @@
           {
             "path": "validation/journeys/j12-github.pg.test.ts",
             "assertion": "      expect(Boolean(row.fork), sha).toBe(false);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
       },
-      "note": "A fork run under fork-policy fixture-only is published neutral/failure and never satisfies the required gate."
+      "note": "A fork run under fork-policy fixture-only is published neutral/failure and never satisfies the required gate. Verified once more against real GitHub.com (W2c hosted proof)."
     },
     {
       "id": "INT-022",
@@ -3713,14 +3853,21 @@
       "scenario": [
         "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link",
-        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success"
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "The check output and comment are derived from the terminal snapshot and show the Run and batch links (authenticated portal pages), environment, head SHA, exclusions, first-attempt counts and freshness, escape untrusted text, and never expose local paths; completion requests resend the batch link as the check details URL."
+        "The check output and comment are derived from the terminal snapshot and show the Run and batch links (authenticated portal pages), environment, head SHA, exclusions, first-attempt counts and freshness, escape untrusted text, and never expose local paths; completion requests resend the batch link as the check details URL.",
+        "Observed on real GitHub.com (W2c): INT-022 behaviour on the head SHA with raw check-run, comment and TestMaster records validated by the hosted evidence validator."
       ],
       "evidence": [
         "packages/application/src/integrations/github/github-pr.test.ts",
-        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/hosted/02-pr-healthy/check-runs-A.json",
+        "validation/results/m4-acceptance/hosted/02-pr-healthy/A-testmaster-runs.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -3730,15 +3877,19 @@
         "packages/application/src/integrations/github/manifest.ts",
         "packages/application/src/integrations/github/index.ts",
         "packages/application/src/integrations/provider.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success",
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -3752,9 +3903,18 @@
           {
             "path": "packages/application/src/integrations/github/github-pr.test.ts",
             "assertion": "    expect(result?.summary).not.toMatch(/\\/var\\/|\\/tmp\\//u);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
-      }
+      },
+      "note": "Verified once more against real GitHub.com (W2c hosted proof)."
     },
     {
       "id": "INT-023",
@@ -6826,11 +6986,14 @@
         "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
         "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
         "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
-        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
         "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict; a fork pull request is refused by policy before runtime installation and the hosted cross-owner fork run had no secret, no write token (HTTP 403 on every write API) and no execution.",
-        "J12 automated part with a fake GitHub: push A then B, deployment ordering, duplicate and tampered webhooks, a malicious fork and the Docker-sandbox preview run; the real installed App is a W2 hosted proof."
+        "J12 automated part with a fake GitHub: push A then B, deployment ordering, duplicate and tampered webhooks, a malicious fork and the Docker-sandbox preview run; the real installed App is a W2 hosted proof.",
+        "Hosted proof on real GitHub.com: a real GitHub App created through the manifest flow, installed on a disposable public repository, real signed webhooks through a cloudflared quick tunnel to a server-profile TestMaster; both checks on the PR head SHA, one comment, a redelivery that created nothing, push A/B/C with B superseded, a failing preview that failed the gate, and an uninstall that revoked the installation. The fork case could not be exercised on real GitHub (one account) and stays proven by the fake-GitHub J12 suite."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
@@ -6846,14 +7009,21 @@
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
         "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
-        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json",
+        "validation/results/m4-acceptance/hosted/02-pr-healthy/summary.json",
+        "validation/results/m4-acceptance/hosted/06-failing-preview/check-runs-C.json",
+        "validation/results/m4-acceptance/hosted/09-uninstall/testmaster-installations-after.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "tools/src/github-action/inputs.ts",
         "tools/src/github-action/main.ts",
         "packages/application/src/ci.ts",
-        "packages/application/src/integrations/github/service.ts"
+        "packages/application/src/integrations/github/service.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
@@ -6862,7 +7032,8 @@
           "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
-          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
@@ -6871,7 +7042,8 @@
           "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
           "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
           "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
-          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network"
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -6893,18 +7065,18 @@
           {
             "path": "validation/journeys/j12-github.pg.test.ts",
             "assertion": "    expect(verdict(world, SHA_B)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "installed GitHub App, preview deployments, rapid push A/B and deployment ordering",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "M3 checks básicos/M4 App e previews"
-          }
-        },
         {
           "milestone": "M5",
           "scope": "tunnel variant of INT-024 (not an App prerequisite)",
@@ -6914,7 +7086,7 @@
           }
         }
       ],
-      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5. M4 S7 adds the automated J12 journey against a fake GitHub; the real App installation remains for W2."
+      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5. M4 S7 adds the automated J12 journey against a fake GitHub; the real App installation remains for W2. W2c hosted proof on real GitHub.com added; the real fork case was not exercised (a single GitHub account cannot fork its own repository) and remains covered by the fake-GitHub suite. A real GitHub App on GitHub.com was installed on a disposable repository and exercised through signed webhooks; the fork case was not exercised there (one GitHub account) and stays proven by the fake-GitHub suite."
     },
     {
       "id": "J13",
@@ -10085,10 +10257,13 @@
         "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
         "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
-        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued"
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "A GitHub App integration receives signed webhooks, waits for the preview of the exact head SHA, runs the pull request in the Docker sandbox, publishes two checks and one comment bound to that SHA, supersedes older pushes, treats forks and internal-network previews as policy denials and keeps the required gate strictly non-green for anything but a verified pass, all through /v1 routes and an accessible portal page. Installation of the App on a real repository is the W2 hosted proof."
+        "A GitHub App integration receives signed webhooks, waits for the preview of the exact head SHA, runs the pull request in the Docker sandbox, publishes two checks and one comment bound to that SHA, supersedes older pushes, treats forks and internal-network previews as policy denials and keeps the required gate strictly non-green for anything but a verified pass, all through /v1 routes and an accessible portal page. Installation of the App on a real repository is the W2 hosted proof.",
+        "A real installed GitHub App on a disposable public repository: checks bound to the head SHA with Run and batch IDs, the verified deployment binding and a link under the public origin, a single marker comment, duplicate redelivery without new work, supersede and revocation."
       ],
       "evidence": [
         "validation/journeys/j12-github.pg.test.ts",
@@ -10099,7 +10274,12 @@
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
         "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
-        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json",
+        "validation/results/m4-acceptance/hosted/01-app-and-installation/github-app.json",
+        "validation/results/m4-acceptance/hosted/02-pr-healthy/check-runs-A.json",
+        "validation/results/m4-acceptance/hosted/03-redelivery/comments-after.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -10111,7 +10291,9 @@
         "packages/application/src/integrations/provider.ts",
         "apps/server/src/routes/github.ts",
         "apps/web/src/routes/github.tsx",
-        "apps/cli/src/github.ts"
+        "apps/cli/src/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
@@ -10119,14 +10301,16 @@
           "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
           "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App, shows consent and labels a test delivery, accessibly at 320 px",
           "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
-          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued"
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
           "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
           "validation/journeys/j12-github.docker.test.ts::J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by the sandbox egress policy and the foreign origin is never reached",
-          "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict"
+          "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -10144,10 +10328,18 @@
           {
             "path": "validation/journeys/github-portal.portal.test.ts",
             "assertion": "    expect(await field.getAttribute(\"aria-invalid\")).toBe(\"true\");"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
       },
-      "note": "Automated against a fake GitHub API and webhook sender (packages/application/src/integrations/github/testing); the Docker sandbox runs the preview Run. The installed-App proof on a real repository and the real fork case are W2 hosted evidence. Preview deployments are consumed from GitHub deployment statuses or a manual attested URL; no vendor API is called, no GitHub Enterprise Server is validated, and github.suiteId list admission is not wired until lists land."
+      "note": "Automated against a fake GitHub API and webhook sender (packages/application/src/integrations/github/testing); the Docker sandbox runs the preview Run. The installed-App proof on a real repository and the real fork case are W2 hosted evidence. Preview deployments are consumed from GitHub deployment statuses or a manual attested URL; no vendor API is called, no GitHub Enterprise Server is validated, and github.suiteId list admission is not wired until lists land. The App installed on a real repository (W2c) is retained under validation/results/m4-acceptance/hosted."
     },
     {
       "id": "M4-08",
@@ -16962,10 +17154,13 @@
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents",
-        "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output"
+        "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
       ],
       "oracle": [
-        "A pull request in an installed repository is verified end to end: webhook, preview wait bound to the head SHA, a Run against that preview in the Docker sandbox, two checks plus one comment on the head SHA, supersede on a newer push, and fork, internal-network and failed-preview negatives that never turn the required gate green."
+        "A pull request in an installed repository is verified end to end: webhook, preview wait bound to the head SHA, a Run against that preview in the Docker sandbox, two checks plus one comment on the head SHA, supersede on a newer push, and fork, internal-network and failed-preview negatives that never turn the required gate green.",
+        "The GitHub App and preview flow ran on real GitHub.com with real signed webhooks, not only against the fake."
       ],
       "evidence": [
         "validation/journeys/j12-github.pg.test.ts",
@@ -16976,7 +17171,11 @@
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
         "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
-        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json",
+        "validation/results/m4-acceptance/hosted/01-app-and-installation/github-installations.json",
+        "validation/results/m4-acceptance/hosted/08-deliveries/deliveries.json",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
       ],
       "code": [
         "packages/application/src/integrations/github/service.ts",
@@ -16986,20 +17185,24 @@
         "packages/application/src/integrations/github/manifest.ts",
         "packages/application/src/integrations/github/index.ts",
         "packages/application/src/integrations/provider.ts",
-        "apps/server/src/routes/github.ts"
+        "apps/server/src/routes/github.ts",
+        "tools/src/github-app/hosted-evidence.ts",
+        "validation/hosted/github-app-hosted.mjs"
       ],
       "coverage": {
         "positive": [
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
           "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
-          "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output"
+          "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
         ],
         "negative": [
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
           "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
           "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
-          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents"
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents",
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
         ],
         "criticalAssertions": [
           {
@@ -17017,9 +17220,18 @@
           {
             "path": "packages/application/src/integrations/github/github-pr.test.ts",
             "assertion": "    expect(pullState(w, SHA_A)).toBe(\"timed_out\");"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "  expect(findHostedAppViolations(evidence)).toEqual([]);"
+          },
+          {
+            "path": "tools/src/github-app/hosted-evidence.test.ts",
+            "assertion": "    ).toBe(true);"
           }
         ]
-      }
+      },
+      "note": "Real GitHub.com hosted proof (W2c); the two defects it found (push without action, redelivery after uninstall) are regression-tested."
     },
     {
       "id": "REQ-034",
