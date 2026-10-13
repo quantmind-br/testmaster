@@ -123,6 +123,9 @@ export class ApprovalsService {
       for (const id of profile.secretRefs as string[]) references.add(id);
     const credentials = [...references].sort().map((id) => {
       const secret = requireEntity(this.ctx, "SecretReference", id);
+      // A managed credential is rewritten by token refresh; approving it binds the slot (id and
+      // origins), never its current version, so refreshing does not void an approval.
+      if (secret.managedBy) return { id, managed: true, allowedOrigins: secret.allowedOrigins };
       return {
         id,
         secretVersion: secret.secretVersion,

@@ -57,6 +57,8 @@ import { UsageService } from "./ai/usage.js";
 import { ApprovalsService } from "./approvals.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
 import { AuditService, auditSecurity } from "./audit.js";
+import { createBrowserLoginProbe } from "./auth/browser-login.js";
+import { AuthCheckpointsService, AuthProfilesService } from "./auth/index.js";
 import {
   EnvironmentsService,
   ProjectsService,
@@ -185,6 +187,8 @@ export class Application {
   readonly workspaces: WorkspacesService;
   readonly members: MembersService;
   readonly tokens: TokensService;
+  readonly authProfiles: AuthProfilesService;
+  readonly authCheckpoints: AuthCheckpointsService;
   /** Host-trust bootstrap and recovery; callers are trusted by controlling the deployment. */
   readonly operator: OperatorService;
   /** Background loops run by `server start`; shared by every scoped instance. */
@@ -296,6 +300,7 @@ export class Application {
       retention: this.retention,
       analysis: { settlePending: () => this.analysis.settlePending() },
       healing: { settlePending: () => this.healing.settlePending() },
+      auth: () => this.authProfiles,
       ...(this.dockerCommand ? { dockerCommand: this.dockerCommand } : {}),
     });
     this.comparisons = new ComparisonsService(this.context, this.runs, this.batches);
@@ -364,6 +369,18 @@ export class Application {
     );
     this.members = new MembersService(this.context);
     this.tokens = new TokensService(this.context, () => this);
+    this.authProfiles = new AuthProfilesService(this.context, {
+      secrets: this.secrets,
+      stepUp: (password, operation) => this.identityService.confirmPassword(password, operation),
+      browserLogin: createBrowserLoginProbe(this.context, {
+        config,
+        secrets: this.secrets,
+        seccompPath: this.seccompPath,
+        images: () => this.images(),
+        ...(this.dockerCommand ? { dockerCommand: this.dockerCommand } : {}),
+      }),
+    });
+    this.authCheckpoints = new AuthCheckpointsService(this.context, this.authProfiles);
     this.operator = new OperatorService(root.forWorkspace("*"));
   }
   readonly backups: BackupsService;

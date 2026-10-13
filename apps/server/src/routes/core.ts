@@ -59,27 +59,15 @@ const handlers: Record<string, RouteHandler> = {
   }),
   "POST /projects/{id}/archive": h(({ app, id, ifMatch }) => app.projects.archive(id, ifMatch())),
   "GET /projects/{id}/environments": h(({ app, id, page }) => page(app.environments.list(id))),
-  "POST /projects/{id}/environments": h(({ app, id, body }) => {
-    if ((body.authRefs as string[] | undefined)?.length)
-      throw new ContractError("CAPABILITY_UNAVAILABLE", "Auth profiles require M4", {
-        capability: "auth-profiles",
-        milestone: "M4",
-      });
-    const { authRefs, ...input } = body;
-    return app.environments.create({ projectId: id, ...input } as Parameters<
+  "POST /projects/{id}/environments": h(({ app, id, body }) =>
+    app.environments.create({ projectId: id, ...body } as Parameters<
       typeof app.environments.create
-    >[0]);
-  }),
+    >[0]),
+  ),
   "GET /environments/{id}": h(({ app, id }) => app.environments.get(id)),
-  "PATCH /environments/{id}": h(({ app, id, body, ifMatch }) => {
-    const { authRefs, ...input } = body;
-    if ((authRefs as string[] | undefined)?.length)
-      throw new ContractError("CAPABILITY_UNAVAILABLE", "Auth profiles require M4", {
-        capability: "auth-profiles",
-        milestone: "M4",
-      });
-    return app.environments.update(id, input, ifMatch());
-  }),
+  "PATCH /environments/{id}": h(({ app, id, body, ifMatch }) =>
+    app.environments.update(id, body, ifMatch()),
+  ),
   "DELETE /environments/{id}": h(({ app, id, ifMatch }) => app.environments.archive(id, ifMatch())),
   "POST /projects/{id}/default-environment": h(({ app, id, body, ifMatch }) =>
     app.environments.setDefault(id, body.environmentId as string, ifMatch()),
