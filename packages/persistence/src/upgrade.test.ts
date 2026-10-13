@@ -91,9 +91,10 @@ it("plans irreversible pending migrations read-only and refuses a newer schema w
 });
 
 it("upgrades in order: preflight, drain, backup of the old schema, migrate, readiness", async () => {
-  // Migration 9 (delivery_requeue) rewrites a trigger, so the previous release is the schema at version 8.
-  const previous = 8;
-  const { root, path, db, all } = await legacyDatabase(previous);
+  // The previous release stops before migration 9 (delivery_requeue), which rewrites a trigger;
+  // `all` is the release under test through that migration and `shipped` includes later no-op ones.
+  const { root, path, db, all: shipped } = await legacyDatabase(8);
+  const all = shipped.slice(0, 9);
   db.run(
     "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES('ws','wrk-old',?, 'ready',?)",
     new Date().toISOString(),
@@ -114,18 +115,18 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   expect([...times].sort()).toEqual(times);
   expect(receipt).toMatchObject({
     upgraded: true,
-    fromVersion: previous,
-    toVersion: all.length,
+    fromVersion: all.length - 1,
+    toVersion: shipped.length,
     irreversible: true,
     rollbackPlan: { appRollback: "restore-required", restoreFrom: backupDir },
   });
   expect(receipt.rollbackPlan.command).toContain(backupDir);
-  expect(receipt.backup).toMatchObject({ databaseVersion: previous, evidenceComplete: true });
+  expect(receipt.backup).toMatchObject({ databaseVersion: all.length - 1, evidenceComplete: true });
 
   // The backup is the pre-migration schema; the live database is migrated and keeps its state.
   const manifest = JSON.parse(await readFile(join(backupDir, "manifest.json"), "utf8"));
-  expect(manifest.databaseVersion).toBe(previous);
-  expect(versionOf(join(backupDir, "testmaster.db"))).toBe(previous);
+  expect(manifest.databaseVersion).toBe(all.length - 1);
+  expect(versionOf(join(backupDir, "testmaster.db"))).toBe(all.length - 1);
   const snapshot = new DatabaseSync(join(backupDir, "testmaster.db"), { readOnly: true });
   expect(
     String(
@@ -136,7 +137,7 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   snapshot.close();
   const live = await PersistenceDatabase.open(path, { migrate: false });
   try {
-    expect(live.status()).toMatchObject({ currentVersion: all.length, pending: [] });
+    expect(live.status()).toMatchObject({ currentVersion: shipped.length, pending: [] });
     expect(
       String(live.get("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'")?.sql),
     ).toContain("OLD.state='dead_letter' AND NEW.state<>'pending'");
@@ -150,7 +151,7 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
           live.get("SELECT value FROM operational_state WHERE key=?", LAST_UPGRADE_KEY)?.value,
         ),
       ),
-    ).toMatchObject({ fromVersion: previous, toVersion: all.length, backup: backupDir });
+    ).toMatchObject({ fromVersion: all.length - 1, toVersion: shipped.length, backup: backupDir });
   } finally {
     live.close();
   }
