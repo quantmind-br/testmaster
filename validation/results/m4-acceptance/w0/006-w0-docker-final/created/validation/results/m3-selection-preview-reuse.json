@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-selection-preview-reuse",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:45:16.463Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-selection-preview-reuse",
+        "--base-url",
+        "http://127.0.0.1:36093",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_be4e47b5-44f7-4270-bac3-18714bd61291",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-iOskTw/repo/selection-producer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3cfffd06-53dc-44ee-a802-054cd978a96d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-iOskTw/repo/selection-consumer.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_13841d7f-daff-47a6-879f-60138498acc6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-7291-7065-8ff3-ab8d626c796c",
+        "--preview",
+        "--env",
+        "env_01a135b9-6d80-70a2-94d0-7f3f77541c81",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9ecb825e-5003-429c-95bd-31746d82237e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-7291-7065-8ff3-ab8d626c796c",
+        "--wait",
+        "--env",
+        "env_01a135b9-6d80-70a2-94d0-7f3f77541c81",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1aff2ed7-ee02-4df0-930c-4578909f8e2f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-7291-7065-8ff3-ab8d626c796c",
+        "--reuse-from-run",
+        "run_01a135b9-7ab2-72c3-bdd6-6474e6fe03fc",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a135b9-6d80-70a2-94d0-7f3f77541c81",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_77f1a455-0493-4d09-a520-656ed4a22466",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-iOskTw/repo/selection-expired.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c38dcb1d-643a-4d95-bfa3-2079964c29b6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-8b8a-7305-bb2a-9b0d7a5b276e",
+        "--reuse-from-run",
+        "run_01a135b9-7ab2-72c3-bdd6-6474e6fe03fc",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a135b9-6d80-70a2-94d0-7f3f77541c81",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_3ad4bfe0-dffe-48c4-a58d-6b439cd079c6",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Selection cannot be admitted",
+        "details": {
+          "reasonCode": "upstream_failed",
+          "refusals": [
+            {
+              "testId": "tst_01a135b9-8b8a-7305-bb2a-9b0d7a5b276e",
+              "code": "PRECONDITION_FAILED",
+              "message": "Fixture output is expired or incompatible"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "secret",
+        "remove",
+        "sec_01a135b9-7d7f-72f3-956b-64dad37ed4b7",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_050bf085-4609-45d4-a61f-9f68a6a724b5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "rerun",
+        "tst_01a135b9-7291-7065-8ff3-ab8d626c796c",
+        "--reuse-from-run",
+        "run_01a135b9-7ab2-72c3-bdd6-6474e6fe03fc",
+        "--skip-dependencies",
+        "--wait",
+        "--env",
+        "env_01a135b9-6d80-70a2-94d0-7f3f77541c81",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_d19f3a93-d0bb-4eb8-ae41-d7c926256131",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Selection cannot be admitted",
+        "details": {
+          "reasonCode": "upstream_failed",
+          "refusals": [
+            {
+              "testId": "tst_01a135b9-7291-7065-8ff3-ab8d626c796c",
+              "code": "PRECONDITION_FAILED",
+              "message": "Sensitive fixture reference is revoked or origin-bound elsewhere"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b9-7ab2-72c3-bdd6-6474e6fe03fc",
+    "run_01a135b9-7ab0-7431-b864-454af86ac26e",
+    "run_01a135b9-85dc-75e5-a62f-b8ee9caef049"
+  ],
+  "oracleVerdicts": [],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

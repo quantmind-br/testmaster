@@ -1,0 +1,245 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j17-backup-restore",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:41:16.051Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j17-backup-restore",
+        "--base-url",
+        "http://127.0.0.1:37987",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5912588b-02eb-4dd6-a7ea-fc207a6e9e78",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-gCZbRC/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_766c3e96-6d47-4595-979e-a9386a1ed6a1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135b5-d370-74e8-b88e-5b9a48519c00",
+        "--wait",
+        "--timeout",
+        "120",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b12a1224-97e6-43c0-9d9f-b8e9982c6b92",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135b5-d906-75e2-ac4b-ed057ea5cafb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_91ed3a1e-a4a5-40eb-b1b2-ec757186846b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "backup",
+        "create",
+        "--out",
+        "/tmp/tm-m1-gCZbRC/backup",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2b66d261-16b9-4459-b57d-4bfd108ad9c5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "backup",
+        "restore",
+        "/tmp/tm-m1-gCZbRC/backup",
+        "--out",
+        "/tmp/tm-m1-gCZbRC/restored-data",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1b3d4c31-3c29-4ad3-9dac-2de249921484",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135b5-d906-75e2-ac4b-ed057ea5cafb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_51202021-6774-40ed-99fa-fa4ebf03b17d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "project",
+        "get",
+        "prj_01a135b5-d164-74d9-8c77-3a370b279e18",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_df59e03e-3c6e-4a97-ac3c-37e810975f25",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "get",
+        "tst_01a135b5-d370-74e8-b88e-5b9a48519c00",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b735b84d-17bb-4d78-ad45-1ebc14816692",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135b5-d906-75e2-ac4b-ed057ea5cafb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bac20293-ffea-4ada-a4f7-4a6631dabca0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135b5-d370-74e8-b88e-5b9a48519c00",
+        "--env",
+        "env_01a135b5-d168-773d-a943-1a516a4e7783",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 6,
+      "signal": null,
+      "requestId": "cli_773b8f88-1e3b-4e40-8737-441a2b9081fb",
+      "error": {
+        "code": "PRECONDITION_FAILED",
+        "message": "Database admission is suspended pending restore review",
+        "details": {},
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135b5-d906-75e2-ac4b-ed057ea5cafb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_09242b5f-98e9-4616-bff9-c02d3dfeb4c2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b5-d906-75e2-ac4b-ed057ea5cafb"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "isolatedRestoreRetainsIdsWithoutEffects",
+      "healthy": true,
+      "runId": "run_01a135b5-d906-75e2-ac4b-ed057ea5cafb",
+      "workspaceId": "ws_01a135b5-d158-763f-b06b-0b8a5b2f6faf",
+      "projectId": "prj_01a135b5-d164-74d9-8c77-3a370b279e18",
+      "originalHash": "a058557aa552e1f27e100ecd7b5a4cda947fe797b2ecbf835a7d124ed3dd1a85",
+      "targetRequestsAfterRestore": 0
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-live-progress-cancel-cas",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:34:43.380Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-live-progress-cancel-cas",
+        "--base-url",
+        "http://127.0.0.1:44429",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8e733448-a068-41ce-8742-09aa53f02e86",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135af-97eb-7642-9c9d-af579f66e668",
+    "run_01a135af-d82f-755d-bc94-2b69d9ec2163",
+    "run_01a135af-e01e-742e-a84a-bfe274b18603"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "liveReconnectAndCancelCAS",
+      "runId": "run_01a135af-97eb-7642-9c9d-af579f66e668",
+      "initialEventCount": 9,
+      "resumedEventCount": 11,
+      "terminalEvents": 1,
+      "cancelledOutcome": "cancelled",
+      "completedOutcome": "passed",
+      "provenFailureCollectionCancelOutcome": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

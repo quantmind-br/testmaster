@@ -1,0 +1,283 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-persisted-batch-comparison",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:37:09.654Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-persisted-batch-comparison",
+        "--base-url",
+        "http://127.0.0.1:33341",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_22de9f38-910c-434f-826c-31e4cf85c6f0",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135b2-0b1f-7042-8cd5-71e9ffa95ff2",
+    "run_01a135b2-0b2c-73f0-9c8d-21a6e022add3",
+    "run_01a135b2-1166-71a4-806a-9e02c9375837",
+    "run_01a135b2-1172-7404-ac2b-a1592ca4c5ae",
+    "run_01a135b2-180e-7131-b857-c8ead75176e9",
+    "run_01a135b2-181b-7673-acdf-a32f7b03f819",
+    "run_01a135b2-1ebd-771b-a146-dce786460310",
+    "run_01a135b2-1eca-707b-a1ae-9b9089bbe38c"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "persistedLogicalBatchMatching",
+      "batches": [
+        "bat_01a135b2-0b14-73ef-b76c-5e2c3a9f1140",
+        "bat_01a135b2-1158-73aa-8a0f-69c8a5ca9c77",
+        "bat_01a135b2-1803-7521-aae1-eef93783a4cd",
+        "bat_01a135b2-1eaf-73e7-88ce-48c89159217c"
+      ],
+      "diff": {
+        "comparability": "partially_comparable",
+        "reasons": [
+          "member-added-or-removed"
+        ],
+        "differences": [
+          {
+            "field": "member-4983796fded77b3fd76df583363bc8e013e340b95303b1d41209a60d4bd31978",
+            "left": "run_01a135b2-0b2c-73f0-9c8d-21a6e022add3",
+            "right": null
+          },
+          {
+            "field": "member-5545477d674f2f6d7de363ed047c021e5aadbd38bcc5bce62beaa985a032152e",
+            "left": null,
+            "right": "run_01a135b2-180e-7131-b857-c8ead75176e9"
+          },
+          {
+            "field": "97cb9a284ae1a58f2cd9df6c697c700aca8e06a23e9f0b1c4c2686c0679b1203-steps",
+            "left": [
+              {
+                "createdAt": "2026-10-13T14:37:03.793Z",
+                "durationMs": 10,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a135b2-0b68-70b5-9d3b-339e8b839365"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135b2-0a6f-721e-8ca6-f20fe892838c"
+              },
+              {
+                "createdAt": "2026-10-13T14:37:03.794Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135b2-0a6f-721e-8ca6-f20fe892838c"
+              },
+              {
+                "createdAt": "2026-10-13T14:37:03.795Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135b2-0a6f-721e-8ca6-f20fe892838c"
+              }
+            ],
+            "right": [
+              {
+                "createdAt": "2026-10-13T14:37:07.807Z",
+                "durationMs": 10,
+                "error": null,
+                "evidenceRefs": [
+                  {
+                    "relativePath": "http/health_request.json",
+                    "snapshotId": "snp_01a135b2-1b1d-72c2-bb3a-701abce42a4f"
+                  }
+                ],
+                "expected": null,
+                "index": 0,
+                "observed": null,
+                "planStepId": "health_request",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135b2-0a6f-721e-8ca6-f20fe892838c"
+              },
+              {
+                "createdAt": "2026-10-13T14:37:07.808Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": [
+                  200
+                ],
+                "index": 1,
+                "observed": 200,
+                "planStepId": "health_status",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135b2-0a6f-721e-8ca6-f20fe892838c"
+              },
+              {
+                "createdAt": "2026-10-13T14:37:07.809Z",
+                "durationMs": 0,
+                "error": null,
+                "evidenceRefs": [],
+                "expected": "ok",
+                "index": 2,
+                "observed": "ok",
+                "planStepId": "health_value",
+                "status": "passed",
+                "version": 1,
+                "workspaceId": "ws_01a135b2-0a6f-721e-8ca6-f20fe892838c"
+              }
+            ]
+          },
+          {
+            "field": "97cb9a284ae1a58f2cd9df6c697c700aca8e06a23e9f0b1c4c2686c0679b1203-artifacts",
+            "left": [
+              {
+                "kind": "http",
+                "hash": "8b5b673a5e83d13c9e71b306732e1f7c121939965f6710b73518906ea81720db",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "d3f4130219cb8b747398752d984aef9c8eedeed81967ed3069d902aeb94e4534",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "51f63fe03a98dbbb6bbd483d8006610bbbdb761545ff51dc2d15e5ec6c5c4fa8",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ],
+            "right": [
+              {
+                "kind": "http",
+                "hash": "7a7fb4eaef9c37fa65ce4997141816a0d000b26470e9b08429dc5e5cd0fb4805",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "http/health_request.json"
+              },
+              {
+                "kind": "log",
+                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/container.log"
+              },
+              {
+                "kind": "network",
+                "hash": "d3f4130219cb8b747398752d984aef9c8eedeed81967ed3069d902aeb94e4534",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "logs/egress.ndjson"
+              },
+              {
+                "kind": "snapshot",
+                "hash": "0efc4d4d17d9e6d2314aed3fbe2c076f341b964075da08ff24918930d9f7bb72",
+                "state": "available",
+                "redactionStatus": "redacted",
+                "relativePath": "snapshot/runtime.json"
+              }
+            ]
+          },
+          {
+            "field": "97cb9a284ae1a58f2cd9df6c697c700aca8e06a23e9f0b1c4c2686c0679b1203-durations",
+            "left": [
+              {
+                "number": 1,
+                "durationMs": 686
+              }
+            ],
+            "right": [
+              {
+                "number": 1,
+                "durationMs": 719
+              }
+            ]
+          }
+        ],
+        "comparisonIdentity": "a7ad93b82c5a475af1e83e11152f9c196c1b8a30e1fd4f3e0b59f6dca7d4bffc",
+        "nextCursor": null
+      },
+      "duplicate": {
+        "comparability": "incomparable",
+        "reasons": [
+          "member-added-or-removed",
+          "ambiguous-logical-member-key"
+        ],
+        "differences": [
+          {
+            "field": "member-4983796fded77b3fd76df583363bc8e013e340b95303b1d41209a60d4bd31978",
+            "left": null,
+            "right": "run_01a135b2-1166-71a4-806a-9e02c9375837"
+          },
+          {
+            "field": "ambiguous-97cb9a284ae1a58f2cd9df6c697c700aca8e06a23e9f0b1c4c2686c0679b1203",
+            "left": [
+              "run_01a135b2-1ebd-771b-a146-dce786460310",
+              "run_01a135b2-1eca-707b-a1ae-9b9089bbe38c"
+            ],
+            "right": [
+              "run_01a135b2-1172-7404-ac2b-a1592ca4c5ae"
+            ]
+          }
+        ],
+        "comparisonIdentity": "16370402a6617a37968c7d0e943cc75de0360d7c0f730da747ab32e712f8d60a",
+        "nextCursor": null
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
