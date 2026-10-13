@@ -13,7 +13,7 @@ export const authStaticRoles = {
   bearer: ["token"],
   "api-key": ["key"],
   cookie: ["cookie"],
-  oauth: ["clientSecret"],
+  oauth: ["clientSecret", "username", "password", "totpSeed"],
   oidc: ["clientSecret", "username", "password", "totpSeed"],
   manual: [],
 } as const satisfies Record<string, readonly string[]>;
@@ -24,7 +24,7 @@ export const authManagedRoles = {
   bearer: [],
   "api-key": [],
   cookie: [],
-  oauth: ["accessToken", "refreshToken"],
+  oauth: ["accessToken", "refreshToken", "otp"],
   oidc: ["accessToken", "refreshToken", "otp"],
   manual: ["storageState", "accessToken", "otp"],
 } as const satisfies Record<string, readonly string[]>;
@@ -271,4 +271,5 @@ export type AuthAuthorization = Static<typeof authContracts.AuthAuthorization>;
 export type AuthCheckpointInput = Static<typeof authContracts.AuthCheckpointInput>;
 export type AuthStateExport = Static<typeof authContracts.AuthStateExport>;
 export type AuthCheckpointKind = (typeof authCheckpointKinds)[number];
+export type AuthChallengeKind = (typeof authChallengeKinds)[number];
 export type AuthSessionState = (typeof authSessionStates)[number];
