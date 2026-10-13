@@ -341,6 +341,12 @@ describe("keyboard and accessibility", () => {
     await keyboard.type("https://hooks.s8.invalid/keyboard");
     await keyboard.press("Tab");
     expect((await keyboard.focused()).name).toContain("Signing secret");
+    // The secret choices load asynchronously; ArrowDown must not outrun them.
+    await page
+      .getByLabel(/Signing secret/u)
+      .locator("option")
+      .nth(1)
+      .waitFor({ state: "attached" });
     await keyboard.press("ArrowDown");
     await keyboard.tabTo((element) => element.name.startsWith("Redaction level"), 6);
     await keyboard.press("Tab");
