@@ -76,8 +76,8 @@ import { entity, type RunActor, type Scope, type ServiceContext } from "./contex
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
-import { IntegrationsService } from "./integrations/index.js";
 import { IdentityService } from "./identity.js";
+import { IntegrationsService } from "./integrations/index.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
@@ -90,6 +90,7 @@ import { SecretsService } from "./secrets.js";
 import { SelectionService } from "./selection.js";
 import type { ServerConfig } from "./server-config.js";
 import { filesystemRoot } from "./server-config.js";
+import { serverReadiness } from "./server-profile.js";
 import {
   MembersService,
   OperatorService,
@@ -138,6 +139,12 @@ export interface ApplicationOptions extends ResolveConfigOptions {
   dockerCommand?: DockerCommand;
   /** Opens the PostgreSQL server profile (ADR-016) instead of the local SQLite file. */
   server?: ServerConfig;
+  /**
+   * Migration set of the release this process runs, for the server profile. Production leaves it
+   * unset (the shipped migrations); the per-component upgrade rehearsal (OPS-038) points it at
+   * the migrations of the release being rehearsed.
+   */
+  migrationsDir?: string;
 }
 interface SharedRuntime {
   controllers: ControllerRegistry;
@@ -259,6 +266,7 @@ export class Application {
         )
           throw new ContractError("FORBIDDEN", "Raw evidence requires artifacts:raw permission");
       },
+      authorizeDecrypt: (projectId) => this.authorizeDecrypt(projectId),
       authorizeNamed: (action, resourceType, projectId, environmentId) =>
         this.authorizeNamed(action, resourceType, projectId, environmentId ?? null),
     };
@@ -268,7 +276,7 @@ export class Application {
     this.tests = new TestsService(this.context);
     this.revisions = new RevisionsService(this.context);
     this.approvals = new ApprovalsService(this.context, config);
-    this.secrets = new SecretsService(this.context, config);
+    this.secrets = new SecretsService(this.context, config, serverConfig);
     this.runs = new RunsService(this.context, {
       config,
       admittedImages: () => this.verifiedImages,
@@ -378,7 +386,9 @@ export class Application {
     await chmod(config.dataDir, 0o700);
     // PostgreSQL is never migrated implicitly (ADR-015): a schema that is behind is refused.
     const database = options.server
-      ? PersistenceDatabase.openPostgres(options.server.database)
+      ? PersistenceDatabase.openPostgres(options.server.database, {
+          ...(options.migrationsDir ? { migrationsDir: options.migrationsDir } : {}),
+        })
       : await PersistenceDatabase.open(join(config.dataDir, "testmaster.db"));
     if (options.server)
       try {
@@ -585,6 +595,36 @@ export class Application {
     }
     if (decision.granted)
       auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "allowed");
+  }
+  /**
+   * Decrypting a secret for anything but worker execution (ADR-017, ADR-019) needs an explicit,
+   * unexpired `secrets:export` grant. Roles never imply it and the matrix still caps it: a role
+   * whose `export` column is `deny` cannot be widened. Without a bearer identity (the in-process
+   * single-user CLI) only roles that administer the workspace qualify.
+   */
+  private authorizeDecrypt(projectId?: string): void {
+    try {
+      this.authorizePermission("R", projectId);
+      const role = this.requireMember(projectId);
+      const decision = this.decide("export", role, projectId, ["SecretReference", "secrets"]);
+      const allowed = this.identity
+        ? decision.allowed && decision.granted
+        : rbacMatrix[role].admin === "allow";
+      if (!allowed)
+        throw new ContractError("FORBIDDEN", "Secret decryption requires a secrets:export grant", {
+          scope: "secrets:export",
+        });
+      auditSecurity(this.context, "grant", projectId ?? this.context.workspaceId, "allowed");
+    } catch (error) {
+      if (this.context.workspaceId)
+        auditSecurity(
+          this.context,
+          "authorization",
+          projectId ?? this.context.workspaceId,
+          "denied",
+        );
+      throw error;
+    }
   }
   /** The `secret` and `export` columns apply on top of the write and read scopes (ADR-017). */
   private authorizeColumn(column: "secret" | "export", projectId?: string): void {
@@ -899,6 +939,8 @@ export class Application {
     return [...revokedImageIds(this.database)].sort();
   }
   async readiness() {
+    if (this.serverConfig)
+      return serverReadiness({ database: this.database, server: this.serverConfig });
     let persistence = false;
     try {
       const status = this.database.status();
@@ -1148,6 +1190,9 @@ export class Application {
         target = { status: "FAIL", diagnostics: ["target_unreachable"] };
       }
     }
+    const server = this.serverConfig
+      ? await serverReadiness({ database: this.database, server: this.serverConfig })
+      : null;
     const checks = {
       node: {
         status: node.supported ? "PASS" : "FAIL",
@@ -1159,6 +1204,15 @@ export class Application {
       storage: { status: storage, availableBytes },
       writablePaths,
       database,
+      server: server
+        ? {
+            status: server.status === "ready" ? "PASS" : "FAIL",
+            ...(server.reasons.length ? { diagnostics: server.reasons } : {}),
+            schema: server.schema,
+            atRestEncryption: server.atRestEncryption,
+            workers: server.worker.ready,
+          }
+        : { status: "NOT_APPLICABLE" },
       timezone,
       network,
       browserSandbox,
@@ -1174,7 +1228,16 @@ export class Application {
         : { status: "ABSENT", diagnostics: ["model_not_configured"], requiredForReplay: false },
     };
     const blocking = (
-      ["node", "runtime", "images", "storage", "writablePaths", "database", "target"] as const
+      [
+        "node",
+        "runtime",
+        "images",
+        "storage",
+        "writablePaths",
+        "database",
+        "server",
+        "target",
+      ] as const
     ).filter((name) => checks[name].status === "FAIL");
     const recommendations = [
       ...(storage === "WARN" ? ["Less than 1 GiB is free on the data-directory volume."] : []),
@@ -1193,8 +1256,11 @@ export class Application {
       ...(target.status === "WARN" ? ["The probed target answered with a server error."] : []),
       ...(runtime.available && runtime.mode === "rootful"
         ? [
-            "Rootful Docker host; rootless is the normative reference and its validation is deferred to M4.",
+            "Rootful Docker host; rootless Docker is the validated reference daemon (docs/operations/rootless-docker.md) and rootful stays supported for the local profile.",
           ]
+        : []),
+      ...(server && server.worker.ready === 0
+        ? ["No worker is ready; admitted Runs stay queued until one registers."]
         : []),
     ];
     return { status: blocking.length ? "FAIL" : "PASS", blocking, recommendations, checks };

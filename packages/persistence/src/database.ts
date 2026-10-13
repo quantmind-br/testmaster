@@ -198,7 +198,10 @@ export class PersistenceDatabase {
    * the connecting role cannot bypass row-level security, the byte-order collation and the
    * compatibility of the applied schema, but never migrates: run `testmaster db migrate`.
    */
-  static openPostgres(config: PostgresConfig): PersistenceDatabase {
+  static openPostgres(
+    config: PostgresConfig,
+    options: { migrationsDir?: string } = {},
+  ): PersistenceDatabase {
     const bridge = PostgresBridge.open(config);
     const core: PostgresCore = {
       engine: "postgres",
@@ -227,7 +230,7 @@ export class PersistenceDatabase {
           "Database collation must be a byte-order collation (C) so ordering matches SQLite",
           { reasonCode: "database_collation", collation },
         );
-      instance.verifyCompatibility(loadMigrationsSync("postgres"));
+      instance.verifyCompatibility(loadMigrationsSync("postgres", options.migrationsDir));
       return instance;
     } catch (error) {
       bridge.close();
@@ -414,7 +417,11 @@ export class PersistenceDatabase {
         throw new ContractError(
           "PRECONDITION_FAILED",
           "Controller is incompatible with database schema",
-          { databaseVersion: row.version, supportedVersion: available.length },
+          {
+            reasonCode: "schema_ahead",
+            databaseVersion: row.version,
+            supportedVersion: available.length,
+          },
         );
       if (migration.name !== row.name || migration.checksum !== row.checksum)
         throw new MigrationChecksumError(row.version, row.checksum, migration.checksum);
@@ -430,6 +437,66 @@ export class PersistenceDatabase {
         "Database schema is behind; run testmaster db migrate",
         { reasonCode: "schema_behind", pending: status.pending },
       );
+  }
+  /**
+   * Where the applied schema stands against the migrations this build ships. A controller or worker
+   * whose build is older than the database (`ahead`) must not write or claim work, one whose build
+   * is newer (`behind`) must wait for `testmaster db migrate`; only `current` may do either.
+   */
+  schemaCompatibility(): {
+    databaseVersion: number;
+    supportedVersion: number;
+    state: "current" | "behind" | "ahead";
+  } {
+    const databaseVersion = this.tableExists("schema_migrations")
+      ? Number(
+          this.get("SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations")?.version,
+        )
+      : 0;
+    const supportedVersion = this.core.migrations.length;
+    return {
+      databaseVersion,
+      supportedVersion,
+      state:
+        databaseVersion === supportedVersion
+          ? "current"
+          : databaseVersion > supportedVersion
+            ? "ahead"
+            : "behind",
+    };
+  }
+  /**
+   * PostgreSQL tenant isolation facts (ADR-015): whether the connected role can bypass row-level
+   * security and which tenant tables lack a forced `tenant_isolation` policy. SQLite has one tenant.
+   */
+  tenantIsolation(): { roleBypassesRls: boolean; unprotectedTables: string[] } {
+    if (this.core.engine !== "postgres") return { roleBypassesRls: false, unprotectedTables: [] };
+    const role = this.get<{ rolsuper: boolean; rolbypassrls: boolean }>(
+      "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user",
+    );
+    // The translator refuses `oid`, so tables, flags and policies come from three oid-free views.
+    const tenantTables = this.all<{ name: string }>(
+      "SELECT table_name AS name FROM information_schema.columns WHERE table_schema=current_schema() AND column_name='workspace_id'",
+    ).map((row) => row.name);
+    const flags = this.all<{ name: string; enabled: boolean; forced: boolean }>(
+      "SELECT relname AS name, relrowsecurity AS enabled, relforcerowsecurity AS forced FROM pg_class WHERE relkind='r'",
+    );
+    const policies = new Set(
+      this.all<{ name: string }>(
+        "SELECT tablename AS name FROM pg_policies WHERE schemaname=current_schema() AND policyname='tenant_isolation'",
+      ).map((row) => row.name),
+    );
+    const unprotected = tenantTables
+      .filter(
+        (name) =>
+          !policies.has(name) ||
+          flags.filter((row) => row.name === name).some((row) => !row.enabled || !row.forced),
+      )
+      .sort();
+    return {
+      roleBypassesRls: !role || Boolean(role.rolsuper) || Boolean(role.rolbypassrls),
+      unprotectedTables: unprotected,
+    };
   }
   async migrate(directory?: string): Promise<void> {
     const available = await loadMigrations(this.core.engine, directory);
