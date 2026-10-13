@@ -27,6 +27,7 @@ export * from "./context.js";
 export * from "./delivery.js";
 export * from "./flake.js";
 export * from "./http-support.js";
+export * from "./integrations/index.js";
 export * from "./local-auth.js";
 export * from "./observability.js";
 export * from "./provenance.js";
