@@ -120,7 +120,7 @@ interface Spawned {
 }
 
 function spawnCli(args: string[], env: NodeJS.ProcessEnv, cwd: string): Spawned {
-  const child = spawn(process.execPath, [cli, ...args, "--output", "json", "--no-color"], {
+  const child = spawn(process.execPath, [cli, ...args, "--json"], {
     cwd,
     env,
     stdio: "pipe",
@@ -222,7 +222,7 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
 
   const stack: Partial<ServerStack> = {};
   try {
-    await run(["db", "migrate", "--config", configPath]);
+    await run(["db", "migrate", "--mode", "server", "--config", configPath]);
     const ownerLogin0 = `owner-${randomBytes(4).toString("hex")}`;
     const bootstrap = await run([
       "server",
@@ -344,7 +344,6 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
       if (!client) throw new Error(`No workspace ${workspace} in this stack`);
       return client;
     };
-    const members = new Map<string, StackUser>();
     let application: Application | null = null;
 
     Object.assign(stack, {
@@ -362,12 +361,17 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
         const workspace = memberOptions.workspace ?? 0;
         const login =
           memberOptions.login ?? `${role.replace(/_/g, "-")}-${randomBytes(4).toString("hex")}`;
-        const created = await ownerClient(workspace).mutate("POST", "/v1/members", {
-          login,
-          displayName: `${role} ${login}`,
-          role,
-          projectRestrictions: memberOptions.projectRestrictions ?? [],
-        });
+        const workspaceId = (workspaces[workspace] as StackWorkspace).workspaceId;
+        const created = await ownerClient(workspace).mutate(
+          "POST",
+          `/v1/workspaces/${workspaceId}/members`,
+          {
+            login,
+            displayName: `${role} ${login}`,
+            role,
+            projectRestrictions: memberOptions.projectRestrictions ?? [],
+          },
+        );
         if (created.status !== 201 && created.status !== 200)
           throw new Error(`member creation failed: ${created.status} ${created.text}`);
         const token = expectString(created.json(), /^tm_rec_/, "member recovery token");
@@ -376,7 +380,6 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
           login,
           token,
         );
-        members.set(member.principalId, member);
         return member;
       },
       async issueToken(principalId, scopes, grants = [], workspace = 0) {
