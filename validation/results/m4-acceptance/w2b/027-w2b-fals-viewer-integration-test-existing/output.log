@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |unit| packages/application/src/integrations/integrations.test.ts (25 tests | 1 failed) 532ms
+   ❯ INT-004 integrations need scope consent and test deliveries are labelled (7)
+     × INT-004 only an administrator of the workspace may configure, list or test an integration 17ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/integrations/integrations.test.ts > INT-004 integrations need scope consent and test deliveries are labelled > INT-004 only an administrator of the workspace may configure, list or test an integration
+AssertionError: expected undefined to be 'FORBIDDEN' // Object.is equality
+
+- Expected:
+"FORBIDDEN"
+
++ Received:
+undefined
+
+ ❯ packages/application/src/integrations/integrations.test.ts:952:60
+    950|         "FORBIDDEN",
+    951|       );
+    952|       expect(await codeOf(() => service.test(created.id))).toBe("FORBI…
+       |                                                            ^
+    953|     }
+    954|     expect(f.probe.tests).toHaveLength(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 24 passed (25)
+   Start at  15:46:06
+   Duration  1.58s (tests 35%, transform 34%, import 31%)
+

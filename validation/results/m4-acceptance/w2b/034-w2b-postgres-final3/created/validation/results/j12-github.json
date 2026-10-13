@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j12-github",
+  "class": "deterministic-e2e",
+  "runner": "process-executor",
+  "externalDependency": "local-fake-github",
+  "observedAt": "2026-10-13T18:50:11.486Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "scenario": "push-a-b",
+      "shas": [
+        {
+          "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "verdict": {
+            "TestMaster / result": "cancelled",
+            "TestMaster / required-gate": "cancelled"
+          }
+        },
+        {
+          "sha": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+          "verdict": {
+            "TestMaster / result": "success",
+            "TestMaster / required-gate": "success"
+          }
+        },
+        {
+          "sha": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
+          "verdict": {
+            "TestMaster / result": "success",
+            "TestMaster / required-gate": "success"
+          }
+        },
+        {
+          "sha": "d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3",
+          "verdict": {
+            "TestMaster / required-gate": "success",
+            "TestMaster / result": "success"
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "duplicate-and-tampered",
+      "deliveries": [
+        {
+          "delivery_id": "3e13428b-1fd4-4544-905b-07b0bd024ae7",
+          "outcome": "accepted"
+        },
+        {
+          "delivery_id": "9a313550-8e76-4caa-8fcd-21e97291d682",
+          "outcome": "accepted"
+        },
+        {
+          "delivery_id": "dup-1",
+          "outcome": "accepted"
+        },
+        {
+          "delivery_id": "dup-1",
+          "outcome": "tampered"
+        }
+      ]
+    },
+    {
+      "scenario": "malicious-fork",
+      "fork": {
+        "TestMaster / result": "action_required",
+        "TestMaster / required-gate": "failure"
+      },
+      "internal": {
+        "TestMaster / result": "action_required",
+        "TestMaster / required-gate": "failure"
+      }
+    },
+    {
+      "scenario": "required-gate",
+      "summary": [
+        {
+          "sha": "a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6",
+          "state": "completed",
+          "fork": false,
+          "verdict": {
+            "TestMaster / result": "success",
+            "TestMaster / required-gate": "success"
+          }
+        },
+        {
+          "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "state": "superseded",
+          "fork": false,
+          "verdict": {
+            "TestMaster / result": "cancelled",
+            "TestMaster / required-gate": "cancelled"
+          }
+        },
+        {
+          "sha": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+          "state": "completed",
+          "fork": false,
+          "verdict": {
+            "TestMaster / result": "failure",
+            "TestMaster / required-gate": "failure"
+          }
+        },
+        {
+          "sha": "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
+          "state": "denied",
+          "fork": true,
+          "verdict": {
+            "TestMaster / result": "action_required",
+            "TestMaster / required-gate": "failure"
+          }
+        },
+        {
+          "sha": "d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3",
+          "state": "completed",
+          "fork": false,
+          "verdict": {
+            "TestMaster / required-gate": "failure",
+            "TestMaster / result": "failure"
+          }
+        },
+        {
+          "sha": "e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4",
+          "state": "timed_out",
+          "fork": false,
+          "verdict": {
+            "TestMaster / result": "action_required",
+            "TestMaster / required-gate": "failure"
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "management-routes",
+      "deadLettered": 4,
+      "retried": 4
+    }
+  ],
+  "limitations": [
+    "Local fake GitHub API and webhook sender; no real GitHub App, tunnel or vendor preview is exercised here.",
+    "The ephemeral worker uses the unsafe-local process executor; Docker execution is proven by j12-github.docker.test.ts.",
+    "PostgreSQL 17 profile on one host; fork 'fixture-only' is proven with a loopback fixture."
+  ]
+}

@@ -1,0 +1,53 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |postgres| packages/application/src/retention-controller.pg.test.ts (2 tests | 2 failed) 237ms
+   × SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock 145ms
+   × SEC-037 OPS-021 a legal hold on one workspace keeps its rows through the controller while another workspace is purged 92ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/retention-controller.pg.test.ts > SEC-037 OPS-021 the registered retention controller enforces the declared 90-day metadata and 365-day audit windows in every workspace on the real clock
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/application/src/retention-controller.pg.test.ts:78:70
+     76|   const present = (table: string, id: string, ws: string) => count(sta…
+     77|   // Positive: what is older than the declared window is gone, in both…
+     78|   expect(present("runs", runs.mineExpired.runId, stack.workspaceId)).t…
+       |                                                                      ^
+     79|   expect(present("runs", runs.otherExpired.runId, other)).toBe(0);
+     80|   expect(present("audit_events", audit.mineExpired, stack.workspaceId)…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| packages/application/src/retention-controller.pg.test.ts > SEC-037 OPS-021 a legal hold on one workspace keeps its rows through the controller while another workspace is purged
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/application/src/retention-controller.pg.test.ts:123:63
+    121|   vi.setSystemTime(now);
+    122|   await controller?.run(stack.application.controllerScope(), new Abort…
+    123|   expect(count(stack, "runs", mine.runId, stack.workspaceId)).toBe(0);
+       |                                                               ^
+    124|   expect(count(stack, "runs", held.runId, other)).toBe(1);
+    125|   expect(count(stack, "audit_events", heldAudit, other)).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  15:44:55
+   Duration  2.48s (transform 41%, import 40%, tests 19%)
+

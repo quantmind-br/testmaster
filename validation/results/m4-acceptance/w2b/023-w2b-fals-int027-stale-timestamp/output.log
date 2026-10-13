@@ -1,0 +1,38 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |unit| packages/application/src/notifications/delivery.test.ts (4 tests | 1 failed) 387ms
+   ❯ INT-027 outbound webhooks are signed over the original bytes (4)
+     × INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery 46ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/notifications/delivery.test.ts > INT-027 outbound webhooks are signed over the original bytes > INT-027 a consumer with the wrong secret or a stale timestamp refuses the delivery
+AssertionError: expected { status: 200, outcome: 'accepted' } to match object { status: 401, …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": "stale_timestamp",
+-   "status": 401,
++   "status": 200,
+  }
+
+ ❯ packages/application/src/notifications/delivery.test.ts:88:34
+     86|     const stale = new Date(h.clock.now.getTime() + 301_000);
+     87|     const late = createReferenceConsumer(["whsec_current"], () => stal…
+     88|     expect(late.handle(request)).toMatchObject({ status: 401, reason: …
+       |                                  ^
+     89|
+     90|     const fresh = createReferenceConsumer(["whsec_current"], () => h.c…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  15:45:49
+   Duration  1.48s (transform 38%, import 35%, tests 27%)
+

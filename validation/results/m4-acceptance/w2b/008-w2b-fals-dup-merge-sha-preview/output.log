@@ -1,0 +1,31 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2b
+
+ ❯ |unit| packages/application/src/integrations/github/github-duplicates.test.ts (4 tests | 1 failed) 4598ms
+   ❯ VAL-033 INT-014 INT-015 a duplicate delivery never creates a second Run (4)
+     × VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA 873ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-duplicates.test.ts > VAL-033 INT-014 INT-015 a duplicate delivery never creates a second Run > VAL-033 INT-015 a deployment of the pull request's merge commit never satisfies the head SHA's preview and no check leaves the head SHA
+AssertionError: expected 'completed' to be 'awaiting_preview' // Object.is equality
+
+Expected: "awaiting_preview"
+Received: "completed"
+
+ ❯ packages/application/src/integrations/github/github-duplicates.test.ts:124:33
+    122|     await w.deploy(1, MERGE);
+    123|     await w.drive();
+    124|     expect(w.pull(SHA_A).state).toBe("awaiting_preview");
+       |                                 ^
+    125|     expect(counts(w).runs).toBe(0);
+    126|     // Positive control: the deployment of the head SHA itself starts …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  15:44:48
+   Duration  5.71s (tests 81%, transform 10%, import 9%)
+

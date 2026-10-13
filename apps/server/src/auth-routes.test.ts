@@ -302,3 +302,35 @@ it("SEC-024 an unknown checkpoint is not found and cannot be continued", async (
   ).toBeGreaterThanOrEqual(403);
   expect((await f.call("GET", "/v1/auth-checkpoints", owner)).json().data.items).toEqual([]);
 });
+
+it("OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can", async () => {
+  const f = await fixture();
+  const owner = await f.tokenFor("owner");
+  const viewer = await f.tokenFor("viewer");
+  const runner = await f.tokenFor("runner");
+  const created = await f.call("POST", "/v1/auth-profiles", owner, f.profileBody);
+  const profile = created.json().data;
+  const environment = f.application.environments.create({
+    projectId: f.init.projectId,
+    name: "revoke-env",
+    baseUrl: f.site.url,
+    networkProfile: "local-loopback",
+    authRefs: [profile.id],
+  });
+  const signedIn = await f.call("POST", `/v1/auth-profiles/${profile.id}/test-login`, owner, {
+    environmentId: environment.id,
+  });
+  expect(signedIn.statusCode).toBe(200);
+  const sessionState = async () =>
+    (await f.call("GET", `/v1/auth-profiles/${profile.id}`, owner)).json().data.session.state;
+  const before = await sessionState();
+  expect(before).not.toBe("revoked");
+  for (const denied of [viewer, runner]) {
+    const refused = await f.call("POST", `/v1/auth-profiles/${profile.id}/revoke-session`, denied);
+    expect(refused.statusCode).toBe(403);
+    expect(await sessionState()).toBe(before);
+  }
+  const revoked = await f.call("POST", `/v1/auth-profiles/${profile.id}/revoke-session`, owner);
+  expect(revoked.statusCode).toBe(200);
+  expect(await sessionState()).toBe("revoked");
+});
