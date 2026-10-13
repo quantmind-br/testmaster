@@ -2,10 +2,12 @@ import { routes as authoring } from "./authoring";
 import { routes as discovery } from "./discovery";
 import { routes as featureMap } from "./feature-map";
 import { routes as home } from "./home";
+import { routes as lists } from "./lists";
 import { routes as onboarding } from "./onboarding";
 import { routes as project } from "./project";
 import { routes as requirements } from "./requirements";
 import { routes as retention } from "./retention";
+import { routes as schedules } from "./schedules";
 import { routes as secrets } from "./secrets";
 import { routes as settings } from "./settings";
 import { routes as sources } from "./sources";
@@ -24,4 +26,6 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...requirements,
   ...featureMap,
   ...authoring,
+  ...lists,
+  ...schedules,
 ];

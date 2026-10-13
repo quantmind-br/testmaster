@@ -1,0 +1,77 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "timezone",
+    "tzdataVersion",
+    "occurrences",
+    "skippedByDst"
+  ],
+  "properties": {
+    "timezone": {
+      "type": "string"
+    },
+    "tzdataVersion": {
+      "type": "string"
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fireAt",
+          "localTime",
+          "dst"
+        ],
+        "properties": {
+          "fireAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "localTime": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "dst": {
+            "anyOf": [
+              {
+                "const": "none",
+                "type": "string"
+              },
+              {
+                "const": "fold_first",
+                "type": "string"
+              },
+              {
+                "const": "fold_second",
+                "type": "string"
+              },
+              {
+                "const": "gap_shifted",
+                "type": "string"
+              },
+              {
+                "const": "gap_skipped",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "skippedByDst": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SchedulePreview",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

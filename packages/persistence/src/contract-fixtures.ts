@@ -2,8 +2,6 @@ import { entities, jsonSchema, validate } from "@testmaster/contracts";
 import { contractProjections } from "./contract-projections.js";
 
 export const unavailableEntityCapabilities: Record<string, string> = {
-  Schedule: "schedules",
-  ScheduledFire: "schedules",
   VisualBaseline: "visual-baselines",
 };
 export function catalogValue(

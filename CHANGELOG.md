@@ -58,3 +58,5 @@ and rollback means restoring a backup taken before the upgrade.
 | 10 | `team_identity` | `1c4f549e5c6d` | Password credentials and sessions; local tokens move from `operational_state` to `server_tokens` (ADR-017) |
 | 11 | `tenant_rls` | `42c4a2931448` | PostgreSQL: forced row-level security on every `workspace_id` table. SQLite: comment-only (ADR-015) |
 | 12 | `integrations` | `aebfadc8a1b7` | `integrations` and `inbound_webhook_deliveries` with webhook dedupe and tamper records (ADR-020) |
+| 13 | `authoring_portal` | `515de580d447` | Server-side `test_drafts` per principal and `refinement_turns` for the proposal refinement chat |
+| 14 | `lists_schedules` | `a5689df59326` | `schedules`, `schedule_revisions`, `schedule_firings` and `scheduler_leases` for cross-project lists and fenced scheduling |

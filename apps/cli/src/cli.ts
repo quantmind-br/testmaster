@@ -14,6 +14,7 @@ import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
 import { healingCommands } from "./heal.js";
 import { imageCommands } from "./images.js";
+import { suiteCommands } from "./lists.js";
 import { mcpCommands } from "./mcp.js";
 import { planCommands } from "./plans.js";
 import { projectCommands } from "./projects.js";
@@ -22,6 +23,7 @@ import { requirementCommands } from "./requirements.js";
 import { resourceCommands } from "./resources.js";
 import { runCommands } from "./runs.js";
 import { Runtime, seconds } from "./runtime.js";
+import { scheduleCommands } from "./schedules.js";
 import { secretCommands } from "./secrets.js";
 import { identityCommands, serverCommands } from "./server.js";
 import { setupCommands } from "./setup.js";
@@ -78,6 +80,8 @@ export function createCli(runtime: Runtime): Command {
   identityCommands(program, runtime);
   resourceCommands(program, runtime);
   ciCommands(program, runtime);
+  suiteCommands(program, runtime);
+  scheduleCommands(program, runtime);
   unavailableCommands(program, runtime);
   return program;
 }

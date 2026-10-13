@@ -3,7 +3,9 @@ import * as Entities from "./entities.js";
 import { authoringContracts } from "./m4/authoring.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
+import { listContracts } from "./m4/lists.js";
 import { onboardingContracts } from "./m4/onboarding.js";
+import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
 import { sourceInsightContracts } from "./m4/sources.js";
 import * as Metrics from "./metrics.js";
@@ -633,6 +635,8 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...settingsContracts,
   ...onboardingContracts,
   ...sourceInsightContracts,
+  ...listContracts,
+  ...scheduleContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

@@ -28,8 +28,6 @@ export const {
   Snapshot,
   Analysis,
   HealingProposal,
-  Schedule,
-  ScheduledFire,
   ModelCall,
   AuditEvent,
   IdempotencyReceipt,
@@ -72,8 +70,6 @@ export type Artifact = Static<typeof Artifact>;
 export type Snapshot = Static<typeof Snapshot>;
 export type Analysis = Static<typeof Analysis>;
 export type HealingProposal = Static<typeof HealingProposal>;
-export type Schedule = Static<typeof Schedule>;
-export type ScheduledFire = Static<typeof ScheduledFire>;
 export type ModelCall = Static<typeof ModelCall>;
 export type AuditEvent = Static<typeof AuditEvent>;
 export type IdempotencyReceipt = Static<typeof IdempotencyReceipt>;

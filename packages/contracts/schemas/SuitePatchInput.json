@@ -1,0 +1,145 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "description": {
+      "maxLength": 8000,
+      "type": "string"
+    },
+    "selection": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "members"
+          ],
+          "properties": {
+            "kind": {
+              "const": "fixed",
+              "type": "string"
+            },
+            "members": {
+              "minItems": 1,
+              "maxItems": 500,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "testId",
+                  "revisionId",
+                  "environmentId"
+                ],
+                "properties": {
+                  "testId": {
+                    "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "revisionId": {
+                    "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "environmentId": {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "projects"
+          ],
+          "properties": {
+            "kind": {
+              "const": "dynamic",
+              "type": "string"
+            },
+            "projects": {
+              "minItems": 1,
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "projectId",
+                  "environmentId"
+                ],
+                "properties": {
+                  "projectId": {
+                    "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "environmentId": {
+                    "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "filter": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "properties": {
+                      "tags": {
+                        "maxItems": 32,
+                        "type": "array",
+                        "items": {
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "type": "string"
+                        }
+                      },
+                      "priorities": {
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "const": "critical",
+                              "type": "string"
+                            },
+                            {
+                              "const": "high",
+                              "type": "string"
+                            },
+                            {
+                              "const": "normal",
+                              "type": "string"
+                            },
+                            {
+                              "const": "low",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "nameContains": {
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SuitePatchInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -5,7 +5,9 @@ import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
 import { onboardingRoutes } from "./onboarding.js";
+import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
+import { suiteRoutes } from "./suites.js";
 import type { RouteHandler, RouteModule } from "./types.js";
 
 export type { RouteContext, RouteHandler, RouteModule } from "./types.js";
@@ -17,6 +19,8 @@ export const routeModules: RouteModule[] = [
   settingsRoutes,
   onboardingRoutes,
   authoringRoutes,
+  scheduleRoutes,
+  suiteRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;
