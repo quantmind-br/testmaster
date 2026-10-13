@@ -75,10 +75,12 @@ import {
 import { entity, type RunActor, type Scope, type ServiceContext } from "./context.js";
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
+import { FeatureMapService } from "./feature-map.js";
 import { FlakeService } from "./flake.js";
 import { IntegrationsService } from "./integrations/index.js";
 import { IdentityService } from "./identity.js";
 import { correlationId } from "./observability.js";
+import { OnboardingService } from "./onboarding.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
@@ -170,6 +172,8 @@ export class Application {
   readonly sources: SourcesService;
   readonly discovery: DiscoveryService;
   readonly requirements: RequirementsService;
+  readonly onboarding: OnboardingService;
+  readonly featureMap: FeatureMapService;
   readonly proposals: ProposalsService;
   readonly usage: UsageService;
   readonly explore: ExploreService;
@@ -336,6 +340,13 @@ export class Application {
     this.integrations = new IntegrationsService(this.context);
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
     this.proposals = new ProposalsService(this.context, this.model, this.requirements);
+    this.onboarding = new OnboardingService(this.context, config);
+    this.featureMap = new FeatureMapService(
+      this.context,
+      this.requirements,
+      this.sources,
+      this.discovery,
+    );
     this.usage = new UsageService(this.context);
     this.explore = new ExploreService(this.context, config);
     this.agentMode = new AgentModeService(this.context, config);

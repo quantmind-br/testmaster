@@ -2,7 +2,15 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { constants } from "node:fs";
 import { mkdir, open, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
-import { ContractError, type Source, validate } from "@testmaster/contracts";
+import {
+  ContractError,
+  type Requirement,
+  type Source,
+  type SourceHistory,
+  type SourceListItem,
+  type SourceOverview,
+  validate,
+} from "@testmaster/contracts";
 import { canonicalJson, sha256, uuidV7IdGenerator } from "@testmaster/domain";
 import {
   type EntityDocument,
@@ -19,6 +27,13 @@ import { authoringTransaction } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { invalidateAiDescendants } from "./invalidation.js";
+import {
+  diffOperations,
+  operationFingerprints,
+  type RevisionNode,
+  SOURCE_EXCLUSION_POLICY,
+  staleTestsFor,
+} from "./source-insights.js";
 
 const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 const MAX_STATE_BYTES = 32 * 1024 * 1024;
@@ -313,12 +328,28 @@ export interface SourceDetail extends SourceParseResult {
 interface SourceState {
   archivedAt: string | null;
   revisionId: string;
+  /** Principal that first imported the source; absent on sources created before M4. */
+  ownerId?: string;
 }
 interface RevisionState {
   sourceId: string;
   projectId: string;
   result: SourceParseResult;
+  importedBy?: string;
+  importedAt?: string;
+  origin?: { kind: "local-file" | "upload"; path?: string };
 }
+/** Where a revision sits in its source, for evidence links from requirements and the feature map. */
+export interface RevisionLocation {
+  sourceId: string;
+  sourceName: string | null;
+  ordinal: number;
+  current: boolean;
+  revisionHash: string;
+  chunks: SourceParseResult["chunks"];
+}
+const MAX_HISTORY_CHUNKS = 200;
+const MAX_HISTORY_CHUNK_TEXT = 2000;
 function sourceFormat(input: SourceAddInput, mediaType: string): SourceFormat {
   if (input.format) return input.format;
   const extension = extname(input.path ?? input.name ?? "").toLowerCase();
@@ -478,10 +509,16 @@ export class SourcesService {
             sourceId: source.id,
             projectId: input.projectId,
             result,
+            importedBy: this.ctx.principalId,
+            importedAt: new Date().toISOString(),
+            origin: relativePath ? { kind: "local-file", path: relativePath } : { kind: "upload" },
           } satisfies RevisionState);
           saveAiState(this.ctx, `source:${source.id}`, {
             archivedAt: null,
             revisionId: id,
+            ownerId:
+              readAiState<SourceState>(this.ctx, `source:${source.id}`)?.ownerId ??
+              this.ctx.principalId,
           } satisfies SourceState);
           if (previous) invalidateAiDescendants(this.ctx, input.projectId, `source:${id}`);
           return this.get(source.id);
@@ -512,5 +549,190 @@ export class SourcesService {
       } satisfies SourceState);
     });
     return requireEntity(this.ctx, "Source", id) as StoredSource;
+  }
+  /** Sources of a project with their update state, owner and what depends on the active revision. */
+  async listWithOverview(projectId: string): Promise<SourceListItem[]> {
+    const sources = this.list(projectId);
+    return Promise.all(
+      sources.map(async (source) => ({
+        ...source,
+        overview: await this.overviewOf(source, this.chainOf(source)),
+      })),
+    ) as Promise<SourceListItem[]>;
+  }
+  /** Every revision of a source, newest first, with diffs against the parent. Nothing is deleted. */
+  async history(id: string, discoveryExcludes: readonly string[] = []): Promise<SourceHistory> {
+    const detail = this.get(id);
+    const chain = this.chainOf(detail.source);
+    const nodes = chain.map((node) => ({ id: node.id, result: node.state.result }));
+    const operations = (node: RevisionNode | undefined) =>
+      node ? operationFingerprints(node.result) : new Map<string, string>();
+    const revisions = chain.map((node, index): SourceHistory["revisions"][number] => {
+      const result = node.state.result;
+      const parent = nodes[index + 1];
+      const parentHashes = new Set(parent?.result.chunks.map((chunk) => chunk.contentHash));
+      const hashes = new Set(result.chunks.map((chunk) => chunk.contentHash));
+      const declared =
+        Array.isArray(result.inventory.operations) || Array.isArray(result.inventory.requests)
+          ? operations(nodes[index]).size
+          : null;
+      return {
+        id: node.id,
+        ordinal: chain.length - index,
+        parentId: result.revision.parentId,
+        contentHash: result.revision.contentHash,
+        mediaType: result.revision.mediaType,
+        sizeBytes: result.revision.sizeBytes,
+        parserVersion: result.revision.parserVersion,
+        status: result.revision.status,
+        active: index === 0,
+        importedAt: node.state.importedAt ?? null,
+        importedBy: node.state.importedBy ?? null,
+        chunkCount: result.chunks.length,
+        chunksTruncated: result.chunks.length > MAX_HISTORY_CHUNKS,
+        chunks: result.chunks.slice(0, MAX_HISTORY_CHUNKS).map((chunk) => ({
+          hash: chunk.contentHash,
+          kind: chunk.kind,
+          text: chunk.text.slice(0, MAX_HISTORY_CHUNK_TEXT),
+          textTruncated: chunk.text.length > MAX_HISTORY_CHUNK_TEXT,
+          ref: {
+            ...(chunk.evidenceRef.relativePath
+              ? { relativePath: chunk.evidenceRef.relativePath }
+              : {}),
+            ...(chunk.evidenceRef.offset !== undefined ? { offset: chunk.evidenceRef.offset } : {}),
+            ...(chunk.evidenceRef.length !== undefined ? { length: chunk.evidenceRef.length } : {}),
+            ...(chunk.evidenceRef.page !== undefined ? { page: chunk.evidenceRef.page } : {}),
+            ...(chunk.evidenceRef.jsonPointer
+              ? { jsonPointer: chunk.evidenceRef.jsonPointer }
+              : {}),
+          },
+          requirementLike: chunk.requirementLike,
+        })),
+        diagnosticCount: result.diagnostics.length,
+        diagnostics: result.diagnostics.slice(0, 50).map((diagnostic) => ({
+          code: diagnostic.code,
+          message: diagnostic.message.slice(0, 1000),
+          location: diagnostic.location ?? null,
+        })),
+        operationCount: declared,
+        changes: parent
+          ? {
+              comparedTo: parent.id,
+              operations: diffOperations(operations(parent), operations(nodes[index])),
+              chunksAdded: [...hashes].filter((hash) => !parentHashes.has(hash)).length,
+              chunksRemoved: [...parentHashes].filter((hash) => !hashes.has(hash)).length,
+            }
+          : null,
+      };
+    });
+    const declaredUnsupported = chain[0]?.state.result.inventory.unsupported;
+    const unsupported = Array.isArray(declaredUnsupported) ? declaredUnsupported.map(String) : [];
+    return {
+      id: detail.source.id,
+      version: detail.source.version as number,
+      projectId: detail.source.projectId,
+      role: detail.source.role,
+      displayName: detail.source.displayName,
+      createdAt: detail.source.createdAt as string,
+      archivedAt: detail.archivedAt,
+      overview: await this.overviewOf(detail.source, chain),
+      exclusions: {
+        policy: [...SOURCE_EXCLUSION_POLICY],
+        unsupported,
+        discovery: [...discoveryExcludes],
+      },
+      revisions,
+      staleTests: staleTestsFor(this.ctx, detail.source.projectId, nodes),
+    };
+  }
+  /** Ordinal and location of a revision for evidence links; `null` when it is not in `projectId`. */
+  locate(revisionId: string, projectId: string): RevisionLocation | null {
+    const state = readAiState<RevisionState>(this.ctx, `revision:${revisionId}`);
+    if (!state || state.projectId !== projectId) return null;
+    const source = this.ctx.entities.get("Source", this.ctx.workspaceId, state.sourceId);
+    const sourceState = readAiState<SourceState>(this.ctx, `source:${state.sourceId}`);
+    let ordinal = 0;
+    for (let cursor: string | null = revisionId; cursor && ordinal < 500; ordinal++)
+      cursor =
+        readAiState<RevisionState>(this.ctx, `revision:${cursor}`)?.result.revision.parentId ??
+        null;
+    return {
+      sourceId: state.sourceId,
+      sourceName: source ? String(source.displayName) : null,
+      ordinal,
+      current: sourceState?.revisionId === revisionId && !sourceState.archivedAt,
+      revisionHash: state.result.revision.contentHash,
+      chunks: state.result.chunks,
+    };
+  }
+  private chainOf(source: StoredSource): { id: string; state: RevisionState }[] {
+    const state = readAiState<SourceState>(this.ctx, `source:${source.id}`);
+    const nodes: { id: string; state: RevisionState }[] = [];
+    let id: string | null = source.activeRevisionId ?? state?.revisionId ?? null;
+    while (id && nodes.length < 500) {
+      const revision: RevisionState | null = readAiState<RevisionState>(this.ctx, `revision:${id}`);
+      if (!revision) break;
+      nodes.push({ id, state: revision });
+      id = revision.result.revision.parentId;
+    }
+    return nodes;
+  }
+  private async overviewOf(
+    source: StoredSource,
+    chain: { id: string; state: RevisionState }[],
+  ): Promise<SourceOverview> {
+    const active = chain[0];
+    if (!active) throw new ContractError("PRECONDITION_FAILED", "Source has no revision");
+    const result = active.state.result;
+    const origin = active.state.origin ?? {
+      kind: source.origin === "local-file" ? "local-file" : "upload",
+    };
+    let originState: SourceOverview["origin"]["state"] = "upload";
+    if (origin.kind === "local-file") {
+      originState = "missing";
+      try {
+        const root = await realpath(this.config.cwd);
+        const bytes = await readConfinedCodeFile(root, origin.path ?? "", MAX_SOURCE_BYTES);
+        originState = sha256(bytes) === result.revision.contentHash ? "unchanged" : "changed";
+      } catch {
+        // An unreadable, moved or excluded origin is reported as missing, never as unchanged.
+      }
+    }
+    const olderIds = new Set(chain.slice(1).map((node) => node.id));
+    const row = this.ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      `requirements:${this.ctx.workspaceId}:${source.projectId}`,
+    );
+    const requirements = row
+      ? (JSON.parse(String(row.value)) as { requirements: Requirement[] }).requirements
+      : [];
+    return {
+      ownerId: readAiState<SourceState>(this.ctx, `source:${source.id}`)?.ownerId ?? null,
+      revisionCount: chain.length,
+      active: {
+        id: active.id,
+        ordinal: chain.length,
+        contentHash: result.revision.contentHash,
+        mediaType: result.revision.mediaType,
+        sizeBytes: result.revision.sizeBytes,
+        parserVersion: result.revision.parserVersion,
+        status: result.revision.status,
+        importedAt: active.state.importedAt ?? null,
+        importedBy: active.state.importedBy ?? null,
+      },
+      origin: { kind: origin.kind, path: origin.path ?? null, state: originState },
+      dependents: {
+        staleTests: staleTestsFor(
+          this.ctx,
+          source.projectId,
+          chain.map((node) => ({ id: node.id, result: node.state.result })),
+        ).length,
+        supersededRequirementRefs: requirements.filter((item) =>
+          item.sourceRefs.some((ref) => olderIds.has(ref.sourceRevisionId as string)),
+        ).length,
+      },
+      diagnostics: result.diagnostics.length,
+      processedChunks: result.chunks.length,
+    };
   }
 }

@@ -104,8 +104,8 @@ const Origin = Obj({
   /** True when this is the source's active revision; false means the evidence is superseded. */
   current: Type.Boolean(),
   revisionHash: nullable(ContentDigest),
-  /** Hash of the cited span as it was when the requirement was written. */
-  spanHash: ContentDigest,
+  /** Hash of the cited span as it was when the requirement was written; `null` for legacy evidence. */
+  spanHash: nullable(ContentDigest),
   ref: SpanLocation,
   /** Bounded plain text of the span, or `null` when the span is no longer in the stored revision. */
   excerpt: nullable(Excerpt),

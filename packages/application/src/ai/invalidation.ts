@@ -1,5 +1,6 @@
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { allEntities, type ServiceContext } from "../context.js";
+import { appendRequirementLog, type RequirementLogInput } from "./requirement-log.js";
 
 /** Supersede authoring descendants, never immutable revisions or admitted Runs. */
 export function invalidateAiDescendants(
@@ -15,6 +16,7 @@ export function invalidateAiDescendants(
       version: number;
       fingerprint: string;
     };
+    const reset: RequirementLogInput[] = [];
     for (const requirement of snapshot.requirements) {
       const current = ctx.entities.get("Requirement", ctx.workspaceId, requirement.id);
       if (!current) continue;
@@ -27,9 +29,20 @@ export function invalidateAiDescendants(
         next,
         { projectId },
       );
+      if (requirement.approval)
+        reset.push({
+          kind: "approval_reset",
+          requirementId: requirement.id,
+          requirementKey:
+            String(
+              (current.extensions as Record<string, unknown> | undefined)?.["testmaster:key"] ?? "",
+            ) || null,
+          note: reason,
+        });
       requirement.approval = null;
       requirement.version = next.version;
     }
+    appendRequirementLog(ctx, projectId, reset);
     snapshot.version++;
     snapshot.fingerprint = semanticHash({
       previous: snapshot.fingerprint,

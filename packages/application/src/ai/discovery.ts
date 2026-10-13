@@ -7,6 +7,7 @@ import {
   type CodeSnapshot,
   ContractError,
   type DiscoveryJob,
+  type DiscoverySummary,
   type Feature,
   parseStrictJson,
   validateAgainstSchema,
@@ -270,6 +271,40 @@ export class DiscoveryService {
   get(id: string): DiscoveryDetail {
     const state = this.state(id);
     return { job: requireEntity(this.ctx, "DiscoveryJob", id) as StoredJob, ...state.detail };
+  }
+  /** Discovery runs of a project, newest first, without their bulky per-file detail. */
+  list(projectId: string): DiscoverySummary[] {
+    this.ctx.authorize("R", projectId);
+    requireEntity(this.ctx, "Project", projectId);
+    return allEntities(this.ctx, "DiscoveryJob")
+      .flatMap((job): DiscoverySummary[] => {
+        const state = readAiState<DiscoveryState>(this.ctx, `discovery:${job.id}`);
+        if (!state || state.projectId !== projectId) return [];
+        const { summary, diff, codeSnapshot, featureMap, status, warnings } = state.detail;
+        return [
+          {
+            id: job.id,
+            createdAt: job.createdAt as string,
+            projectId,
+            phase: job.phase as DiscoverySummary["phase"],
+            scope: state.request.scope ?? "codebase",
+            baseSha: diff?.baseSha ?? codeSnapshot.baseSha,
+            headSha: diff?.headSha ?? codeSnapshot.headSha,
+            includesWorkingTree: diff?.includeWorkingTree ?? false,
+            status,
+            counts: {
+              scannedFiles: summary.scannedFiles.length,
+              skippedFiles: summary.skippedFiles.length,
+              endpoints: summary.endpoints.length,
+              routes: summary.routes.length,
+              features: featureMap.features.length,
+              warnings: warnings.length,
+            },
+            sourceRevisionIds: featureMap.sourceRevisionIds,
+          },
+        ];
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
   }
   events(id: string, afterSeq = -1): Record<string, unknown>[] {
     this.get(id);

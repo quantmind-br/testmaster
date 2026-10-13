@@ -222,7 +222,9 @@ const handlers: Record<string, RouteHandler> = {
     return app.uploads.write(id, body as unknown as AsyncIterable<Uint8Array>, uploadToken);
   }),
   "POST /uploads/{id}/complete": h(({ app, id, key }) => app.uploads.complete(id, key)),
-  "GET /projects/{id}/sources": h(({ app, id, page }) => page(app.sources.list(id))),
+  "GET /projects/{id}/sources": h(async ({ app, id, page }) =>
+    page(await app.sources.listWithOverview(id)),
+  ),
   "POST /projects/{id}/sources": h(({ app, id, body, key, ifMatch }) =>
     app.sources.add({
       projectId: id,
