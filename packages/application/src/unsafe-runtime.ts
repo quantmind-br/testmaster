@@ -31,6 +31,7 @@ export class UnsafeRuntime implements AttemptRuntimeExecutor {
           ...process.env,
           TESTMASTER_INPUT_PATH: join(input.inputDir, "snapshot.json"),
           TESTMASTER_EGRESS_SOCKET: join(input.socketsDir, "egress.sock"),
+          TESTMASTER_FORWARDER_PORT: "0",
           TESTMASTER_PROTOCOL_SOCKET: join(input.socketsDir, "protocol.sock"),
         },
         timeoutMs: input.attemptTimeoutMs ?? 300000,
