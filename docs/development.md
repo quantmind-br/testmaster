@@ -932,3 +932,43 @@ authored after implementation freeze using `evals/holdout/case-format.md`, with 
 authorship and the deterministic `disputed` rule ([ADR-012](adr/012-automated-only-validation.md)).
 No capability was homologated by this smoke.
 
+
+### M4 server, portal, teams and automation
+
+`node tools/dist/traceability/cli.js check --milestone-gate M4` passes. The cumulative M3 gate and the four M3 capability gates still pass. The
+write-once record is written by `evaluate --milestone-gate M4` from a clean worktree into
+`validation/results/release-evaluations/M4/<commit>.json` (same procedure as M3: commit, evaluate in a clean worktree of that commit, commit the
+record). Every cited run goes through the result-preservation wrapper; the records are under `validation/results/m4-acceptance/<slice>/`
+(`manifest.json`, `output.log` and the created journey manifests).
+
+How the gate passes ([ADR-022](adr/022-m4-gate-closure.md); nothing historical was rewritten and no target was relaxed):
+
+- All 111 registry items owned by M4 are verified, and the 36 M4 deferred entries on M0–M3 items were discharged by tests.
+- Journeys J09, J10, J12, J13, J16 and J17 (server) have versioned scripts, retained passing runs and automatic, reviewer-named manifests
+  (`validation/journeys/m4-journey-manifests.test.ts`).
+- J12 was also exercised on GitHub.com: a real GitHub App created through the manifest flow, installed on a disposable public repository, with
+  signed webhooks reaching a server-profile stack through a quick tunnel. That run found and fixed three defects that the fake GitHub did not
+  show (manifest events, `push` without `action`, redelivery after uninstall). Evidence: `validation/results/m4-acceptance/hosted/`, validated by
+  `tools/src/github-app/hosted-evidence.ts`.
+- Residual scope that the specification assigns to later milestones is deferred with a literal quote and blocks the gate at that milestone:
+  - **M5**: J08, J12, J13, OPS-001, OPS-026, OPS-028, OPS-033, OPS-035, REQ-028, REQ-038, SEC-030, VAL-035, VAL-045.
+  - **M6**: J16, M0-05, OPS-019, OPS-034, OPS-035, VAL-035, VAL-045.
+
+Claim limits (what M4 does not show):
+
+- Storage is PostgreSQL plus the filesystem on one host. S3-compatible storage is refused (`CAPABILITY_UNAVAILABLE`) and not claimed; tenant key and IAM
+  isolation for S3 is M5 (SEC-030).
+- PostgreSQL writes are serialized by one advisory lock on one host; the server profile does not scale writes horizontally. Remote workers,
+  outbound enrollment over a network and distributed fair share are M5.
+- The portal is verified in Chromium only. No human screen-reader session and no pt-BR/en visual matrix (J16, VAL-041: M6). Firefox and WebKit are M5.
+- Docker: rootless and rootful hardened daemons on Linux x64; no macOS/Windows capacity or portability claim (OPS-034: M6).
+- GitHub: the fake GitHub suite plus one hosted installation on GitHub.com. No real fork case was exercised there (one GitHub account), so fork
+  denial is proven by `validation/journeys/j12-github.pg.test.ts` only. `github.suiteId` list admission is not implemented: pull-request runs use the
+  repository selection. GitHub Enterprise Server and vendor preview APIs are not validated.
+- Dynamic authentication evidence uses the local `fixtures/reference-auth` provider; no hosted identity provider was tested. Notification delivery makes
+  no exactly-once claim, and there is no Jira/Linear tracker (M5).
+- Operations: one disaster-recovery rehearsal (RPO 2.6 s, RTO 8.9 s on the reference host) and one capacity benchmark on Linux x64
+  (`validation/results/m4-dr-rehearsal.json`, `m4-capacity-benchmark.json`); proposed objectives are not measured service levels. Volume encryption is an
+  operator attestation. No SCIM revocation source (OPS-019: M6).
+- Reproduce with `pnpm test`, `pnpm test:postgres`, `pnpm test:postgres-parity`, `pnpm test:docker` and `pnpm test:docker:rootless`, each through the
+  preservation wrapper; the PostgreSQL projects start a pinned `postgres:17-alpine` container per run.

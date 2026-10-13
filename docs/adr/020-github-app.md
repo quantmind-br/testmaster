@@ -44,3 +44,9 @@ M4 delivers PR-triggered runs against preview deployments with required checks b
 
 - Required checks accept only `success` for passing; neutral, action_required, cancelled and passed-with-gate-failed never satisfy them.
 - No vendor-specific preview API is called; vendors without GitHub deployment statuses use `manual`.
+
+## Implementation deviations (M4)
+
+- `github.suiteId` is not implemented. Pull-request runs use the repository `selection` (`all` or `tests`) with origin `github`; see [ADR-022](022-m4-gate-closure.md).
+- `default_events` in the manifest omits `installation` and `installation_repositories`: GitHub always delivers them and rejects a manifest that lists them. The webhook still handles both.
+- A real `push` carries no `action`; the adapter accepts it. A redelivery after `installation.deleted` answers 200 with the original outcome instead of being recorded as tampered.

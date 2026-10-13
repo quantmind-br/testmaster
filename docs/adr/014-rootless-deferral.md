@@ -1,6 +1,6 @@
 # ADR-014: Rootless Docker validation deferred to M4
 
-- Status: accepted
+- Status: superseded by [ADR-016](016-server-profile.md) for the server profile (rootless Docker validated in M4); still the record for the M0–M3 local profile
 - Date: 2026-10-12
 - Scope: the isolation profile claimed through M3. Extends [ADR-003](003-rootful-docker.md).
 

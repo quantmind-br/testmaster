@@ -9,6 +9,20 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+### M4 server, portal, teams and automation (server profile)
+
+- Server profile: `testmaster server start --mode server --config <file>` runs the API, the portal and the controller loops on PostgreSQL 17 (TLS, `verify-full`) with filesystem evidence storage on one host ([ADR-015](docs/adr/015-postgres-runtime.md), [ADR-016](docs/adr/016-server-profile.md)); `storage.kind: "s3"` is refused with `CAPABILITY_UNAVAILABLE` (M5). Compose reference deployment in `deploy/compose/`, workers as host systemd user units, rootless Docker validated ([`docs/operations/rootless-docker.md`](docs/operations/rootless-docker.md)).
+- PostgreSQL migrations are never applied by `Application.open`; use `testmaster db migrate|status --config`. Multi-workspace hosting needs PostgreSQL: forced row-level security on every `workspace_id` table and a runtime role without `BYPASSRLS`.
+- Identity ([ADR-017](docs/adr/017-team-identity.md)): password login with lockout, `__Host-` cookie sessions with CSRF and Origin checks, API/worker/operator tokens in `server_tokens`, recovery tokens, workspaces, members, roles and grants; `GET /v1/rbac/matrix`, `GET /v1/audit-events`, dual-approver policy. Local tokens move from `operational_state` to `server_tokens` (migration 10).
+- CLI remote mode: `auth login|status|logout`, `--endpoint`/`--profile` for `runs`, `tests list|show`, `projects list`, `whoami`; other commands fail closed with `CAPABILITY_UNAVAILABLE`.
+- Portal (`apps/web`, [ADR-018](docs/adr/018-portal.md)): onboarding, sources and discovery, proposals, tests and revisions, refinement chat as proposals, run detail with SSE recovery, artifact gateway with 300 s signed links, comparison, flake, healing review, settings, secrets rotation, project purge, admin and operations pages. Verified in Chromium with axe-core, keyboard-only and 320 px / 200 % journeys; no human screen-reader session.
+- Target dynamic authentication: form, basic, bearer, API key, cookie, OAuth 2.0/OIDC with PKCE and refresh rotation, Cognito, TOTP, browser storage state, manual checkpoints; CAPTCHA is never automated.
+- Lists (`/suites`) and schedules (`/schedules`): cross-project members with per-project mapping, frozen expansion, cron5 with IANA timezone and DST policy, misfire, overlap, dependencies, auto-pause, lease-fenced scheduler.
+- Notifications: Slack, email (nodemailer) and signed outbound webhooks with outbox, backoff and dead letters; `/workers` registration, drain and revoke; per-tenant fair share and queue limits on one host.
+- GitHub App ([ADR-020](docs/adr/020-github-app.md)): manifest flow, signed webhooks with dedupe and tamper detection, checks and one PR comment on the head SHA, previews from deployment statuses or a manual URL, fork denial, revocation that survives restore. Exercised on GitHub.com against a disposable repository; three defects found there are fixed (`docs/operations/github-app.md`).
+- Operations: encrypted server backups with separate access, isolated restore, retention controller, admin pause/drain/reconcile and dead-letter requeue, opt-in `/v1/metrics`, eleven alert rules, incident records, capacity benchmark and disaster-recovery rehearsal (`docs/operations/`).
+- Migrations 10–18 are listed in the table below. [ADR-022](docs/adr/022-m4-gate-closure.md) records the gate closure and the M5/M6 deferrals.
+
 ### Operations (OPS-038, local single-user profile)
 
 - `testmaster db upgrade` previews (default) or applies (`--apply --backup-out <dir>`) an ordered offline
