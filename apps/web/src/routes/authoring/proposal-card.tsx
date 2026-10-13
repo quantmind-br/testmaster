@@ -282,7 +282,7 @@ export function ProposalCard(props: CardProps): ReactNode {
         </ul>
       ) : null}
       {item && item.similar.length > 0 ? (
-        <section aria-label="Similar tests and proposals">
+        <div>
           <p>
             <strong>Similar to existing work</strong>
           </p>
@@ -310,7 +310,7 @@ export function ProposalCard(props: CardProps): ReactNode {
               <UntrustedText value={duplicates[0]?.name} maxLength={80} />
             </label>
           ) : null}
-        </section>
+        </div>
       ) : null}
       <details>
         <summary>
