@@ -1,0 +1,30 @@
+$ vitest run --project unit packages/application/src/integrations/github/github-webhooks.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2c
+
+ ❯ |unit| packages/application/src/integrations/github/github-webhooks.test.ts (11 tests | 1 failed) 5806ms
+   ❯ INT-014 REQ-033 webhook intake (11)
+     × INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering 477ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/integrations/github/github-webhooks.test.ts > INT-014 REQ-033 webhook intake > INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering
+ContractError: Webhook delivery ID was already used with a different payload or scope
+ ❯ IntegrationsService.receiveWebhook packages/application/src/integrations/service.ts:550:13
+    548|       const original = admission.row;
+    549|       this.auditInbound(provider.id, outcome.workspaceId, "tampered", …
+    550|       throw new ContractError(
+       |             ^
+    551|         "IDEMPOTENCY_CONFLICT",
+    552|         "Webhook delivery ID was already used with a different payload…
+ ❯ packages/application/src/integrations/github/github-webhooks.test.ts:67:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  17:05:34
+   Duration  6.88s (tests 85%, transform 8%, import 7%)
+
+[ELIFECYCLE] Test failed. See above for more details.

@@ -318,7 +318,7 @@ export class GithubService {
       ...base,
       installationKey: event?.installationId ?? null,
       projectId,
-      action: event?.action ?? null,
+      action: event?.action || null,
       disposition: "ignored",
       ignoredReason: reason,
     });
@@ -344,23 +344,27 @@ export class GithubService {
       known.integrationId !== integration.id
     )
       return ignore("unknown_installation", event);
+    // The dedupe scope names the project a repository is bound to whatever the installation's later state:
+    // GitHub redelivering an event after an uninstall or a settings change is a duplicate, not tampering.
+    const bound =
+      event.kind === "installation" || event.kind === "installation_repositories"
+        ? null
+        : this.globalStore.repository(known.workspaceId, known.installationId, event.repository.id);
+    const boundProject = bound?.settings.projectId ?? null;
     if (known.state === "revoked" || this.revokedTombstone(known.installationId)) {
       if (known.state === "active")
         this.revokeInstallation(known.workspaceId, known.installationId, "revoked_before_restore");
-      return ignore("revoked_installation", event);
+      return ignore("revoked_installation", event, boundProject);
     }
     if (event.kind === "installation")
       return this.accept(base, event, null, () => this.apply(integration, event));
     if (event.kind === "installation_repositories")
       return this.accept(base, event, null, () => this.apply(integration, event));
-    const repository = this.globalStore.repository(
-      known.workspaceId,
-      known.installationId,
-      event.repository.id,
-    );
-    if (!repository?.granted) return ignore("repository_not_allowed", event);
+    const repository = bound;
+    if (!repository?.granted) return ignore("repository_not_allowed", event, boundProject);
     const projectId = repository.settings.projectId;
-    if (!repository.settings.enabled || !projectId) return ignore("repository_disabled", event);
+    if (!repository.settings.enabled || !projectId)
+      return ignore("repository_disabled", event, boundProject);
     if (integration.projectIds.length && !integration.projectIds.includes(projectId))
       return ignore("project_not_in_integration", event, projectId);
     if (event.kind === "pull_request") {

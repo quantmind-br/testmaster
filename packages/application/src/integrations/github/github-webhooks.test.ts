@@ -38,6 +38,44 @@ describe("INT-014 REQ-033 webhook intake", () => {
     ).toEqual(["TestMaster / required-gate=queued", "TestMaster / result=queued"]);
   });
 
+  it("INT-014 REQ-033 a real push delivery has no action field and is ignored as not handled instead of failing the webhook", async () => {
+    const w = await world();
+    await w.install();
+    const push = w.fake.pushPayload({
+      installationId: w.installationId,
+      repository: w.repository,
+      after: SHA_A,
+    });
+    expect(push).not.toHaveProperty("action");
+    const receipt = await w.send("push", push);
+    expect(receipt).toMatchObject({ outcome: "ignored", ignoredReason: "event_not_handled" });
+    expect(pullCount(w)).toBe(0);
+    expect(runCount(w)).toBe(0);
+    // Positive control: the pull_request that follows the push is still accepted.
+    await expect(w.openPr(7, SHA_A)).resolves.toMatchObject({ outcome: "accepted" });
+    expect(pullCount(w)).toBe(1);
+  });
+
+  it("INT-014 INT-002 a genuine redelivery after the installation was deleted is a duplicate of the original outcome, not tampering", async () => {
+    const w = await world();
+    await w.install();
+    const deliveryId = "11111111-2222-3333-4444-555555555555";
+    const first = await w.openPr(7, SHA_A, { deliver: { deliveryId } });
+    expect(first).toMatchObject({ outcome: "accepted", duplicate: false });
+    const installation = w.fake.installations.get(w.installationId);
+    await w.send("installation", w.fake.installationPayload("deleted", installation as never));
+    const replay = await w.openPr(7, SHA_A, { deliver: { deliveryId } });
+    expect(replay).toMatchObject({ outcome: "accepted", duplicate: true });
+    expect(
+      w.app.database.all("SELECT id FROM inbound_webhook_deliveries WHERE outcome='tampered'"),
+    ).toEqual([]);
+    expect(pullCount(w)).toBe(1);
+    // Negative control: a different delivery ID for the same event is not replayed work; it is ignored.
+    const other = await w.openPr(7, SHA_B, { action: "synchronize" });
+    expect(other).toMatchObject({ outcome: "ignored", ignoredReason: "revoked_installation" });
+    expect(pullCount(w)).toBe(1);
+  });
+
   it("INT-014 refuses a wrong secret, an altered payload and a missing signature without creating a pull or Run", async () => {
     const w = await world();
     await w.install();
