@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   ContractError,
+  WORKER_CREDENTIAL_TTL_SECONDS,
   WORKER_ENROLLMENT_DEFAULT_TTL_SECONDS,
   WORKER_HEARTBEAT_TIMEOUT_MS,
   type WorkerEnrollment,
@@ -81,6 +82,19 @@ function readySlots(database: PersistenceDatabase, now: Date): number {
   return Math.max(1, total);
 }
 
+interface CredentialOwner {
+  workspaceId: string;
+  tokenId: string;
+  workerId: string;
+  enrolled: boolean;
+}
+/** Body of a worker heartbeat (catalog `HeartbeatInput`). */
+export interface WorkerHeartbeat {
+  leaseId: string;
+  state: "ready" | "draining" | "offline";
+  version: number;
+}
+
 /** The worker pool of one workspace: enrollment, drain, revoke and liveness (REQ-038, M4-08). */
 export class WorkerPoolService {
   constructor(
@@ -140,49 +154,138 @@ export class WorkerPoolService {
     return this.ctx.database.inTransaction ? create() : this.ctx.database.withTx(create);
   }
 
-  /**
-   * Presents an enrollment token (controller scope: the workspace is only known from the token).
-   * An unused, unexpired token enrolls its worker exactly once. Presenting it again resumes the
-   * same identity until the worker is revoked, so a restarted process keeps its worker row.
-   */
-  enroll(token: string): { workspaceId: string; workerId: string; resumed: boolean } {
-    const invalid = () =>
-      new ContractError("UNAUTHENTICATED", "Enrollment token is invalid or expired");
-    if (tokenKind(token) !== "worker") throw invalid();
+  private workerDocument(workspaceId: string, id: string): EntityDocument {
+    const found = this.ctx.entities.get("Worker", workspaceId, id);
+    if (!found) throw new ContractError("NOT_FOUND", "Worker does not exist", { id });
+    return found;
+  }
+
+  /** The worker a `tm_wrk_` credential belongs to, or null when the token is unknown, expired or revoked. */
+  private credentialOwner(token: string): CredentialOwner | null {
+    if (tokenKind(token) !== "worker") return null;
     const database = this.ctx.database;
     const row = database.get(
       "SELECT workspace_id,id,expires_at,revoked_at FROM server_tokens WHERE token_hash=?",
       sha256Hex(token),
     );
-    if (!row) throw invalid();
+    if (!row || row.revoked_at) return null;
     const workspaceId = String(row.workspace_id);
     const worker = database.get(
-      "SELECT id,state FROM workers WHERE workspace_id=? AND json_extract(data_json,'$.labels.enrollmentTokenId')=?",
+      "SELECT id,state,data_json FROM workers WHERE workspace_id=? AND json_extract(data_json,'$.labels.enrollmentTokenId')=?",
       workspaceId,
       String(row.id),
     );
-    if (!worker || worker.state === "revoked") throw invalid();
-    const workerId = String(worker.id);
-    const enroll = () => {
-      if (row.revoked_at === null || row.revoked_at === undefined) {
-        if (Date.parse(String(row.expires_at)) <= this.now().getTime()) throw invalid();
-        if (!revokeTokenRow(database, workspaceId, String(row.id))) throw invalid();
-        new AuditRepository(database).append({
-          workspaceId,
-          actor: `worker:${workerId}`,
-          action: "worker.enroll",
-          resourceId: workerId,
-          requestId: randomUUID(),
-          timestamp: this.now().toISOString(),
-          beforeHash: null,
-          afterHash: null,
-        });
-        return false;
-      }
-      return true;
+    if (!worker || worker.state === "revoked") return null;
+    if (Date.parse(String(row.expires_at)) <= this.now().getTime()) return null;
+    const document: { labels?: Record<string, unknown> } = JSON.parse(String(worker.data_json));
+    return {
+      workspaceId,
+      tokenId: String(row.id),
+      workerId: String(worker.id),
+      enrolled: typeof document.labels?.enrolledAt === "string",
     };
-    const resumed = database.inTransaction ? enroll() : database.withTx(enroll);
-    return { workspaceId, workerId, resumed };
+  }
+
+  /**
+   * Presents an enrollment token (controller scope: the workspace is only known from the token).
+   * An unused, unexpired token enrolls its worker exactly once and from then on is that worker's
+   * credential (heartbeat only, `WORKER_CREDENTIAL_TTL_SECONDS`). Presenting it again resumes the
+   * same identity until the worker is revoked, so a restarted process keeps its worker row.
+   */
+  enroll(token: string): { workspaceId: string; workerId: string; resumed: boolean } {
+    const owner = this.credentialOwner(token);
+    if (!owner)
+      throw new ContractError("UNAUTHENTICATED", "Enrollment token is invalid or expired");
+    const { workspaceId, workerId, tokenId } = owner;
+    if (owner.enrolled) return { workspaceId, workerId, resumed: true };
+    const enroll = () => {
+      const at = this.now();
+      this.ctx.database.run(
+        "UPDATE server_tokens SET expires_at=? WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
+        new Date(at.getTime() + WORKER_CREDENTIAL_TTL_SECONDS * 1000).toISOString(),
+        workspaceId,
+        tokenId,
+      );
+      const current = this.workerDocument(workspaceId, workerId);
+      this.ctx.entities.update("Worker", workspaceId, workerId, Number(current.version), {
+        ...current,
+        labels: { ...(current.labels as Record<string, string>), enrolledAt: at.toISOString() },
+      });
+      new AuditRepository(this.ctx.database).append({
+        workspaceId,
+        actor: `worker:${workerId}`,
+        action: "worker.enroll",
+        resourceId: workerId,
+        requestId: randomUUID(),
+        timestamp: at.toISOString(),
+        beforeHash: null,
+        afterHash: null,
+      });
+    };
+    if (this.ctx.database.inTransaction) enroll();
+    else this.ctx.database.withTx(enroll);
+    return { workspaceId, workerId, resumed: false };
+  }
+
+  /**
+   * Heartbeat over HTTP (REQ-038): authenticated by the worker credential and scoped to that
+   * worker. Renews the named lease if this worker still holds it, applies a requested state change
+   * (an administrator's drain always wins) and answers the worker document with its version.
+   */
+  heartbeat(token: string, workerId: string, input: WorkerHeartbeat): EntityDocument {
+    const owner = this.credentialOwner(token);
+    if (!owner?.enrolled || owner.workerId !== workerId)
+      throw new ContractError("UNAUTHENTICATED", "A valid worker credential is required");
+    const { workspaceId } = owner;
+    const database = this.ctx.database;
+    const at = this.now().toISOString();
+    database.withTx(() => {
+      const worker = database.get(
+        "SELECT state,version FROM workers WHERE workspace_id=? AND id=?",
+        workspaceId,
+        workerId,
+      );
+      if (!worker || worker.state === "revoked")
+        throw new ContractError("UNAUTHENTICATED", "A valid worker credential is required");
+      if (Number(worker.version) !== input.version)
+        throw new ContractError("REVISION_CONFLICT", "Worker version changed", {
+          current: Number(worker.version),
+        });
+      const held = database.get(
+        "SELECT j.fence,j.lease_owner,a.id AS attempt_id FROM job_leases j JOIN attempts a ON a.workspace_id=j.workspace_id AND a.job_id=j.id AND a.fence=j.fence WHERE j.workspace_id=? AND j.id=? AND j.state='leased' AND a.worker_id=?",
+        workspaceId,
+        input.leaseId,
+        workerId,
+      );
+      if (!held)
+        throw new ContractError("PRECONDITION_FAILED", "The worker does not hold this lease", {
+          reasonCode: "lease_lost",
+          leaseId: input.leaseId,
+        });
+      new LeaseRepository(database).heartbeat(
+        {
+          workspaceId,
+          jobId: input.leaseId,
+          owner: String(held.lease_owner),
+          fence: Number(held.fence),
+          attemptId: String(held.attempt_id),
+        },
+        undefined,
+        at,
+      );
+      // Draining is an administrator's decision: a worker reporting ready never undoes it.
+      const next =
+        worker.state === "draining" && input.state === "ready" ? "draining" : input.state;
+      database.run(
+        "UPDATE workers SET last_heartbeat_at=?,state=?,version=version+(CASE WHEN state=? THEN 0 ELSE 1 END) WHERE workspace_id=? AND id=?",
+        at,
+        next,
+        next,
+        workspaceId,
+        workerId,
+      );
+    });
+    return this.workerDocument(workspaceId, workerId);
   }
 
   /** Stops new claims; the worker finishes what it holds and goes offline. */
