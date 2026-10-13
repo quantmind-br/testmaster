@@ -112,7 +112,7 @@ function EnvironmentForm(props: EditorProps & { before: EnvironmentSettings | nu
   const changed =
     before === null ||
     before.name !== after.name ||
-    before.baseUrl !== after.baseUrl ||
+    (parseTarget(before.baseUrl) ?? before.baseUrl) !== after.baseUrl ||
     before.networkProfile !== after.networkProfile ||
     before.production !== after.production;
 

@@ -85,7 +85,9 @@ function BudgetForm({
       <ConfirmButton
         label="Set token budget"
         tone="primary"
-        disabledReason={adminReason ?? (parsed === limit ? "Nothing changed yet." : null)}
+        disabledReason={
+          adminReason ?? (parsed !== null && parsed === limit ? "Nothing changed yet." : null)
+        }
         beforeOpen={() => {
           const found = validate();
           setIssues(found);
