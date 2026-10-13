@@ -5189,7 +5189,10 @@
       "scenario": [
         "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
         "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events",
-        "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
+        "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document",
+        "validation/journeys/portal-runs-live.portal.test.ts::J05 UX-026 UX-027 UX-028 progress continues across a severed connection and cancel is a request until the Run stops",
+        "apps/web/src/lib/run-timeline.test.ts::J05 a lease expiry is recorded on its Attempt without producing a verdict",
+        "apps/web/src/lib/run-timeline.test.ts::J05 a snapshot after a gap fills missing steps, keeps newer event state and never reopens a terminal result"
       ],
       "oracle": [
         "Real live Fastify SSE disconnect during a held target request does not cancel; Last-Event-ID reconnect returns exactly durable suffix. Step cancel becomes cancelled, completed pass rejects late cancel unchanged, proven assertion failure remains failed through collection cancel with exactly one terminal and actual Attempt bundle."
@@ -5199,21 +5202,30 @@
         "validation/results/m3-acceptance/001-live-security-gap-8/created/validation/results/m3-live-progress-cancel-cas.json",
         "apps/server/src/server.test.ts",
         "validation/journeys/m1-recovery.docker.test.ts",
-        "validation/results/cli-001-interruption.json"
+        "validation/results/cli-001-interruption.json",
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
       ],
       "code": [
         "apps/server/src/server.ts",
         "packages/application/src/runs.ts",
-        "packages/domain/src/run.ts"
+        "packages/domain/src/run.ts",
+        "apps/web/src/lib/run-timeline.ts",
+        "apps/web/src/api/sse.ts",
+        "apps/web/src/routes/runs.tsx",
+        "validation/journeys/tls-proxy.ts"
       ],
       "coverage": {
         "positive": [
           "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
-          "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events"
+          "apps/server/src/server.test.ts::resumes durable SSE events without gaps or duplicate terminal events",
+          "validation/journeys/portal-runs-live.portal.test.ts::J05 UX-026 UX-027 UX-028 progress continues across a severed connection and cancel is a request until the Run stops"
         ],
         "negative": [
           "validation/journeys/m3-live-security-acceptance.docker.test.ts::J05 real live SSE reconnect returns concurrent missing suffix and cancel CAS preserves proven failure and completed verdict",
-          "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document"
+          "validation/journeys/m1-recovery.docker.test.ts::CLI-001 timeout, graceful signal and partially admitted batch remain one parseable JSON document",
+          "apps/web/src/lib/run-timeline.test.ts::J05 a lease expiry is recorded on its Attempt without producing a verdict",
+          "apps/web/src/lib/run-timeline.test.ts::J05 a snapshot after a gap fills missing steps, keeps newer event state and never reopens a terminal result"
         ],
         "criticalAssertions": [
           {
@@ -5235,20 +5247,14 @@
           {
             "path": "validation/journeys/m1-recovery.docker.test.ts",
             "assertion": "expect((await session.current(runId)).outcome).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/portal-runs-live.portal.test.ts",
+            "assertion": "    await expect\n      .poll(() => eventRequests(diagnostics.requests, live.runId).length, { timeout: 30_000 })\n      .toBeGreaterThan(connectionsBefore);"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "UI rendering of live progress, reconnect and cancel (UX-026–031/052)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "M3 core/M4 UI"
-          }
-        }
-      ],
-      "note": "M3 core is proven: real server SSE durable-cursor ordering and resume, disconnect without cancellation, and step/collection cancel CAS with retained Attempt evidence. UI snapshot/reconnect rendering and duplicate/out-of-order event consumer handling are M4 scope."
+      "note": "M3 core is proven: real server SSE durable-cursor ordering and resume, disconnect without cancellation, and step/collection cancel CAS with retained Attempt evidence. UI snapshot/reconnect rendering and duplicate/out-of-order event consumer handling are M4 scope. M4 S5a added the portal Run detail with live SSE progress, a severed-connection reconnect and cancel-as-request, proved through the real server stack in portal-runs-live.portal.test.ts."
     },
     {
       "id": "J06",
@@ -8480,7 +8486,12 @@
         "apps/cli/src/remote.test.ts::M4-01 auth login refuses plain HTTP outside loopback, an empty variable and a token the server rejects",
         "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
         "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
-        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once"
+        "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 DELETE /v1/artifacts/{id} over HTTP tombstones the artifact and ends issued links, and needs the delete grant",
+        "apps/server/src/portal.test.ts::M4-01 the portal bypass does not weaken the API: /v1 and /mcp still demand authentication",
+        "apps/server/src/portal.test.ts::M4-01 an API-only server (portal disabled or not built) keeps the previous behaviour",
+        "apps/server/src/portal.test.ts::M4-01 only GET and HEAD are anonymous portal requests; mutations on portal paths are rejected",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 deleting the artifact or revoking the minting credential ends an issued link at once"
       ],
       "oracle": [
         "Two organizations share one PostgreSQL database behind the TLS server: tenant B's token, session, MCP tool call and CLI profile receive exactly the response of a missing identifier for tenant A's objects, a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service, and one cancel changes the same persisted Run and revision whether it is sent from the portal API, the remote CLI or MCP.",
@@ -8489,21 +8500,30 @@
       "evidence": [
         "validation/results/m4-acceptance/s1/103-s1-final-unit/output.log",
         "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
-        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log"
+        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log",
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log",
+        "validation/results/m4-acceptance/s5a/009-s5a-parity-new/output.log"
       ],
       "code": [
         "apps/cli/src/remote.ts",
         "apps/server/src/server.ts",
         "packages/application/src/local-auth.ts",
         "packages/persistence/migrations/postgres/0011_tenant_rls.sql",
-        "packages/evidence/src/store.ts"
+        "packages/evidence/src/store.ts",
+        "packages/application/src/artifact-links.ts",
+        "apps/server/src/routes/artifact-gateway.ts",
+        "apps/server/src/routes/core.ts"
       ],
       "coverage": {
         "positive": [
           "apps/cli/src/remote.test.ts::M4-01 UX-001 auth login stores endpoint metadata and a private token file, auth logout keeps the server token valid",
           "apps/cli/src/remote.test.ts::M4-01 UX-001 the remote commands read the server state and every other command is CAPABILITY_UNAVAILABLE naming itself",
           "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 cancelling a Run through the portal session, the remote CLI and MCP persists the same object and revision",
-          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's"
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
+          "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 DELETE /v1/artifacts/{id} over HTTP tombstones the artifact and ends issued links, and needs the delete grant",
+          "apps/server/src/portal.test.ts::M4-01 the portal bypass does not weaken the API: /v1 and /mcp still demand authentication",
+          "apps/server/src/portal.test.ts::M4-01 an API-only server (portal disabled or not built) keeps the previous behaviour"
         ],
         "negative": [
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
@@ -8511,7 +8531,9 @@
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
           "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
           "apps/cli/src/remote.test.ts::M4-01 auth login refuses plain HTTP outside loopback, an empty variable and a token the server rejects",
-          "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once"
+          "validation/journeys/surfaces.pg.test.ts::UX-001 M4-01 revoking a token ends it on the portal API, the remote CLI and MCP at once",
+          "apps/server/src/portal.test.ts::M4-01 only GET and HEAD are anonymous portal requests; mutations on portal paths are rejected",
+          "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 deleting the artifact or revoking the minting credential ends an issued link at once"
         ],
         "criticalAssertions": [
           {
@@ -8541,10 +8563,14 @@
           {
             "path": "apps/cli/src/remote.test.ts",
             "assertion": "    expect(plain.document.error?.code).toBe(\"INVALID_ARGUMENT\");"
+          },
+          {
+            "path": "apps/server/src/artifact-gateway.test.ts",
+            "assertion": "  expect((await f.app.inject({ url })).statusCode).toBe(404);"
           }
         ]
       },
-      "note": "M4-01 verified for the PostgreSQL plus filesystem server profile on one host; S3-compatible storage is not claimed (ADR-016). Tenant isolation is proven by the RLS role, workspace-bound identities, signed cursors bound to principal and path, per-tenant idempotency and workspace-scoped evidence paths."
+      "note": "M4-01 verified for the PostgreSQL plus filesystem server profile on one host; S3-compatible storage is not claimed (ADR-016). Tenant isolation is proven by the RLS role, workspace-bound identities, signed cursors bound to principal and path, per-tenant idempotency and workspace-scoped evidence paths. M4 S5a added the artifact gateway tombstone proof: DELETE /v1/artifacts/{id} ends every issued signed link at once and a new link is refused."
     },
     {
       "id": "M4-02",
@@ -8651,10 +8677,39 @@
       "milestone": "M4",
       "ownerRole": "UX",
       "status": "planned",
-      "scenario": [],
+      "scenario": [
+        "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history lists Runs with filters, sortable columns, paging and a project scope",
+        "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history loads further pages on request and applies the filter form by keyboard",
+        "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history says which state it is in: empty, forbidden and unknown Run are distinct",
+        "validation/journeys/portal-static.portal.test.ts::M4-05 the portal only calls catalog /v1 routes and its own static assets"
+      ],
       "oracle": [],
-      "evidence": [],
-      "code": []
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/runs.tsx",
+        "apps/web/src/components/artifact-viewer.tsx",
+        "apps/web/src/components/run-facts.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history lists Runs with filters, sortable columns, paging and a project scope",
+          "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history loads further pages on request and applies the filter form by keyboard"
+        ],
+        "negative": [
+          "validation/journeys/portal-runs-detail.portal.test.ts::M4-05 the history says which state it is in: empty, forbidden and unknown Run are distinct",
+          "validation/journeys/portal-static.portal.test.ts::M4-05 the portal only calls catalog /v1 routes and its own static assets"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-runs-detail.portal.test.ts",
+            "assertion": "    expect(await page.getByRole(\"link\", { name: runs.passed.runId }).count()).toBe(0);"
+          }
+        ]
+      },
+      "note": "M4 S5a added live Run detail, history, artifacts, comparison, matrix, flaky, quarantine, healing and dashboard pages built only on catalog /v1 routes."
     },
     {
       "id": "M4-06",
@@ -15188,11 +15243,54 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/view-models.test.ts::REQ-053 draws an edge from the producing step to each consumer and lays the producer out first",
+        "apps/web/src/lib/view-models.test.ts::REQ-053 a dependency output feeds its consumer and an unknown name stays unresolved",
+        "apps/web/src/lib/view-models.test.ts::REQ-053 links a created resource to its cleanup and lists orphaned resources with their state",
+        "validation/journeys/portal-runs-dashboard.portal.test.ts::REQ-053 draws the producer to consumer graph and the same data as a table, with the sensitive value hidden",
+        "apps/web/src/lib/view-models.test.ts::REQ-053 masks sensitive captures: rows say hidden, no value is carried and observed data is withheld",
+        "apps/web/src/lib/view-models.test.ts::REQ-053 flags a reference nothing produces as unresolved instead of dropping it",
+        "apps/web/src/lib/run-facts.test.ts::REQ-053 names only the steps that capture a sensitive value",
+        "validation/journeys/portal-runs-detail.portal.test.ts::REQ-053 a step that captures a sensitive value withholds its observed data and fails closed when the plan is unreadable"
+      ],
+      "oracle": [
+        "The data-flow view draws each variable from the step that produces it to the steps that consume it, with resources linked to their cleanup, and offers the same data as a table.",
+        "A reference nothing produces is flagged unresolved, orphaned resources are listed with their state, and sensitive values and the observed data of steps that capture them are never shown."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/data-flow.ts",
+        "apps/web/src/components/data-flow-panel.tsx",
+        "apps/web/src/components/data-flow-graph.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/view-models.test.ts::REQ-053 draws an edge from the producing step to each consumer and lays the producer out first",
+          "apps/web/src/lib/view-models.test.ts::REQ-053 a dependency output feeds its consumer and an unknown name stays unresolved",
+          "apps/web/src/lib/view-models.test.ts::REQ-053 links a created resource to its cleanup and lists orphaned resources with their state",
+          "validation/journeys/portal-runs-dashboard.portal.test.ts::REQ-053 draws the producer to consumer graph and the same data as a table, with the sensitive value hidden"
+        ],
+        "negative": [
+          "apps/web/src/lib/view-models.test.ts::REQ-053 masks sensitive captures: rows say hidden, no value is carried and observed data is withheld",
+          "apps/web/src/lib/view-models.test.ts::REQ-053 flags a reference nothing produces as unresolved instead of dropping it",
+          "apps/web/src/lib/run-facts.test.ts::REQ-053 names only the steps that capture a sensitive value",
+          "validation/journeys/portal-runs-detail.portal.test.ts::REQ-053 a step that captures a sensitive value withholds its observed data and fails closed when the plan is unreadable"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/view-models.test.ts",
+            "assertion": "    expect(graph.edges).toEqual([\n      expect.objectContaining({\n        kind: \"variable\",\n        name: \"order-id\",\n        from: \"create-order\",\n        to: \"read-order\",\n        unresolved: false,\n        sensitive: false,\n      }),\n    ]);"
+          },
+          {
+            "path": "apps/web/src/lib/view-models.test.ts",
+            "assertion": "    expect(stepRows.find((row) => row.id === \"login\")?.observedWithheld).toBe(true);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-054",
@@ -19702,11 +19800,47 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/run-timeline.test.ts::UX-026 request, dispatch, readiness, steps, collection and result advance in order from server time",
+        "apps/web/src/lib/run-facts.test.ts::UX-026 announcements name the phase while live and the result once terminal",
+        "apps/web/src/api/sse.test.ts::UX-026 delivers events in order and closes after the terminal event with one snapshot",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-026 UX-027 a finished Run lists six stages with server time and a reload reattaches to the same Run",
+        "apps/web/src/lib/run-facts.test.ts::UX-026 durations and times come from server timestamps and are shown in UTC",
+        "apps/web/src/api/sse.test.ts::UX-026 ignores comments and blocks without data"
+      ],
+      "oracle": [
+        "The Run page shows request, dispatch, readiness, steps, collection and the terminal result as separate stages whose durations come from server timestamps.",
+        "A live Run shows the current stage as in progress and the terminal stage as pending; nothing is marked done before the server reports it, and a reload reattaches to the same Run."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/run-timeline.ts",
+        "apps/web/src/lib/run-facts.ts",
+        "apps/web/src/components/run-facts.tsx",
+        "apps/web/src/routes/runs.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/run-timeline.test.ts::UX-026 request, dispatch, readiness, steps, collection and result advance in order from server time",
+          "apps/web/src/lib/run-facts.test.ts::UX-026 announcements name the phase while live and the result once terminal",
+          "apps/web/src/api/sse.test.ts::UX-026 delivers events in order and closes after the terminal event with one snapshot",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-026 UX-027 a finished Run lists six stages with server time and a reload reattaches to the same Run"
+        ],
+        "negative": [
+          "apps/web/src/lib/run-facts.test.ts::UX-026 durations and times come from server timestamps and are shown in UTC",
+          "apps/web/src/api/sse.test.ts::UX-026 ignores comments and blocks without data"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/run-timeline.test.ts",
+            "assertion": "    expect(done.map((stage) => stage.durationMs)).toEqual([null, 2000, 3000, 1000, 4000, 2000]);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-027",
@@ -19714,11 +19848,45 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/run-facts.test.ts::UX-027 duplicate and replayed stream events through toRunEvent never reopen a terminal Run",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-027 a live Run streams phase changes, announces them politely and shows the terminal result once",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-026 UX-027 a finished Run lists six stages with server time and a reload reattaches to the same Run",
+        "apps/web/src/lib/run-timeline.test.ts::UX-027 a finished step is never reopened by a late step.started and keeps its server duration",
+        "apps/web/src/api/sse.test.ts::UX-027 drops duplicate and reordered events instead of regressing state"
+      ],
+      "oracle": [
+        "Live updates arrive over the Run event stream and the page announces each phase change politely and once.",
+        "Duplicate, reordered or late events never reopen a finished step or replace the first terminal result, and a sequence gap refetches the snapshot instead of guessing."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/run-timeline.ts",
+        "apps/web/src/api/sse.ts",
+        "apps/web/src/hooks/use-event-stream.ts",
+        "apps/web/src/routes/runs.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/run-facts.test.ts::UX-027 duplicate and replayed stream events through toRunEvent never reopen a terminal Run",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-027 a live Run streams phase changes, announces them politely and shows the terminal result once",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-026 UX-027 a finished Run lists six stages with server time and a reload reattaches to the same Run"
+        ],
+        "negative": [
+          "apps/web/src/lib/run-timeline.test.ts::UX-027 a finished step is never reopened by a late step.started and keeps its server duration",
+          "apps/web/src/api/sse.test.ts::UX-027 drops duplicate and reordered events instead of regressing state"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/run-facts.test.ts",
+            "assertion": "    expect(conflicting.terminal?.outcome).toBe(\"failed\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-028",
@@ -19726,11 +19894,44 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/run-facts.test.ts::UX-028 the cancel control is enabled on a live Run and states a request apart from the terminal result",
+        "apps/web/src/lib/run-timeline.test.ts::UX-028 cancellation is reported as requested until the terminal event and never becomes a terminal result",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-028 cancel works from the keyboard, is a request until the Run stops, and stays disabled with a reason",
+        "apps/web/src/lib/run-facts.test.ts::UX-028 a finished Run disables cancel with the reason and a proven failure stays failed after a cancel request",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-028 a finished Run cannot be cancelled and says why"
+      ],
+      "oracle": [
+        "Cancel runs behind a confirmation and the page shows 'cancellation requested' as a request until the terminal event confirms it.",
+        "A finished Run disables cancel with the reason in text, and a proven failure stays failed after a cancel request."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/run-facts.ts",
+        "apps/web/src/lib/run-timeline.ts",
+        "apps/web/src/routes/runs.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/run-facts.test.ts::UX-028 the cancel control is enabled on a live Run and states a request apart from the terminal result",
+          "apps/web/src/lib/run-timeline.test.ts::UX-028 cancellation is reported as requested until the terminal event and never becomes a terminal result",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-028 cancel works from the keyboard, is a request until the Run stops, and stays disabled with a reason"
+        ],
+        "negative": [
+          "apps/web/src/lib/run-facts.test.ts::UX-028 a finished Run disables cancel with the reason and a proven failure stays failed after a cancel request",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-028 a finished Run cannot be cancelled and says why"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/run-facts.test.ts",
+            "assertion": "    expect(control.reason).toBe(\"The Run already finished as failed; there is nothing to cancel.\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-029",
@@ -19738,11 +19939,54 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/run-facts.test.ts::UX-029 labels a Run Passed only when completed, passed, and neither cleanup nor the gate failed",
+        "apps/web/src/lib/run-facts.test.ts::UX-029 each Attempt keeps its own number, policy, retry reason and result",
+        "apps/server/src/run-views.test.ts::UX-029 GET /runs/{id}/attempts returns every Attempt with its policy and retry reason",
+        "packages/application/src/run-views.test.ts::UX-029 Attempts keep their number, pinned policy and the reason each retry exists",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a retry keeps both attempts, the failed result stays visible and the pass is not called stable",
+        "apps/web/src/lib/run-facts.test.ts::UX-029 a Run that is loading, running or without evidence never turns Passed with time",
+        "apps/web/src/lib/run-facts.test.ts::UX-029 a failed Run keeps its verdict and names a failed cleanup or gate",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a pass is never plain Passed when cleanup or the gate failed",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a step cites evidence only from its own attempt's bundle"
+      ],
+      "oracle": [
+        "Attempts keep their own number, pinned policy, retry reason and result, and steps stay under their own Attempt.",
+        "A Run reads Passed only when it completed, passed, and neither cleanup nor the gate failed; otherwise the label names what failed and a loading or unfinished Run never turns Passed."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log",
+        "validation/results/m4-acceptance/s5a/009-s5a-parity-new/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/run-facts.ts",
+        "apps/web/src/components/run-facts.tsx",
+        "packages/application/src/run-views.ts",
+        "apps/server/src/routes/run-views.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/run-facts.test.ts::UX-029 labels a Run Passed only when completed, passed, and neither cleanup nor the gate failed",
+          "apps/web/src/lib/run-facts.test.ts::UX-029 each Attempt keeps its own number, policy, retry reason and result",
+          "apps/server/src/run-views.test.ts::UX-029 GET /runs/{id}/attempts returns every Attempt with its policy and retry reason",
+          "packages/application/src/run-views.test.ts::UX-029 Attempts keep their number, pinned policy and the reason each retry exists",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a retry keeps both attempts, the failed result stays visible and the pass is not called stable"
+        ],
+        "negative": [
+          "apps/web/src/lib/run-facts.test.ts::UX-029 a Run that is loading, running or without evidence never turns Passed with time",
+          "apps/web/src/lib/run-facts.test.ts::UX-029 a failed Run keeps its verdict and names a failed cleanup or gate",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a pass is never plain Passed when cleanup or the gate failed",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a step cites evidence only from its own attempt's bundle"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/run-facts.test.ts",
+            "assertion": "    expect(describeRunFacts(run({ cleanupOutcome: \"failed\" }), null)).toMatchObject({\n      label: \"Passed, but cleanup failed\",\n      status: \"degraded\",\n      passed: false,\n    });"
+          }
+        ]
+      }
     },
     {
       "id": "UX-030",
@@ -19750,11 +19994,42 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/artifact-view.test.ts::UX-030 access class and integrity are explicit for every state",
+        "apps/web/src/lib/artifact-view.test.ts::UX-030 a partial or subset manifest carries a warning and a complete one does not",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-030 UX-031 the artifact table shows size, hash, access class and integrity; restricted raw offers nothing",
+        "apps/web/src/lib/artifact-view.test.ts::UX-030 an artifact without a recorded hash, a capture or full availability never reads as plain available"
+      ],
+      "oracle": [
+        "Each artifact row shows its Run, Attempt, revision, snapshot, hash, size, access class and integrity state.",
+        "A missing hash, a partial or expired artifact and a subset manifest are named explicitly and never presented as plain available."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/artifact-view.ts",
+        "apps/web/src/components/artifact-viewer.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/artifact-view.test.ts::UX-030 access class and integrity are explicit for every state",
+          "apps/web/src/lib/artifact-view.test.ts::UX-030 a partial or subset manifest carries a warning and a complete one does not",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-030 UX-031 the artifact table shows size, hash, access class and integrity; restricted raw offers nothing"
+        ],
+        "negative": [
+          "apps/web/src/lib/artifact-view.test.ts::UX-030 an artifact without a recorded hash, a capture or full availability never reads as plain available",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-030 UX-031 the artifact table shows size, hash, access class and integrity; restricted raw offers nothing"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/artifact-view.test.ts",
+            "assertion": "    expect(describeIntegrity(entry({ sha256: null }))).toMatchObject({ tone: \"warning\" });"
+          }
+        ]
+      }
     },
     {
       "id": "UX-031",
@@ -19762,11 +20037,50 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/artifact-view.test.ts::UX-031 screenshots use the image viewer, text evidence the escaped text viewer, DOM HTML only a sandboxed frame or source text",
+        "apps/web/src/lib/artifact-view.test.ts::UX-031 text is fetched with a bounded inclusive range and long bodies are cut with a notice",
+        "apps/web/src/lib/artifact-view.test.ts::UX-031 complete JSON is indented while truncated or non-JSON bodies stay verbatim",
+        "apps/web/src/components/components.test.ts::UX-031 opens a gateway link only inside a fully sandboxed frame",
+        "apps/web/src/lib/lib.test.ts::UX-031 accepts only same-origin /v1 gateway links",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-031 images, hostile JSON and HTML, long logs and downloads open only through gateway links and never run",
+        "apps/web/src/lib/artifact-view.test.ts::UX-031 an artifact that is missing, expired or partial is named, never replaced by a viewer",
+        "apps/web/src/components/components.test.ts::UX-031 refuses a foreign, scripted or non-gateway link without rendering a frame"
+      ],
+      "oracle": [
+        "Screenshots open as images, text evidence as escaped text, and HTML, traces, video and archives only inside a sandboxed frame or as a download, always through gateway links.",
+        "Hostile JSON or HTML content is shown literally and never executes; missing, expired or restricted artifacts are named instead of replaced by a blank viewer."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/artifact-view.ts",
+        "apps/web/src/components/artifact-viewer.tsx",
+        "apps/web/src/components/artifact-frame.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/artifact-view.test.ts::UX-031 screenshots use the image viewer, text evidence the escaped text viewer, DOM HTML only a sandboxed frame or source text",
+          "apps/web/src/lib/artifact-view.test.ts::UX-031 text is fetched with a bounded inclusive range and long bodies are cut with a notice",
+          "apps/web/src/lib/artifact-view.test.ts::UX-031 complete JSON is indented while truncated or non-JSON bodies stay verbatim",
+          "apps/web/src/components/components.test.ts::UX-031 opens a gateway link only inside a fully sandboxed frame",
+          "apps/web/src/lib/lib.test.ts::UX-031 accepts only same-origin /v1 gateway links",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-031 images, hostile JSON and HTML, long logs and downloads open only through gateway links and never run"
+        ],
+        "negative": [
+          "apps/web/src/lib/artifact-view.test.ts::UX-031 an artifact that is missing, expired or partial is named, never replaced by a viewer",
+          "apps/web/src/components/components.test.ts::UX-031 refuses a foreign, scripted or non-gateway link without rendering a frame"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/artifact-view.test.ts",
+            "assertion": "    expect(dom.viewers).toEqual([\"frame\", \"text\", \"download\"]);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-032",
@@ -19774,11 +20088,55 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/server/src/artifact-gateway.test.ts::UX-032 a signed link serves the artifact without credentials, inline, for one resource only",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 links honour a single explicit byte range and refuse malformed ranges",
+        "apps/web/src/lib/artifact-view.test.ts::UX-032 only the download viewer asks the gateway for an attachment",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-032 a tampered link shows an expired-link notice and a new link restores the artifact",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 deleting the artifact or revoking the minting credential ends an issued link at once",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 restricted raw evidence and non-readable credentials never receive a gateway link",
+        "apps/server/src/artifact-gateway.test.ts::UX-032 a link expires after 300 seconds and a forged or missing link is refused with its own reason",
+        "apps/web/src/lib/artifact-view.test.ts::UX-032 restricted raw evidence offers no viewer or link even when it would be an image or text"
+      ],
+      "oracle": [
+        "An artifact is opened through a signed link of 300 seconds bound to one artifact and method; authorization and tombstone are re-checked on every request.",
+        "A tampered, expired or swapped link, a revoked minting credential, restricted raw evidence and another tenant are all refused, each with its own reason."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log",
+        "validation/results/m4-acceptance/s5a/009-s5a-parity-new/output.log"
+      ],
+      "code": [
+        "packages/application/src/artifact-links.ts",
+        "apps/server/src/routes/artifact-gateway.ts",
+        "apps/web/src/components/artifact-viewer.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/server/src/artifact-gateway.test.ts::UX-032 a signed link serves the artifact without credentials, inline, for one resource only",
+          "apps/server/src/artifact-gateway.test.ts::UX-032 links honour a single explicit byte range and refuse malformed ranges",
+          "apps/web/src/lib/artifact-view.test.ts::UX-032 only the download viewer asks the gateway for an attachment",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-032 a tampered link shows an expired-link notice and a new link restores the artifact"
+        ],
+        "negative": [
+          "apps/server/src/artifact-gateway.test.ts::UX-032 M4-01 deleting the artifact or revoking the minting credential ends an issued link at once",
+          "apps/server/src/artifact-gateway.test.ts::UX-032 restricted raw evidence and non-readable credentials never receive a gateway link",
+          "apps/server/src/artifact-gateway.test.ts::UX-032 a link expires after 300 seconds and a forged or missing link is refused with its own reason",
+          "apps/web/src/lib/artifact-view.test.ts::UX-032 restricted raw evidence offers no viewer or link even when it would be an image or text"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/server/src/artifact-gateway.test.ts",
+            "assertion": "  expect(revoked.statusCode).toBe(401);"
+          },
+          {
+            "path": "apps/server/src/artifact-gateway.test.ts",
+            "assertion": "  expect(denied.statusCode).toBe(403);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-033",
@@ -19786,11 +20144,47 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/healing-view.test.ts::UX-033 a supported cause without cited evidence is labelled a suggestion, never confirmed",
+        "apps/web/src/lib/healing-view.test.ts::UX-033 confidence always carries its calibration status",
+        "apps/web/src/lib/healing-view.test.ts::UX-033 a hypothesis states how many cited items support and contradict it",
+        "validation/journeys/portal-runs-healing.portal.test.ts::UX-033 a rules analysis shows its source, evidence chain, limitations and a qualified conclusion",
+        "apps/web/src/lib/healing-view.test.ts::UX-033 a missing, pending or unavailable analysis never reads as a finished one",
+        "validation/journeys/portal-runs-healing.portal.test.ts::UX-033 a Run without analysis says so and never reads as 'no problem found'",
+        "apps/web/src/lib/healing-view.test.ts::UX-033 partially supported and unknown conclusions stay visibly qualified"
+      ],
+      "oracle": [
+        "The analysis panel shows source, failure kind, evidence chain, hypotheses with supporting and contradicting evidence, limitations and next steps, and model usage when permitted.",
+        "A missing or pending analysis is stated as such, confidence always carries its calibration status, and a cause without cited evidence is labelled a suggestion, never confirmed."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/components/analysis-panel.tsx",
+        "apps/web/src/lib/healing-view.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/healing-view.test.ts::UX-033 a supported cause without cited evidence is labelled a suggestion, never confirmed",
+          "apps/web/src/lib/healing-view.test.ts::UX-033 confidence always carries its calibration status",
+          "apps/web/src/lib/healing-view.test.ts::UX-033 a hypothesis states how many cited items support and contradict it",
+          "validation/journeys/portal-runs-healing.portal.test.ts::UX-033 a rules analysis shows its source, evidence chain, limitations and a qualified conclusion"
+        ],
+        "negative": [
+          "apps/web/src/lib/healing-view.test.ts::UX-033 a missing, pending or unavailable analysis never reads as a finished one",
+          "validation/journeys/portal-runs-healing.portal.test.ts::UX-033 a Run without analysis says so and never reads as 'no problem found'",
+          "apps/web/src/lib/healing-view.test.ts::UX-033 partially supported and unknown conclusions stay visibly qualified"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/healing-view.test.ts",
+            "assertion": "    expect(bare.label).toBe(\"Suggestion — no cited evidence\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-034",
@@ -19798,11 +20192,47 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/view-models.test.ts::UX-034 marks a passed Run stale when the test or source moved on, keeping the verdict",
+        "apps/web/src/lib/run-facts.test.ts::UX-034 a failed lookup reads unknown, a changed revision reads stale, and history keeps its verdict",
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-034 a changed test revision makes the result stale, an unchanged one stays current and a failed lookup is unknown",
+        "apps/web/src/lib/view-models.test.ts::UX-034 a dimension that could not be loaded is unknown, never current"
+      ],
+      "oracle": [
+        "A passed Run keeps its 'passed at revision' headline and gains a stale marker when the test revision, environment revision or source commit moved on.",
+        "A dimension that could not be loaded is reported unknown, never current, and the historical verdict is never rewritten."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/stale-evidence.ts",
+        "apps/web/src/lib/run-facts.ts",
+        "apps/web/src/routes/runs.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/view-models.test.ts::UX-034 marks a passed Run stale when the test or source moved on, keeping the verdict",
+          "apps/web/src/lib/run-facts.test.ts::UX-034 a failed lookup reads unknown, a changed revision reads stale, and history keeps its verdict",
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-034 a changed test revision makes the result stale, an unchanged one stays current and a failed lookup is unknown"
+        ],
+        "negative": [
+          "apps/web/src/lib/view-models.test.ts::UX-034 a dimension that could not be loaded is unknown, never current",
+          "apps/web/src/lib/run-facts.test.ts::UX-034 a failed lookup reads unknown, a changed revision reads stale, and history keeps its verdict"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/view-models.test.ts",
+            "assertion": "    expect(stale.state).toBe(\"stale\");"
+          },
+          {
+            "path": "apps/web/src/lib/view-models.test.ts",
+            "assertion": "    expect(unknown.state).toBe(\"unknown\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-035",
@@ -19810,11 +20240,46 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/comparison-view.test.ts::UX-035 a partially comparable result lists each difference and keeps the verdict rows",
+        "apps/web/src/lib/view-models.test.ts::UX-035 groups comparison differences by the part of the Run they describe",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-035 compares two Runs of different revisions: explicit mismatch, grouped differences, no regression verdict",
+        "apps/web/src/lib/comparison-view.test.ts::UX-035 an incomparable result is not meaningful and drops the verdict rows from the diagnosis list",
+        "apps/web/src/lib/comparison-view.test.ts::UX-035 a batch case present on one side only reads as not run, never as passed",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-035 two Runs of different tests are not comparable: the verdict difference is not presented"
+      ],
+      "oracle": [
+        "Comparing two Runs or batches lists every difference grouped by the part of the Run it describes and states whether the sides are comparable.",
+        "An incomparable pair is not presented as meaningful, a difference is never called a regression, and a case present on one side only reads as not run."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/comparisons.tsx",
+        "apps/web/src/lib/comparison-view.ts",
+        "apps/web/src/lib/matrix.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/comparison-view.test.ts::UX-035 a partially comparable result lists each difference and keeps the verdict rows",
+          "apps/web/src/lib/view-models.test.ts::UX-035 groups comparison differences by the part of the Run they describe",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-035 compares two Runs of different revisions: explicit mismatch, grouped differences, no regression verdict"
+        ],
+        "negative": [
+          "apps/web/src/lib/comparison-view.test.ts::UX-035 an incomparable result is not meaningful and drops the verdict rows from the diagnosis list",
+          "apps/web/src/lib/comparison-view.test.ts::UX-035 a batch case present on one side only reads as not run, never as passed",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-035 two Runs of different tests are not comparable: the verdict difference is not presented"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/comparison-view.test.ts",
+            "assertion": "    expect(summary.meaningful).toBe(false);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-036",
@@ -19822,11 +20287,49 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/matrix.test.ts::UX-036 a batch whose every member has a loaded Run is complete and reads its gate",
+        "apps/web/src/lib/batch-view.test.ts::UX-036 a complete batch keeps the gate the server computed",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-036 a complete batch reads its gate, with every pair run and no Not run cell",
+        "apps/web/src/lib/matrix.test.ts::UX-036 a member without a loaded Run makes the batch incomplete instead of green",
+        "apps/web/src/lib/matrix.test.ts::UX-036 a member that was not dispatched keeps its reason code and makes the batch incomplete",
+        "apps/web/src/lib/batch-view.test.ts::UX-036 an incomplete batch never shows a passed gate"
+      ],
+      "oracle": [
+        "The batch matrix lists every Run per test and environment, repetitions included, with text status and links to each Run.",
+        "A pair with no Run reads 'Not run', not-dispatched members keep their reason code, and an incomplete batch never reads green."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log",
+        "validation/results/m4-acceptance/s5a/009-s5a-parity-new/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/comparisons.tsx",
+        "apps/web/src/components/batch-matrix.tsx",
+        "apps/web/src/lib/matrix.ts",
+        "apps/web/src/lib/batch-view.ts",
+        "apps/server/src/routes/core.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/matrix.test.ts::UX-036 a batch whose every member has a loaded Run is complete and reads its gate",
+          "apps/web/src/lib/batch-view.test.ts::UX-036 a complete batch keeps the gate the server computed",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-036 a complete batch reads its gate, with every pair run and no Not run cell"
+        ],
+        "negative": [
+          "apps/web/src/lib/matrix.test.ts::UX-036 a member without a loaded Run makes the batch incomplete instead of green",
+          "apps/web/src/lib/matrix.test.ts::UX-036 a member that was not dispatched keeps its reason code and makes the batch incomplete",
+          "apps/web/src/lib/batch-view.test.ts::UX-036 an incomplete batch never shows a passed gate"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/matrix.test.ts",
+            "assertion": "    expect(matrix.completeness).toBe(\"incomplete\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-037",
@@ -19834,11 +20337,48 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/view-models.test.ts::UX-037 ten passes never read as stable and print the 95% upper bound beside the verdict",
+        "apps/web/src/lib/flake-form.test.ts::UX-037 accepts a comparable cohort definition and builds the request body",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-037 a finished study shows counts, interval, limitations and never calls a small sample stable",
+        "apps/web/src/lib/flake-form.test.ts::UX-037 refuses a sample too small to estimate flakiness",
+        "apps/web/src/lib/flake-form.test.ts::UX-037 requires a test, one revision, one environment and a whole-number seed",
+        "apps/web/src/lib/view-models.test.ts::UX-037 without a zero-failure bound or interval the wording does not invent either",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-037 the start form rejects n below 2, shows the server's refusal and keeps the input"
+      ],
+      "oracle": [
+        "A flaky study shows counts, the 95% interval, the zero-failure upper bound, the server's classification, limitations and the Runs behind it.",
+        "A sample without failures is never described as stable, and the start form refuses a cohort too small to estimate flakiness."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/flaky.tsx",
+        "apps/web/src/lib/flake-view.ts",
+        "apps/web/src/lib/flake-form.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/view-models.test.ts::UX-037 ten passes never read as stable and print the 95% upper bound beside the verdict",
+          "apps/web/src/lib/flake-form.test.ts::UX-037 accepts a comparable cohort definition and builds the request body",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-037 a finished study shows counts, interval, limitations and never calls a small sample stable"
+        ],
+        "negative": [
+          "apps/web/src/lib/flake-form.test.ts::UX-037 refuses a sample too small to estimate flakiness",
+          "apps/web/src/lib/flake-form.test.ts::UX-037 requires a test, one revision, one environment and a whole-number seed",
+          "apps/web/src/lib/view-models.test.ts::UX-037 without a zero-failure bound or interval the wording does not invent either",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-037 the start form rejects n below 2, shows the server's refusal and keeps the input"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/view-models.test.ts",
+            "assertion": "    expect(text).not.toMatch(/\\bstable\\b/i);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-038",
@@ -19846,11 +20386,49 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/quarantine-view.test.ts::UX-038 an active quarantine states exclusion with reason quarantined and the strict-policy effect",
+        "apps/web/src/lib/quarantine-view.test.ts::UX-038 a quarantine is active until its expiry and expired from that moment on",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-038 quarantines a test with owner, reason and expiry, states the gate effect and keeps the failed Run failed",
+        "apps/web/src/lib/quarantine-view.test.ts::UX-038 an expired quarantine no longer claims an exclusion",
+        "apps/web/src/lib/quarantine-view.test.ts::UX-038 an effect the preview does not confirm is reported as unconfirmed",
+        "apps/web/src/lib/quarantine-view.test.ts::UX-038 requires a test, a reason and a future expiry",
+        "validation/journeys/portal-runs-compare.portal.test.ts::UX-038 an expired quarantine is marked expired and no longer claims an exclusion"
+      ],
+      "oracle": [
+        "Quarantine entries show test, owner, reason, expiry, active state and the Run counts of the metrics window, and the page states the gate effect before a change is confirmed.",
+        "An expired quarantine no longer claims an exclusion, an edit sends the version it read and a stale edit is refused, and quarantined failures stay in history."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/quarantine.tsx",
+        "apps/web/src/lib/quarantine-view.ts",
+        "apps/server/src/routes/run-views.ts",
+        "packages/application/src/run-views.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/quarantine-view.test.ts::UX-038 an active quarantine states exclusion with reason quarantined and the strict-policy effect",
+          "apps/web/src/lib/quarantine-view.test.ts::UX-038 a quarantine is active until its expiry and expired from that moment on",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-038 quarantines a test with owner, reason and expiry, states the gate effect and keeps the failed Run failed"
+        ],
+        "negative": [
+          "apps/web/src/lib/quarantine-view.test.ts::UX-038 an expired quarantine no longer claims an exclusion",
+          "apps/web/src/lib/quarantine-view.test.ts::UX-038 an effect the preview does not confirm is reported as unconfirmed",
+          "apps/web/src/lib/quarantine-view.test.ts::UX-038 requires a test, a reason and a future expiry",
+          "validation/journeys/portal-runs-compare.portal.test.ts::UX-038 an expired quarantine is marked expired and no longer claims an exclusion"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/quarantine-view.test.ts",
+            "assertion": "    expect(effect.kind).toBe(\"expired\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-039",
@@ -19858,11 +20436,46 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "apps/web/src/lib/healing-view.test.ts::UX-039 UX-040 acceptance is allowed only for a reviewable proposal with intact assertions",
+        "apps/web/src/lib/healing-view.test.ts::UX-039 every status has text and a shape, and an unknown status is never success",
+        "validation/journeys/portal-runs-healing.portal.test.ts::UX-039 the review shows before and after, the assertion invariant, risk, policy and evidence",
+        "apps/web/src/lib/healing-view.test.ts::UX-039 acceptance names every reason it is blocked",
+        "apps/web/src/lib/healing-view.test.ts::UX-039 a rejection needs a bounded reason",
+        "validation/journeys/portal-runs-healing.portal.test.ts::UX-039 a proposal whose assertions are not intact cannot be accepted"
+      ],
+      "oracle": [
+        "The healing review shows the change before and after, identity, automation decision and reasons, the preserved-assertions invariant, risk and evidence, and accept or reject happen behind explicit confirmation.",
+        "A proposal whose assertions are not intact or whose base revision is no longer active cannot be accepted, a version conflict is recoverable without overwriting, and a viewer sees the actions disabled with the reason."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/healing.tsx",
+        "apps/web/src/lib/healing-view.ts",
+        "apps/web/src/components/healing-badges.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/healing-view.test.ts::UX-039 UX-040 acceptance is allowed only for a reviewable proposal with intact assertions",
+          "apps/web/src/lib/healing-view.test.ts::UX-039 every status has text and a shape, and an unknown status is never success",
+          "validation/journeys/portal-runs-healing.portal.test.ts::UX-039 the review shows before and after, the assertion invariant, risk, policy and evidence"
+        ],
+        "negative": [
+          "apps/web/src/lib/healing-view.test.ts::UX-039 acceptance names every reason it is blocked",
+          "apps/web/src/lib/healing-view.test.ts::UX-039 a rejection needs a bounded reason",
+          "validation/journeys/portal-runs-healing.portal.test.ts::UX-039 a proposal whose assertions are not intact cannot be accepted"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/healing-view.test.ts",
+            "assertion": "    expect(blocked.allowed).toBe(false);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-040",
@@ -19870,11 +20483,54 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/run-views.test.ts::UX-040 healing proposals are listed only for the Run they were proposed for",
+        "apps/web/src/lib/healing-view.test.ts::UX-040 never says healed while the verification Run is queued or running",
+        "apps/server/src/server.test.ts::UX-040 REST healing review stays readable while the verification Run is queued and reports the verdict once it finishes",
+        "validation/journeys/portal-runs-healing.portal.test.ts::UX-040 the Run lists its healing proposals with status and risk and links to the review",
+        "apps/web/src/lib/healing-view.test.ts::UX-040 a failed verification is not promoted and a proposal without one says none exists",
+        "apps/web/src/lib/healing-view.test.ts::UX-039 UX-040 acceptance is allowed only for a reviewable proposal with intact assertions",
+        "validation/journeys/portal-runs-healing.portal.test.ts::UX-039 UX-040 accepting asks for confirmation, then starts a new verification Run and never shows healed while it is queued"
+      ],
+      "oracle": [
+        "A Run lists only the healing proposals proposed for it, with status and risk, and accepting one starts a new verification Run.",
+        "The page never says healed while the verification Run is queued or running, and a failed verification is not promoted."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log",
+        "validation/results/m4-acceptance/s5a/009-s5a-parity-new/output.log"
+      ],
+      "code": [
+        "apps/web/src/routes/healing.tsx",
+        "apps/web/src/lib/healing-view.ts",
+        "packages/application/src/run-views.ts",
+        "apps/server/src/routes/run-views.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/run-views.test.ts::UX-040 healing proposals are listed only for the Run they were proposed for",
+          "apps/web/src/lib/healing-view.test.ts::UX-040 never says healed while the verification Run is queued or running",
+          "apps/server/src/server.test.ts::UX-040 REST healing review stays readable while the verification Run is queued and reports the verdict once it finishes",
+          "validation/journeys/portal-runs-healing.portal.test.ts::UX-040 the Run lists its healing proposals with status and risk and links to the review"
+        ],
+        "negative": [
+          "apps/web/src/lib/healing-view.test.ts::UX-040 a failed verification is not promoted and a proposal without one says none exists",
+          "apps/web/src/lib/healing-view.test.ts::UX-039 UX-040 acceptance is allowed only for a reviewable proposal with intact assertions",
+          "validation/journeys/portal-runs-healing.portal.test.ts::UX-039 UX-040 accepting asks for confirmation, then starts a new verification Run and never shows healed while it is queued"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/run-views.test.ts",
+            "assertion": "    expect(app.runViews.healingProposals(failed.runId)).toMatchObject([\n      { id: mine.id, failedRunId: failed.runId, status: \"proposed\", risk: \"read\" },\n    ]);"
+          },
+          {
+            "path": "apps/web/src/lib/healing-view.test.ts",
+            "assertion": "    expect(queued.healed).toBe(false);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-041",
@@ -20873,27 +21529,49 @@
       "scenario": [
         "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
         "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass",
-        "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible"
+        "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible",
+        "packages/application/src/run-views.test.ts::VAL-007 quarantine never improves first-attempt or terminal rates and stays visible",
+        "apps/web/src/lib/view-models.test.ts::VAL-007 keeps the first-attempt, terminal, conditional and end-to-end families in separate sections",
+        "apps/server/src/run-views.test.ts::VAL-007 GET /projects/{id}/metrics and /quarantine expose rates and visible quarantine records",
+        "validation/journeys/portal-runs-dashboard.portal.test.ts::VAL-007 shows first-attempt, terminal, conditional and end-to-end rates as separate sections with fractions, definitions and zero exclusions",
+        "apps/web/src/lib/view-models.test.ts::VAL-007 an unavailable rate says Insufficient data or Not applicable and is never shown as 0%",
+        "packages/application/src/run-views.test.ts::VAL-007 the dashboard window is bounded and an inverted window is refused",
+        "validation/journeys/portal-runs-dashboard.portal.test.ts::VAL-007 quarantine changes no rate, and the quarantined test stays visible with its failed Runs"
       ],
       "oracle": [
         "Local report metrics separate first-attempt, terminal, conditional and end-to-end (gate) rates with labelled definitions and keep every exclusion visible without denominator improvement."
       ],
       "evidence": [
         "packages/reporting/src/metrics.test.ts",
-        "validation/results/m3-acceptance/001-unit-final/output.log"
+        "validation/results/m3-acceptance/001-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log",
+        "validation/results/m4-acceptance/s5a/009-s5a-parity-new/output.log"
       ],
       "code": [
-        "packages/reporting/src/metrics.ts"
+        "packages/reporting/src/metrics.ts",
+        "apps/web/src/routes/dashboard.tsx",
+        "apps/web/src/lib/metrics-view.ts",
+        "packages/application/src/run-views.ts",
+        "packages/application/src/artifacts.ts",
+        "apps/server/src/routes/run-views.ts"
       ],
       "coverage": {
         "positive": [
           "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
-          "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible"
+          "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible",
+          "packages/application/src/run-views.test.ts::VAL-007 quarantine never improves first-attempt or terminal rates and stays visible",
+          "apps/web/src/lib/view-models.test.ts::VAL-007 keeps the first-attempt, terminal, conditional and end-to-end families in separate sections",
+          "apps/server/src/run-views.test.ts::VAL-007 GET /projects/{id}/metrics and /quarantine expose rates and visible quarantine records",
+          "validation/journeys/portal-runs-dashboard.portal.test.ts::VAL-007 shows first-attempt, terminal, conditional and end-to-end rates as separate sections with fractions, definitions and zero exclusions"
         ],
         "negative": [
           "packages/reporting/src/metrics.test.ts::internal retries and expanded dependencies do not improve strict pass denominator",
           "packages/reporting/src/metrics.test.ts::all-blocked and empty selections never invent completion or conditional pass",
-          "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible"
+          "packages/reporting/src/metrics.test.ts::labels first-attempt, terminal, conditional and end-to-end rates and keeps every exclusion visible",
+          "apps/web/src/lib/view-models.test.ts::VAL-007 an unavailable rate says Insufficient data or Not applicable and is never shown as 0%",
+          "packages/application/src/run-views.test.ts::VAL-007 the dashboard window is bounded and an inverted window is refused",
+          "validation/journeys/portal-runs-dashboard.portal.test.ts::VAL-007 quarantine changes no rate, and the quarantined test stays visible with its failed Runs"
         ],
         "criticalAssertions": [
           {
@@ -20919,20 +21597,18 @@
           {
             "path": "packages/reporting/src/metrics.test.ts",
             "assertion": "expect(metrics.rates.gatePassRate?.definition).toMatch(/^End-to-end gate: /);"
+          },
+          {
+            "path": "packages/application/src/run-views.test.ts",
+            "assertion": "    expect(after.metrics.rates.terminalPassRate).toEqual(before.metrics.rates.terminalPassRate);"
+          },
+          {
+            "path": "apps/web/src/lib/view-models.test.ts",
+            "assertion": "    expect(unknown).toMatchObject({\n      display: \"Insufficient data\",\n      fraction: \"0 of unknown\",\n      available: false,\n    });"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "dashboard rendering of first-attempt/terminal/conditional/end-to-end metrics and visible quarantine exclusions (UI)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility"
-          }
-        }
-      ],
-      "note": "Local metrics separate first-attempt (strictPassRate), terminal (terminalPassRate), conditional (firstAttemptFailureRate) and end-to-end (gatePassRate) bases, each with a labelled definition, and expose exclusions. End-to-end is the existing gate rate: no new metric key. Dashboard rendering is M4."
+      "note": "Local metrics separate first-attempt (strictPassRate), terminal (terminalPassRate), conditional (firstAttemptFailureRate) and end-to-end (gatePassRate) bases, each with a labelled definition, and expose exclusions. End-to-end is the existing gate rate: no new metric key. Dashboard rendering is M4. M4 S5a added the project dashboard that renders the four metric families separately with fractions, definitions, exclusions and visible quarantine, proved in the browser and against the metrics service."
     },
     {
       "id": "VAL-008",
@@ -22642,10 +23318,44 @@
       "milestone": "M4",
       "ownerRole": "Quality",
       "status": "planned",
-      "scenario": [],
+      "scenario": [
+        "apps/web/src/lib/run-timeline.test.ts::VAL-034 duplicate and reordered events never regress the phase or replace the terminal result",
+        "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 a sequence gap refetches the snapshot, a contiguous stream does not",
+        "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 duplicates, reordered events and events after the terminal result never regress the Run"
+      ],
       "oracle": [],
-      "evidence": [],
-      "code": []
+      "evidence": [
+        "validation/results/m4-acceptance/s5a/018-s5a-unit-final/output.log",
+        "validation/results/m4-acceptance/s5a/017-s5a-journeys-4/output.log"
+      ],
+      "code": [
+        "apps/web/src/lib/run-timeline.ts",
+        "apps/web/src/api/sse.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "apps/web/src/lib/run-timeline.test.ts::VAL-034 duplicate and reordered events never regress the phase or replace the terminal result",
+          "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 a sequence gap refetches the snapshot, a contiguous stream does not"
+        ],
+        "negative": [
+          "validation/journeys/portal-runs-live.portal.test.ts::VAL-034 UX-027 duplicates, reordered events and events after the terminal result never regress the Run"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "apps/web/src/lib/run-timeline.test.ts",
+            "assertion": "    expect(applyEvent(ordered, happyPath[4] as RunEventEnvelope)).toBe(ordered);"
+          },
+          {
+            "path": "validation/journeys/portal-runs-live.portal.test.ts",
+            "assertion": "    expect(terminal.toLowerCase()).toContain(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/portal-runs-live.portal.test.ts",
+            "assertion": "    expect(gappedReads).toBeGreaterThan(contiguousReads);"
+          }
+        ]
+      },
+      "note": "M4 S5a added the live Run page reorder, duplicate, gap and post-terminal event proof in a browser (portal-runs-live.portal.test.ts)."
     },
     {
       "id": "VAL-035",

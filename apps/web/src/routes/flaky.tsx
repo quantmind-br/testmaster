@@ -549,6 +549,6 @@ export const routes: PortalRoute[] = [
     path: "/projects/:projectId/flake-studies/new",
     title: "Start a flake study",
     element: <NewStudyPage />,
-    projectNav: { label: "Flake study", order: 80 },
+    projectNav: { label: "Flake study", order: 87 },
   },
 ];
