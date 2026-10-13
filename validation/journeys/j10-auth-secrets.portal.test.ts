@@ -35,6 +35,7 @@ let passwordSecret: { id: string };
 let usernameSecret: { id: string };
 let testId = "";
 let lastRunId = "";
+let blockedRunId = "";
 const open: OpenPortal[] = [];
 
 const owner = () => stack.ownerClient();
@@ -220,6 +221,7 @@ describe("J10 auth, secrets and redaction", () => {
     expect((await runToEnd(harness, testId, environmentId)).outcome).toBe("inconclusive");
     const blocked = await runToEnd(harness, testId, environmentId);
     expect(blocked).toMatchObject({ outcome: "blocked", reasonCode: "manual_auth_required" });
+    blockedRunId = blocked.id;
     // The target cannot say which factor was wrong, so the engine reports a rejected sign-in.
     expect(["login_rejected", "otp_rejected"]).toContain(blocked.authFailure);
     const apiCalls = site.counters.apiCalls;
@@ -285,6 +287,14 @@ describe("J10 auth, secrets and redaction", () => {
     }
     const view = await owner().request("GET", `/v1/auth-profiles/${profile.id}`);
     for (const value of secrets) expect(view.text).not.toContain(value);
+    // The blocked and the recovered Run, their reduced state and their event streams carry no credential either.
+    for (const runId of [blockedRunId, lastRunId])
+      for (const route of [`/v1/runs/${runId}`, `/v1/runs/${runId}/events`]) {
+        const response = await owner().request("GET", route);
+        expect(response.status, route).toBe(200);
+        expect(response.text, `${route} is readable`).toContain(runId);
+        for (const value of secrets) expect(response.text, route).not.toContain(value);
+      }
     const login = site.requests.filter((request) => request.path === "/api/login").at(-1);
     const sentCode = String(JSON.parse(login?.body ?? "{}").otp);
     expect(await evidenceLeaks([...secrets, sentCode])).toEqual([]);
