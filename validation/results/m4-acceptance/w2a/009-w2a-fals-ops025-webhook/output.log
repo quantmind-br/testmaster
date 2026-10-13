@@ -1,0 +1,32 @@
+$ vitest run --project postgres packages/application/src/restore-isolation.pg.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2a
+
+ ❯ |postgres| packages/application/src/restore-isolation.pg.test.ts (1 test | 1 failed) 749ms
+   × OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it 748ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/restore-isolation.pg.test.ts > OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it
+ContractError: Restored copy is isolated; webhooks are refused
+ ❯ IntegrationsService.receiveWebhook packages/application/src/integrations/service.ts:502:13
+    500|     // the sender's redelivery after the release is processed instead …
+    501|     if (!isRestoreIsolated(this.ctx.database))
+    502|       throw new ContractError("UNAVAILABLE", "Restored copy is isolate…
+       |             ^
+    503|         reasonCode: "restore_isolated",
+    504|         retryable: true,
+ ❯ Object.send packages/application/src/integrations/github/testing/world.ts:210:53
+ ❯ Object.install packages/application/src/integrations/github/testing/world.ts:215:19
+ ❯ source packages/application/src/restore-isolation.pg.test.ts:185:15
+ ❯ packages/application/src/restore-isolation.pg.test.ts:315:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  15:43:18
+   Duration  3.03s (tests 42%, transform 29%, import 28%)
+
+[ELIFECYCLE] Command failed with exit code 1.

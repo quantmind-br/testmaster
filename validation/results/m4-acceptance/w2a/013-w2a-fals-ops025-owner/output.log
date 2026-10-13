@@ -1,0 +1,44 @@
+$ vitest run --project postgres packages/application/src/restore-isolation.pg.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2a
+
+ ❯ |postgres| packages/application/src/restore-isolation.pg.test.ts (1 test | 1 failed) 2130ms
+   × OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it 2129ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/application/src/restore-isolation.pg.test.ts > OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "FORBIDDEN",
++ ContractError {
++   "message": "Restore review must be approved first",
++   "code": "PRECONDITION_FAILED",
++   "details": {
++     "reasonCode": "restore_review_pending",
++   },
++   "issues": [],
++   "name": "ContractError",
+  }
+
+ ❯ packages/application/src/restore-isolation.pg.test.ts:405:70
+    403|   // --- only the owner, and only after the review, may release ---
+    404|   for (const actor of [viewer, admin])
+    405|     expect(() => actor.operations.releaseIsolation("not the owner")).t…
+       |                                                                      ^
+    406|       expect.objectContaining({ code: "FORBIDDEN" }),
+    407|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  15:44:06
+   Duration  4.46s (tests 68%, transform 16%, import 16%)
+
+[ELIFECYCLE] Command failed with exit code 1.

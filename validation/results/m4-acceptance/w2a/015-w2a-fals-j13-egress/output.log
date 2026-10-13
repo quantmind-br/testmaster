@@ -1,0 +1,37 @@
+$ vitest run --project postgres validation/journeys/j13-schedule-notify.pg.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/w2a
+
+ ❯ |postgres| validation/journeys/j13-schedule-notify.pg.test.ts (2 tests | 1 failed) 4212ms
+   × J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count 3593ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/j13-schedule-notify.pg.test.ts > J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ validation/journeys/j13-schedule-notify.pg.test.ts:278:85
+    276|     expect(forgedReceiver.requests).toHaveLength(0);
+    277|     expect(forged.every((delivery) => delivery.state === "dead_letter"…
+    278|     expect(forged.every((delivery) => delivery.lastReasonCode === "egr…
+       |                                                                                     ^
+    279|
+    280|     // The operations DLQ shows every dead letter; none of this touche…
+ ❯ recorded validation/journeys/j13-schedule-notify.pg.test.ts:67:48
+ ❯ validation/journeys/j13-schedule-notify.pg.test.ts:183:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  15:44:51
+   Duration  6.61s (tests 79%, transform 11%, import 10%)
+
+[ELIFECYCLE] Command failed with exit code 1.

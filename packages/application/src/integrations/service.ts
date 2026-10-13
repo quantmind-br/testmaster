@@ -15,6 +15,7 @@ import { sha256 } from "@testmaster/domain";
 import { AuditRepository } from "@testmaster/persistence";
 import { auditSecurity } from "../audit.js";
 import type { ServiceContext } from "../context.js";
+import { isRestoreIsolated } from "../operations-state.js";
 import {
   adapterCompatible,
   type DeliveryContext,
@@ -495,6 +496,13 @@ export class IntegrationsService {
     },
   ): Promise<InboundWebhookReceipt> {
     const provider = this.providers.resolve(providerId);
+    // OPS-025: a restored copy accepts no webhook until an operator releases it. Nothing is recorded, so
+    // the sender's redelivery after the release is processed instead of deduplicated as already ignored.
+    if (isRestoreIsolated(this.ctx.database))
+      throw new ContractError("UNAVAILABLE", "Restored copy is isolated; webhooks are refused", {
+        reasonCode: "restore_isolated",
+        retryable: true,
+      });
     if (!provider.receive)
       throw new ContractError("CAPABILITY_UNAVAILABLE", "Provider does not accept webhooks", {
         capability: "webhooks",

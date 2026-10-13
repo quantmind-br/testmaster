@@ -16,6 +16,11 @@ export interface ScheduleJourneyOptions {
   /** An application able to write tests, lists and schedules and to admit Runs (`W` and `X`). */
   readonly app: Application;
   readonly projectId: string;
+  /**
+   * More projects whose tests the same list covers (a cross-project list, J09). The caller creates
+   * their tests and environments first; the driver only binds them to the list.
+   */
+  readonly additionalBindings?: readonly { projectId: string; environmentId: string }[];
   readonly environmentId: string;
   /** Moves the application's clock; the driver calls it before every step. */
   readonly setClock: (epochMs: number) => void;
@@ -69,7 +74,10 @@ export async function runScheduleJourneyPart(
     name: "j13-nightly",
     selection: {
       kind: "dynamic",
-      projects: [{ projectId: options.projectId, environmentId: options.environmentId }],
+      projects: [
+        { projectId: options.projectId, environmentId: options.environmentId },
+        ...(options.additionalBindings ?? []),
+      ],
     },
   });
   const schedule = app.schedules.create({
