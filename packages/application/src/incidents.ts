@@ -9,6 +9,7 @@ import {
 } from "@testmaster/contracts";
 import type { PersistenceDatabase } from "@testmaster/persistence";
 import { auditSecurity } from "./audit.js";
+import { authoringTransaction } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
 
 /**
@@ -213,7 +214,7 @@ export class IncidentsService {
 
   create(input: IncidentInput): IncidentView {
     this.ctx.authorize("A");
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const now = new Date().toISOString();
       const id = `inr_${randomUUID()}`;
       const data: IncidentData = {
@@ -243,7 +244,7 @@ export class IncidentsService {
 
   addEvent(id: string, input: IncidentEventInput): IncidentView {
     this.ctx.authorize("A");
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const row = this.row(id);
       if (row.state === "closed")
         throw new ContractError("PRECONDITION_FAILED", "Incident is closed; open a new incident", {
@@ -333,7 +334,7 @@ export class IncidentsService {
 
   close(id: string, input: IncidentCloseInput): IncidentView {
     this.ctx.authorize("A");
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const row = this.row(id);
       if (row.state === "closed")
         throw new ContractError("PRECONDITION_FAILED", "Incident is already closed", {

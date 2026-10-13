@@ -14,6 +14,7 @@ import {
   type PersistenceDatabase,
 } from "@testmaster/persistence";
 import { auditSecurity } from "./audit.js";
+import { authoringTransaction } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
 import type { DeliveryService } from "./delivery.js";
 import { backupSettings, listServerBackups } from "./server-backup.js";
@@ -267,7 +268,7 @@ export class OperationsService {
   /** Pauses, drains or resumes new Run admission for this workspace; queued and running work continues. */
   admission(input: { action: "pause" | "drain" | "resume"; reason: string }): AdminOperation {
     this.ctx.authorize("A");
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const before = this.admissionState();
       const now = new Date().toISOString();
       const key = admissionKey(this.ctx.workspaceId);
@@ -332,7 +333,7 @@ export class OperationsService {
   }): Promise<AdminOperation> {
     this.ctx.authorize("A");
     const result = await this.deps.reconcile({ dryRun: input.mode === "preview" });
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       auditSecurity(this.ctx, `ops.reconcile.${input.mode}`, this.ctx.workspaceId, "allowed");
       return this.insert(
         "reconcile",
@@ -353,7 +354,7 @@ export class OperationsService {
         milestone: "M4",
       });
     backupSettings(this.deps.server);
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const pending = this.ctx.database.get<OperationRow>(
         `SELECT ${operationColumns} FROM admin_operations WHERE workspace_id=? AND kind='backup' AND state IN ('requested','running') ORDER BY created_at LIMIT 1`,
         this.ctx.workspaceId,
@@ -373,7 +374,7 @@ export class OperationsService {
         milestone: "M4",
       });
     backupSettings(this.deps.server);
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       auditSecurity(this.ctx, "ops.restore.verify", input.backupId, "requested");
       return this.insert(
         "restore_verify",
@@ -391,7 +392,7 @@ export class OperationsService {
    */
   releaseIsolation(reason: string): AdminOperation {
     this.requireOwner();
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       if (!this.isolated())
         throw new ContractError("PRECONDITION_FAILED", "Workspace is not isolated by a restore", {
           reasonCode: "not_isolated",
@@ -474,7 +475,7 @@ export class OperationsService {
             created_at: string;
             result: string | null;
           }>(
-            "SELECT id,queue,attempts,created_at,json_extract(data_json,'$.result.state') AS result FROM job_leases WHERE workspace_id=? AND state='completed' AND queue<>'delivery' AND json_extract(data_json,'$.result.state')='dead_letter' ORDER BY created_at DESC LIMIT 500",
+            "SELECT id,queue,attempts,created_at,json_extract(data_json,'$.result.state') AS result FROM job_leases WHERE workspace_id=? AND state='completed' AND queue IN ('analysis','healing') AND json_extract(data_json,'$.result.state')='dead_letter' ORDER BY created_at DESC LIMIT 500",
             this.ctx.workspaceId,
           )
           .map((job) => ({

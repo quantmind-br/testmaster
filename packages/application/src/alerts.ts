@@ -7,6 +7,7 @@ import {
   type PersistenceDatabase,
   SqliteBudgetLedger,
 } from "@testmaster/persistence";
+import { authoringTransaction } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
 import { type OperationsService, stateJson } from "./operations.js";
 import type { ServerConfig } from "./server-config.js";
@@ -429,7 +430,7 @@ export class AlertsService {
 
   acknowledge(id: string): AlertView {
     this.ctx.authorize("A");
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const row = this.ctx.database.get<AlertRow>(
         `SELECT ${columns} FROM alerts WHERE workspace_id=? AND id=?`,
         this.ctx.workspaceId,
