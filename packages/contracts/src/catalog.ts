@@ -1,6 +1,6 @@
-import { identityContracts } from "./m4/identity.js";
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
+import { identityContracts } from "./m4/identity.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";

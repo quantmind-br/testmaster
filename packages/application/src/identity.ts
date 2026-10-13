@@ -6,9 +6,9 @@ import { auditAs } from "./audit.js";
 import type { ServiceContext } from "./context.js";
 import {
   assertPasswordAcceptable,
+  deriveCsrfToken,
   hashPassword,
   loginPattern,
-  deriveCsrfToken,
   randomToken,
   sha256Hex,
   verifyAgainstDummy,

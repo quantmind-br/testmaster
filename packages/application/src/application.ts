@@ -73,8 +73,10 @@ import {
   resolveConfig,
 } from "./config.js";
 import { entity, type RunActor, type Scope, type ServiceContext } from "./context.js";
+import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
+import { IdentityService } from "./identity.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
@@ -85,12 +87,8 @@ import { measureRuntimeIdentities } from "./runtime-identity.js";
 import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
 import { SecretsService } from "./secrets.js";
 import { SelectionService } from "./selection.js";
-import { WorkerService } from "./worker.js";
-import { ControllerRegistry } from "./controllers.js";
-import { IdentityService } from "./identity.js";
 import type { ServerConfig } from "./server-config.js";
 import { filesystemRoot } from "./server-config.js";
-import { openServerDatabase, scopeDatabase } from "./tenancy.js";
 import {
   MembersService,
   OperatorService,
@@ -98,7 +96,9 @@ import {
   TokensService,
   WorkspacesService,
 } from "./team.js";
+import { openServerDatabase, scopeDatabase } from "./tenancy.js";
 import type { TokenData, TokenKind } from "./tokens.js";
+import { WorkerService } from "./worker.js";
 
 const columnScope: Readonly<Record<RbacColumn, Scope>> = {
   read: "R",
@@ -229,10 +229,13 @@ export class Application {
       workspaceId: String(workspaceId ?? ""),
       principalId: identity?.principalId ?? String(principal?.id ?? ""),
       correlationId: correlation,
-      actor: {
-        principalId: identity?.principalId ?? String(principal?.id ?? ""),
-        credentialKind: identity && "credential" in identity ? identity.credential.kind : null,
-        credentialId: identity && "credential" in identity ? identity.credential.id : null,
+      // Read live: `init()` assigns the principal after construction.
+      get actor(): RunActor {
+        return {
+          principalId: this.principalId,
+          credentialKind: identity && "credential" in identity ? identity.credential.kind : null,
+          credentialId: identity && "credential" in identity ? identity.credential.id : null,
+        };
       },
       reauthorizeActor: (actor, projectId) => this.reauthorizeActor(actor, projectId),
       authorize: (scope, projectId) => this.authorize(scope, projectId),

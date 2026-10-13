@@ -53,7 +53,7 @@ import { CodeImportService } from "./ai/code-import.js";
 import { auditSecurity } from "./audit.js";
 import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
-import { entity, requireEntity, type RunActor, type ServiceContext } from "./context.js";
+import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import { fixtureRevoked, planRunnerPolicy, stageFixtureInputs } from "./input-fixtures.js";
 import { correlationId, OperationalLogger } from "./observability.js";

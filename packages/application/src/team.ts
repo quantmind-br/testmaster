@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { ContractError, type Role, rbacMatrix } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import {
-  EntityRepository,
   type EntityDocument,
+  EntityRepository,
   type PersistenceDatabase,
 } from "@testmaster/persistence";
 import type { Application, AuthenticatedIdentity, PermissionGrant } from "./application.js";
