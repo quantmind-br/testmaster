@@ -1,0 +1,604 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "workspaceId",
+    "title",
+    "severity",
+    "category",
+    "summary",
+    "state",
+    "detectedAt",
+    "versions",
+    "resources",
+    "openedBy",
+    "closedAt",
+    "dataAffected",
+    "resolution",
+    "communication",
+    "reach",
+    "actions",
+    "timeline",
+    "createdAt",
+    "version"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^inr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "severity": {
+      "anyOf": [
+        {
+          "const": "critical",
+          "type": "string"
+        },
+        {
+          "const": "high",
+          "type": "string"
+        },
+        {
+          "const": "medium",
+          "type": "string"
+        },
+        {
+          "const": "low",
+          "type": "string"
+        }
+      ]
+    },
+    "category": {
+      "anyOf": [
+        {
+          "const": "isolation_loss",
+          "type": "string"
+        },
+        {
+          "const": "secret_exposure",
+          "type": "string"
+        },
+        {
+          "const": "tenant_exposure",
+          "type": "string"
+        },
+        {
+          "const": "outage",
+          "type": "string"
+        },
+        {
+          "const": "artifact_loss",
+          "type": "string"
+        },
+        {
+          "const": "ai_degradation",
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "type": "string"
+        }
+      ]
+    },
+    "summary": {
+      "maxLength": 8000,
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "open",
+          "type": "string"
+        },
+        {
+          "const": "mitigated",
+          "type": "string"
+        },
+        {
+          "const": "resumed",
+          "type": "string"
+        },
+        {
+          "const": "closed",
+          "type": "string"
+        }
+      ]
+    },
+    "detectedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "openedBy": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "closedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dataAffected": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "const": "confirmed",
+              "type": "string"
+            },
+            {
+              "const": "suspected",
+              "type": "string"
+            },
+            {
+              "const": "none_with_evidence",
+              "type": "string"
+            },
+            {
+              "const": "unknown",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resolution": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "communication": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "anyOf": [
+            {
+              "const": "none",
+              "type": "string"
+            },
+            {
+              "const": "private_notified",
+              "type": "string"
+            },
+            {
+              "const": "public_disclosed",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "reach": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "confirmed",
+        "suspected",
+        "unknown"
+      ],
+      "properties": {
+        "confirmed": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "scope",
+              "description",
+              "resources"
+            ],
+            "properties": {
+              "scope": {
+                "anyOf": [
+                  {
+                    "const": "confirmed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "suspected",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unknown",
+                    "type": "string"
+                  }
+                ]
+              },
+              "description": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "resources": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "properties": {
+                    "type": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "id": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "suspected": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "scope",
+              "description",
+              "resources"
+            ],
+            "properties": {
+              "scope": {
+                "anyOf": [
+                  {
+                    "const": "confirmed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "suspected",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unknown",
+                    "type": "string"
+                  }
+                ]
+              },
+              "description": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "resources": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "properties": {
+                    "type": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "id": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "unknown": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "scope",
+              "description",
+              "resources"
+            ],
+            "properties": {
+              "scope": {
+                "anyOf": [
+                  {
+                    "const": "confirmed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "suspected",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unknown",
+                    "type": "string"
+                  }
+                ]
+              },
+              "description": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "resources": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "properties": {
+                    "type": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "id": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "eventId",
+          "description",
+          "verificationCriterion",
+          "owner",
+          "verified"
+        ],
+        "properties": {
+          "eventId": {
+            "pattern": "^ine_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "description": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "verificationCriterion": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "owner": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "seq",
+          "kind",
+          "at",
+          "actor",
+          "text",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^ine_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "seq": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "timeline",
+                "type": "string"
+              },
+              {
+                "const": "evidence",
+                "type": "string"
+              },
+              {
+                "const": "reach",
+                "type": "string"
+              },
+              {
+                "const": "action",
+                "type": "string"
+              },
+              {
+                "const": "action_verified",
+                "type": "string"
+              },
+              {
+                "const": "communication",
+                "type": "string"
+              },
+              {
+                "const": "status",
+                "type": "string"
+              }
+            ]
+          },
+          "at": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "actor": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:Incident",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

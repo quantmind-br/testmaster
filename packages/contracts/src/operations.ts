@@ -340,6 +340,17 @@ export const BackupManifest = Obj({
   keyIds: Type.Optional(Type.Array(ContentDigest)),
   configDigests: Type.Optional(Type.Array(ContentDigest)),
   missingObjects: Type.Optional(Type.Array(Type.String())),
+  /** Server-profile backups (ADR-019): engine, encryption parameters and the manifest MAC. */
+  engine: Type.Optional(Enum(["sqlite", "postgres"])),
+  backupId: Type.Optional(Name),
+  encryption: Type.Optional(
+    Obj({
+      algorithm: Type.Literal("aes-256-gcm-chunked"),
+      keyId: ContentDigest,
+      chunkBytes: Positive,
+    }),
+  ),
+  mac: Type.Optional(ContentDigest),
 });
 export const RestoreRequest = Obj({
   manifest: BackupManifest,

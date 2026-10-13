@@ -1,0 +1,129 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "unit",
+    "window",
+    "proposedTarget",
+    "observed",
+    "measurement",
+    "numerator",
+    "denominator",
+    "buckets",
+    "errorBudgetRemaining",
+    "notes"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "unit": {
+      "anyOf": [
+        {
+          "const": "ratio",
+          "type": "string"
+        },
+        {
+          "const": "seconds",
+          "type": "string"
+        }
+      ]
+    },
+    "window": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "proposedTarget": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "measurement": {
+      "anyOf": [
+        {
+          "const": "measured",
+          "type": "string"
+        },
+        {
+          "const": "not_measured",
+          "type": "string"
+        }
+      ]
+    },
+    "numerator": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "denominator": {
+      "type": "number"
+    },
+    "buckets": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "le",
+          "count"
+        ],
+        "properties": {
+          "le": {
+            "type": "number"
+          },
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "errorBudgetRemaining": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "notes": {
+      "maxLength": 8000,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SloIndicator",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

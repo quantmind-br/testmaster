@@ -9,6 +9,7 @@ import { integrationContracts } from "./m4/integrations.js";
 import { listContracts } from "./m4/lists.js";
 import { deliveryContracts, notificationContracts } from "./m4/notifications.js";
 import { onboardingContracts } from "./m4/onboarding.js";
+import { operationsContracts } from "./m4/operations.js";
 import { runViewContracts } from "./m4/runs.js";
 import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
@@ -535,12 +536,10 @@ const supplemental = {
     progress: Type.Number({ minimum: 0, maximum: 1 }),
   }),
   IdentityInput: P.Obj({ principal: P.Name, credentialRef: Type.Optional(P.id("sec")) }),
-  AdmissionInput: P.Obj({ action: P.Enum(["pause", "resume"]), reason: P.Description }),
   ReconcileInput: P.Obj({
     mode: P.Enum(["preview", "apply"]),
     approval: Type.Optional(P.id("apr")),
   }),
-  BackupInput: P.Obj({ destination: P.Name }),
   BootstrapReceipt: P.Obj({
     projectId: P.id("prj"),
     config: Ops.ProjectConfig,
@@ -655,6 +654,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...scheduleContracts,
   ...runViewContracts,
   ...authContracts,
+  ...operationsContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

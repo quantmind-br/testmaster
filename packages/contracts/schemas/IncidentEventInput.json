@@ -1,0 +1,532 @@
+{
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text"
+      ],
+      "properties": {
+        "kind": {
+          "const": "timeline",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "kind": {
+          "const": "evidence",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "minItems": 1,
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "ref"
+            ],
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "audit_event",
+                    "type": "string"
+                  },
+                  {
+                    "const": "artifact",
+                    "type": "string"
+                  },
+                  {
+                    "const": "run",
+                    "type": "string"
+                  },
+                  {
+                    "const": "log",
+                    "type": "string"
+                  },
+                  {
+                    "const": "document",
+                    "type": "string"
+                  },
+                  {
+                    "const": "test",
+                    "type": "string"
+                  }
+                ]
+              },
+              "ref": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "reach"
+      ],
+      "properties": {
+        "kind": {
+          "const": "reach",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "reach": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "scope",
+            "description",
+            "resources"
+          ],
+          "properties": {
+            "scope": {
+              "anyOf": [
+                {
+                  "const": "confirmed",
+                  "type": "string"
+                },
+                {
+                  "const": "suspected",
+                  "type": "string"
+                },
+                {
+                  "const": "unknown",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "resources": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "id": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "action"
+      ],
+      "properties": {
+        "kind": {
+          "const": "action",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "action": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "description",
+            "verificationCriterion",
+            "owner"
+          ],
+          "properties": {
+            "description": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "verificationCriterion": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "owner": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "dueAt": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "actionEventId",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "kind": {
+          "const": "action_verified",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "actionEventId": {
+          "pattern": "^ine_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "minItems": 1,
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "ref"
+            ],
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "audit_event",
+                    "type": "string"
+                  },
+                  {
+                    "const": "artifact",
+                    "type": "string"
+                  },
+                  {
+                    "const": "run",
+                    "type": "string"
+                  },
+                  {
+                    "const": "log",
+                    "type": "string"
+                  },
+                  {
+                    "const": "document",
+                    "type": "string"
+                  },
+                  {
+                    "const": "test",
+                    "type": "string"
+                  }
+                ]
+              },
+              "ref": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "communication"
+      ],
+      "properties": {
+        "kind": {
+          "const": "communication",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "communication": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "state",
+            "audience"
+          ],
+          "properties": {
+            "state": {
+              "anyOf": [
+                {
+                  "const": "none",
+                  "type": "string"
+                },
+                {
+                  "const": "private_notified",
+                  "type": "string"
+                },
+                {
+                  "const": "public_disclosed",
+                  "type": "string"
+                }
+              ]
+            },
+            "audience": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "status",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "const": "mitigated",
+              "type": "string"
+            },
+            {
+              "const": "resumed",
+              "type": "string"
+            }
+          ]
+        },
+        "gates": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "security",
+            "consistency"
+          ],
+          "properties": {
+            "security": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "ref"
+                ],
+                "properties": {
+                  "kind": {
+                    "anyOf": [
+                      {
+                        "const": "audit_event",
+                        "type": "string"
+                      },
+                      {
+                        "const": "artifact",
+                        "type": "string"
+                      },
+                      {
+                        "const": "run",
+                        "type": "string"
+                      },
+                      {
+                        "const": "log",
+                        "type": "string"
+                      },
+                      {
+                        "const": "document",
+                        "type": "string"
+                      },
+                      {
+                        "const": "test",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "ref": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "consistency": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "ref"
+                ],
+                "properties": {
+                  "kind": {
+                    "anyOf": [
+                      {
+                        "const": "audit_event",
+                        "type": "string"
+                      },
+                      {
+                        "const": "artifact",
+                        "type": "string"
+                      },
+                      {
+                        "const": "run",
+                        "type": "string"
+                      },
+                      {
+                        "const": "log",
+                        "type": "string"
+                      },
+                      {
+                        "const": "document",
+                        "type": "string"
+                      },
+                      {
+                        "const": "test",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "ref": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {},
+  "$id": "urn:testmaster:IncidentEventInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

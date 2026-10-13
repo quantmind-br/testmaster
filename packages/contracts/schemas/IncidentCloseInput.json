@@ -1,0 +1,90 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "resolution",
+    "dataAffected",
+    "noDataAffectedEvidence"
+  ],
+  "properties": {
+    "resolution": {
+      "minLength": 1,
+      "maxLength": 4000,
+      "type": "string"
+    },
+    "dataAffected": {
+      "anyOf": [
+        {
+          "const": "confirmed",
+          "type": "string"
+        },
+        {
+          "const": "suspected",
+          "type": "string"
+        },
+        {
+          "const": "none_with_evidence",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "noDataAffectedEvidence": {
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "const": "audit_event",
+                "type": "string"
+              },
+              {
+                "const": "artifact",
+                "type": "string"
+              },
+              {
+                "const": "run",
+                "type": "string"
+              },
+              {
+                "const": "log",
+                "type": "string"
+              },
+              {
+                "const": "document",
+                "type": "string"
+              },
+              {
+                "const": "test",
+                "type": "string"
+              }
+            ]
+          },
+          "ref": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:IncidentCloseInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
