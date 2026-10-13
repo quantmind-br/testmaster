@@ -42,6 +42,7 @@ export class CodeExportService {
     if (Object.keys(options).some((key) => !["format", "out", "revisionId", "async"].includes(key)))
       throw new ContractError("INVALID_ARGUMENT", "Unknown code export option");
     const test = new TestsService(this.ctx).get(testId);
+    this.ctx.authorizeColumn("export", test.projectId);
     const revisionId = options.revisionId ?? test.activeRevisionId;
     if (!revisionId) throw new ContractError("PRECONDITION_FAILED", "Test has no active revision");
     const revision = new RevisionsService(this.ctx).get(revisionId);
