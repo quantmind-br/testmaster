@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-healing-policy-wait",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:52:19.620Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-healing-policy-wait",
+        "--base-url",
+        "http://127.0.0.1:39509",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_910452fe-6fa2-4f81-a75c-14a4f26cb72d",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135bf-c805-705f-9e04-03f7c775093f",
+    "run_01a135bf-d17b-75b0-946c-733224ea7cc7",
+    "run_01a135bf-daf5-7668-94d2-47ecb5252ec8",
+    "run_01a135bf-eb75-71ed-96ea-06c00ebe55ee",
+    "run_01a135bf-fcf2-7301-aedf-727c2af83705"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "policyWaitEquivalence",
+      "baselineRunId": "run_01a135bf-c805-705f-9e04-03f7c775093f",
+      "failedRunId": "run_01a135bf-daf5-7668-94d2-47ecb5252ec8",
+      "proposalId": "hea_01a135bf-fcb2-723a-b345-ae304004211e",
+      "verificationRunId": "run_01a135bf-fcf2-7301-aedf-727c2af83705",
+      "wrongStateProposalId": "hea_01a135c0-071f-7125-a05f-00e587585d6a",
+      "originalCeilingMs": 3000,
+      "controlledProvider": true,
+      "qualityEvidence": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

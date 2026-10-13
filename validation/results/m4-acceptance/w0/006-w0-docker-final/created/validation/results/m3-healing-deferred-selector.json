@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-healing-deferred-selector",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:34:00.277Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-healing-deferred-selector",
+        "--base-url",
+        "http://127.0.0.1:40625",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cd147f83-d5ed-476a-b165-50dbb9b5b3b6",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135af-2b31-750e-a22b-c46125c78b36",
+    "run_01a135af-2f91-7141-8a17-3c0b91beea61",
+    "run_01a135af-3a03-73b2-8ebe-66ec2e8de7ae"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "deferredSelectorIdentity",
+      "failedRunId": "run_01a135af-2f91-7141-8a17-3c0b91beea61",
+      "verificationRunId": "run_01a135af-3a03-73b2-8ebe-66ec2e8de7ae",
+      "proposalId": "hea_01a135af-393a-7161-a8cc-69c63fdad654",
+      "controlledProvider": true,
+      "qualityEvidence": false
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m3-analysis-deadline-source",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T14:33:54.354Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m3-analysis-deadline-source",
+        "--base-url",
+        "http://127.0.0.1:45305",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5630465e-fccd-4a5c-9775-cbb4a5c83809",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-Zu58ko/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9cfe6ba4-df91-4615-88e0-caeeef22b467",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "analyze",
+        "run_01a135af-20e9-725d-8fd9-bb6beb6dd8db",
+        "--model",
+        "--deadline-ms",
+        "100",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_8861706e-810e-45f7-8c5f-0540203ee6a1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "analyze",
+        "run_01a135af-20e9-725d-8fd9-bb6beb6dd8db",
+        "--model",
+        "--deadline-ms",
+        "100",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_21cd2254-cb69-47bb-b19e-222d01b9c2ec",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/int/apps/cli/dist/main.js",
+        "run",
+        "analyze",
+        "run_01a135af-20e9-725d-8fd9-bb6beb6dd8db",
+        "--model",
+        "--discovery",
+        "dsc_01a135af-208c-70b9-9116-44c2c0e32d78",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_24d12eca-3119-46bc-b8d5-3398165bbc59",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135af-20e9-725d-8fd9-bb6beb6dd8db"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "analysisDeadlineSourceBinding",
+      "controlledProvider": true,
+      "qualityEvidence": false,
+      "runId": "run_01a135af-20e9-725d-8fd9-bb6beb6dd8db",
+      "timeoutAnalysisId": "ana_01a135af-267b-75e0-a3eb-47777efbb03c",
+      "sourceAnalysisId": "ana_01a135af-298d-745a-89ab-6c78c7ec27cf",
+      "dispatches": 2
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
