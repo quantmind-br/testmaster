@@ -329,11 +329,34 @@ export class LeaseRepository {
     seed?: number;
     now?: string;
     runIds?: readonly string[];
+    /** Fair share: the most jobs this tenant may hold leased on the queue while another tenant waits. */
+    maxLeased?: number;
   }): (Fence & { runId: string; expiresAt: string; number: number }) | null {
     const claim = () => {
       if (
         this.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value !==
         "enabled"
+      )
+        return null;
+      // A worker that is draining, revoked or offline claims nothing, even mid-iteration.
+      if (
+        request.workerId &&
+        this.database.get(
+          "SELECT state FROM workers WHERE workspace_id=? AND id=?",
+          request.workspaceId,
+          request.workerId,
+        )?.state !== "ready"
+      )
+        return null;
+      if (
+        request.maxLeased !== undefined &&
+        Number(
+          this.database.get(
+            "SELECT COUNT(*) AS n FROM job_leases WHERE workspace_id=? AND queue=? AND state='leased' AND dispatchable=1",
+            request.workspaceId,
+            request.queue,
+          )?.n,
+        ) >= request.maxLeased
       )
         return null;
       const now = request.now ?? new Date().toISOString();
@@ -467,6 +490,42 @@ export class LeaseRepository {
       }
       return expired.map((row) => String(row.id));
     });
+  }
+  /**
+   * Revocation fences every job a worker holds: the lease is released for reconciliation and the
+   * attempt ends inconclusive, so a late write from that worker fails its fence check.
+   */
+  fenceWorker(workspaceId: string, workerId: string, now = new Date().toISOString()): string[] {
+    const fence = () => {
+      const held = this.database.all(
+        `SELECT j.id,j.fence,j.resource_id FROM job_leases j JOIN attempts a ON a.workspace_id=j.workspace_id AND a.job_id=j.id AND a.fence=j.fence WHERE j.workspace_id=? AND j.state='leased' AND a.worker_id=? AND j.queue NOT IN (${auxiliaryQueueSql})`,
+        workspaceId,
+        workerId,
+      );
+      for (const row of held) {
+        this.database.run(
+          "UPDATE job_leases SET state='reconciliation_required',lease_owner=NULL,lease_expires_at=NULL WHERE workspace_id=? AND id=? AND fence=?",
+          workspaceId,
+          row.id,
+          row.fence,
+        );
+        this.database.run(
+          "UPDATE attempts SET phase='completed',outcome='inconclusive',ended_at=? WHERE workspace_id=? AND job_id=? AND fence=?",
+          now,
+          workspaceId,
+          row.id,
+          row.fence,
+        );
+        this.outbox.append(workspaceId, String(row.resource_id), "attempt.lease_expired", {
+          jobId: row.id,
+          reasonCode: "worker_lost",
+          workerId,
+          revoked: true,
+        });
+      }
+      return held.map((row) => String(row.id));
+    };
+    return this.database.inTransaction ? fence() : this.database.withTx(fence);
   }
   resume(workspaceId: string, jobId: string, expectedFence: number): void {
     this.database.withTx(() => {
