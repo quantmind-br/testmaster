@@ -231,7 +231,11 @@ export const authContracts = {
     expiresAt: P.Timestamp,
   }),
   /** `inputRef` names a vault secret holding the redirect URL the identity provider returned. */
-  AuthCompleteInput: P.Obj({ authorizationId: P.Name, inputRef: P.id("sec") }),
+  AuthCompleteInput: P.Obj({
+    environmentId: P.id("env"),
+    authorizationId: P.Name,
+    inputRef: P.id("sec"),
+  }),
   AuthStateImportInput: P.Obj({
     inputRef: P.id("sec"),
     ttlSeconds: Type.Optional(Ttl),
