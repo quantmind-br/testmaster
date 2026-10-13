@@ -12,6 +12,7 @@ import { contractCommands } from "./contracts.js";
 import { databaseCommands } from "./database.js";
 import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
+import { githubCommands } from "./github.js";
 import { healingCommands } from "./heal.js";
 import { imageCommands } from "./images.js";
 import { mcpCommands } from "./mcp.js";
@@ -78,6 +79,7 @@ export function createCli(runtime: Runtime): Command {
   identityCommands(program, runtime);
   resourceCommands(program, runtime);
   ciCommands(program, runtime);
+  githubCommands(program, runtime);
   unavailableCommands(program, runtime);
   return program;
 }
