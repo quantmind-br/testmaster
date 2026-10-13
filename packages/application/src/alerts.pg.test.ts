@@ -247,44 +247,68 @@ it("OPS-028 defines an alert rule for every required condition with an owner, se
   }
 });
 
-for (const [rule, scenario] of Object.entries(scenarios))
-  it(`OPS-028 ${rule} fires from a synthetic condition with its outbox event and audit row, then resolves`, async () => {
-    const stack = await freshStack();
-    const now = new Date();
-    expect((await stack.workspace.alerts.evaluate({ now, ...healthy })).fired).toEqual([]);
+async function firesAndResolves(rule: string): Promise<void> {
+  const scenario = scenarios[rule];
+  if (!scenario) throw new Error(`No scenario for ${rule}`);
+  const stack = await freshStack();
+  const now = new Date();
+  expect((await stack.workspace.alerts.evaluate({ now, ...healthy })).fired).toEqual([]);
 
-    const probes = await scenario.raise(stack, now);
-    const raised = await stack.workspace.alerts.evaluate({ now, ...probes });
-    expect(raised.errors).toEqual({});
-    const alert = raised.fired.find((candidate) => candidate.rule === rule);
-    expect(alert, `${rule} must fire`).toBeDefined();
-    expect(alert).toMatchObject({
-      state: "firing",
-      owner: alertRuleCatalog[rule]?.owner,
-      severity: alertRuleCatalog[rule]?.severity,
-      runbook: `docs/operations/alerts.md#${rule}`,
-    });
-    const event = db(stack).get<{ aggregate_id: string; data_json: string }>(
-      "SELECT aggregate_id,data_json FROM outbox WHERE workspace_id=? AND type='alert.fired' AND aggregate_id=?",
-      stack.workspaceId,
-      alert?.id,
-    );
-    expect(JSON.parse(String(event?.data_json))).toMatchObject({ alertId: alert?.id, rule });
-    expect(
-      total(
-        stack,
-        "SELECT COUNT(*) AS n FROM audit_events WHERE workspace_id=? AND action='alert.fired.allowed' AND resource_id=?",
-        alert?.id,
-      ),
-    ).toBe(1);
-
-    const cleared = await scenario.clear(stack, now);
-    const recovery = await stack.workspace.alerts.evaluate({ now: cleared.now, ...cleared.probes });
-    expect(recovery.resolved, `${rule} must resolve`).toContain(alert?.id);
-    expect(stack.workspace.alerts.list({ state: "resolved" }).map((item) => item.id)).toContain(
-      alert?.id,
-    );
+  const probes = await scenario.raise(stack, now);
+  const raised = await stack.workspace.alerts.evaluate({ now, ...probes });
+  expect(raised.errors).toEqual({});
+  const alert = raised.fired.find((candidate) => candidate.rule === rule);
+  expect(alert, `${rule} must fire`).toBeDefined();
+  expect(alert).toMatchObject({
+    state: "firing",
+    owner: alertRuleCatalog[rule]?.owner,
+    severity: alertRuleCatalog[rule]?.severity,
+    runbook: `docs/operations/alerts.md#${rule}`,
   });
+  const event = db(stack).get<{ aggregate_id: string; data_json: string }>(
+    "SELECT aggregate_id,data_json FROM outbox WHERE workspace_id=? AND type='alert.fired' AND aggregate_id=?",
+    stack.workspaceId,
+    alert?.id,
+  );
+  expect(JSON.parse(String(event?.data_json))).toMatchObject({ alertId: alert?.id, rule });
+  expect(
+    total(
+      stack,
+      "SELECT COUNT(*) AS n FROM audit_events WHERE workspace_id=? AND action='alert.fired.allowed' AND resource_id=?",
+      alert?.id,
+    ),
+  ).toBe(1);
+
+  const cleared = await scenario.clear(stack, now);
+  const recovery = await stack.workspace.alerts.evaluate({ now: cleared.now, ...cleared.probes });
+  expect(recovery.resolved, `${rule} must resolve`).toContain(alert?.id);
+  expect(stack.workspace.alerts.list({ state: "resolved" }).map((item) => item.id)).toContain(
+    alert?.id,
+  );
+}
+
+it("OPS-028 lease_expirations_abnormal fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("lease_expirations_abnormal"));
+it("OPS-028 queue_age_high fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("queue_age_high"));
+it("OPS-028 storage_warning fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("storage_warning"));
+it("OPS-028 storage_critical fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("storage_critical"));
+it("OPS-028 backup_failing fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("backup_failing"));
+it("OPS-028 dlq_not_empty fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("dlq_not_empty"));
+it("OPS-028 audit_unavailable fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("audit_unavailable"));
+it("OPS-028 budget_exhausted fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("budget_exhausted"));
+it("OPS-028 cancellation_stuck fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("cancellation_stuck"));
+it("OPS-028 tenant_violation fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("tenant_violation"));
+it("OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("egress_denied"));
 
 it("OPS-028 stays quiet on a healthy deployment and below every threshold", async () => {
   const stack = await freshStack();
