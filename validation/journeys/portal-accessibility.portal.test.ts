@@ -370,6 +370,30 @@ describe("accessibility checks fail on defective pages", () => {
     expect((await checkKeyboardTraversal(page)).problems).toEqual([]);
   });
 
+  it("UX-051 NFR-008 counts a radio group and a date input as one tab stop each, and still reports what the keyboard cannot reach", async () => {
+    const page = await blank();
+    const ring = "<style>*:focus{outline:3px solid #123}</style>";
+    await page.setContent(
+      `<main><h1>t</h1>${ring}<form><input type="radio" name="g" value="a"><input type="radio" name="g" value="b" checked><input type="radio" name="g" value="c"></form><input type="datetime-local"><button>Go</button></main>`,
+    );
+    const native = await checkKeyboardTraversal(page);
+    expect(native).toMatchObject({ total: 3, reached: 3, problems: [] });
+    // Negative control: a loop that is not a date input's own segments is still a trap, and a
+    // group whose only tab stop was taken away is reported as unreachable.
+    await page.setContent(
+      `<main><h1>t</h1>${ring}<button>A</button><button onkeydown="if(event.key==='Tab'){event.preventDefault()}">Trap</button><input type="datetime-local"></main>`,
+    );
+    expect((await checkKeyboardTraversal(page)).problems.join("\n")).toContain(
+      "keyboard trap or loop",
+    );
+    await page.setContent(
+      `<main><h1>t</h1>${ring}<style>input{display:block}</style><input type="radio" name="g" value="a" tabindex="-1" checked><input type="radio" name="g" value="b"></main>`,
+    );
+    expect((await checkKeyboardTraversal(page)).problems.join("\n")).toContain(
+      "not reachable with Tab",
+    );
+  });
+
   it("UX-053 reports horizontal page scroll, overlap and controls outside the 320 px viewport", async () => {
     const page = await blank();
     await atViewport(page, { width: 320, zoom: 2 });

@@ -27,34 +27,64 @@ interface TraversalReport {
   readonly order: string[];
 }
 
+/** Native date/time inputs expose one tab stop per editable segment (month, day, hour, ...). */
+const segmentedTypes = ["date", "datetime-local", "time", "month", "week"];
+const maxSegments = 10;
+
 /**
  * Tabs through the page from its start. Every visible, enabled interactive element must receive
  * focus exactly once before focus cycles, each with a visible focus indicator (WCAG 2.4.7/2.4.11
  * as far as it can be computed), and no element may use a positive `tabindex` (WCAG 2.4.3).
+ *
+ * Two native composite widgets are modelled as the browser implements them (WAI-ARIA APG):
+ * a radio group is ONE tab stop (its checked radio, or the first when none is checked; arrow
+ * keys move inside it), and a date/time input keeps focus through its editable segments before
+ * Tab leaves it. Both still have to be reached, and any other repeat of an element is a loop.
  */
 export async function checkKeyboardTraversal(page: Page): Promise<TraversalReport> {
-  const total = await page.evaluate((selector) => {
-    document.querySelectorAll("[data-sweep-index]").forEach((node) => {
-      node.removeAttribute("data-sweep-index");
-    });
-    const visible = (element: Element) => {
-      const style = getComputedStyle(element);
-      return (
-        style.visibility !== "hidden" &&
-        style.display !== "none" &&
-        element.getClientRects().length > 0 &&
-        !element.closest("[inert], dialog:not([open])") &&
-        !(element as HTMLButtonElement).disabled
-      );
-    };
-    const elements = [...document.querySelectorAll(selector)].filter(visible);
-    elements.forEach((element, index) => {
-      element.setAttribute("data-sweep-index", String(index));
-    });
-    (document.activeElement as HTMLElement | null)?.blur();
-    window.scrollTo(0, 0);
-    return elements.length;
-  }, interactiveSelector);
+  const { total, segmented } = await page.evaluate(
+    ({ selector, segmentedTypes }) => {
+      document.querySelectorAll("[data-sweep-index]").forEach((node) => {
+        node.removeAttribute("data-sweep-index");
+      });
+      const visible = (element: Element) => {
+        const style = getComputedStyle(element);
+        return (
+          style.visibility !== "hidden" &&
+          style.display !== "none" &&
+          element.getClientRects().length > 0 &&
+          !element.closest("[inert], dialog:not([open])") &&
+          !(element as HTMLButtonElement).disabled
+        );
+      };
+      const candidates = [...document.querySelectorAll(selector)].filter(visible);
+      const tabStop = (element: Element) => {
+        if (!(element instanceof HTMLInputElement) || element.type !== "radio" || !element.name)
+          return true;
+        const group = candidates.filter(
+          (other): other is HTMLInputElement =>
+            other instanceof HTMLInputElement &&
+            other.type === "radio" &&
+            other.name === element.name &&
+            other.form === element.form,
+        );
+        return element === (group.find((radio) => radio.checked) ?? group[0]);
+      };
+      const elements = candidates.filter(tabStop);
+      elements.forEach((element, index) => {
+        element.setAttribute("data-sweep-index", String(index));
+      });
+      (document.activeElement as HTMLElement | null)?.blur();
+      window.scrollTo(0, 0);
+      return {
+        total: elements.length,
+        segmented: elements.filter(
+          (element) => element instanceof HTMLInputElement && segmentedTypes.includes(element.type),
+        ).length,
+      };
+    },
+    { selector: interactiveSelector, segmentedTypes },
+  );
   const problems: string[] = [];
   const order: string[] = [];
   const seen = new Set<number>();
@@ -65,9 +95,11 @@ export async function checkKeyboardTraversal(page: Page): Promise<TraversalRepor
       ).length,
   );
   if (positive > 0) problems.push(`${positive} element(s) use a positive tabindex`);
-  for (let press = 0; press < total + 6; press++) {
+  let previous: number | null = null;
+  let stays = 0;
+  for (let press = 0; press < total + 6 + segmented * maxSegments; press++) {
     await page.keyboard.press("Tab");
-    const focus = await page.evaluate(() => {
+    const focus = await page.evaluate((segmentedTypes) => {
       const element = document.activeElement as HTMLElement | null;
       if (!element || element === document.body) return null;
       const style = getComputedStyle(element);
@@ -80,11 +112,12 @@ export async function checkKeyboardTraversal(page: Page): Promise<TraversalRepor
         index: element.getAttribute("data-sweep-index"),
         tag: element.tagName.toLowerCase(),
         text: text.trim().replace(/\s+/gu, " ").slice(0, 60),
+        segmented: element instanceof HTMLInputElement && segmentedTypes.includes(element.type),
         ring:
           (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) >= 2) ||
           style.boxShadow !== "none",
       };
-    });
+    }, segmentedTypes);
     if (focus === null) break; // focus left the document: the browser chrome has it
     if (focus.index === null) {
       problems.push(
@@ -94,12 +127,16 @@ export async function checkKeyboardTraversal(page: Page): Promise<TraversalRepor
     }
     const index = Number(focus.index);
     if (seen.has(index)) {
+      // The next segment of the date/time input that already has focus is not a repeat.
+      if (focus.segmented && index === previous && ++stays < maxSegments) continue;
       if (seen.size < total)
         problems.push(
           `keyboard trap or loop: "${focus.text}" focused again before ${total - seen.size} control(s) were reached`,
         );
       break;
     }
+    previous = index;
+    stays = 0;
     seen.add(index);
     order.push(`${focus.tag}:${focus.text}`);
     if (!focus.ring) problems.push(`no visible focus indicator on <${focus.tag}> "${focus.text}"`);
