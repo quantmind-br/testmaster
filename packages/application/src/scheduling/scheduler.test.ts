@@ -43,7 +43,7 @@ it("OPS-016 OPS-017 a cron schedule fires once per occurrence and keeps the plan
   expect(fire?.scheduledAt).toBe("2026-05-04T09:00:00.000Z");
   const batch = w.app.context.entities.get("BatchRun", w.init.workspaceId, String(fire?.batchId));
   expect(batch?.scheduleId).toBe(schedule.id);
-  const runs = (batch?.memberRuns as string[]).map((id) => w.app.runs.get(id));
+  const runs = ((batch?.memberRuns ?? []) as string[]).map((id) => w.app.runs.get(id));
   expect(runs).toHaveLength(2);
   expect(runs.every((run) => run.origin === "schedule")).toBe(true);
   // The same instant never fires twice, whatever the number of ticks.

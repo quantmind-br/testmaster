@@ -88,7 +88,7 @@ export async function createScheduleWorld(
     },
     finish(batchId, outcome) {
       const batch = opened.context.entities.get("BatchRun", init.workspaceId, batchId);
-      for (const runId of batch?.memberRuns as string[]) {
+      for (const runId of (batch?.memberRuns ?? []) as string[]) {
         const run = opened.context.entities.get("Run", init.workspaceId, runId);
         const next = {
           ...run,
