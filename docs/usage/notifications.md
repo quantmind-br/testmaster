@@ -10,15 +10,17 @@ finally lands in the dead-letter queue.
 | Provider | Secret (stored as a TestMaster secret) | Notes |
 |---|---|---|
 | `slack` | the Slack incoming-webhook URL (`settings.secretRef`) | text is escaped; the URL host must be a Slack host |
-| `email` | JSON `{host, port, user, password}` (`settings.smtpSecretRef`) | `security` is `tls` or `starttls`; recipients must match `allowedRecipientDomains`; CR/LF in any header value is refused (`header_injection`) |
+| `email` | JSON `{host, port, user, password}` (`settings.smtpSecretRef`) | `security` is `tls` (implicit) or `starttls` (the server must offer STARTTLS, otherwise the delivery is refused; plaintext SMTP does not exist); recipients must match `allowedRecipientDomains`; CR/LF in any header value is refused (`header_injection`) |
 | `webhook` | the signing secret (`settings.signingSecretRef`) | HTTPS only; redirects are never followed |
 
 Every secret must be bound (`allowedOrigins`) to the destination origin and listed in the
 integration's `secretRefs`. Creating or updating an integration needs consent for the provider's
 scope: `notify:slack`, `notify:email` or `notify:webhook`.
 
-An integration subscribes to `run.completed`, `run.failed`, `batch.completed`, `schedule.misfire`,
-`schedule.paused`, `delivery.dead_letter`, `worker.offline` and `alert.fired`, optionally narrowed by
+An integration subscribes to `run.completed`, `run.failed`, `run.recovered` (a pass after a
+non-passing Run of the same test and environment), `resource.orphaned` (cleanup could not be
+confirmed), `batch.completed`, `schedule.misfire`, `schedule.paused`, `delivery.dead_letter`,
+`worker.offline` and `alert.fired`, optionally narrowed by
 `projectIds`, `settings.rules.environmentIds` and `settings.rules.suiteIds`. `settings.redaction.level`
 is `summary` (default) or `minimal` (no counts, no reason code).
 

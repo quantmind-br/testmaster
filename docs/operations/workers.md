@@ -12,9 +12,20 @@ network and distributed fairness are M5.
    `testmaster worker start --mode server --config <server.json> --enroll-token-file <file>`.
 3. The worker registers its labels, slot count and heartbeat and becomes `ready`.
 
-A token enrolls exactly one identity. Presenting it again resumes the same worker (a restarted
-process keeps its row) until the worker is revoked; an unknown, expired or revoked token is refused
-with `UNAUTHENTICATED`.
+A token enrolls exactly one identity. On first use the token becomes that worker's credential: its
+expiry is extended to 30 days and it authorizes only `POST /v1/workers/{id}/heartbeat` for that
+worker (it is never accepted as a user or API token). Presenting it again resumes the same worker
+(a restarted process keeps its row) until the worker is revoked; an unknown, expired or revoked
+token is refused with `UNAUTHENTICATED`. Revoking the worker revokes the credential.
+
+## Heartbeat
+
+`POST /v1/workers/{id}/heartbeat` with `Authorization: Bearer <worker credential>` and
+`{leaseId, state, version}` renews the lease the worker holds, records liveness and answers the
+Worker document. It is refused with `UNAUTHENTICATED` for any other caller, `REVISION_CONFLICT`
+when `version` is stale and `PRECONDITION_FAILED` with `reasonCode: "lease_lost"` when the worker
+no longer holds the lease (including an expired one): the worker must stop that job, not retry.
+A worker that reports `ready` while an administrator has drained it stays `draining`.
 
 ## States
 
