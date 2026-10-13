@@ -6,13 +6,14 @@
 	auto_https disable_redirects
 }
 
-:8443 {
+{$TESTMASTER_PUBLIC_HOST:localhost}:8443 {
 	tls internal
 	encode zstd gzip
 	reverse_proxy server:7331 {
 		header_up X-Forwarded-Proto https
 		header_up X-Forwarded-For {remote_host}
 		health_uri /v1/health/live
+		health_interval 5s
 	}
 	header {
 		Strict-Transport-Security "max-age=31536000"

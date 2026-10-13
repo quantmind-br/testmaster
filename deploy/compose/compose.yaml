@@ -74,6 +74,7 @@ services:
       - ${TESTMASTER_DATA_DIR:?set TESTMASTER_DATA_DIR}:${TESTMASTER_DATA_DIR}
       - ${TESTMASTER_KEY_DIR:?set TESTMASTER_KEY_DIR}:${TESTMASTER_KEY_DIR}
       - ${TESTMASTER_BACKUP_DIR:-/var/empty}:/var/backups/testmaster
+      - ${TESTMASTER_DB_PASSWORD_FILE:?set TESTMASTER_DB_PASSWORD_FILE}:/run/testmaster/db.password:ro
     networks: [backend, frontend]
     healthcheck:
       # /v1/health/live is the one unauthenticated route. Operators read full readiness with
@@ -90,7 +91,11 @@ services:
   caddy:
     image: caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
     restart: unless-stopped
-    depends_on: [server]
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      TESTMASTER_PUBLIC_HOST: ${TESTMASTER_PUBLIC_HOST:-localhost}
     ports:
       - "${TESTMASTER_PUBLIC_PORT:-8443}:8443"
     volumes:

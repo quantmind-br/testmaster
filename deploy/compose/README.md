@@ -5,20 +5,35 @@ workers as systemd user units on the same host. Storage is PostgreSQL plus a fil
 directory; S3-compatible storage is not implemented (a `storage.kind: "s3"` configuration is
 refused at startup with `CAPABILITY_UNAVAILABLE`, milestone M5).
 
+`validation/journeys/j17-server.docker.test.ts` runs exactly the sequence below (with generated
+paths and ports) on the rootless Docker daemon: image build, TLS through Caddy, migration,
+bootstrap, owner sign-in, a Run executed by a host worker, and crash recovery.
+
 ## 1. Prepare
 
+Copy `.env.example` to `.env` next to `compose.yaml` and adjust the paths. Then, from this
+directory (`testmaster` below stands for `node $TESTMASTER_RUNTIME_DIR/apps/cli/dist/main.js`; the
+runtime is a checkout built with `pnpm install --frozen-lockfile && pnpm build`):
+
 ```bash
-export TESTMASTER_DATA_DIR=/srv/testmaster/evidence      # evidence volume (operator encrypts it)
-export TESTMASTER_PG_DATA=/srv/testmaster/pgdata         # database volume (operator encrypts it)
-export TESTMASTER_KEY_DIR=/srv/testmaster/keys
-export TESTMASTER_TLS_DIR=/srv/testmaster/tls
-export TESTMASTER_RUNTIME_DIR=$HOME/testmaster           # built checkout: pnpm install && pnpm build
-export TESTMASTER_CONFIG=/srv/testmaster/server.json     # from server.example.json
-export TESTMASTER_PG_ADMIN_PASSWORD_FILE=/srv/testmaster/pg-admin.password
-bash gen-tls.sh "$TESTMASTER_TLS_DIR"
-node "$TESTMASTER_RUNTIME_DIR/apps/cli/dist/main.js" server keygen --out "$TESTMASTER_KEY_DIR/master.key"
-node "$TESTMASTER_RUNTIME_DIR/apps/cli/dist/main.js" server keygen --out "$TESTMASTER_KEY_DIR/backup.key"
+set -a; . ./.env; set +a
+mkdir -p "$TESTMASTER_DATA_DIR" "$TESTMASTER_KEY_DIR" "$TESTMASTER_BACKUP_DIR" "$TESTMASTER_PG_DATA"
+bash gen-tls.sh "$TESTMASTER_TLS_DIR"                           # PostgreSQL CA + certificate
+testmaster server keygen --out "$TESTMASTER_KEY_DIR/master.key" # prints only the key id
+testmaster server keygen --out "$TESTMASTER_KEY_DIR/backup.key"
+printf '%s\n' "$(openssl rand -base64 24 | tr -dc A-Za-z0-9)xxxxxxxx" > "$TESTMASTER_PG_ADMIN_PASSWORD_FILE"
+printf '%s\n' "$(openssl rand -base64 24 | tr -dc A-Za-z0-9)xxxxxxxx" > "$TESTMASTER_DB_PASSWORD_FILE"
+chmod 600 "$TESTMASTER_PG_ADMIN_PASSWORD_FILE" "$TESTMASTER_DB_PASSWORD_FILE"
 ```
+
+Create two server configuration files from `server.example.json` (mode 0600, owned by you):
+`$TESTMASTER_CONFIG` for the container (`database.url` host `postgres`, `passwordFile`
+`/run/testmaster/db.password`, `caFile` `/etc/testmaster/tls/ca.crt`) and a host copy for the
+operator CLI and workers (`database.url` host `127.0.0.1` and `$TESTMASTER_PG_PORT`, host paths for
+`passwordFile` and `caFile`). `storage.root` and both key paths are host paths and are mounted at the
+same path in the container, because worker sandboxes bind-mount host paths.
+`server.publicOrigin` and `server.origins` must be the `https://` origin Caddy serves
+(`https://$TESTMASTER_PUBLIC_HOST:$TESTMASTER_PUBLIC_PORT`).
 
 `security.atRestEncryption` must declare `operator-volume` for the database and the evidence: server
 mode refuses to start otherwise, and `/v1/health/ready` reports `atRestEncryption:
@@ -26,49 +41,66 @@ mode refuses to start otherwise, and `/v1/health/ready` reports `atRestEncryptio
 is the operator's statement. Secrets (AES-256-GCM, key id = sha256 of the master key) and backups
 (`security.backupKeyFile`) are encrypted by TestMaster itself.
 
-Create the application role and database (the runtime role must not be a superuser nor have
-`BYPASSRLS`; the server refuses such a role) and put its password in `database.passwordFile`:
-
-```sql
-CREATE ROLE testmaster LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '...';
-CREATE DATABASE testmaster OWNER testmaster TEMPLATE template0 LOCALE 'C' ENCODING 'UTF8';
-```
-
 ## 2. Start
 
 ```bash
 docker compose up -d --wait postgres
-testmaster db migrate --mode server --config "$TESTMASTER_CONFIG"     # the only thing that migrates
-testmaster server bootstrap --config "$TESTMASTER_CONFIG" --workspace-name Acme --owner-login owner
-docker compose up -d --wait
-testmaster server readiness --config "$TESTMASTER_CONFIG"             # all probes, exit 1 when not ready
+bash provision-db.sh "$TESTMASTER_DB_PASSWORD_FILE"     # role without SUPERUSER/BYPASSRLS, database
+testmaster db migrate --mode server --config HOST_CONFIG  # the only thing that migrates
+testmaster server bootstrap --config HOST_CONFIG --workspace-name Acme --owner-login owner
+docker compose up -d --build --wait server caddy
+testmaster server readiness --config HOST_CONFIG          # all probes, exit 1 when not ready
 systemctl --user enable --now testmaster-worker@production
 ```
 
+`bootstrap` prints a one-time owner recovery token: open the portal at your public origin, or
+`POST /v1/identity/recovery` with `{principal, recoveryToken, newPassword}`, then sign in. Caddy
+uses its own CA (`tls internal`); export it with
+`docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .` and trust it, or replace
+`tls internal` with an ACME or operator certificate.
+
 On a rootless daemon container root is the operator, so the default `TESTMASTER_CONTAINER_USER=0:0`
-keeps file ownership; on a rootful daemon set it to `$(id -u):$(id -g)`. The data and key
-directories are mounted at their host paths so worker sandboxes bind-mount the same paths.
+keeps file ownership; on a rootful daemon set it to `$(id -u):$(id -g)`. The worker unit reads its
+configuration from `~/.config/testmaster/<instance>.json` (the host copy) and talks to the rootless
+socket (`DOCKER_HOST=unix://%t/docker.sock`).
 
-## 3. Readiness
+To remove a deployment on a rootless daemon: `docker compose down -v`, then give the database files
+back with `docker run --rm --entrypoint chown -v "$TESTMASTER_PG_DATA:/d" <postgres image> -R 0:0 /d`
+(PostgreSQL's files belong to a subordinate uid).
 
-`testmaster server readiness` (and `GET /v1/health/ready` for a workspace token) reports database
+## 3. What the server process does and does not do
+
+The server process has no Docker daemon. At admission it verifies the runner image lock file and
+the seccomp profile hash (`server` branch of `Application.preflight`) and freezes the lock into the
+Run's admission snapshot. The worker host compares that lock with its own image store when it starts
+and verifies every container's hardening before each Attempt; a mismatch ends the Run `blocked` with
+`security_precondition_failed`. A Run is only admitted while a worker is live.
+
+## 4. Readiness
+
+`testmaster server readiness` (and `GET /v1/health/ready` for a signed-in caller) reports database
 reachability, schema version (`current`, `behind` or `ahead`), the tenant-isolation role check,
 evidence-volume writability and free space (refuses below 10%), master-key availability, admission
 state, and ready workers. Without a worker the API is ready and reports `worker.status: "degraded"`.
+While PostgreSQL is down the API answers 503 and recovers by itself when it returns.
 
-## 4. Per-component rolling upgrade (OPS-038)
+## 5. Per-component rolling upgrade (OPS-038)
 
 Migrations of one release are additive (expand-only), so adjacent releases can overlap.
 
 1. Back up: `pg_dump --format=custom` plus the evidence directory (or `testmaster backup create`).
 2. Upgrade the server first: install the new runtime, `testmaster db upgrade` (preview), then
    `testmaster db migrate --mode server --config ...`, then `docker compose up -d server`.
-3. Running workers keep finishing their fenced leases. The next heartbeat window a worker older than
-   the schema sees `schemaCompatibility() = ahead`, claims nothing, drains and exits with
-   `PRECONDITION_FAILED` / `worker_schema_behind`. systemd restarts it every 30 s until its own
-   runtime is upgraded; it then resumes claiming. A new process of an older build is refused at
-   start (`Controller is incompatible with database schema`, `schema_ahead`).
+3. Running workers keep finishing their fenced leases. Within about two seconds a worker older
+   than the schema stops claiming, drains and exits with `PRECONDITION_FAILED` /
+   `worker_schema_behind`. systemd restarts it every 30 s until its own runtime is upgraded; it then
+   resumes claiming. A new process of an older build is refused at start
+   (`Controller is incompatible with database schema`, `schema_ahead`).
 4. Upgrading a worker first is refused by the new build until the migration ran
    (`Database schema is behind; run testmaster db migrate`).
-5. A lease that was in flight when a worker stopped is reclaimed by the lease fence, never
-   executed twice.
+5. A lease that was in flight when a worker died is reclaimed through the lease fence on the next
+   worker's maintenance pass: the lost Attempt ends `inconclusive` and a new Attempt gets a higher
+   fence; nothing runs twice under one fence.
+
+`validation/journeys/rolling-upgrade.docker.test.ts` proves steps 3 and 4 with real worker
+processes on the rootless daemon.
