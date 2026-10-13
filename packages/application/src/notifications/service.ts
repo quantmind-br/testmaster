@@ -248,6 +248,14 @@ export class NotificationsService {
   /** Dead-lettered notifications in the admin DLQ shape (independent of any verdict). */
   deadLetters(): NotificationDeadLetter[] {
     this.ctx.authorize("A");
+    return this.deadLetterEntries();
+  }
+
+  /**
+   * The same entries without a permission check, for the operations DLQ whose own listing already
+   * requires read access (a notification list needs no more); requeue stays admin-only there.
+   */
+  deadLetterEntries(): NotificationDeadLetter[] {
     return this.ctx.database
       .all(
         "SELECT * FROM notification_deliveries WHERE workspace_id=? AND state='dead_letter' ORDER BY created_at DESC, id DESC LIMIT 1000",

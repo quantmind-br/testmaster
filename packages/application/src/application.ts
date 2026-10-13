@@ -504,7 +504,7 @@ export class Application {
       publicOrigin,
     });
     this.operations.registerDlqSource("notification", {
-      list: () => this.notifications.deadLetters(),
+      list: () => this.notifications.deadLetterEntries(),
       requeue: (id) => this.notifications.requeue(id),
     });
   }
