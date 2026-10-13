@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "J17-server",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-rootless-compose",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:14:33.080Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [
+    "run_01a135d4-5ac9-7678-aea5-5b03e28efef9"
+  ],
+  "oracleVerdicts": [],
+  "limitations": [
+    "Single host: PostgreSQL, API and Caddy in compose, worker as a host process on the rootless daemon.",
+    "Filesystem evidence storage only; S3 is refused (ADR-016).",
+    "Caddy internal CA; no public ACME certificate.",
+    "Volume encryption is operator-attested and not verified."
+  ]
+}

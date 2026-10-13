@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j01-j06-toast-without-persist",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:37:14.498Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "j01-j06-toast-without-persist",
+        "--base-url",
+        "http://127.0.0.1:38335",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_aef1162a-368b-4403-9a8e-448342aadb53",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-jnyRTl/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3f097d77-dbe4-4afe-afc3-742dc3dc0cec",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135e8-9c01-77de-b828-e89df01c9c10",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_4fe31529-3eeb-47c3-83af-9bdea689a0e6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135e8-a23d-77eb-98e4-279711794cef",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_5c5cb8ff-7029-4ea3-9d41-2f43726846d7",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a135e8-a23d-77eb-98e4-279711794cef",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f97dbb0b-abab-4279-8469-b70fc6a0c5c1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "artifact",
+        "get",
+        "run_01a135e8-a23d-77eb-98e4-279711794cef",
+        "--raw",
+        "--out",
+        "/tmp/tm-m1-jnyRTl/repo/evidence",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d983af45-e461-448a-8a8c-89ab0c26497c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a135e8-a23d-77eb-98e4-279711794cef",
+        "--format",
+        "json",
+        "--out",
+        "/tmp/tm-m1-jnyRTl/repo/failure-report.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_df5890c5-2816-4860-91f3-6e341134de0e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135e8-a23d-77eb-98e4-279711794cef",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_aa7eedbf-c770-405d-b097-660dedcd3b55",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e8-a23d-77eb-98e4-279711794cef"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "browserCheckoutDatabasePersistence",
+      "healthy": false,
+      "observed": {
+        "persistedOrders": 0
+      },
+      "runId": "run_01a135e8-a23d-77eb-98e4-279711794cef"
+    },
+    {
+      "check": "orderPersistence",
+      "healthy": false,
+      "defective": true,
+      "observed": {
+        "orderId": "aa20144e-39ba-4b79-94ca-d9503b68a232",
+        "persistedRows": 0
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

@@ -1,0 +1,30 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s2a
+
+(node:2268287) [DEP0123] DeprecationWarning: Setting the TLS ServerName to an IP address is not permitted by RFC 6066. This will be ignored in a future version.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:2268287) [DEP0123] DeprecationWarning: Setting the TLS ServerName to an IP address is not permitted by RFC 6066. This will be ignored in a future version.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ❯ |docker-rootless| validation/journeys/postgres-tls.docker.test.ts (2 tests | 1 failed) 1790ms
+   × SEC-036 PostgreSQL refuses a client that trusts a different CA, and a plaintext client 125ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |docker-rootless| validation/journeys/postgres-tls.docker.test.ts > SEC-036 PostgreSQL refuses a client that trusts a different CA, and a plaintext client
+AssertionError: expected [Function] to throw an error
+ ❯ validation/journeys/postgres-tls.docker.test.ts:125:88
+    123|   expect(() => open({ caFile: join(directory, "other-tls", "ca.crt") }…
+    124|   // hostssl-only pg_hba.conf: a plaintext connection matches no rule …
+    125|   expect(() => open({ caFile: join(directory, "tls", "ca.crt"), sslmod…
+       |                                                                                        ^
+    126| });
+    127|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 5 passed (6)
+   Start at  12:21:48
+   Duration  4.44s (tests 89%, import 6%, transform 5%)
+

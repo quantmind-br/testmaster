@@ -1,0 +1,40 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s2a
+
+ ❯ |unit| packages/application/src/server-secrets.test.ts (5 tests | 1 failed) 155ms
+   × SEC-036 server vault fails closed without the master key and never mints a replacement 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/application/src/server-secrets.test.ts > SEC-036 server vault fails closed without the master key and never mints a replacement
+AssertionError: expected ContractError: Secure secret storage is u… { …(3) } to match object { code: 'PRECONDITION_FAILED', …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
++ ContractError {
+    "code": "PRECONDITION_FAILED",
+-   "details": {
+-     "reasonCode": "master_key_unavailable",
+-   },
++   "details": {},
+  }
+
+ ❯ packages/application/src/server-secrets.test.ts:128:60
+    126|   };
+    127|   await expect(release.resolve()).rejects.toMatchObject(missing);
+    128|   await expect(service.set("replacement", "other", origin)).rejects.to…
+       |                                                            ^
+    129|   expect(await readdir(keyDirectory)).toEqual([]);
+    130|   // A different key cannot decrypt what the original key sealed.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  12:21:39
+   Duration  534ms (transform 49%, tests 33%, import 18%)
+

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "cli-002-dry-run-boundary",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:36:02.843Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-CU3M2Q/repo/invalid.json",
+        "--dry-run",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_ef9e8e1b-8c7c-4ec2-82d2-105e4f5b8d9b",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "Invalid ExecutablePlan",
+        "details": {
+          "issues": [
+            {
+              "path": "/steps",
+              "rule": "minItems",
+              "message": "must NOT have fewer than 1 items"
+            }
+          ]
+        },
+        "retryable": false,
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-CU3M2Q/repo/valid.json",
+        "--dry-run",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4e7aee12-03f7-402b-bd59-809d49921085",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "offlineDryRunBoundary",
+      "healthy": true,
+      "positiveControl": {
+        "fetchCalls": 1,
+        "targetRequests": 1
+      },
+      "invalidExit": 5,
+      "validExit": 0,
+      "dryRunRequests": 0,
+      "repositoryAndHomeUnchanged": true
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
