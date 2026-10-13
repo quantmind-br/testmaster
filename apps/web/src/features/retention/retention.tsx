@@ -101,6 +101,7 @@ function RemoveReferenceSection({ project, me, onChanged }: SectionProps): React
         ) : (
           <ConfirmButton
             label="Remove reference"
+            subject={item.locator}
             tone="danger"
             dialog={{
               title: "Remove this secret reference?",
@@ -196,6 +197,7 @@ function ArchiveTestSection({ project, me, onChanged }: SectionProps): ReactNode
         ) : (
           <ConfirmButton
             label="Archive test"
+            subject={item.name}
             tone="danger"
             dialog={{
               title: "Archive this test?",
@@ -310,6 +312,7 @@ function ArtifactsOfRun({
         ) : (
           <ConfirmButton
             label="Expire artifact"
+            subject={item.relativePath}
             tone="danger"
             dialog={{
               title: "Expire this artifact?",

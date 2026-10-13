@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useId, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api";
 import { ApiError } from "../../api/client";
 import type { Me } from "../../api/session";
@@ -284,6 +284,14 @@ export function EnvironmentsSection({
     `/projects/${encodeURIComponent(project.id)}/environments`,
   );
   const [editing, setEditing] = useState<Environment | "new" | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const wasEditing = useRef(false);
+  // The editor and its dialog leave the page when saving ends; focus returns to the section so
+  // keyboard users keep their place instead of landing on <body>.
+  useEffect(() => {
+    if (editing === null && wasEditing.current) heading.current?.focus();
+    wasEditing.current = editing !== null;
+  }, [editing]);
   const canWrite = me.permissions.write;
   const writeReason = canWrite
     ? null
@@ -326,6 +334,7 @@ export function EnvironmentsSection({
             {project.defaultEnvironmentId === item.id ? null : (
               <ConfirmButton
                 label="Make default"
+                subject={item.name}
                 tone="secondary"
                 dialog={{
                   title: "Make this the default environment?",
@@ -355,6 +364,7 @@ export function EnvironmentsSection({
             {project.defaultEnvironmentId === item.id ? null : (
               <ConfirmButton
                 label="Archive"
+                subject={item.name}
                 tone="danger"
                 dialog={{
                   title: "Archive this environment?",
@@ -383,7 +393,9 @@ export function EnvironmentsSection({
   ];
   return (
     <section aria-labelledby="environments-heading" className="settings-section">
-      <h2 id="environments-heading">Environments</h2>
+      <h2 id="environments-heading" tabIndex={-1} ref={heading}>
+        Environments
+      </h2>
       <p className="hint">
         Each save records a new immutable environment revision. Recorded runs keep the revision they
         ran against.

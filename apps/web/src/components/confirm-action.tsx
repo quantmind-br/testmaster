@@ -4,6 +4,8 @@ import { useAnnounce } from "./live-region";
 
 interface ConfirmButtonProps {
   readonly label: string;
+  /** What the button acts on, appended for assistive technology so repeated row buttons differ. */
+  readonly subject?: string;
   readonly tone?: "primary" | "secondary" | "danger";
   /** When set, the button is inert and the reason is shown next to it (never silently hidden). */
   readonly disabledReason?: string | null;
@@ -33,12 +35,14 @@ const toneClass = { primary: "button", secondary: "button secondary", danger: "b
 export function ConfirmButton(props: ConfirmButtonProps): ReactNode {
   const [open, setOpen] = useState(false);
   const key = useRef<string | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const announce = useAnnounce();
   const reasonId = useId();
   const blocked = props.disabledReason !== undefined && props.disabledReason !== null;
   return (
     <>
       <button
+        ref={trigger}
         type="button"
         className={toneClass[props.tone ?? "secondary"]}
         aria-disabled={blocked}
@@ -51,6 +55,7 @@ export function ConfirmButton(props: ConfirmButtonProps): ReactNode {
         }}
       >
         {props.label}
+        {props.subject ? <span className="visually-hidden"> {props.subject}</span> : null}
       </button>
       {blocked ? (
         <p className="hint" id={reasonId}>
@@ -69,11 +74,17 @@ export function ConfirmButton(props: ConfirmButtonProps): ReactNode {
         onConfirm={async () => {
           const current = key.current ?? crypto.randomUUID();
           key.current = current;
+          const invoker = trigger.current;
           await props.onConfirm(current);
           // Only a completed action consumes the key; a failure keeps it for the retry.
           key.current = null;
           setOpen(false);
           if (props.successMessage) announce(props.successMessage);
+          // When the action removed the invoker, focus would fall to <body>; keep the user in the page.
+          setTimeout(() => {
+            if (invoker && !invoker.isConnected && document.activeElement === document.body)
+              document.querySelector<HTMLElement>("main")?.focus();
+          }, 0);
         }}
       />
     </>

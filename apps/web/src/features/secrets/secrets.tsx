@@ -393,6 +393,7 @@ export function SecretsPage(): ReactNode {
               </button>
               <ConfirmButton
                 label="Revoke"
+                subject={item.locator}
                 tone="danger"
                 dialog={{
                   title: "Remove this secret reference?",
