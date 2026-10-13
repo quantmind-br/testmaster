@@ -2,8 +2,14 @@ import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Application, type ServerConfig } from "@testmaster/application";
+import {
+  Application,
+  type PermissionGrant,
+  type ServerConfig,
+  scaffoldPlan,
+} from "@testmaster/application";
 import { type Role, routeCatalog } from "@testmaster/contracts";
+import { uuidV7IdGenerator } from "@testmaster/domain";
 import { afterEach, expect, it } from "vitest";
 import { testProvider } from "../../../packages/model-gateway/src/test-support.js";
 import { buildRouteTable } from "./routes/index.js";
@@ -87,6 +93,7 @@ async function fixture(options: { providers?: boolean } = {}) {
     role: Role,
     scopes: ("R" | "W" | "X" | "A")[],
     restrictions: string[] = [],
+    grants: PermissionGrant[] = [],
   ) => {
     const login = `${role.replace("_", "-")}-${++counter}`;
     const added = application.members.add(init.workspaceId, {
@@ -106,6 +113,7 @@ async function fixture(options: { providers?: boolean } = {}) {
       scopes,
       expiresAt: new Date(Date.now() + 3600_000).toISOString(),
       principalId: added.member.principalId,
+      ...(grants.length ? { grants } : {}),
     });
     return { token: issued.token, principalId: added.member.principalId };
   };
@@ -343,6 +351,14 @@ it("UX-047 reads, grants and revokes model data sharing over HTTP without exposi
   expect(
     (await f.call("DELETE", `/projects/${projectId}/model-consents/fake`, viewer.token)).statusCode,
   ).toBe(403);
+  // A provider the configuration does not know has nothing to revoke: not found, and no audit row.
+  const auditRows = () =>
+    f.application.database.all("SELECT 1 FROM audit_events WHERE action='consent.revoked'").length;
+  const before = auditRows();
+  const ghost = await f.call("DELETE", `/projects/${projectId}/model-consents/ghost`, owner.token);
+  expect(ghost.statusCode).toBe(404);
+  expect(ghost.json().error.code).toBe("NOT_FOUND");
+  expect(auditRows()).toBe(before);
   const everything = [read.body, grant.body, revoked.body, notAllowed.body].join("\n");
   for (const secret of ["HTTP-API-KEY-CANARY", "SETTINGS_FAKE_KEY", "apiKey", "private-path"])
     expect(everything).not.toContain(secret);
@@ -435,4 +451,132 @@ it("M4-05 lists environment revisions over HTTP newest first and answers every p
   expect(table.has("GET /tunnels")).toBe(false);
   const tunnels = await f.call("GET", "/tunnels", owner.token);
   expect(tunnels.json().error.code).toBe("CAPABILITY_UNAVAILABLE");
+});
+
+/** One completed Run of a fresh Test with a live artifact row and file, written without a worker. */
+async function seedArtifact(f: Awaited<ReturnType<typeof fixture>>) {
+  const { application } = f;
+  const ctx = application.context;
+  const at = "2020-01-01T00:00:00.000Z";
+  const test = application.tests.create({
+    projectId: f.init.projectId,
+    plan: scaffoldPlan("backend"),
+  });
+  const revisionId = String(test.activeRevisionId);
+  const runId = uuidV7IdGenerator.next("run");
+  const attemptId = uuidV7IdGenerator.next("att");
+  const snapshotId = uuidV7IdGenerator.next("snp");
+  const jobId = uuidV7IdGenerator.next("job");
+  const artifactId = uuidV7IdGenerator.next("art");
+  ctx.entities.insert("Run", {
+    id: runId,
+    workspaceId: ctx.workspaceId,
+    createdAt: at,
+    testId: test.id,
+    revisionId,
+    environmentRevisionId: application.environments.get(f.init.environmentId).activeRevisionId,
+    batchId: null,
+    matrixCell: { environmentName: "local" },
+    mode: "replay",
+    phase: "completed",
+    status: "passed",
+    outcome: "passed",
+    origin: "settings-http-test",
+    gatePolicy: {},
+    gate: "passed",
+    cleanupOutcome: "not_required",
+    analysisStatus: "not_requested",
+  });
+  ctx.database.run(
+    "INSERT INTO job_leases(workspace_id,id,created_at,queue,resource_id,state,available_at,fence) VALUES(?,?,?,?,?,?,?,1)",
+    ctx.workspaceId,
+    jobId,
+    at,
+    "execution",
+    runId,
+    "completed",
+    at,
+  );
+  ctx.entities.insert(
+    "Attempt",
+    {
+      id: attemptId,
+      workspaceId: ctx.workspaceId,
+      createdAt: at,
+      runId,
+      number: 1,
+      workerId: null,
+      seed: 0,
+      phase: "completed",
+      startedAt: at,
+      endedAt: at,
+      outcome: "passed",
+    },
+    { jobId, fence: 1, leaseOwner: "settings-http-test" },
+  );
+  ctx.entities.insert("Snapshot", {
+    id: snapshotId,
+    workspaceId: ctx.workspaceId,
+    createdAt: at,
+    runId,
+    attemptId,
+    revisionId,
+    manifestHash: "0".repeat(64),
+    committedAt: at,
+    redactionPolicyHash: "0".repeat(64),
+  });
+  const storageKey = `runs/${ctx.workspaceId}/${runId}/${attemptId}/evidence/result.txt`;
+  const file = join(application.config.dataDir, storageKey);
+  await mkdir(join(file, ".."), { recursive: true });
+  await writeFile(file, "evidence");
+  ctx.entities.insert("Artifact", {
+    id: artifactId,
+    workspaceId: ctx.workspaceId,
+    createdAt: at,
+    runId,
+    attemptId,
+    revisionId,
+    snapshotId,
+    kind: "dom",
+    hash: "1".repeat(64),
+    bytes: 8,
+    mime: "text/plain",
+    storageKey,
+    state: "available",
+    redactionStatus: "not_applicable",
+  });
+  return artifactId;
+}
+
+it("UX-048 revokes an artifact over HTTP through the idempotency wrapper and replays the same operation", async () => {
+  const f = await fixture();
+  const artifactId = await seedArtifact(f);
+  const deleteGrant: PermissionGrant = {
+    resourceType: "Artifact",
+    actions: ["delete"],
+    projectIds: [f.init.projectId],
+    environmentIds: [],
+    expiresAt: null,
+    grantedBy: f.init.principalId,
+  };
+  const owner = await f.actor("org_owner", ["R", "W", "A"], [], [deleteGrant]);
+  const viewer = await f.actor("viewer", ["R", "W", "A"], [], [deleteGrant]);
+  // Negative control: a role without the delete authority is refused and nothing is tombstoned.
+  const refused = await f.call("DELETE", `/artifacts/${artifactId}`, viewer.token);
+  expect(refused.statusCode).toBe(403);
+  expect(f.application.retention.listDeletionOperations()).toEqual([]);
+  const key = randomUUID();
+  const first = await f.call("DELETE", `/artifacts/${artifactId}`, owner.token, { key });
+  expect(first.statusCode, first.body).toBe(200);
+  const operation = first.json().data;
+  expect(operation).toMatchObject({ resourceRefs: [artifactId], requestedBy: owner.principalId });
+  const replay = await f.call("DELETE", `/artifacts/${artifactId}`, owner.token, { key });
+  expect(replay.statusCode, replay.body).toBe(200);
+  expect(replay.json().data.id).toBe(operation.id);
+  const repeat = await f.call("DELETE", `/artifacts/${artifactId}`, owner.token);
+  expect(repeat.json().data.id).toBe(operation.id);
+  expect(f.application.retention.listDeletionOperations()).toHaveLength(1);
+  expect(
+    f.application.database.get("SELECT state FROM artifacts WHERE id=?", artifactId)?.state,
+  ).toBe("expired");
 });
