@@ -295,9 +295,8 @@ describe("OPS-033 a tenant with thousands of queued jobs cannot starve another t
     );
     const flooder = fairShareCap({ database: view, workspaceId, now });
     const newcomer = fairShareCap({ database: view, workspaceId: otherWorkspace, now });
-    expect(flooder).toBeGreaterThanOrEqual(1);
-    expect(flooder).toBeLessThanOrEqual(1);
-    expect(newcomer).toBeGreaterThanOrEqual(1);
+    expect(flooder).toBe(1);
+    expect(newcomer).toBe(1);
 
     // With the cap applied the flooder holds at most its share.
     const leases = new LeaseRepository(app.database);
@@ -316,9 +315,6 @@ describe("OPS-033 a tenant with thousands of queued jobs cannot starve another t
       maxLeased: flooder ?? 1,
     });
     expect(first).not.toBeNull();
-    expect(second).toBeNull();
-    // The flooder is held at its share, so the slot it did not take stays available to the other tenant.
-    expect(newcomer).toBeGreaterThanOrEqual(1);
     expect(second).toBeNull();
   });
 });

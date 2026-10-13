@@ -13,10 +13,11 @@ import type {
   NotificationType,
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
-import { LeaseRepository, OutboxRepository } from "@testmaster/persistence";
+import { LeaseRepository, OutboxRepository, type PostgresConfig } from "@testmaster/persistence";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
 import { requireEntity } from "../context.js";
+import { authenticateSession } from "../identity.js";
 import { integrationProviders } from "../integrations/registry.js";
 import type { EgressOptions } from "../notifications/https.js";
 import {
@@ -26,6 +27,7 @@ import {
   type SlackProviderOptions,
 } from "../notifications/providers.js";
 import { NotificationsService } from "../notifications/service.js";
+import type { ServerConfig } from "../server-config.js";
 import {
   allowLoopbackPort,
   createTestTls,
@@ -116,6 +118,11 @@ export interface NotificationHarness {
     members: RunFixtureOptions[],
     data?: { suiteId?: string },
   ): { batchId: string; runIds: string[] };
+  /**
+   * A second dispatcher on its own database connection (PostgreSQL only), sharing the fake clock:
+   * the way a second server process would race the first for the same deliveries.
+   */
+  dispatcher(): Promise<NotificationsService>;
   /** One service pass at the current fake time. */
   tick(): Promise<{ created: number; attempted: number }>;
   /** Passes until nothing is due, advancing the fake clock past each backoff. */
@@ -123,8 +130,74 @@ export interface NotificationHarness {
   close(): Promise<void>;
 }
 
+export interface HarnessOptions {
+  publicOrigin?: string;
+  /** Runs the whole stack on a PostgreSQL server-profile database instead of the local SQLite one. */
+  postgres?: PostgresConfig;
+}
+
+const ownerPassword = "correct horse battery staple";
+interface PostgresTenant {
+  base: Application;
+  scoped: Application;
+  workspaceId: string;
+  projectId: string;
+  environmentId: string;
+  sessionToken: string;
+  serverConfig: ServerConfig;
+  root: string;
+}
+
+/** Bootstraps one workspace with an owner session on PostgreSQL and returns its workspace-bound Application. */
+async function openPostgresTenant(root: string, database: PostgresConfig): Promise<PostgresTenant> {
+  const serverConfig: ServerConfig = {
+    mode: "server",
+    database: { engine: "postgres", ...database },
+    storage: { kind: "filesystem", root: join(root, "evidence") },
+    server: {
+      listen: { host: "127.0.0.1", port: 0 },
+      publicOrigin: "https://tm.example.test",
+      trustedProxies: [],
+      origins: ["https://tm.example.test"],
+    },
+    security: {
+      masterKeyFile: join(root, "master.key"),
+      backupKeyFile: join(root, "backup.key"),
+      atRestEncryption: { database: "operator-volume", evidence: "operator-volume" },
+    },
+  };
+  const base = await Application.open({ cwd: root, home: root, env: {}, server: serverConfig });
+  const first = base.operator.bootstrap({ workspaceName: "Notify", ownerLogin: "notify-owner" });
+  await base.identityService.recover({
+    principal: "notify-owner",
+    recoveryToken: first.ownerRecovery.recoveryToken,
+    newPassword: ownerPassword,
+  });
+  const { sessionToken } = await base.identityService.login({
+    principal: "notify-owner",
+    password: ownerPassword,
+  });
+  const scoped = base.forIdentity(authenticateSession(base, sessionToken));
+  const project = scoped.projects.create({ name: "Notify project" });
+  const environment = scoped.environments.create({
+    projectId: project.id,
+    name: "local",
+    baseUrl: "http://127.0.0.1:3000",
+  });
+  return {
+    base,
+    scoped,
+    workspaceId: String(first.workspace.id),
+    projectId: project.id,
+    environmentId: environment.id,
+    sessionToken,
+    serverConfig,
+    root,
+  };
+}
+
 export async function createNotificationHarness(
-  options: { publicOrigin?: string } = {},
+  options: HarnessOptions = {},
 ): Promise<NotificationHarness> {
   installProviders();
   const root = await mkdtemp(join(tmpdir(), "tm-notify-"));
@@ -133,8 +206,10 @@ export async function createNotificationHarness(
   egress.privateTargets = [];
   delete egress.resolver;
   egress.timeoutMs = 1500;
-  const app = await Application.open({ cwd: root, home: root });
-  const init = await app.init();
+  const tenant = options.postgres ? await openPostgresTenant(root, options.postgres) : null;
+  const extraApplications: Application[] = [];
+  const app = tenant?.scoped ?? (await Application.open({ cwd: root, home: root }));
+  const init = tenant ?? (await app.init());
   const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
   const environmentRevision = app.environments.get(init.environmentId).activeRevisionId;
   const clock: Clock = {
@@ -365,6 +440,22 @@ export async function createNotificationHarness(
       }
       return { batchId, runIds };
     },
+    async dispatcher() {
+      if (!tenant) throw new Error("A second dispatcher needs the PostgreSQL harness");
+      const other = await Application.open({
+        cwd: tenant.root,
+        home: tenant.root,
+        env: {},
+        server: tenant.serverConfig,
+      });
+      extraApplications.push(other);
+      const scoped = other.forIdentity(authenticateSession(other, tenant.sessionToken));
+      return new NotificationsService(scoped.context, scoped.integrations, scoped.batches, {
+        publicOrigin,
+        now: () => clock.now,
+        random: () => 0.5,
+      });
+    },
     tick: () => service.tick(),
     async settle(maxPasses = 40) {
       let passes = 0;
@@ -386,7 +477,9 @@ export async function createNotificationHarness(
     async close() {
       for (const started of receivers) await started.close();
       for (const started of smtps) await started.close();
-      app.close();
+      for (const other of extraApplications) other.close();
+      if (tenant) tenant.base.close();
+      else app.close();
       await rm(root, { recursive: true, force: true });
     },
   };
