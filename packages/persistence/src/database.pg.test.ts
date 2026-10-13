@@ -233,13 +233,18 @@ describe("PostgreSQL engine", () => {
       startChild(cliMain, arguments_, process.execPath, []),
     ];
     // Both migrators are blocked on the advisory lock once two advisory lock requests are waiting.
+    let finished = false;
+    void Promise.race(migrators.map((migrator) => migrator.exited)).then(() => {
+      finished = true;
+    });
     let blocked = 0;
-    while (blocked < 2) {
+    while (blocked < 2 && !finished) {
       const waiting = await holder.query(
         "SELECT count(*)::int AS n FROM pg_locks WHERE locktype='advisory' AND NOT granted",
       );
       blocked = Number(waiting.rows[0]?.n);
     }
+    expect(finished).toBe(false);
     const waiting = await holder.query("SELECT to_regclass('schema_migrations') AS found");
     expect(waiting.rows[0]?.found).toBeNull();
     await holder.query("SELECT pg_advisory_unlock(7340042)");
@@ -387,6 +392,16 @@ describe("PostgreSQL engine", () => {
     expect(() => viewA.run("UPDATE runs SET workspace_id=? WHERE id=?", b.ws, a.run)).toThrowError(
       expect.objectContaining({ code: "42501" }),
     );
+    expect(() =>
+      viewA.run(
+        "INSERT INTO workspaces(workspace_id,id,created_at,name,mode) VALUES(?,?,?,?,?)",
+        b.ws,
+        `${b.ws}-clone`,
+        "2026-01-01T00:00:00.000Z",
+        "Clone",
+        "server",
+      ),
+    ).toThrowError(expect.objectContaining({ code: "42501" }));
     expect(db.get("SELECT status FROM runs WHERE id=?", b.run)?.status).toBe("queued");
     expect(db.get("SELECT workspace_id FROM runs WHERE id=?", a.run)?.workspace_id).toBe(a.ws);
   });
