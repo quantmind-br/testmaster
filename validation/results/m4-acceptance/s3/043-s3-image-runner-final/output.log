@@ -1,0 +1,64 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.68kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+#2 DONE 0.0s
+
+#3 [internal] load metadata for mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [ffmpeg 1/4] FROM docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+#6 resolve docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 0.0s done
+#6 DONE 0.0s
+
+#7 [base 1/3] FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+#7 resolve mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 0.0s done
+#7 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 28.20MB 0.2s done
+#5 DONE 0.2s
+
+#8 [stage-2 2/3] COPY --chown=1000:1000 runner/ /opt/testmaster/runner/
+#8 CACHED
+
+#9 [stage-2 1/3] COPY --from=base / /
+#9 CACHED
+
+#10 [ffmpeg 2/4] RUN apt-get update     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends        build-essential ca-certificates curl nasm pkg-config xz-utils     && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [ffmpeg 3/4] COPY ffmpeg/ /recipe/
+#11 CACHED
+
+#12 [ffmpeg 4/4] RUN sh /recipe/build.sh /out && cp /recipe/provenance.json /out/TESTMASTER_FFMPEG_BUILD.json
+#12 CACHED
+
+#13 [base 3/3] RUN apt-get update     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade openssl libssl3t64     && rm -rf /var/lib/apt/lists/*     && rm -rf /usr/lib/node_modules/npm /usr/bin/npm /usr/bin/npx /usr/local/bin/npm /usr/local/bin/npx
+#13 CACHED
+
+#14 [base 2/3] COPY --from=ffmpeg /out/ /ms-playwright/ffmpeg-1011/
+#14 CACHED
+
+#15 [stage-2 3/3] WORKDIR /opt/testmaster/runner
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:0a8fd1061f9a3dfba3f251cc897dbf9323148e0086421a037d3b3f0146a3891f done
+#16 exporting config sha256:7b317d7b611fdc77a5a0e0e98036a1796ebffc5ed487e1d86e7a66fc29adf456 done
+#16 exporting attestation manifest sha256:8e9295a4f51b74f2bb192502c50435663363ba652c65970b0ea762939718bcf5 0.0s done
+#16 exporting manifest list sha256:784825744dd3718c6da6c3ddc1837a1c44c1a34e3de1f5a35b1df0493b410f1c done
+#16 naming to docker.io/library/testmaster-runner:local done
+#16 unpacking to docker.io/library/testmaster-runner:local done
+#16 DONE 0.1s
