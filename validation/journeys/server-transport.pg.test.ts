@@ -137,7 +137,7 @@ it("SEC-013 a client that does not trust the server certificate fails the handsh
   expect(proxy.requests).toHaveLength(seen + 1);
 });
 
-it("SEC-013 plaintext reaches nothing but the liveness probe, and a spoofed forwarding header from outside the trusted proxy changes nothing", async () => {
+it("SEC-013 plaintext reaches nothing but the liveness probe, and not even the login route accepts a password over http", async () => {
   const me = await plainRequest("GET", "/v1/me", {});
   expect(me.status).toBe(403);
   expect(me.json.error).toMatchObject({ code: "FORBIDDEN", details: { reason: "tls_required" } });
@@ -197,7 +197,7 @@ it("SEC-013 the session cookie is Secure, HttpOnly, SameSite=Strict and host-bou
   expect(accepted.status).toBe(201);
 });
 
-it("SEC-013 a signed webhook over plaintext is refused before its signature is read, and over TLS it is accepted once and replayed without effect", async () => {
+it("SEC-013 a correctly signed webhook over plaintext is refused with no effect, and over TLS it is accepted once and replayed without effect", async () => {
   const payload = pullPayload(7, SHA_A);
   const signed = world.fake.signedRequest("pull_request", payload, { deliveryId: "sec013-1" });
   const before = { pulls: pullCount(), deliveries: deliveryCount() };
