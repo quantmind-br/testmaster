@@ -23,7 +23,7 @@ import { resourceCommands } from "./resources.js";
 import { runCommands } from "./runs.js";
 import { Runtime, seconds } from "./runtime.js";
 import { secretCommands } from "./secrets.js";
-import { serverCommands } from "./server.js";
+import { identityCommands, serverCommands } from "./server.js";
 import { setupCommands } from "./setup.js";
 import { sourceCommands } from "./sources.js";
 import { testCommands } from "./tests.js";
@@ -75,6 +75,7 @@ export function createCli(runtime: Runtime): Command {
   explorationCommands(program, runtime);
   mcpCommands(program, runtime);
   serverCommands(program, runtime);
+  identityCommands(program, runtime);
   resourceCommands(program, runtime);
   ciCommands(program, runtime);
   unavailableCommands(program, runtime);

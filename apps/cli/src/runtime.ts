@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { Application, dryRunPlan, lintPlan } from "@testmaster/application";
+import {
+  Application,
+  dryRunPlan,
+  lintPlan,
+  readServerConfig,
+  type ServerConfig,
+} from "@testmaster/application";
 import {
   ContractError,
   capabilityRegistry,
@@ -154,6 +160,24 @@ export class Runtime {
       });
     }
     return this.opening;
+  }
+  /**
+   * Opens the PostgreSQL server profile from the deployment file named by `--config`; for the
+   * server commands that option is the server configuration, never a project configuration.
+   */
+  async serverApp(): Promise<{ application: Application; server: ServerConfig }> {
+    if (this.signal) throw this.interrupted();
+    const server = await readServerConfig(this.path(required(this.options, "config")));
+    const cwd = string(this.options, "cwd");
+    this.opening ??= Application.open({
+      correlationId: this.requestId,
+      server,
+      ...(cwd ? { cwd } : {}),
+    }).then((app) => {
+      this.application = app;
+      return app;
+    });
+    return { application: await this.opening, server };
   }
   async project(options: Options = this.options): Promise<string> {
     const explicit = string(options, "project") ?? process.env.TESTMASTER_PROJECT_ID;
