@@ -3,6 +3,7 @@
   "type": "object",
   "required": [
     "generatedAt",
+    "workspaceId",
     "indicators"
   ],
   "properties": {
@@ -11,18 +12,134 @@
       "pattern": "Z$",
       "type": "string"
     },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
     "indicators": {
       "type": "array",
       "items": {
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "id"
+          "id",
+          "title",
+          "unit",
+          "window",
+          "proposedTarget",
+          "observed",
+          "measurement",
+          "numerator",
+          "denominator",
+          "buckets",
+          "errorBudgetRemaining",
+          "notes"
         ],
         "properties": {
           "id": {
             "minLength": 1,
             "maxLength": 200,
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "const": "ratio",
+                "type": "string"
+              },
+              {
+                "const": "seconds",
+                "type": "string"
+              }
+            ]
+          },
+          "window": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "proposedTarget": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "const": "measured",
+                "type": "string"
+              },
+              {
+                "const": "not_measured",
+                "type": "string"
+              }
+            ]
+          },
+          "numerator": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "denominator": {
+            "type": "number"
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "le",
+                "count"
+              ],
+              "properties": {
+                "le": {
+                  "type": "number"
+                },
+                "count": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "errorBudgetRemaining": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "maxLength": 8000,
             "type": "string"
           }
         }
