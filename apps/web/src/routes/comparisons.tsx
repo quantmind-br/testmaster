@@ -8,7 +8,7 @@ import { ErrorSummary, type FieldIssue, FormField } from "../components/form";
 import { useAnnounce } from "../components/live-region";
 import { Icon, type Shape, StatusBadge } from "../components/status";
 import { UntrustedText } from "../components/untrusted-text";
-import { StatusView, ViewState } from "../components/view-state";
+import { combineStatus, StatusView, ViewState } from "../components/view-state";
 import { usePageTitle } from "../hooks/use-page-title";
 import { usePaged, useResource } from "../hooks/use-resource";
 import { useUrlState } from "../hooks/use-url-state";
@@ -277,6 +277,136 @@ function ComparisonResultView({ comparison }: { comparison: ComparisonView }): R
   );
 }
 
+interface SideRecord {
+  readonly outcome?: string | null;
+  readonly phase?: string;
+  readonly gate?: string;
+  readonly aggregate?: { readonly gate?: string };
+}
+
+function SideSummary({
+  kind,
+  label,
+  id,
+  record,
+}: {
+  kind: Kind;
+  label: string;
+  id: string;
+  record: SideRecord;
+}): ReactNode {
+  if (kind === "run") {
+    const outcome = record.outcome ?? null;
+    return (
+      <div className="context-row">
+        <dt>{label}</dt>
+        <dd>
+          <Link to={`/runs/${encodeURIComponent(id)}`}>{id}</Link>{" "}
+          {outcome ? (
+            <StatusBadge status={outcome} />
+          ) : (
+            <StatusBadge status={record.phase ?? "pending"} label="Not finished" />
+          )}
+        </dd>
+      </div>
+    );
+  }
+  const gate = record.gate ?? record.aggregate?.gate ?? "pending";
+  return (
+    <div className="context-row">
+      <dt>{label}</dt>
+      <dd>
+        <Link to={`/batches/${encodeURIComponent(id)}`}>{id}</Link>{" "}
+        <StatusBadge status={gate} label={`Gate ${gate.replace(/_/g, " ")}`} />
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * Looks both sides up before comparing them, so a mistyped or inaccessible ID is reported on its
+ * own (without revealing whether it exists) and nothing that looks like a verdict is on screen
+ * until both sides are known.
+ */
+function ComparedSides({
+  kind,
+  left,
+  right,
+  onRetry,
+}: {
+  kind: Kind;
+  left: string;
+  right: string;
+  onRetry: () => void;
+}): ReactNode {
+  const base = kind === "run" ? "/runs" : "/batches";
+  const leftSide = useResource<SideRecord>(`${base}/${encodeURIComponent(left)}`);
+  const rightSide = useResource<SideRecord>(`${base}/${encodeURIComponent(right)}`);
+  const lookups = combineStatus([leftSide, rightSide]);
+  if (lookups.status === "not-found")
+    return (
+      <ViewState
+        kind="not-found"
+        message="One of the IDs does not exist, or you do not have access to it."
+      />
+    );
+  return (
+    <StatusView
+      status={lookups.status}
+      error={lookups.error}
+      onRetry={() => void Promise.all([leftSide.reload(), rightSide.reload()])}
+    >
+      {leftSide.data && rightSide.data ? (
+        <>
+          <section aria-label="Compared sides">
+            <h2>Compared sides</h2>
+            <dl className="context">
+              <SideSummary kind={kind} label="Left" id={left} record={leftSide.data} />
+              <SideSummary kind={kind} label="Right" id={right} record={rightSide.data} />
+            </dl>
+          </section>
+          <ComparisonOutcome kind={kind} left={left} right={right} onRetry={onRetry} />
+        </>
+      ) : null}
+    </StatusView>
+  );
+}
+
+function ComparisonOutcome({
+  kind,
+  left,
+  right,
+  onRetry,
+}: {
+  kind: Kind;
+  left: string;
+  right: string;
+  onRetry: () => void;
+}): ReactNode {
+  const comparison = useComparison(kind, left, right);
+  return (
+    <>
+      {comparison.status === "loading" ? <ViewState kind="loading" /> : null}
+      {comparison.status === "error" && comparison.error ? (
+        comparison.error.hidesExistence ? (
+          <ViewState
+            kind="not-found"
+            message="One of the IDs does not exist, or you do not have access to it."
+          />
+        ) : (
+          <ViewState
+            kind="error"
+            error={comparison.error}
+            message={comparison.error.message}
+            onRetry={onRetry}
+          />
+        )
+      ) : null}
+      {comparison.status === "ready" ? <ComparisonResultView comparison={comparison} /> : null}
+    </>
+  );
+}
+
 function ComparePage({ kind }: { kind: Kind }): ReactNode {
   const spec = kinds[kind];
   usePageTitle(spec.title);
@@ -285,7 +415,6 @@ function ComparePage({ kind }: { kind: Kind }): ReactNode {
   const [right, setRight] = useState(url.right);
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [submitCount, setSubmitCount] = useState(0);
-  const comparison = useComparison(kind, url.left, url.right);
 
   useEffect(() => {
     setLeft(url.left);
@@ -366,23 +495,14 @@ function ComparePage({ kind }: { kind: Kind }): ReactNode {
           Compare
         </button>
       </form>
-      {comparison.status === "loading" ? <ViewState kind="loading" /> : null}
-      {comparison.status === "error" && comparison.error ? (
-        comparison.error.hidesExistence ? (
-          <ViewState
-            kind="not-found"
-            message="One of the IDs does not exist, or you do not have access to it."
-          />
-        ) : (
-          <ViewState
-            kind="error"
-            error={comparison.error}
-            message={comparison.error.message}
-            onRetry={() => setUrl({ left: url.left, right: url.right })}
-          />
-        )
+      {url.left && url.right ? (
+        <ComparedSides
+          kind={kind}
+          left={url.left}
+          right={url.right}
+          onRetry={() => setUrl({ left: url.left, right: url.right })}
+        />
       ) : null}
-      {comparison.status === "ready" ? <ComparisonResultView comparison={comparison} /> : null}
     </>
   );
 }
