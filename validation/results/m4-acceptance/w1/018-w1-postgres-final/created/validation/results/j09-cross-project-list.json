@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j09-cross-project-list",
+  "class": "server-portal-e2e",
+  "runner": "chromium-playwright-server-profile",
+  "externalDependency": "postgres-container",
+  "observedAt": "2026-10-13T18:38:15.847Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "check": "list-saved-with-explicit-environment-per-project",
+      "passed": true,
+      "suiteId": "sui_01a1368e-d91b-70eb-8dc5-ae05ab4e01da"
+    },
+    {
+      "check": "homonymous-staging-has-separate-origin-revision-and-secret",
+      "passed": true
+    },
+    {
+      "check": "batch-freezes-expansion-revisions-and-mapping-one-run-per-cell",
+      "passed": true,
+      "batchId": "bat_01a1368e-da0e-75b3-b779-647c53ad65b1"
+    },
+    {
+      "check": "revoked-project-blocks-or-requires-confirmed-subset-with-declared-notDispatched",
+      "passed": true,
+      "batchId": "bat_01a1368e-daed-75cf-81bd-e4adc0a50eff",
+      "gate": "failed"
+    },
+    {
+      "check": "grant-on-A-does-not-authorize-B",
+      "passed": true,
+      "deniedStatus": 403
+    },
+    {
+      "check": "portal-used-catalog-v1-routes-only",
+      "passed": true,
+      "requests": 9
+    }
+  ],
+  "limitations": [
+    "Chromium only; no human sign-off or screen-reader session.",
+    "Runs target unreachable loopback origins; only admission and freezing are observed, not test verdicts.",
+    "A project-scoped membership stands in for a project grant; delegated token grants are covered by the identity suites."
+  ]
+}

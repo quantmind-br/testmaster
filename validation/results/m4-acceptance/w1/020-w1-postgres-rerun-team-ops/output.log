@@ -1,0 +1,50 @@
+$ vitest run --project postgres validation/journeys/team.portal.test.ts validation/journeys/operations.portal.test.ts
+
+ RUN  v5.0.3 /var/tmp/tm-m4/int
+
+ ❯ |postgres| validation/journeys/operations.portal.test.ts (6 tests | 1 failed) 39104ms
+   ❯ operations pages on the server profile (6)
+     × M4-02 viewer sees disabled-with-reason operations controls 30684ms
+ ❯ |postgres| validation/journeys/team.portal.test.ts (7 tests | 1 failed) 39704ms
+   ❯ team, tokens and audit trail in the portal (7)
+     × UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret 30948ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| validation/journeys/operations.portal.test.ts > operations pages on the server profile > M4-02 viewer sees disabled-with-reason operations controls
+TimeoutError: locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Requeue job_0f928fee-2852-44d9-bd4a-528cc3b2ba80' }) to be visible
+
+ ❯ validation/journeys/operations.portal.test.ts:770:19
+    768|     await waitForHeading(page, "Dead-letter queue");
+    769|     const requeue = page.getByRole("button", { name: `Requeue ${dlqId}…
+    770|     await requeue.waitFor();
+       |                   ^
+    771|     expect(await requeue.getAttribute("aria-disabled")).toBe("true");
+    772|     await requeue.click({ force: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| validation/journeys/team.portal.test.ts > team, tokens and audit trail in the portal > UX-050 the audit trail lists actor kind, operation, outcome, scope and correlation, filters in the URL, pages by cursor and shows no secret
+TimeoutError: page.waitForURL: Timeout 30000ms exceeded.
+=========================== logs ===========================
+waiting for navigation until "load"
+============================================================
+ ❯ validation/journeys/team.portal.test.ts:521:16
+    519|     await keyboard.type("auth.token.revoke");
+    520|     await keyboard.press("Enter");
+    521|     await page.waitForURL((url) => url.searchParams.get("operation") =…
+       |                ^
+    522|     await expect
+    523|       .poll(async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 11 passed (13)
+   Start at  15:42:09
+   Duration  81.97s (tests 98%, import 2%, transform 1%)
+
+[ELIFECYCLE] Command failed with exit code 1.
