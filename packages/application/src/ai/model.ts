@@ -1,4 +1,9 @@
-import { ContractError } from "@testmaster/contracts";
+import {
+  ContractError,
+  type ModelConsentSettings,
+  modelDataClassDescriptions,
+  modelDataClasses,
+} from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import type { ModelRequest, ModelResult } from "@testmaster/model-gateway";
 import {
@@ -9,6 +14,17 @@ import {
 import type { ResolvedConfig } from "../config.js";
 import { requireEntity, type ServiceContext } from "../context.js";
 
+/** Origin of a provider endpoint (never path, query or credentials) and whether it leaves the host. */
+function endpointOf(baseUrl: string): { origin: string; remote: boolean } {
+  try {
+    const url = new URL(baseUrl);
+    const host = url.hostname.replace(/^\[|\]$/g, "");
+    const loopback = host === "localhost" || host === "::1" || /^127\./.test(host);
+    return { origin: url.origin, remote: !loopback };
+  } catch {
+    return { origin: "invalid-endpoint", remote: true };
+  }
+}
 export const promptVersions = {
   normalize: "normalize-3-evidence-handles",
   plan: "plan-4-integration-workflow",
@@ -60,17 +76,7 @@ export class ModelService {
       throw new ContractError("POLICY_DENIED", "Provider is not authorized by the user profile");
     if (
       !dataClasses.length ||
-      dataClasses.some(
-        (value) =>
-          ![
-            "documents",
-            "code_summary",
-            "dom",
-            "requirements",
-            "plans",
-            "execution_evidence",
-          ].includes(value),
-      )
+      dataClasses.some((value) => !(modelDataClasses as readonly string[]).includes(value))
     )
       throw new ContractError("INVALID_ARGUMENT", "Explicit supported data classes are required");
     this.consents.grant(
@@ -82,6 +88,7 @@ export class ModelService {
   }
   revokeConsent(projectId: string, providerId: string): void {
     this.ctx.authorize("A", projectId);
+    requireEntity(this.ctx, "Project", projectId);
     this.consents.revoke(
       { workspaceId: this.ctx.workspaceId, projectId, providerId },
       this.ctx.principalId,
@@ -90,6 +97,66 @@ export class ModelService {
   async consent(projectId: string, providerId: string) {
     this.ctx.authorize("R", projectId);
     return this.consents.find({ workspaceId: this.ctx.workspaceId, projectId, providerId });
+  }
+  /**
+   * What a project shares with each configured model provider and under which consent. Never
+   * exposes credentials: only the endpoint origin, model ids and consent facts are returned.
+   */
+  settings(projectId: string): ModelConsentSettings {
+    this.ctx.authorize("R", projectId);
+    requireEntity(this.ctx, "Project", projectId);
+    return {
+      projectId,
+      dataClasses: modelDataClasses.map((id) => ({
+        id,
+        description: modelDataClassDescriptions[id],
+      })),
+      providers: this.config.modelProviders.map((provider) => {
+        const endpoint = endpointOf(provider.baseUrl);
+        return {
+          id: provider.id,
+          baseUrl: endpoint.origin,
+          remote: endpoint.remote,
+          models: provider.models.map((model) => model.id),
+          allowedByProfile: this.config.profilePolicy.allowedModelProviders.includes(provider.id),
+          consent: this.consentFacts(projectId, provider.id),
+        };
+      }),
+    } as ModelConsentSettings;
+  }
+  private consentFacts(
+    projectId: string,
+    providerId: string,
+  ): ModelConsentSettings["providers"][number]["consent"] {
+    const row = this.ctx.database.get<{
+      data_classes_json: string;
+      granted_at: string;
+      revoked_at: string | null;
+      allow_unknown_cost: number;
+    }>(
+      "SELECT data_classes_json,granted_at,revoked_at,allow_unknown_cost FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
+      this.ctx.workspaceId,
+      projectId,
+      providerId,
+    );
+    if (!row) return null;
+    const dataClasses = JSON.parse(row.data_classes_json) as string[];
+    const allowUnknownCost = row.allow_unknown_cost === 1;
+    // The consent row keeps no actor; the grant event for exactly this grant does.
+    const grant = this.ctx.database.get<{ actor: string }>(
+      "SELECT actor FROM audit_events WHERE workspace_id=? AND action='consent.granted' AND resource_id=? AND timestamp=? AND after_hash=? ORDER BY created_at DESC,id DESC",
+      this.ctx.workspaceId,
+      projectId,
+      row.granted_at,
+      sha256(canonicalJson({ providerId, dataClasses, allowUnknownCost })),
+    );
+    return {
+      dataClasses,
+      allowUnknownCost,
+      grantedBy: grant?.actor ?? "unknown",
+      grantedAt: row.granted_at,
+      revokedAt: row.revoked_at,
+    };
   }
   async complete<T>(input: ModelInput): Promise<ModelResult<T>> {
     this.ctx.authorize("X", input.projectId);

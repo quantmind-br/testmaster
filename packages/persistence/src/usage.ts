@@ -310,6 +310,11 @@ export class SqliteBudgetLedger implements BudgetLedger {
 }
 export class SqliteConsentStore implements ConsentStore {
   constructor(readonly database: PersistenceDatabase) {}
+  /** HTTP mutations run inside an idempotency receipt transaction, which cannot nest. */
+  private atomic(action: () => void): void {
+    if (this.database.inTransaction) action();
+    else this.database.withTx(action);
+  }
   async find(request: ConsentQuery): Promise<ConsentRecord | null> {
     const row = this.database.get<{
       data_classes_json: string;
@@ -332,7 +337,7 @@ export class SqliteConsentStore implements ConsentStore {
       : null;
   }
   grant(query: ConsentQuery, dataClasses: string[], actor: string, allowUnknownCost = false): void {
-    this.database.withTx(() => {
+    this.atomic(() => {
       const now = new Date().toISOString();
       this.database.run(
         "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,revoked_at,allow_unknown_cost) VALUES(?,?,?,?,?,?,?,NULL,?) ON CONFLICT(workspace_id,project_id,provider_id) DO UPDATE SET data_classes_json=excluded.data_classes_json,granted_at=excluded.granted_at,revoked_at=NULL,allow_unknown_cost=excluded.allow_unknown_cost",
@@ -360,7 +365,7 @@ export class SqliteConsentStore implements ConsentStore {
     });
   }
   revoke(query: ConsentQuery, actor: string): void {
-    this.database.withTx(() => {
+    this.atomic(() => {
       const now = new Date().toISOString();
       this.database.run(
         "UPDATE consents SET revoked_at=? WHERE workspace_id=? AND project_id=? AND provider_id=?",
