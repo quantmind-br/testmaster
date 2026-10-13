@@ -1,0 +1,140 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "createdAt",
+    "projectId",
+    "phase",
+    "scope",
+    "baseSha",
+    "headSha",
+    "includesWorkingTree",
+    "status",
+    "counts",
+    "sourceRevisionIds"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "phase": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "const": "codebase",
+          "type": "string"
+        },
+        {
+          "const": "diff",
+          "type": "string"
+        }
+      ]
+    },
+    "baseSha": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "headSha": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "includesWorkingTree": {
+      "type": "boolean"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "partial",
+          "type": "string"
+        },
+        {
+          "const": "needs_input",
+          "type": "string"
+        },
+        {
+          "const": "unreachable",
+          "type": "string"
+        }
+      ]
+    },
+    "counts": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "scannedFiles",
+        "skippedFiles",
+        "endpoints",
+        "routes",
+        "features",
+        "warnings"
+      ],
+      "properties": {
+        "scannedFiles": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "skippedFiles": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "endpoints": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "routes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "features": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "warnings": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "sourceRevisionIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:DiscoverySummary",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

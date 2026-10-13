@@ -25,6 +25,38 @@
     "sourceId": {
       "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
+    },
+    "format": {
+      "anyOf": [
+        {
+          "const": "markdown",
+          "type": "string"
+        },
+        {
+          "const": "text",
+          "type": "string"
+        },
+        {
+          "const": "prd-json",
+          "type": "string"
+        },
+        {
+          "const": "pdf",
+          "type": "string"
+        },
+        {
+          "const": "openapi",
+          "type": "string"
+        },
+        {
+          "const": "graphql",
+          "type": "string"
+        },
+        {
+          "const": "postman",
+          "type": "string"
+        }
+      ]
     }
   },
   "$defs": {},

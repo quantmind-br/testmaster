@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "conflictId",
+    "selectedRequirementId",
+    "reason",
+    "expectedVersion"
+  ],
+  "properties": {
+    "conflictId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "selectedRequirementId": {
+      "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 2000,
+      "type": "string"
+    },
+    "expectedVersion": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ConflictDecisionInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

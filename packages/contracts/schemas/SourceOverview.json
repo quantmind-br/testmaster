@@ -1,0 +1,201 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "ownerId",
+    "revisionCount",
+    "active",
+    "origin",
+    "dependents",
+    "diagnostics",
+    "processedChunks"
+  ],
+  "properties": {
+    "ownerId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "revisionCount": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "active": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "ordinal",
+        "contentHash",
+        "mediaType",
+        "sizeBytes",
+        "parserVersion",
+        "status",
+        "importedAt",
+        "importedBy"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "ordinal": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "contentHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "mediaType": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "sizeBytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "parserVersion": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "partial",
+              "type": "string"
+            },
+            {
+              "const": "needs_input",
+              "type": "string"
+            },
+            {
+              "const": "invalid",
+              "type": "string"
+            }
+          ]
+        },
+        "importedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "importedBy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "origin": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "path",
+        "state"
+      ],
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "const": "local-file",
+              "type": "string"
+            },
+            {
+              "const": "upload",
+              "type": "string"
+            }
+          ]
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "anyOf": [
+            {
+              "const": "unchanged",
+              "type": "string"
+            },
+            {
+              "const": "changed",
+              "type": "string"
+            },
+            {
+              "const": "missing",
+              "type": "string"
+            },
+            {
+              "const": "upload",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "dependents": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "staleTests",
+        "supersededRequirementRefs"
+      ],
+      "properties": {
+        "staleTests": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "supersededRequirementRefs": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "diagnostics": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "processedChunks": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SourceOverview",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

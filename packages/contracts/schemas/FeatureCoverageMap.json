@@ -1,0 +1,401 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "projectId",
+    "generatedAt",
+    "discovery",
+    "rows",
+    "truncated",
+    "summary",
+    "limitations"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "generatedAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "discovery": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id",
+            "createdAt",
+            "status",
+            "scope",
+            "baseSha",
+            "headSha"
+          ],
+          "properties": {
+            "id": {
+              "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "createdAt": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "const": "partial",
+                  "type": "string"
+                },
+                {
+                  "const": "needs_input",
+                  "type": "string"
+                },
+                {
+                  "const": "unreachable",
+                  "type": "string"
+                }
+              ]
+            },
+            "scope": {
+              "anyOf": [
+                {
+                  "const": "codebase",
+                  "type": "string"
+                },
+                {
+                  "const": "diff",
+                  "type": "string"
+                }
+              ]
+            },
+            "baseSha": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "headSha": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rows": {
+      "maxItems": 500,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "title",
+          "requirementIds",
+          "sources",
+          "endpoints",
+          "routes",
+          "files",
+          "tests",
+          "evidence",
+          "coverage"
+        ],
+        "properties": {
+          "key": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "requirement",
+                "type": "string"
+              },
+              {
+                "const": "endpoint",
+                "type": "string"
+              },
+              {
+                "const": "route",
+                "type": "string"
+              },
+              {
+                "const": "component",
+                "type": "string"
+              },
+              {
+                "const": "desired",
+                "type": "string"
+              }
+            ]
+          },
+          "title": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "requirementIds": {
+            "type": "array",
+            "items": {
+              "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "sourceId",
+                "sourceName",
+                "revisionId",
+                "current"
+              ],
+              "properties": {
+                "sourceId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sourceName": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "revisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "current": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "testId",
+                "name",
+                "revisionId",
+                "revisionOrdinal",
+                "via"
+              ],
+              "properties": {
+                "testId": {
+                  "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "name": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "revisionId": {
+                  "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "revisionOrdinal": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "via": {
+                  "anyOf": [
+                    {
+                      "const": "requirement",
+                      "type": "string"
+                    },
+                    {
+                      "const": "request",
+                      "type": "string"
+                    },
+                    {
+                      "const": "navigation",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "evidence": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "runId",
+                "testId",
+                "revisionId",
+                "status",
+                "outcome",
+                "valid",
+                "createdAt"
+              ],
+              "properties": {
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "testId": {
+                  "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "revisionId": {
+                  "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "status": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "outcome": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "valid": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "format": "date-time",
+                  "pattern": "Z$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "const": "no_tests",
+                "type": "string"
+              },
+              {
+                "const": "tests_without_valid_run",
+                "type": "string"
+              },
+              {
+                "const": "valid_run",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "noTests",
+        "testsWithoutValidRun",
+        "validRun"
+      ],
+      "properties": {
+        "noTests": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "testsWithoutValidRun": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "validRun": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:FeatureCoverageMap",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,583 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "projectId",
+    "version",
+    "fingerprint",
+    "requirements",
+    "conflicts",
+    "openQuestions",
+    "changes"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "fingerprint": {
+      "maxLength": 128,
+      "type": "string"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "key",
+          "text",
+          "acceptanceCriteria",
+          "originKind",
+          "confidence",
+          "approval",
+          "reason",
+          "origins",
+          "conflictIds",
+          "supersededOrigin"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          },
+          "originKind": {
+            "anyOf": [
+              {
+                "const": "explicit",
+                "type": "string"
+              },
+              {
+                "const": "user_spec",
+                "type": "string"
+              },
+              {
+                "const": "inferred",
+                "type": "string"
+              },
+              {
+                "const": "observed",
+                "type": "string"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "maximum": 1,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origins": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "sourceRevisionId",
+                "sourceId",
+                "sourceName",
+                "revisionOrdinal",
+                "current",
+                "revisionHash",
+                "spanHash",
+                "ref",
+                "excerpt"
+              ],
+              "properties": {
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sourceName": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "revisionOrdinal": {
+                  "anyOf": [
+                    {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "current": {
+                  "type": "boolean"
+                },
+                "revisionHash": {
+                  "anyOf": [
+                    {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "spanHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "ref": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "properties": {
+                    "relativePath": {
+                      "maxLength": 1024,
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "maxLength": 2048,
+                      "type": "string"
+                    }
+                  }
+                },
+                "excerpt": {
+                  "anyOf": [
+                    {
+                      "maxLength": 600,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "conflictIds": {
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "supersededOrigin": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "reason",
+          "requirementIds",
+          "origins",
+          "resolution"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "requirementIds": {
+            "type": "array",
+            "items": {
+              "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          "origins": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "sourceRevisionId",
+                "sourceId",
+                "sourceName",
+                "revisionOrdinal",
+                "current",
+                "revisionHash",
+                "spanHash",
+                "ref",
+                "excerpt"
+              ],
+              "properties": {
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sourceName": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "revisionOrdinal": {
+                  "anyOf": [
+                    {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "current": {
+                  "type": "boolean"
+                },
+                "revisionHash": {
+                  "anyOf": [
+                    {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "spanHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "ref": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "properties": {
+                    "relativePath": {
+                      "maxLength": 1024,
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "maxLength": 2048,
+                      "type": "string"
+                    }
+                  }
+                },
+                "excerpt": {
+                  "anyOf": [
+                    {
+                      "maxLength": 600,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "selectedRequirementId",
+                  "reason",
+                  "actorId"
+                ],
+                "properties": {
+                  "selectedRequirementId": {
+                    "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "maxLength": 8000,
+                    "type": "string"
+                  },
+                  "actorId": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "openQuestions": {
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    },
+    "changes": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "at",
+          "kind",
+          "actorId",
+          "requirementId",
+          "requirementKey",
+          "before",
+          "after",
+          "note",
+          "sourceRevisionIds"
+        ],
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "requirement_added",
+                "type": "string"
+              },
+              {
+                "const": "requirement_removed",
+                "type": "string"
+              },
+              {
+                "const": "interpretation_changed",
+                "type": "string"
+              },
+              {
+                "const": "edited",
+                "type": "string"
+              },
+              {
+                "const": "approved",
+                "type": "string"
+              },
+              {
+                "const": "approval_reset",
+                "type": "string"
+              },
+              {
+                "const": "conflict_decided",
+                "type": "string"
+              },
+              {
+                "const": "normalized",
+                "type": "string"
+              }
+            ]
+          },
+          "actorId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "requirementId": {
+            "anyOf": [
+              {
+                "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requirementKey": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceRevisionIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RequirementReview",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
