@@ -56,7 +56,31 @@ import { filesystemRoot, type ServerConfig } from "./server-config.js";
  * Everything is written to `.partial-<backupId>` and renamed last, so a listing never shows an
  * unfinished backup.
  */
-export type BackupFaultHook = (point: string) => void;
+/** Every write boundary of a backup, its retention and a restore, in execution order. */
+export const backupFaultPoints = [
+  "backup.holds",
+  "backup.dump",
+  "backup.evidence",
+  "backup.index",
+  "backup.manifest",
+  "backup.renamed",
+] as const;
+export const restoreFaultPoints = [
+  "restore.verified",
+  "restore.target_prepared",
+  "restore.evidence_restored",
+  "restore.database_restored",
+  "restore.migrated",
+  "restore.finalizing",
+  "restore.finalized",
+] as const;
+export const retentionFaultPoints = ["retention.remove"] as const;
+export type BackupFaultHook = (
+  point:
+    | (typeof backupFaultPoints)[number]
+    | (typeof restoreFaultPoints)[number]
+    | (typeof retentionFaultPoints)[number],
+) => void;
 
 export interface ServerBackupResult {
   backupId: string;
@@ -957,12 +981,16 @@ export async function assertBackupSeparation(server: ServerConfig): Promise<void
       ],
     });
   if (await probeAccess(settings.destination, "write"))
-    throw new ContractError("PRECONDITION_FAILED", "The server process can write the backup destination", {
-      reasonCode: "backup_access_not_separated",
-      path: "backup.destination",
-      nextActions: [
-        "Make the backup destination writable only by the backup agent user",
-        "Set backup.allowSharedAccess only for single-user deployments",
-      ],
-    });
+    throw new ContractError(
+      "PRECONDITION_FAILED",
+      "The server process can write the backup destination",
+      {
+        reasonCode: "backup_access_not_separated",
+        path: "backup.destination",
+        nextActions: [
+          "Make the backup destination writable only by the backup agent user",
+          "Set backup.allowSharedAccess only for single-user deployments",
+        ],
+      },
+    );
 }
