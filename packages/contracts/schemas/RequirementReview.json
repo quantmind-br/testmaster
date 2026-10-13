@@ -204,8 +204,15 @@
                   ]
                 },
                 "spanHash": {
-                  "pattern": "^[0-9a-f]{64}$",
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "ref": {
                   "additionalProperties": false,
@@ -361,8 +368,15 @@
                   ]
                 },
                 "spanHash": {
-                  "pattern": "^[0-9a-f]{64}$",
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "ref": {
                   "additionalProperties": false,
