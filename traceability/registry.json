@@ -8395,10 +8395,45 @@
       "milestone": "M4",
       "ownerRole": "UX",
       "status": "planned",
-      "scenario": [],
+      "scenario": [
+        "validation/journeys/portal-onboarding.portal.test.ts::M4-04 the onboarding journey called only catalog /v1 routes and its own static assets",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::M4-04 the sources and discovery journey called only catalog /v1 routes and its own static assets",
+        "validation/journeys/portal-requirements.portal.test.ts::M4-04 the requirements and feature map journey called only catalog /v1 routes and its own static assets"
+      ],
       "oracle": [],
-      "evidence": [],
-      "code": []
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/003-s4a-journey-onboarding/output.log",
+        "validation/results/m4-acceptance/s4a/004-s4a-journey-sources/output.log",
+        "validation/results/m4-acceptance/s4a/005-s4a-journey-requirements/output.log"
+      ],
+      "code": [],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-onboarding.portal.test.ts::M4-04 the onboarding journey called only catalog /v1 routes and its own static assets",
+          "validation/journeys/portal-sources-discovery.portal.test.ts::M4-04 the sources and discovery journey called only catalog /v1 routes and its own static assets",
+          "validation/journeys/portal-requirements.portal.test.ts::M4-04 the requirements and feature map journey called only catalog /v1 routes and its own static assets"
+        ],
+        "negative": [
+          "validation/journeys/portal-onboarding.portal.test.ts::M4-04 the onboarding journey called only catalog /v1 routes and its own static assets",
+          "validation/journeys/portal-sources-discovery.portal.test.ts::M4-04 the sources and discovery journey called only catalog /v1 routes and its own static assets",
+          "validation/journeys/portal-requirements.portal.test.ts::M4-04 the requirements and feature map journey called only catalog /v1 routes and its own static assets"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(privateEndpointCalls(calls)).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(privateEndpointCalls(calls)).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(privateEndpointCalls(calls)).toEqual([]);"
+          }
+        ]
+      },
+      "note": "S4a added network-log proofs that the onboarding, sources, discovery, requirements and feature-map pages call only catalog /v1 routes and their own static assets."
     },
     {
       "id": "M4-05",
@@ -17326,11 +17361,77 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-009 saves progress on the server per principal and resumes in a fresh browser at the same step",
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-009 never stores or sends a credential: embedded userinfo and password fields are refused, and the URL stays clean",
+        "packages/application/src/onboarding.test.ts::UX-009 resumes the saved step, choices and history for the same principal and project",
+        "packages/application/src/onboarding.test.ts::UX-009 never stores credentials and reduces the target to an origin",
+        "packages/application/src/onboarding.test.ts::UX-009 refuses to complete a step whose choice is missing and rejects foreign references",
+        "apps/server/src/onboarding-routes.test.ts::UX-009 serves the wizard state with an ETag and refuses a write without or with a stale If-Match",
+        "apps/web/src/lib/onboarding.test.ts::UX-009 moves between steps in order and stops at both ends"
+      ],
+      "oracle": [
+        "The wizard state (step, choices, history) is stored on the server per principal and project behind an ETag; a fresh browser or a new login resumes at the saved step, another principal on the same project starts clean, and a write without or with a stale If-Match is refused.",
+        "Credentials never enter the wizard state: embedded userinfo, token-like query strings and password fields are refused with INVALID_ARGUMENT, the stored version and bytes do not change, and neither the page URL, the request log nor the server log contains the secret."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/003-s4a-journey-onboarding/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/onboarding.ts",
+        "apps/server/src/routes/onboarding.ts",
+        "apps/web/src/routes/onboarding.tsx",
+        "apps/web/src/lib/onboarding.ts",
+        "packages/contracts/src/m4/onboarding.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-009 saves progress on the server per principal and resumes in a fresh browser at the same step",
+          "packages/application/src/onboarding.test.ts::UX-009 resumes the saved step, choices and history for the same principal and project",
+          "apps/server/src/onboarding-routes.test.ts::UX-009 serves the wizard state with an ETag and refuses a write without or with a stale If-Match",
+          "apps/web/src/lib/onboarding.test.ts::UX-009 moves between steps in order and stops at both ends"
+        ],
+        "negative": [
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-009 never stores or sends a credential: embedded userinfo and password fields are refused, and the URL stays clean",
+          "packages/application/src/onboarding.test.ts::UX-009 never stores credentials and reduces the target to an origin",
+          "packages/application/src/onboarding.test.ts::UX-009 refuses to complete a step whose choice is missing and rejects foreign references",
+          "apps/server/src/onboarding-routes.test.ts::UX-009 serves the wizard state with an ETag and refuses a write without or with a stale If-Match"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(await second.page.getByLabel(\"Base URL\").inputValue()).toBe(target.url);"
+          },
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(mine.completedSteps).toEqual([\"mode\", \"project\", \"source\"]);"
+          },
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(JSON.parse(after).data.version).toBe(JSON.parse(before).data.version);"
+          },
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(page.url()).not.toContain(\"hunter2\");"
+          },
+          {
+            "path": "packages/application/src/onboarding.test.ts",
+            "assertion": "expect(resumed.choices.target?.baseUrl).toBe(\"http://127.0.0.1:4010\");"
+          },
+          {
+            "path": "packages/application/src/onboarding.test.ts",
+            "assertion": "expect(String(row?.value)).not.toMatch(/hunter2|abc123def456|Bearer/u);"
+          },
+          {
+            "path": "packages/application/src/onboarding.test.ts",
+            "assertion": "expect(service.get(projectId).saved).toBe(false);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-010",
@@ -17338,11 +17439,81 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-010 passes every prerequisite for a healthy target and still names what it does not claim",
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-010 a target that policy denies is refused with egress_denied and is never contacted",
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-010 an unreachable target is told apart from a policy denial and carries no invented reason code",
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-010 a missing, a revoked and a wrongly bound secret each fail the authentication check with their own reason",
+        "validation/journeys/portal-onboarding.portal.test.ts::UX-010 an unreachable container runtime fails the runner check with security_precondition_failed and never falls back",
+        "packages/application/src/onboarding.test.ts::UX-010 reports a missing runner with its own reason and never falls back",
+        "packages/application/src/onboarding.test.ts::UX-010 checks only the runner before a target is chosen and reports the rest as pending, never as passed",
+        "packages/application/src/onboarding.test.ts::UX-010 denies a target by policy and never contacts it",
+        "packages/application/src/onboarding.test.ts::UX-010 distinguishes an unreachable target from a policy denial",
+        "packages/application/src/onboarding.test.ts::UX-010 flags missing, revoked and wrong-origin credentials separately and passes a healthy setup",
+        "apps/server/src/onboarding-routes.test.ts::UX-010 reports each prerequisite with its own reason and never contacts a policy-denied target",
+        "apps/web/src/lib/onboarding.test.ts::UX-010 words each prerequisite failure from its registry reason, and names a missing code"
+      ],
+      "oracle": [
+        "Each prerequisite (runner, authentication, policy, target) reports its own status and registry reason: an unavailable runtime fails with security_precondition_failed and never falls back, a missing, revoked or wrongly bound secret fails authentication with missing_secret, credential_revoked or egress_denied, and a target that policy denies is refused with egress_denied and is never contacted.",
+        "An unreachable target is told apart from a policy denial and carries no invented reason code; before a target exists only the runner is checked and nothing else reads as passed."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/003-s4a-journey-onboarding/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/onboarding.ts",
+        "apps/server/src/routes/onboarding.ts",
+        "apps/web/src/routes/onboarding.tsx",
+        "apps/web/src/lib/onboarding.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-010 passes every prerequisite for a healthy target and still names what it does not claim",
+          "packages/application/src/onboarding.test.ts::UX-010 flags missing, revoked and wrong-origin credentials separately and passes a healthy setup",
+          "apps/server/src/onboarding-routes.test.ts::UX-010 reports each prerequisite with its own reason and never contacts a policy-denied target",
+          "apps/web/src/lib/onboarding.test.ts::UX-010 words each prerequisite failure from its registry reason, and names a missing code"
+        ],
+        "negative": [
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-010 a target that policy denies is refused with egress_denied and is never contacted",
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-010 an unreachable target is told apart from a policy denial and carries no invented reason code",
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-010 a missing, a revoked and a wrongly bound secret each fail the authentication check with their own reason",
+          "validation/journeys/portal-onboarding.portal.test.ts::UX-010 an unreachable container runtime fails the runner check with security_precondition_failed and never falls back",
+          "packages/application/src/onboarding.test.ts::UX-010 reports a missing runner with its own reason and never falls back",
+          "packages/application/src/onboarding.test.ts::UX-010 checks only the runner before a target is chosen and reports the rest as pending, never as passed",
+          "packages/application/src/onboarding.test.ts::UX-010 denies a target by policy and never contacts it",
+          "packages/application/src/onboarding.test.ts::UX-010 distinguishes an unreachable target from a policy denial"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(target.hits()).toBe(hitsBefore);"
+          },
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(await report.getByTestId(\"reason-policy\").textContent()).toBe(\"egress_denied\");"
+          },
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(await report.getByTestId(\"reason-target\").textContent()).toBe(\"no registry code\");"
+          },
+          {
+            "path": "validation/journeys/portal-onboarding.portal.test.ts",
+            "assertion": "expect(await report.getByTestId(\"reason-auth\").textContent()).toBe(reason);"
+          },
+          {
+            "path": "packages/application/src/onboarding.test.ts",
+            "assertion": "expect(reach).not.toHaveBeenCalled();"
+          },
+          {
+            "path": "packages/application/src/onboarding.test.ts",
+            "assertion": "expect(runner?.nextAction).toMatch(/never falls back/u);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-011",
@@ -17350,11 +17521,75 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-011 an uploaded PRD is hashed in the browser, previewed before sending, and listed with its revision, hash, owner and update status",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-011 a file named like a credential is refused with its reason and no source is created",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-011 a source imported from a repository file shows whether its origin is unchanged, changed or missing",
+        "packages/application/src/ai/source-history.test.ts::UX-011 reports owner, origin update state and counts, and notices a changed or missing origin",
+        "packages/application/src/ai/source-history.test.ts::UX-011 refuses an upload named like a credential and accepts the same bytes under a plain name",
+        "apps/web/src/lib/onboarding.test.ts::UX-011 picks a role and a format from the file name and leaves unknown files to the server",
+        "apps/web/src/lib/onboarding.test.ts::UX-011 computes the sha256 digest the upload contract expects",
+        "apps/web/src/lib/onboarding.test.ts::UX-011 sends bytes as an octet stream with the upload token and never lets a header override security headers"
+      ],
+      "oracle": [
+        "An uploaded source is hashed in the browser, previewed before anything is sent, and listed with its revision, hash, owner and update status; the server stores exactly the bytes that were hashed.",
+        "A file named like a credential is refused with POLICY_DENIED for uploads as well as repository paths and creates no source; a repository-file origin that changed or disappeared is reported as such and never as unchanged."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/004-s4a-journey-sources/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/ai/source-insights.ts",
+        "apps/server/src/routes/core.ts",
+        "apps/web/src/routes/sources.tsx",
+        "apps/web/src/lib/onboarding.ts",
+        "apps/web/src/api/client.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-011 an uploaded PRD is hashed in the browser, previewed before sending, and listed with its revision, hash, owner and update status",
+          "packages/application/src/ai/source-history.test.ts::UX-011 reports owner, origin update state and counts, and notices a changed or missing origin",
+          "apps/web/src/lib/onboarding.test.ts::UX-011 picks a role and a format from the file name and leaves unknown files to the server",
+          "apps/web/src/lib/onboarding.test.ts::UX-011 computes the sha256 digest the upload contract expects",
+          "apps/web/src/lib/onboarding.test.ts::UX-011 sends bytes as an octet stream with the upload token and never lets a header override security headers"
+        ],
+        "negative": [
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-011 a file named like a credential is refused with its reason and no source is created",
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-011 a source imported from a repository file shows whether its origin is unchanged, changed or missing",
+          "packages/application/src/ai/source-history.test.ts::UX-011 refuses an upload named like a credential and accepts the same bytes under a plain name"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(stored?.overview.active.contentHash).toBe(sha256(prd));"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(await failure.textContent()).toContain(\"POLICY_DENIED\");"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(after).toHaveLength(countBefore);"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(await state()).toContain(\"Origin file is missing\");"
+          },
+          {
+            "path": "packages/application/src/ai/source-history.test.ts",
+            "assertion": "expect((await read())?.origin.state).toBe(\"missing\");"
+          },
+          {
+            "path": "packages/application/src/ai/source-history.test.ts",
+            "assertion": "expect(await app.sources.listWithOverview(projectId)).toHaveLength(before);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-012",
@@ -17362,11 +17597,74 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-requirements.portal.test.ts::UX-012 a conflict between a specification and the code shows the span on each side and blocks approval until a reasoned decision is recorded",
+        "validation/journeys/portal-requirements.portal.test.ts::UX-012 a re-normalization that rewords a requirement shows the interpretation change with the text before and after",
+        "validation/journeys/portal-requirements.portal.test.ts::UX-012 a requirement whose source was updated is flagged as resting on a superseded revision, and the old span stays readable",
+        "validation/journeys/portal-requirements.portal.test.ts::UX-012 normalization without a model consent is refused, shows its reason and calls no model",
+        "packages/application/src/ai/requirements-review.test.ts::UX-012 links each requirement to the exact span it came from and flags an origin that was superseded",
+        "packages/application/src/ai/requirements-review.test.ts::UX-012 records interpretation changes, edits, approvals and approval resets with before and after text",
+        "packages/application/src/ai/requirements-review.test.ts::UX-012 shows a conflict with the spans on both sides and keeps approval blocked until a decision with a reason is recorded",
+        "apps/server/src/onboarding-routes.test.ts::UX-012 serves the requirement review, the discovery list and the feature map from catalog routes"
+      ],
+      "oracle": [
+        "Every requirement links to the exact source span it came from (source, revision, byte range, span hash, excerpt) and says whether that revision is still current; a requirement whose source was updated is flagged as resting on a superseded revision while the old span stays readable.",
+        "A conflict shows the span on each side and keeps approval blocked until a decision with a statement and a reason is recorded by a person; a re-normalization records the text before and after, and normalization without model consent is refused with no model call."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/005-s4a-journey-requirements/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/requirements.ts",
+        "packages/application/src/ai/requirement-log.ts",
+        "apps/server/src/routes/onboarding.ts",
+        "apps/web/src/routes/requirements.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-requirements.portal.test.ts::UX-012 a conflict between a specification and the code shows the span on each side and blocks approval until a reasoned decision is recorded",
+          "validation/journeys/portal-requirements.portal.test.ts::UX-012 a re-normalization that rewords a requirement shows the interpretation change with the text before and after",
+          "validation/journeys/portal-requirements.portal.test.ts::UX-012 a requirement whose source was updated is flagged as resting on a superseded revision, and the old span stays readable",
+          "packages/application/src/ai/requirements-review.test.ts::UX-012 links each requirement to the exact span it came from and flags an origin that was superseded",
+          "packages/application/src/ai/requirements-review.test.ts::UX-012 records interpretation changes, edits, approvals and approval resets with before and after text",
+          "apps/server/src/onboarding-routes.test.ts::UX-012 serves the requirement review, the discovery list and the feature map from catalog routes"
+        ],
+        "negative": [
+          "validation/journeys/portal-requirements.portal.test.ts::UX-012 normalization without a model consent is refused, shows its reason and calls no model",
+          "packages/application/src/ai/requirements-review.test.ts::UX-012 shows a conflict with the spans on both sides and keeps approval blocked until a decision with a reason is recorded",
+          "validation/journeys/portal-requirements.portal.test.ts::UX-012 a conflict between a specification and the code shows the span on each side and blocks approval until a reasoned decision is recorded"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(joined).toContain(\"GET /health MUST return healthy=true.\");"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(await wrong.textContent()).toContain(\"Decide the conflict this requirement is part of\");"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(await card.textContent()).toContain(\"Rests on a superseded source revision\");"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(model.calls()).toBe(callsBefore);"
+          },
+          {
+            "path": "packages/application/src/ai/requirements-review.test.ts",
+            "assertion": "expect(wrong.conflictIds).toEqual([conflict.id]);"
+          },
+          {
+            "path": "packages/application/src/ai/requirements-review.test.ts",
+            "assertion": "expect(after?.supersededOrigin).toBe(true);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-013",
@@ -17374,11 +17672,55 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-requirements.portal.test.ts::UX-013 the map shows items with no test, tests without a valid run and a valid run as visibly different states, and never counts absence as coverage",
+        "packages/application/src/feature-map.test.ts::UX-013 shows no coverage, tests without a valid run and valid runs as three different states",
+        "packages/application/src/feature-map.test.ts::UX-013 never reports a requirement as covered when no test links to it and says discovery has not run"
+      ],
+      "oracle": [
+        "The feature map renders requirements, endpoints and features in three visibly different coverage states (no coverage, tests without a valid run, has a valid run), each with its own words and icon shape, and the summary counts and the URL-persisted filter agree with the rows.",
+        "A requirement that no test links to is never reported as covered, and the map says when no discovery has run."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/005-s4a-journey-requirements/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/feature-map.ts",
+        "apps/server/src/routes/onboarding.ts",
+        "apps/web/src/routes/feature-map.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-requirements.portal.test.ts::UX-013 the map shows items with no test, tests without a valid run and a valid run as visibly different states, and never counts absence as coverage",
+          "packages/application/src/feature-map.test.ts::UX-013 shows no coverage, tests without a valid run and valid runs as three different states"
+        ],
+        "negative": [
+          "packages/application/src/feature-map.test.ts::UX-013 never reports a requirement as covered when no test links to it and says discovery has not run",
+          "packages/application/src/feature-map.test.ts::UX-013 shows no coverage, tests without a valid run and valid runs as three different states"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(await count(\"valid_run\")).toMatch(/Has a valid run\\s*1/);"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(await count(\"no_tests\")).toMatch(/No coverage\\s*1/);"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(new Set(shapes).size).toBe(3);"
+          },
+          {
+            "path": "packages/application/src/feature-map.test.ts",
+            "assertion": "expect(map.summary).toEqual({ noTests: 1, testsWithoutValidRun: 0, validRun: 0 });"
+          }
+        ]
+      }
     },
     {
       "id": "UX-014",
@@ -17386,11 +17728,74 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a full discovery lists what was parsed and what was skipped and never claims the application was fully understood",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a diff discovery shows the exact base and head SHAs, what changed, the ignored files and the limits of the impact analysis",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a diff without a base is refused on the form and by the server, and an unknown base names the problem",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a diff against the working tree is labelled as including uncommitted changes",
+        "validation/journeys/portal-requirements.portal.test.ts::UX-014 an endpoint found by discovery that no test covers appears as no coverage, linked to the discovery it came from",
+        "packages/application/src/feature-map.test.ts::UX-014 lists discovery runs newest first with scope, counts and the files that were skipped",
+        "apps/web/src/lib/onboarding.test.ts::UX-014 rejects a diff without a base, and without a head unless the working tree is included",
+        "packages/application/src/feature-map.test.ts::UX-013 never reports a requirement as covered when no test links to it and says discovery has not run"
+      ],
+      "oracle": [
+        "A discovery preview lists what was scanned, parsed and skipped (with the skip reason), the endpoints and uncertainties, and states its coverage without claiming the application was fully understood; excluded files are never read.",
+        "A diff preview shows the exact base and head SHAs (or the uncommitted working tree), what changed, the files the impact analysis ignored and its limits; a diff without a base is refused by the form and by the server."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/004-s4a-journey-sources/output.log",
+        "validation/results/m4-acceptance/s4a/005-s4a-journey-requirements/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/discovery.ts",
+        "apps/server/src/routes/onboarding.ts",
+        "apps/web/src/routes/discovery.tsx",
+        "apps/web/src/routes/feature-map.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a full discovery lists what was parsed and what was skipped and never claims the application was fully understood",
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a diff discovery shows the exact base and head SHAs, what changed, the ignored files and the limits of the impact analysis",
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a diff against the working tree is labelled as including uncommitted changes",
+          "validation/journeys/portal-requirements.portal.test.ts::UX-014 an endpoint found by discovery that no test covers appears as no coverage, linked to the discovery it came from",
+          "packages/application/src/feature-map.test.ts::UX-014 lists discovery runs newest first with scope, counts and the files that were skipped"
+        ],
+        "negative": [
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-014 a diff without a base is refused on the form and by the server, and an unknown base names the problem",
+          "apps/web/src/lib/onboarding.test.ts::UX-014 rejects a diff without a base, and without a head unless the working tree is included",
+          "packages/application/src/feature-map.test.ts::UX-013 never reports a requirement as covered when no test links to it and says discovery has not run"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(await page.getByTestId(\"base-sha\").textContent()).toBe(baseSha);"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(await page.getByTestId(\"head-sha\").textContent()).toBe(headSha);"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(await page.getByTestId(\"ignored-files\").innerText()).toContain(\"package.json\");"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(posts()).toBe(before);"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(refused.status).toBe(422);"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(skipped).toContain(\"default_exclude\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-015",
@@ -17746,11 +18151,73 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-044 an updated API specification keeps both revisions, lists added, removed and changed operations, and flags only the tests that rest on them",
+        "validation/journeys/portal-sources-discovery.portal.test.ts::UX-044 an update made from an out-of-date page is refused with a revision conflict and changes nothing",
+        "packages/application/src/ai/source-history.test.ts::UX-044 keeps every revision with its hash and importer and diffs each against its parent",
+        "packages/application/src/ai/source-history.test.ts::UX-044 lists only tests that rest on a changed, removed or superseded declaration",
+        "packages/application/src/ai/source-history.test.ts::UX-044 flags tests through the requirements whose evidence cites a superseded revision",
+        "packages/application/src/ai/source-history.test.ts::UX-044 states the fixed exclusion policy and still refuses excluded files",
+        "apps/server/src/onboarding-routes.test.ts::UX-044 lists a source with its overview and serves its revision history with the diff against the parent"
+      ],
+      "oracle": [
+        "Updating a source keeps every revision readable with its hash and importer and lists the added, removed and changed operations against the parent; only tests whose steps rest on a changed, removed or superseded declaration are flagged, each with its reason.",
+        "An update from an out-of-date page fails with REVISION_CONFLICT and changes nothing, and excluded files remain refused."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
+        "validation/results/m4-acceptance/s4a/004-s4a-journey-sources/output.log",
+        "validation/results/m4-acceptance/s4a/001-s4a-unit-suite/output.log",
+        "validation/results/m4-acceptance/s4a/008-s4a-postgres-suite-rerun/output.log"
+      ],
+      "code": [
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/ai/source-insights.ts",
+        "apps/server/src/routes/core.ts",
+        "apps/server/src/routes/onboarding.ts",
+        "apps/web/src/routes/sources.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-044 an updated API specification keeps both revisions, lists added, removed and changed operations, and flags only the tests that rest on them",
+          "packages/application/src/ai/source-history.test.ts::UX-044 keeps every revision with its hash and importer and diffs each against its parent",
+          "packages/application/src/ai/source-history.test.ts::UX-044 lists only tests that rest on a changed, removed or superseded declaration",
+          "apps/server/src/onboarding-routes.test.ts::UX-044 lists a source with its overview and serves its revision history with the diff against the parent"
+        ],
+        "negative": [
+          "validation/journeys/portal-sources-discovery.portal.test.ts::UX-044 an update made from an out-of-date page is refused with a revision conflict and changes nothing",
+          "packages/application/src/ai/source-history.test.ts::UX-044 flags tests through the requirements whose evidence cites a superseded revision",
+          "packages/application/src/ai/source-history.test.ts::UX-044 states the fixed exclusion policy and still refuses excluded files",
+          "packages/application/src/ai/source-history.test.ts::UX-044 lists only tests that rest on a changed, removed or superseded declaration"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(staleText).toContain(\"Orders list — endpoint_changed: GET /orders\");"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(staleText).not.toContain(\"Order detail\");"
+          },
+          {
+            "path": "validation/journeys/portal-sources-discovery.portal.test.ts",
+            "assertion": "expect(await failure.textContent()).toContain(\"REVISION_CONFLICT\");"
+          },
+          {
+            "path": "packages/application/src/ai/source-history.test.ts",
+            "assertion": "expect(byTest[changed.id]).toEqual([\"endpoint_changed: GET /orders\"]);"
+          },
+          {
+            "path": "packages/application/src/ai/source-history.test.ts",
+            "assertion": "expect(byTest[untouched.id]).toBeUndefined();"
+          },
+          {
+            "path": "packages/application/src/ai/source-history.test.ts",
+            "assertion": "expect(reported).not.toContain(\"GET /orders/{id}\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-045",
