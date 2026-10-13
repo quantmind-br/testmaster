@@ -31,6 +31,64 @@ const LOG_BYTES = 1024 * 1024;
 const DOM_BYTES = 1024 * 1024;
 const ARTIFACT_BYTES = 64 * 1024 * 1024;
 
+/** Cookie and web-storage values of a Playwright storage state (scrubbed from every artifact). */
+export function storageStateSecrets(raw: string): string[] {
+  const state = JSON.parse(raw) as {
+    cookies?: { value?: unknown }[];
+    origins?: { localStorage?: { value?: unknown }[] }[];
+  };
+  return [
+    ...(state.cookies ?? []).map((cookie) => cookie.value),
+    ...(state.origins ?? []).flatMap((origin) =>
+      (origin.localStorage ?? []).map((entry) => entry.value),
+    ),
+  ].filter((value): value is string => typeof value === "string" && value.length >= 6);
+}
+
+interface LoadedStorageState {
+  cookies: {
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    expires: number;
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: "Lax" | "None" | "Strict";
+  }[];
+  origins: { origin: string; localStorage: { name: string; value: string }[] }[];
+}
+/**
+ * Reads the vault storage state named by the host. Cookies for hosts outside the network policy
+ * are dropped, so a state captured for one site is never replayed toward another origin.
+ */
+async function loadStorageState(runtime: Runtime): Promise<LoadedStorageState | undefined> {
+  const reference = runtime.input.auth?.storageState;
+  if (!reference) return undefined;
+  const raw = String(await runtime.resolve({ secretRef: reference.secretRef }));
+  let parsed: Partial<LoadedStorageState>;
+  try {
+    parsed = JSON.parse(raw) as Partial<LoadedStorageState>;
+  } catch {
+    throw new RuntimeError("manual_auth_required", "Stored browser state is unreadable", "blocked");
+  }
+  const hosts = new Set(
+    runtime.input.networkPolicy.allowedOrigins.map((origin) => new URL(origin).hostname),
+  );
+  const cookies = (parsed.cookies ?? []).filter((cookie) =>
+    hosts.has(String(cookie.domain ?? "").replace(/^\./u, "")),
+  );
+  const origins = (parsed.origins ?? []).filter((entry) => {
+    try {
+      return hosts.has(new URL(String(entry.origin)).hostname);
+    } catch {
+      return false;
+    }
+  });
+  for (const value of storageStateSecrets(JSON.stringify({ cookies, origins })))
+    runtime.secrets.add(value);
+  return { cookies, origins };
+}
 /** One isolated browser context, with egress enforced by the supervisor's mandatory proxy. */
 export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   const unsupported = storageStateRefusal(runtime.input);
@@ -1229,6 +1287,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     // Collection can precede the action that first uses a credential.
     for (const reference of runtime.input.secrets)
       await runtime.resolve({ secretRef: reference.secretRef });
+    const storageState = await loadStorageState(runtime);
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
     tempDirectory = await mkdtemp(join(tmpdir(), "testmaster-browser-"));
@@ -1255,6 +1314,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       serviceWorkers: "block",
       acceptDownloads: policy.allowDownloads === true,
       ignoreHTTPSErrors: false,
+      ...(storageState ? { storageState } : {}),
       ...(policy.video === true ? { recordVideo: { dir: tempDirectory } } : {}),
     });
     await context.route("**/*", async (route) => {
@@ -1299,6 +1359,27 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       pages.set(alias, popup);
       attachPage(popup);
     });
+    const login = runtime.input.auth?.login;
+    if (login) {
+      // The login phase is not a plan step: indexes and evidence stay those of the authored plan.
+      try {
+        for (const step of login.steps) await perform(step);
+      } catch (error) {
+        if (runtime.signal.aborted) throw error;
+        throw new RuntimeError("manual_auth_required", "Browser login did not complete", "blocked");
+      }
+      if (login.captureState) {
+        const captured = JSON.stringify(await context.storageState());
+        for (const value of storageStateSecrets(captured)) runtime.secrets.add(value);
+        if (Buffer.byteLength(captured) > 100_000)
+          throw new RuntimeError(
+            "storage_unavailable",
+            "Captured storage state exceeds the size limit",
+            "blocked",
+          );
+        await runtime.protocol.emit("auth.state", { kind: "storageState", data: captured });
+      }
+    }
     result = await runtime.runSteps(plan.steps, withEvidence);
     if (violation && result.outcome === "passed")
       result = { outcome: violation.outcome, reasonCode: violation.reasonCode };

@@ -36,6 +36,15 @@ export interface RunnerInput {
     maxRequests: number;
     mutationActions?: PlanStep[];
   };
+  /**
+   * Dynamic authentication prepared by the host (SEC-022, SEC-024). `storageState` names a vault
+   * secret holding a captured browser state; `login` runs vault-referenced steps before the plan
+   * and reports the resulting storage state back through the protocol, never through an event.
+   */
+  auth?: {
+    storageState?: { secretRef: string };
+    login?: { steps: PlanStep[]; captureState: boolean };
+  };
 }
 export interface RunnerResult {
   outcome: "passed" | "failed" | "blocked" | "cancelled" | "inconclusive";
