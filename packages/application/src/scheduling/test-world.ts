@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ScheduleInput } from "@testmaster/contracts";
+import { uuidV7IdGenerator } from "@testmaster/domain";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
 import type { StoredSuite } from "../suites.js";
@@ -34,6 +35,40 @@ export const stubHost = (application: Application): void => {
   application.runs.host.liveWorker = () => true;
 };
 
+/**
+ * Server workspaces get a credential-less controller principal when they are provisioned. The
+ * single-user workspace that `init()` creates has none on SQLite (the scheduler then reads through
+ * its own scope), but the PostgreSQL parity run opens the same world on a tenant-isolated engine, so
+ * the world gives it the principal that `provisionWorkspace` would have created.
+ */
+function provisionControllerPrincipal(application: Application, workspaceId: string): void {
+  if (application.database.engine !== "postgres") return;
+  const key = `system-principal:${workspaceId}`;
+  if (application.database.get("SELECT 1 AS present FROM operational_state WHERE key=?", key))
+    return;
+  const principalId = uuidV7IdGenerator.next("svc");
+  const { entities } = application.context;
+  entities.insert("Principal", {
+    id: principalId,
+    workspaceId,
+    kind: "service",
+    displayName: "TestMaster controller",
+    disabledAt: null,
+  });
+  entities.insert("Membership", {
+    id: uuidV7IdGenerator.next("mem"),
+    workspaceId,
+    principalId,
+    role: "org_owner",
+    projectRestrictions: [],
+  });
+  application.database.run(
+    "INSERT INTO operational_state(key,value) VALUES(?,?)",
+    key,
+    principalId,
+  );
+}
+
 export async function createScheduleWorld(
   options: { app?: Application; root?: string } = {},
 ): Promise<ScheduleWorld> {
@@ -47,6 +82,7 @@ export async function createScheduleWorld(
   const opened = app;
   stubHost(opened);
   const init = await opened.init();
+  provisionControllerPrincipal(opened, init.workspaceId);
   opened.tests.create({
     projectId: init.projectId,
     plan: scaffoldPlan("backend"),
