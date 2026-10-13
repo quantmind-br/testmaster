@@ -62,6 +62,12 @@ it("OPS-024 a flipped ciphertext byte, a reordered chunk, a truncated tail and e
   await expect(open(trailing)).rejects.toMatchObject({
     details: { reasonCode: "backup_integrity" },
   });
+  // Marking a non-final chunk final and dropping the tail is caught by the authenticated flag.
+  const forged = Buffer.from(cipher.subarray(0, 20 + recordBytes * 2));
+  forged[20 + recordBytes] = 1;
+  await expect(open(forged)).rejects.toMatchObject({
+    details: { reasonCode: "backup_integrity" },
+  });
   const swapped = Buffer.concat([
     cipher.subarray(0, 20),
     cipher.subarray(20 + recordBytes, 20 + recordBytes * 2),

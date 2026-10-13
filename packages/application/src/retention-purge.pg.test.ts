@@ -177,7 +177,9 @@ it("OPS-021 purges audit events past 365 days behind a signed chained summary an
   expect(summary?.signature).toMatch(/^[0-9a-f]{64}$/);
 
   insertAudit(stack, "2025-02-01T00:00:00.000Z");
-  const second = await stack.workspace.retentionPurge.run({ now });
+  const second = await stack.workspace.retentionPurge.run({
+    now: new Date(now.getTime() + 60_000),
+  });
   const chained = db(stack).get<{ previous_digest: string | null }>(
     "SELECT previous_digest FROM audit_purge_summaries WHERE workspace_id=? AND id=?",
     stack.workspaceId,
@@ -213,6 +215,50 @@ it("OPS-021 a different signing key makes the summary chain fail verification", 
   expect(verdict.problems.join(" ")).toMatch(/signature mismatch/);
   await writeFile(stack.server.security.masterKeyFile, original, { mode: 0o600 });
   expect((await stack.workspace.retentionPurge.verifySummaries()).valid).toBe(true);
+});
+
+it("OPS-021 detects an altered or removed audit purge summary even when the owner disables the immutability trigger", async () => {
+  const stack = await stackWithClock();
+  insertAudit(stack, "2025-01-01T00:00:00.000Z");
+  await stack.workspace.retentionPurge.run({ now });
+  insertAudit(stack, "2025-02-01T00:00:00.000Z");
+  await stack.workspace.retentionPurge.run({ now: new Date(now.getTime() + 60_000) });
+  const verify = () => stack.workspace.retentionPurge.verifySummaries();
+  expect(await verify()).toMatchObject({ valid: true, summaries: 2, problems: [] });
+  // The summary rows are immutable for the application: an update is refused.
+  expect(() => db(stack).run("UPDATE audit_purge_summaries SET event_count=99")).toThrow();
+
+  const summaries = db(stack).all<{ id: string; event_count: number }>(
+    "SELECT id,event_count FROM audit_purge_summaries WHERE workspace_id=? ORDER BY created_at,id",
+    stack.workspaceId,
+  );
+  const first = String(summaries[0]?.id);
+  const second = String(summaries[1]?.id);
+  const originalCount = Number(summaries[0]?.event_count);
+  db(stack).run(
+    "ALTER TABLE audit_purge_summaries DISABLE TRIGGER audit_purge_summaries_immutable",
+  );
+  try {
+    // An altered event count breaks the signature of that summary only.
+    db(stack).run("UPDATE audit_purge_summaries SET event_count=99 WHERE id=?", first);
+    expect((await verify()).problems).toEqual([`${first}: signature mismatch`]);
+    db(stack).run(
+      "UPDATE audit_purge_summaries SET event_count=? WHERE id=?",
+      originalCount,
+      first,
+    );
+    expect((await verify()).valid).toBe(true);
+
+    // Removing the first summary leaves the second one pointing at a missing predecessor.
+    db(stack).run("DELETE FROM audit_purge_summaries WHERE id=?", first);
+    const broken = await verify();
+    expect(broken.valid).toBe(false);
+    expect(broken.problems).toEqual([`${second}: chain broken`]);
+  } finally {
+    db(stack).run(
+      "ALTER TABLE audit_purge_summaries ENABLE TRIGGER audit_purge_summaries_immutable",
+    );
+  }
 });
 
 it("OPS-021 refuses to delete audit events while the signing key is unavailable", async () => {

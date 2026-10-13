@@ -6,6 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import {
   type OpsStack,
   opsStack,
+  ownerSession,
   restoreTarget,
   testPgRestore,
   writeKeyFile,
@@ -65,6 +66,14 @@ async function walk(directory: string): Promise<string[]> {
 it("OPS-024 PostgreSQL backup is a consistent encrypted dump and restores database rows and evidence into a fresh isolated stack", async () => {
   const { stack, fixtureId, storageKey, payload } = await seeded();
   const database = stack.application.controllerScope().database;
+  const signedIn = await ownerSession(stack);
+  signedIn.tokens.create({
+    name: "ci",
+    scopes: ["R"],
+    expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+  });
+  expect(Number(database.get("SELECT COUNT(*) AS n FROM server_tokens")?.n)).toBeGreaterThan(0);
+  expect(Number(database.get("SELECT COUNT(*) AS n FROM sessions")?.n)).toBeGreaterThan(0);
   const result = await createServerBackup({ database, server: stack.server });
   expect(result.manifest.engine).toBe("postgres");
   expect(result.manifest.secretIncluded).toBe(false);
@@ -105,6 +114,9 @@ it("OPS-024 PostgreSQL backup is a consistent encrypted dump and restores databa
     expect(copy.get("SELECT value FROM operational_state WHERE key='admission'")?.value).toBe(
       "suspended_restore",
     );
+    // Restore only tightens access: every token and session of the old installation is gone.
+    expect(Number(copy.get("SELECT COUNT(*) AS n FROM server_tokens")?.n)).toBe(0);
+    expect(Number(copy.get("SELECT COUNT(*) AS n FROM sessions")?.n)).toBe(0);
     expect(copy.tableExists("tm_restore_pending")).toBe(false);
     // Row-level security and the owner-role protection survive the restore.
     const forced = copy.get(
@@ -222,7 +234,10 @@ it("OPS-024 the retention controller removes only expired authentic backups from
   const database = stack.application.controllerScope().database;
   const server = {
     ...stack.server,
-    backup: { ...stack.server.backup!, retention: { daily: 2, weekly: 0, monthly: 0 } },
+    backup: {
+      ...(stack.server.backup as NonNullable<typeof stack.server.backup>),
+      retention: { daily: 2, weekly: 0, monthly: 0 },
+    },
   };
   const ids: string[] = [];
   for (let day = 0; day < 4; day += 1) {
