@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -96,7 +97,11 @@ async function stack() {
       payload: request.rawBody,
     });
   };
-  const pr = (number: number, headSha: string, extra: { action?: string; fork?: { fullName: string } } = {}) =>
+  const pr = (
+    number: number,
+    headSha: string,
+    extra: { action?: string; fork?: { fullName: string } } = {},
+  ) =>
     hook(
       "pull_request",
       world.fake.pullRequestPayload({
@@ -107,7 +112,11 @@ async function stack() {
         ...extra,
       }),
     );
-  const deployment = (deploymentId: number, sha: string, url: string | null = world.target.origin) =>
+  const deployment = (
+    deploymentId: number,
+    sha: string,
+    url: string | null = world.target.origin,
+  ) =>
     hook(
       "deployment_status",
       world.fake.deploymentStatusPayload({
@@ -119,12 +128,18 @@ async function stack() {
       }),
     );
   const get = (path: string) =>
-    http.inject({ method: "GET", url: path, headers: { authorization: `Bearer ${token}`, ...tls } });
+    http.inject({
+      method: "GET",
+      url: path,
+      headers: { authorization: `Bearer ${token}`, ...tls },
+    });
   return { world, http, hook, pr, deployment, get, tls, token };
 }
 
 const verdict = (world: GithubWorld, sha: string): Record<string, string | null> =>
-  Object.fromEntries(world.checks(sha).map((check) => [check.name, check.conclusion ?? check.status]));
+  Object.fromEntries(
+    world.checks(sha).map((check) => [check.name, check.conclusion ?? check.status]),
+  );
 
 async function recorded(name: string, body: () => Promise<Record<string, unknown>>): Promise<void> {
   try {
@@ -148,13 +163,19 @@ it("J12 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B wait
       "TestMaster / required-gate": "cancelled",
     });
     expect(String(world.pull(SHA_A).state)).toBe("superseded");
-    expect(verdict(world, SHA_B)).toEqual({ "TestMaster / result": "queued", "TestMaster / required-gate": "queued" });
+    expect(verdict(world, SHA_B)).toEqual({
+      "TestMaster / result": "queued",
+      "TestMaster / required-gate": "queued",
+    });
     // Deployment A arrives after B: it cannot start A or approve B.
     expect((await deployment(1, SHA_A)).statusCode).toBe(200);
     await world.drive();
     expect(world.app.runs.list()).toHaveLength(0);
     expect(world.target.hits).toEqual([]);
-    expect(verdict(world, SHA_B)).toEqual({ "TestMaster / result": "queued", "TestMaster / required-gate": "queued" });
+    expect(verdict(world, SHA_B)).toEqual({
+      "TestMaster / result": "queued",
+      "TestMaster / required-gate": "queued",
+    });
     // Deployment B starts exactly one Run and only B turns green.
     expect((await deployment(2, SHA_B)).statusCode).toBe(200);
     await world.drive();
@@ -168,7 +189,10 @@ it("J12 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B wait
     await pr(8, SHA_D, { action: "synchronize" });
     await world.drive();
     expect(verdict(world, SHA_C)).toEqual(SUCCESS);
-    expect(verdict(world, SHA_D)).toEqual({ "TestMaster / result": "queued", "TestMaster / required-gate": "queued" });
+    expect(verdict(world, SHA_D)).toEqual({
+      "TestMaster / result": "queued",
+      "TestMaster / required-gate": "queued",
+    });
     await deployment(4, SHA_D);
     await world.drive();
     expect(verdict(world, SHA_D)).toEqual(SUCCESS);
@@ -178,7 +202,9 @@ it("J12 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B wait
     expect([...new Set(world.fake.checkRuns.map((check) => check.head_sha))].sort()).toEqual(
       [SHA_A, SHA_B, SHA_C, SHA_D].sort(),
     );
-    return { shas: [SHA_A, SHA_B, SHA_C, SHA_D].map((sha) => ({ sha, verdict: verdict(world, sha) })) };
+    return {
+      shas: [SHA_A, SHA_B, SHA_C, SHA_D].map((sha) => ({ sha, verdict: verdict(world, sha) })),
+    };
   });
 }, 300_000);
 
@@ -196,7 +222,10 @@ it("J12 INT-014 INT-002 a duplicate delivery is answered from the record, a tamp
     expect(first.statusCode).toBe(200);
     expect(first.json().data).toMatchObject({ duplicate: false, outcome: "accepted" });
     const replay = await hook("pull_request", payload, { deliveryId: "dup-1" });
-    expect(replay.json().data).toMatchObject({ duplicate: true, reference: first.json().data.reference });
+    expect(replay.json().data).toMatchObject({
+      duplicate: true,
+      reference: first.json().data.reference,
+    });
     const pulls = () => world.app.database.all("SELECT head_sha FROM github_pulls");
     expect(pulls()).toHaveLength(1);
     // Tampered: the same delivery ID with different bytes (re-signed, so only the dedupe record can tell).
@@ -212,30 +241,61 @@ it("J12 INT-014 INT-002 a duplicate delivery is answered from the record, a tamp
       { deliveryId: "dup-1" },
     );
     expect(tampered.statusCode).toBe(409);
-    expect(tampered.json().error).toMatchObject({ code: "IDEMPOTENCY_CONFLICT", details: { reason: "tampered" } });
+    expect(tampered.json().error).toMatchObject({
+      code: "IDEMPOTENCY_CONFLICT",
+      details: { reason: "tampered" },
+    });
     // The original stays accepted; the tampered attempt is its own linked record.
-    const records = world.app.database.all("SELECT outcome, original_id FROM inbound_webhook_deliveries WHERE delivery_id=? ORDER BY outcome", "dup-1");
+    const records = world.app.database.all(
+      "SELECT outcome, original_id FROM inbound_webhook_deliveries WHERE delivery_id=? ORDER BY outcome",
+      "dup-1",
+    );
     expect(records.map((record) => record.outcome)).toEqual(["accepted", "tampered"]);
     expect(records[1]?.original_id).not.toBeNull();
     expect(pulls()).toHaveLength(1);
     // A body altered after signing and a forged signature are refused before any parsing result is stored.
-    const altered = await hook("pull_request", payload, { deliveryId: "bad-1", alteredBody: JSON.stringify({ x: 1 }) });
+    const altered = await hook("pull_request", payload, {
+      deliveryId: "bad-1",
+      alteredBody: JSON.stringify({ x: 1 }),
+    });
     expect(altered.statusCode).toBe(401);
-    const forged = await hook("pull_request", payload, { deliveryId: "bad-2", secret: "attacker-secret" });
+    const forged = await hook("pull_request", payload, {
+      deliveryId: "bad-2",
+      secret: "attacker-secret",
+    });
     expect(forged.statusCode).toBe(401);
-    const unsigned = await hook("pull_request", payload, { deliveryId: "bad-3" }, { "x-hub-signature-256": "" });
+    const unsigned = await hook(
+      "pull_request",
+      payload,
+      { deliveryId: "bad-3" },
+      { "x-hub-signature-256": "" },
+    );
     expect(unsigned.statusCode).toBe(401);
-    expect(world.app.database.all("SELECT delivery_id FROM inbound_webhook_deliveries WHERE delivery_id LIKE 'bad-%'")).toEqual([]);
+    expect(
+      world.app.database.all(
+        "SELECT delivery_id FROM inbound_webhook_deliveries WHERE delivery_id LIKE 'bad-%'",
+      ),
+    ).toEqual([]);
     // Oversize is refused by size before the signature is even considered.
-    const big = await hook("pull_request", { padding: "x".repeat(INBOUND_WEBHOOK_MAX_BYTES + 1) }, { deliveryId: "big-1" });
+    const big = await hook(
+      "pull_request",
+      { padding: "x".repeat(INBOUND_WEBHOOK_MAX_BYTES + 1) },
+      { deliveryId: "big-1" },
+    );
     expect(big.statusCode).toBe(413);
     expect(pulls()).toHaveLength(1);
     // Positive control: the journey still accepts the next honest push after every refusal.
     expect((await pr(7, SHA_B, { action: "synchronize" })).statusCode).toBe(200);
     expect(pulls()).toHaveLength(2);
     // The management API shows the deduplicated, tampered and accepted deliveries to an administrator only.
-    expect((await get(`/v1/integrations/${world.integration.id}/github/pulls`)).json().data.items).toHaveLength(2);
-    return { deliveries: world.app.database.all("SELECT delivery_id, outcome FROM inbound_webhook_deliveries ORDER BY delivery_id") };
+    expect(
+      (await get(`/v1/integrations/${world.integration.id}/github/pulls`)).json().data.items,
+    ).toHaveLength(2);
+    return {
+      deliveries: world.app.database.all(
+        "SELECT delivery_id, outcome FROM inbound_webhook_deliveries ORDER BY delivery_id",
+      ),
+    };
   });
 }, 300_000);
 
@@ -250,7 +310,10 @@ it("J12 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outsid
     expect(String(world.pull(SHA_FORK).reason_code)).toBe("fork_policy_denied");
     expect(world.app.runs.list()).toHaveLength(0);
     expect(world.target.hits).toEqual([]);
-    expect(verdict(world, SHA_FORK)).toEqual({ "TestMaster / result": "action_required", "TestMaster / required-gate": "failure" });
+    expect(verdict(world, SHA_FORK)).toEqual({
+      "TestMaster / result": "action_required",
+      "TestMaster / required-gate": "failure",
+    });
     // Check write: a forged delivery cannot create or move a check on any commit.
     const checksBefore = world.fake.checkRuns.length;
     const forged = await hook(
@@ -278,18 +341,28 @@ it("J12 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outsid
     expect(verdict(world, SHA_INTERNAL)["TestMaster / required-gate"]).toBe("failure");
     // Nothing the App wrote to GitHub carries a credential or the private key.
     const written = JSON.stringify([
-      world.fake.requests.filter((request) => request.method !== "GET").map((request) => request.body),
+      world.fake.requests
+        .filter((request) => request.method !== "GET")
+        .map((request) => request.body),
       world.fake.comments,
     ]);
-    for (const secret of [world.fake.privateKeyPem, world.fake.webhookSecret, ...world.fake.issuedTokens()])
+    for (const secret of [
+      world.fake.privateKeyPem,
+      world.fake.webhookSecret,
+      ...world.fake.issuedTokens(),
+    ])
       expect(written).not.toContain(secret);
-    expect(world.fake.requests.filter((request) => /\/(contents|git)\//u.test(request.path))).toEqual([]);
+    expect(
+      world.fake.requests.filter((request) => /\/(contents|git)\//u.test(request.path)),
+    ).toEqual([]);
     return { fork: verdict(world, SHA_FORK), internal: verdict(world, SHA_INTERNAL) };
   });
 }, 300_000);
 
 async function expectGateInvariant(world: GithubWorld): Promise<Record<string, unknown>[]> {
-  const rows = world.app.database.all("SELECT head_sha, state, fork FROM github_pulls ORDER BY head_sha");
+  const rows = world.app.database.all(
+    "SELECT head_sha, state, fork FROM github_pulls ORDER BY head_sha",
+  );
   const summary: Record<string, unknown>[] = [];
   for (const row of rows) {
     const sha = String(row.head_sha);
@@ -333,13 +406,118 @@ it("J12 INT-021 the required gate never accepts neutral, action_required, cancel
     await world.drive();
     expect(verdict(world, SHA_INTERNAL)).toEqual(SUCCESS);
     // Negative controls: B ran healthy and passed, D ran against a failing preview, E timed out, the fork was denied.
-    expect(summary.find((entry) => entry.sha === SHA_D)?.verdict).toMatchObject({ "TestMaster / required-gate": "failure" });
+    expect(summary.find((entry) => entry.sha === SHA_D)?.verdict).toMatchObject({
+      "TestMaster / required-gate": "failure",
+    });
     expect(summary.find((entry) => entry.sha === SHA_E)?.verdict).toMatchObject({
       "TestMaster / result": "action_required",
       "TestMaster / required-gate": "failure",
     });
-    expect(summary.find((entry) => entry.sha === SHA_C)?.verdict).toMatchObject({ "TestMaster / required-gate": "failure" });
-    expect(summary.find((entry) => entry.sha === SHA_A)?.verdict).toMatchObject({ "TestMaster / required-gate": "cancelled" });
+    expect(summary.find((entry) => entry.sha === SHA_C)?.verdict).toMatchObject({
+      "TestMaster / required-gate": "failure",
+    });
+    expect(summary.find((entry) => entry.sha === SHA_A)?.verdict).toMatchObject({
+      "TestMaster / required-gate": "cancelled",
+    });
     return { summary: await expectGateInvariant(world) };
+  });
+}, 300_000);
+
+it("J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry", async () => {
+  await recorded("management-routes", async () => {
+    const { world, http, hook, pr, token, tls } = await stack();
+    await world.install();
+    const send = (method: "PATCH" | "POST", url: string, payload: object) =>
+      http.inject({
+        method,
+        url,
+        headers: { authorization: `Bearer ${token}`, "idempotency-key": randomUUID(), ...tls },
+        payload,
+      });
+    const id = world.integration.id;
+    const settings = await send(
+      "PATCH",
+      `/v1/integrations/${id}/github/repositories/${world.repository.id}`,
+      {
+        includeDrafts: true,
+      },
+    );
+    expect(settings.statusCode).toBe(200);
+    expect(settings.json().data.settings.includeDrafts).toBe(true);
+    // Negative control: an environment of another project is refused and nothing changes.
+    const refused = await send(
+      "PATCH",
+      `/v1/integrations/${id}/github/repositories/${world.repository.id}`,
+      {
+        baseEnvironmentId: "env_00000000-0000-7000-8000-000000000000",
+      },
+    );
+    expect(refused.statusCode).toBe(400);
+
+    const next = await world.app.secrets.set("github-webhook-secret-2", "second-secret", {
+      allowedOrigins: [new URL(world.fake.url).origin],
+    });
+    const rotated = await send("POST", `/v1/integrations/${id}/github/rotate-webhook-secret`, {
+      secretRef: next.id,
+    });
+    expect(rotated.statusCode).toBe(200);
+    expect(
+      (
+        await hook(
+          "pull_request",
+          world.fake.pullRequestPayload({
+            installationId: world.installationId,
+            repository: world.repository,
+            number: 6,
+            headSha: SHA_B,
+          }),
+          { secret: "second-secret" },
+        )
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await hook(
+          "pull_request",
+          world.fake.pullRequestPayload({
+            installationId: world.installationId,
+            repository: world.repository,
+            number: 5,
+            headSha: SHA_C,
+          }),
+          { secret: "never-configured" },
+        )
+      ).statusCode,
+    ).toBe(401);
+
+    world.fake.failNext("POST /repos/acme/shop/check-runs", 422, {}, 1000);
+    expect((await pr(7, SHA_A)).statusCode).toBe(200);
+    await world.drive();
+    const dead = world.app.database.all(
+      "SELECT id FROM github_checks WHERE state='dead_letter' ORDER BY id",
+    );
+    expect(dead.length).toBeGreaterThanOrEqual(2);
+    world.fake.clearFaults();
+    for (const row of dead) {
+      const retried = await send(
+        "POST",
+        `/v1/integrations/${id}/github/checks/${String(row.id)}/retry`,
+        {},
+      );
+      expect(retried.statusCode).toBe(200);
+    }
+    // Retrying a check that is not dead-lettered is refused.
+    const again = await send(
+      "POST",
+      `/v1/integrations/${id}/github/checks/${String(dead[0]?.id)}/retry`,
+      {},
+    );
+    expect(again.statusCode).toBe(422);
+    await world.drive();
+    expect(verdict(world, SHA_A)).toEqual({
+      "TestMaster / result": "queued",
+      "TestMaster / required-gate": "queued",
+    });
+    return { deadLettered: dead.length, retried: dead.length };
   });
 }, 300_000);
