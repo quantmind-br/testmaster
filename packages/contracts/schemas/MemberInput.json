@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "login",
+    "displayName",
+    "role",
+    "projectRestrictions"
+  ],
+  "properties": {
+    "login": {
+      "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+      "type": "string"
+    },
+    "displayName": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "role": {
+      "anyOf": [
+        {
+          "const": "org_owner",
+          "type": "string"
+        },
+        {
+          "const": "org_admin",
+          "type": "string"
+        },
+        {
+          "const": "maintainer",
+          "type": "string"
+        },
+        {
+          "const": "runner",
+          "type": "string"
+        },
+        {
+          "const": "reviewer",
+          "type": "string"
+        },
+        {
+          "const": "viewer",
+          "type": "string"
+        },
+        {
+          "const": "service_account",
+          "type": "string"
+        }
+      ]
+    },
+    "projectRestrictions": {
+      "type": "array",
+      "items": {
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:MemberInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

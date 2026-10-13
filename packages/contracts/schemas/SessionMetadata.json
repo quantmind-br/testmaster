@@ -4,7 +4,12 @@
   "required": [
     "id",
     "principalId",
-    "expiresAt"
+    "createdAt",
+    "lastSeenAt",
+    "expiresAt",
+    "idleExpiresAt",
+    "revokedAt",
+    "current"
   ],
   "properties": {
     "id": {
@@ -13,13 +18,44 @@
       "type": "string"
     },
     "principalId": {
-      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "lastSeenAt": {
+      "format": "date-time",
+      "pattern": "Z$",
       "type": "string"
     },
     "expiresAt": {
       "format": "date-time",
       "pattern": "Z$",
       "type": "string"
+    },
+    "idleExpiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "revokedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "current": {
+      "type": "boolean"
     }
   },
   "$defs": {},

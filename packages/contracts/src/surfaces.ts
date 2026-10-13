@@ -23,6 +23,8 @@ export interface RouteDefinition {
   method: string;
   path: string;
   scope: string;
+  /** `public` skips authentication, `signature` is verified by the route itself. */
+  auth: "token" | "public" | "signature";
   milestone: Milestone;
   requestSchema: string;
   responseSchema: string;
@@ -39,19 +41,23 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "DocumentValidationInput",
     "DocumentValidationResult",
   ],
-  ["GET", "/me", "identity:R", "M4", "Empty", "Principal"],
-  ["GET,POST", "/workspaces", "workspace:R/A", "M4", "WorkspaceInput", "Workspace"],
+  ["GET", "/me", "identity:R", "M4", "Empty", "MeResponse"],
+  ["GET", "/rbac/matrix", "identity:R", "M4", "Empty", "RbacMatrix"],
+  ["GET", "/workspaces", "workspace:R", "M4", "Empty", "Workspace"],
+  ["POST", "/workspaces", "workspace:A", "M4", "WorkspaceInput", "WorkspaceCreated"],
   ["GET,PATCH", "/workspaces/{id}", "workspace:R/A", "M4", "WorkspaceInput", "Workspace"],
-  ["GET,POST", "/workspaces/{id}/members", "members:A", "M4", "MembershipInput", "Membership"],
+  ["GET", "/workspaces/{id}/members", "members:A", "M4", "Empty", "MemberView"],
+  ["POST", "/workspaces/{id}/members", "members:A", "M4", "MemberInput", "MemberCreated"],
   [
     "PATCH,DELETE",
     "/workspaces/{id}/members/{memberId}",
     "members:A",
     "M4",
     "MembershipInput",
-    "Membership",
+    "MemberView",
   ],
-  ["GET,POST", "/tokens", "tokens:A", "M4", "TokenInput", "TokenMetadata"],
+  ["GET", "/tokens", "tokens:A", "M4", "Empty", "TokenMetadata"],
+  ["POST", "/tokens", "tokens:A", "M4", "TokenInput", "TokenCreated"],
   ["DELETE", "/tokens/{id}", "tokens:A", "M4", "Empty", "TokenMetadata"],
   ["GET,POST", "/projects", "projects:R/W", "M1", "ProjectInput", "Project"],
   ["GET,PATCH", "/projects/{id}", "projects:R/W", "M1", "ProjectInput", "Project"],
@@ -188,12 +194,12 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ],
   ["POST", "/exports", "portability:R", "M6", "PortabilityInput", "OperationReceipt"],
   ["POST", "/imports", "portability:W", "M6", "PortabilityInput", "OperationReceipt"],
-  ...["login", "logout", "recovery"].map(
-    (path) =>
-      ["POST", `/identity/${path}`, "identity", "M4", "IdentityInput", "IdentityReceipt"] as const,
-  ),
+  ["POST", "/identity/login", "public", "M4", "LoginInput", "IdentityReceipt"],
+  ["POST", "/identity/logout", "identity:R", "M4", "Empty", "IdentityReceipt"],
+  ["POST", "/identity/recovery", "public", "M4", "RecoveryInput", "IdentityReceipt"],
   ["GET", "/identity/sessions", "identity:R", "M4", "Empty", "SessionMetadata"],
-  ["DELETE", "/identity/sessions/{id}", "identity:W", "M4", "Empty", "SessionMetadata"],
+  ["DELETE", "/identity/sessions/{id}", "identity:R", "M4", "Empty", "SessionMetadata"],
+  ["POST", "/identity/password", "identity:R", "M4", "PasswordChangeInput", "IdentityReceipt"],
   ["POST", "/identity/break-glass", "identity:A", "M6", "IdentityInput", "IdentityReceipt"],
   ["POST", "/auth-profiles/{id}/test-login", "env:X", "M4", "AuthProfile", "OperationReceipt"],
   ["POST", "/auth-profiles/{id}/export-state", "secrets:export", "M4", "Empty", "OperationReceipt"],
@@ -252,6 +258,7 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
         method,
         path,
         scope: resolvedScope,
+        auth: scope === "public" ? "public" : scope === "signature" ? "signature" : "token",
         milestone,
         requestSchema:
           method === "GET" || method === "DELETE"
