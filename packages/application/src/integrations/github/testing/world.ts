@@ -19,6 +19,8 @@ import { type DeliverOptions, FakeGithub, type FakeRepository } from "./fake-git
 export interface WorldOptions {
   /** Run on PostgreSQL as a server-profile deployment: one workspace and an owner session. */
   server?: ServerConfig;
+  /** `process` (default) replaces the sandbox with the unsafe-local executor; `docker` runs the real sandbox. */
+  executor?: "process" | "docker";
   /** Add `contents: write` to the installation and `allowAgentPullRequests` to the integration. */
   agentPullRequests?: boolean;
   installationPermissions?: Record<string, "read" | "write">;
@@ -80,14 +82,16 @@ export interface GithubWorld {
 }
 
 export async function startGithubWorld(options: WorldOptions = {}): Promise<GithubWorld> {
+  const docker = options.executor === "docker";
   const resolutions = new Map<string, string[]>();
   const root = await mkdtemp(join(tmpdir(), "tm-github-"));
   const home = join(root, "home");
   await mkdir(join(home, ".config", "testmaster"), { recursive: true });
-  await writeFile(
-    join(home, ".config", "testmaster", "policy.json"),
-    JSON.stringify({ security: { allowUnsafeProcessExecution: true } }),
-  );
+  if (!docker)
+    await writeFile(
+      join(home, ".config", "testmaster", "policy.json"),
+      JSON.stringify({ security: { allowUnsafeProcessExecution: true } }),
+    );
   // Starts at the real time: server cursors cut off at the wall clock, so a fake future would hide every row.
   const clock = { t: Date.now() };
   const target = { origin: "", healthy: true, hits: [] as string[], redirect: null as string | null };
@@ -101,13 +105,13 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     response.writeHead(target.healthy ? 200 : 500, { "content-type": "application/json" });
     response.end(JSON.stringify({ status: target.healthy ? "ok" : "down" }));
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(0, docker ? "0.0.0.0" : "127.0.0.1", resolve));
   target.origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const fake = await FakeGithub.start({ now: () => clock.t });
   const runtime = await Application.open({
     cwd: root,
     home,
-    env: { TESTMASTER_EXECUTOR: "process" },
+    env: docker ? {} : { TESTMASTER_EXECUTOR: "process" },
     ...(options.server ? { server: options.server } : {}),
     github: {
       apiBaseUrl: fake.url,
@@ -121,7 +125,7 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
   // The acting application of an integration is a separate instance, so the stub lives on the class
   // for the lifetime of the world: the process executor here replaces Docker only inside tests.
   const originalPreflight = Application.prototype.preflight;
-  Application.prototype.preflight = async () => {};
+  if (!docker) Application.prototype.preflight = async () => {};
   const init = options.server ? seedServerProject(app) : await app.init();
   const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
   const origin = new URL(fake.url).origin;
