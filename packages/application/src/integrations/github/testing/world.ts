@@ -21,6 +21,8 @@ export interface WorldOptions {
   server?: ServerConfig;
   /** `process` (default) replaces the sandbox with the unsafe-local executor; `docker` runs the real sandbox. */
   executor?: "process" | "docker";
+  /** Origin used in check and comment links; defaults to a fixed example origin. */
+  publicOrigin?: string;
   /** Add `contents: write` to the installation and `allowAgentPullRequests` to the integration. */
   agentPullRequests?: boolean;
   installationPermissions?: Record<string, "read" | "write">;
@@ -31,6 +33,8 @@ export interface GithubWorld {
   app: Application;
   /** The process-wide instance (controller scopes, HTTP server). */
   runtime: Application;
+  /** The signed-in owner of the server-profile workspace, for browser journeys. */
+  owner: { login: string; password: string } | null;
   fake: FakeGithub;
   clock: { t: number };
   /** The preview origin every deployment points at; `healthy` flips `/health` to a 500. */
@@ -94,7 +98,12 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     );
   // Starts at the real time: server cursors cut off at the wall clock, so a fake future would hide every row.
   const clock = { t: Date.now() };
-  const target = { origin: "", healthy: true, hits: [] as string[], redirect: null as string | null };
+  const target = {
+    origin: "",
+    healthy: true,
+    hits: [] as string[],
+    redirect: null as string | null,
+  };
   const server: Server = createServer((request, response) => {
     target.hits.push(`${request.method} ${request.url}`);
     if (target.redirect) {
@@ -129,19 +138,28 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
   const init = options.server ? seedServerProject(app) : await app.init();
   const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
   const origin = new URL(fake.url).origin;
-  const privateKeyRef = (await app.secrets.set("github-private-key", fake.privateKeyPem, { allowedOrigins: [origin] })).id;
-  const webhookSecretRef = (await app.secrets.set("github-webhook-secret", fake.webhookSecret, { allowedOrigins: [origin] })).id;
+  const privateKeyRef = (
+    await app.secrets.set("github-private-key", fake.privateKeyPem, { allowedOrigins: [origin] })
+  ).id;
+  const webhookSecretRef = (
+    await app.secrets.set("github-webhook-secret", fake.webhookSecret, { allowedOrigins: [origin] })
+  ).id;
   const integration = app.integrations.create({
     provider: "github",
     name: "github-app",
     projectIds: [init.projectId],
     events: [...githubEventTypes],
-    consent: { scopes: [...githubDefaultScopes, ...(options.agentPullRequests ? ["github:contents:write"] : [])] },
+    consent: {
+      scopes: [
+        ...githubDefaultScopes,
+        ...(options.agentPullRequests ? ["github:contents:write"] : []),
+      ],
+    },
     secretRefs: [privateKeyRef, webhookSecretRef],
     settings: {
       appId: String(fake.appId),
       appSlug: fake.slug,
-      publicOrigin: "https://testmaster.example.test",
+      publicOrigin: options.publicOrigin ?? "https://testmaster.example.test",
       allowAgentPullRequests: options.agentPullRequests === true,
       credentials: {
         privateKeyRef,
@@ -160,7 +178,15 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     ...(options.installationPermissions
       ? { permissions: options.installationPermissions }
       : options.agentPullRequests
-        ? { permissions: { metadata: "read", contents: "write", checks: "write", pull_requests: "write", deployments: "read" } }
+        ? {
+            permissions: {
+              metadata: "read",
+              contents: "write",
+              checks: "write",
+              pull_requests: "write",
+              deployments: "read",
+            },
+          }
         : {}),
   });
   fake.branchHeads.set(`${repository.fullName}:main`, "b".repeat(40));
@@ -178,6 +204,7 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     secrets: { privateKeyRef, webhookSecretRef },
     resolutions,
     runtime,
+    owner: options.server ? { login: ownerLogin, password: ownerPassword } : null,
     send: (event, payload, deliver) => {
       const request = fake.signedRequest(event, payload, deliver);
       return runtime.controllerScope().integrations.receiveWebhook("github", request);
@@ -213,9 +240,14 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
       return row;
     },
     checks: (headSha) =>
-      fake
-        .checksFor(repository.fullName, headSha)
-        .map((check) => ({ name: check.name, status: check.status, conclusion: check.conclusion, title: check.output.title ?? "", summary: check.output.summary ?? "", detailsUrl: check.details_url })),
+      fake.checksFor(repository.fullName, headSha).map((check) => ({
+        name: check.name,
+        status: check.status,
+        conclusion: check.conclusion,
+        title: check.output.title ?? "",
+        summary: check.output.summary ?? "",
+        detailsUrl: check.details_url,
+      })),
     configureRepository: (patch = {}) => {
       app.github.updateRepository(integration.id, String(repository.id), {
         enabled: true,
@@ -226,12 +258,18 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     },
     async drive(maxTicks = 8) {
       for (let tick = 0; tick < maxTicks; tick++) {
-        const before = JSON.stringify(app.database.all("SELECT id,state FROM github_pulls ORDER BY id"));
+        const before = JSON.stringify(
+          app.database.all("SELECT id,state FROM github_pulls ORDER BY id"),
+        );
         await runtime.controllerScope().github.reconcile();
         await app.github.settle();
         await runtime.controllerScope().github.reconcile();
-        const rows = app.database.all("SELECT state FROM github_pulls WHERE state IN ('awaiting_preview','running')");
-        const after = JSON.stringify(app.database.all("SELECT id,state FROM github_pulls ORDER BY id"));
+        const rows = app.database.all(
+          "SELECT state FROM github_pulls WHERE state IN ('awaiting_preview','running')",
+        );
+        const after = JSON.stringify(
+          app.database.all("SELECT id,state FROM github_pulls ORDER BY id"),
+        );
         if (!rows.length || (before === after && tick > 1)) return;
       }
     },
@@ -272,6 +310,9 @@ async function signInOwner(runtime: Application): Promise<Application> {
     recoveryToken: boot.ownerRecovery.recoveryToken,
     newPassword: ownerPassword,
   });
-  const login = await runtime.identityService.login({ principal: ownerLogin, password: ownerPassword });
+  const login = await runtime.identityService.login({
+    principal: ownerLogin,
+    password: ownerPassword,
+  });
   return runtime.forIdentity(authenticateSession(runtime, login.sessionToken));
 }
