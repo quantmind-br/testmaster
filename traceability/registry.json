@@ -2462,29 +2462,40 @@
         "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
         "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
         "packages/application/src/testing/j13-notify.test.ts::INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run",
-        "packages/application/src/notifications/resilience.test.ts::INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once"
+        "packages/application/src/notifications/resilience.test.ts::INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 a rate limit is retried after the advertised delay, alerts once and recovers with the same check",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 exhausted retries dead-letter visibly and an operator retry republishes the same payload",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a 4xx rejection that retrying cannot fix goes straight to the dead letter"
       ],
       "oracle": [
-        "With the destination down a delivery retries with backoff, dead-letters visibly and keeps a redeliverable record while the Run, its gate and the Run count stay untouched; requeue after recovery resends the same delivery ID and bytes without a new Run. A 429 waits at least Retry-After and a 4xx rejection dead-letters at once. The same holds on PostgreSQL and in the J13 notify scenario."
+        "With the destination down a delivery retries with backoff, dead-letters visibly and keeps a redeliverable record while the Run, its gate and the Run count stay untouched; requeue after recovery resends the same delivery ID and bytes without a new Run. A 429 waits at least Retry-After and a 4xx rejection dead-letters at once. The same holds on PostgreSQL and in the J13 notify scenario.",
+        "GitHub check delivery retries with bounded backoff and the advertised rate-limit delay, dead-letters visibly and independently of the verdict, and an operator retry republishes the same payload."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
         "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
-        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log",
+        "packages/application/src/integrations/github/github-delivery.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
       ],
       "code": [
         "packages/application/src/notifications/service.ts",
-        "packages/application/src/notifications/controllers.ts"
+        "packages/application/src/notifications/controllers.ts",
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/api.ts"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
           "packages/application/src/notifications/resilience.test.ts::OPS-011 INT-003 requeue after the destination recovers redelivers the same delivery ID and bytes without a new Run",
           "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
-          "packages/application/src/testing/j13-notify.test.ts::INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run"
+          "packages/application/src/testing/j13-notify.test.ts::INT-003 INT-026 OPS-011 the J13 notify scenario retries a Slack outage and a webhook timeout under one delivery ID each without rerunning the Run",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 a rate limit is retried after the advertised delay, alerts once and recovers with the same check"
         ],
         "negative": [
-          "packages/application/src/notifications/resilience.test.ts::INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once"
+          "packages/application/src/notifications/resilience.test.ts::INT-003 a 429 with Retry-After waits at least the advertised time and a 4xx rejection dead-letters at once",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 exhausted retries dead-letter visibly and an operator retry republishes the same payload",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a 4xx rejection that retrying cannot fix goes straight to the dead letter"
         ],
         "criticalAssertions": [
           {
@@ -2506,9 +2517,14 @@
           {
             "path": "packages/application/src/testing/j13-notify.test.ts",
             "assertion": "  expect(report.runAfter).toEqual(report.runBefore);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "    expect(dead.map((row) => row.state)).toEqual([\"dead_letter\", \"dead_letter\"]);"
           }
         ]
-      }
+      },
+      "note": "M4 adds the GitHub App delivery cases (rate limit, dead letter, operator retry)."
     },
     {
       "id": "INT-004",
@@ -3137,11 +3153,107 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 refuses a wrong secret, an altered payload and a missing signature without creating a pull or Run",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 checks the content type and the 5 MiB limit before looking at the signature",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 ignores deliveries for unknown installations, repositories outside the allowlist and unbound repositories without creating a Run",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts the previous webhook secret only inside its 24 hour rotation window",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 an uninstalled or suspended installation creates no Run and drops its tokens",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 requests the minimum permissions, points the webhook at this deployment and asks for contents: write only for agent pull requests",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 refuses a plaintext public origin, credentials in URLs and a remote plaintext redirect",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 exchanges the one-time code once, stores the credentials as secrets bound to the GitHub API origin and never returns them",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 an unknown state, an expired state and a code GitHub rejects create no integration",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 a test delivery proves the App credentials and creates no check, comment, Run or pull request",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
+        "apps/server/src/github.routes.test.ts::INT-014 INT-002 the GitHub webhook route authenticates by signature only and answers each failure with its own status",
+        "apps/server/src/github.routes.test.ts::INT-014 the GitHub webhook route rejects other content types and oversize bodies before any signature work",
+        "apps/server/src/github.routes.test.ts::INT-014 the manifest routes return the one-time state, never the credentials, and convert the code once",
+        "apps/server/src/github.routes.test.ts::INT-014 rotating the webhook secret over HTTP keeps the previous secret valid for the overlap window only",
+        "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
+        "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper refuses a wrong state, a foreign Host header and unknown paths, and creates nothing",
+        "packages/application/src/integrations/github/github.pg.test.ts::INT-014 INT-002 PostgreSQL row-level security hides one workspace's GitHub installations, pulls, checks and deployments from another",
+        "packages/application/src/integrations/github/github.pg.test.ts::INT-014 SEC-047 a tenant cannot claim another tenant's installation or read its management views by ID",
+        "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing"
+      ],
+      "oracle": [
+        "A GitHub App is created through the manifest flow with the minimum permissions and its credentials become GitHub-bound secrets that are never returned. A webhook is accepted only with the content type, size, HMAC signature (current or previous secret inside the 24 h window) and schema checks, in that order; a reused delivery ID answers from the record or is recorded as tampered, unknown or revoked installations create no Run, and one workspace never reads another's installations on PostgreSQL."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-webhooks.test.ts",
+        "packages/application/src/integrations/github/github-setup.test.ts",
+        "apps/server/src/github.routes.test.ts",
+        "apps/cli/src/github.test.ts",
+        "packages/application/src/integrations/github/github.pg.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 requests the minimum permissions, points the webhook at this deployment and asks for contents: write only for agent pull requests",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 exchanges the one-time code once, stores the credentials as secrets bound to the GitHub API origin and never returns them",
+          "apps/server/src/github.routes.test.ts::INT-014 INT-002 the GitHub webhook route authenticates by signature only and answers each failure with its own status",
+          "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
+          "packages/application/src/integrations/github/github.pg.test.ts::INT-014 INT-002 PostgreSQL row-level security hides one workspace's GitHub installations, pulls, checks and deployments from another",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts the previous webhook secret only inside its 24 hour rotation window"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 refuses a wrong secret, an altered payload and a missing signature without creating a pull or Run",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 checks the content type and the 5 MiB limit before looking at the signature",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-014 refuses a plaintext public origin, credentials in URLs and a remote plaintext redirect",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-014 an unknown state, an expired state and a code GitHub rejects create no integration",
+          "apps/server/src/github.routes.test.ts::INT-014 the GitHub webhook route rejects other content types and oversize bodies before any signature work",
+          "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper refuses a wrong state, a foreign Host header and unknown paths, and creates nothing",
+          "packages/application/src/integrations/github/github.pg.test.ts::INT-014 SEC-047 a tenant cannot claim another tenant's installation or read its management views by ID",
+          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "    expect(receipt).toMatchObject({ outcome: \"accepted\", duplicate: false });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "      expect(error).toMatchObject({ code: \"UNAUTHENTICATED\" });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "      code: \"IDEMPOTENCY_CONFLICT\","
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-webhooks.test.ts",
+            "assertion": "      code: \"PAYLOAD_TOO_LARGE\","
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-setup.test.ts",
+            "assertion": "    expect(JSON.stringify(created)).not.toContain(w.fake.webhookSecret);"
+          },
+          {
+            "path": "apps/server/src/github.routes.test.ts",
+            "assertion": "  expect(tampered.statusCode).toBe(409);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(forged.statusCode).toBe(401);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-015",
@@ -3149,11 +3261,68 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 cancels the wait when the pull request closes and ignores deployments of other environments",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+      ],
+      "oracle": [
+        "A pull request waits for a deployment_status success whose deployment.sha equals the head SHA and whose environment matches the repository pattern; only then is a Run admitted against an ephemeral environment pointing at the preview origin. A missing preview concludes action_required with a failing gate at the deadline, a late or other-environment deployment starts nothing, and A's verdict is untouched by B."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j12-github.docker.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 cancels the wait when the pull request closes and ignores deployments of other environments",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(pullState(w, SHA_A)).toBe(\"timed_out\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(verdict(w, SHA_B)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(verdict(world, SHA_B)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "validation/journeys/j12-github.docker.test.ts",
+            "assertion": "    expect(verdict(w, SHA_A)).toEqual(SUCCESS);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-016",
@@ -3217,11 +3386,68 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-017 denies a hostname that resolves to a private address (DNS rebinding) and admits one that resolves to a public address",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-017 accepts a manual preview URL under the same allowlist and refuses webhook deployments for a manual repository",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-017 refuses a redirect from the preview to another origin and never reaches it",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "validation/journeys/j12-github.docker.test.ts::J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by the sandbox egress policy and the foreign origin is never reached"
+      ],
+      "oracle": [
+        "A preview URL, from a deployment status or a manual attestation, is checked by the network policy before any Run starts: loopback, internal and metadata addresses and hostnames that resolve to them are denied with preview_url_denied, and a redirect to another origin is refused by the runner egress policy and never reaches the foreign origin."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j12-github.docker.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-017 accepts a manual preview URL under the same allowlist and refuses webhook deployments for a manual repository",
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-017 denies a hostname that resolves to a private address (DNS rebinding) and admits one that resolves to a public address",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-017 refuses a redirect from the preview to another origin and never reaches it",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+          "validation/journeys/j12-github.docker.test.ts::J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by the sandbox egress policy and the foreign origin is never reached"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(w.pull(SHA_A).reason_code).toBe(\"preview_url_denied\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "      expect(verdict(w, SHA_A)[\"TestMaster / result\"]).not.toBe(\"success\");"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(String(world.pull(SHA_INTERNAL).reason_code)).toBe(\"preview_url_denied\");"
+          },
+          {
+            "path": "validation/journeys/j12-github.docker.test.ts",
+            "assertion": "    expect(foreign.hits).toEqual([]);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-018",
@@ -3229,11 +3455,64 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-018 fixture-only runs a fork against the secret-free fixture environment and can never satisfy the required gate",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-018 fixture-only refuses a missing fixture, plans that reference secrets and production environments",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+        "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent"
+      ],
+      "oracle": [
+        "A pull request from a fork runs nothing by default: no secret is resolved, repository contents are never touched and the result check concludes action_required with a failing required gate (fork_policy_denied). The opt-in fixture-only policy runs only a secret-free, non-production fixture environment and its verdict can never satisfy the required gate."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "apps/server/src/github.routes.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 fixture-only runs a fork against the secret-free fixture environment and can never satisfy the required gate"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 fixture-only refuses a missing fixture, plans that reference secrets and production environments",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+          "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(w.pull(SHA_A).reason_code).toBe(\"fork_policy_denied\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(w.target.hits).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(String(world.pull(SHA_FORK).reason_code)).toBe(\"fork_policy_denied\");"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "      expect(written).not.toContain(secret);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-019",
@@ -3241,11 +3520,62 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-019 a failing preview run fails both checks on its own SHA while another SHA keeps its result",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing"
+      ],
+      "oracle": [
+        "Pushing A then B cancels every in-flight piece of work for A (state superseded, checks concluded cancelled on SHA A, Run never started) and B runs alone; a deployment for A that arrives after B starts nothing, a failing preview fails both checks of its own SHA only, and no check ever moves to another commit."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-019 a failing preview run fails both checks on its own SHA while another SHA keeps its result",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 supersedes in-flight A when B arrives first: A is cancelled on its own SHA and never runs, B runs"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(pullState(w, SHA_A)).toBe(\"superseded\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(w.pull(SHA_A).superseded_by).toBe(SHA_B);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(String(world.pull(SHA_A).state)).toBe(\"superseded\");"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect([...new Set(world.fake.checkRuns.map((check) => check.head_sha))].sort()).toEqual("
+          }
+        ]
+      }
     },
     {
       "id": "INT-020",
@@ -3253,11 +3583,51 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-020 escapes Markdown, HTML, mentions and links in text that came from outside"
+      ],
+      "oracle": [
+        "The pull-request comment is upserted by one marker per installation, repository and pull request, edited in place and never adopts a comment forged by another author; every interpolated value is Markdown-, HTML-, mention- and link-escaped."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 escapes Markdown, HTML, mentions and links in text that came from outside",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(escaped).not.toContain(\"@everyone\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(own[0]?.body.startsWith(MARKER)).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(w.fake.comments.find((comment) => comment.id === forged.id)?.body).toContain("
+          }
+        ]
+      }
     },
     {
       "id": "INT-021",
@@ -3265,11 +3635,73 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate is success only for a passed, verified, deployment-bound, non-fork verdict",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate never concludes neutral, skipped or success for any non-completed state",
+        "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+      ],
+      "oracle": [
+        "TestMaster / required-gate is success only for a completed, passed, deployment-bound, non-fork verdict with a non-empty selection; neutral, skipped or success are never published for any non-completed state, and an empty selection, a failed Run, an unbound verdict, a timeout, a supersede or a fork never produces success."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j12-github.docker.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate is success only for a passed, verified, deployment-bound, non-fork verdict",
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 the required gate never concludes neutral, skipped or success for any non-completed state",
+          "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(gateOf(passing)?.conclusion).toBe(\"success\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "      expect(gateOf(pull)?.conclusion, name).not.toBe(\"success\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "        expect([\"neutral\", \"skipped\", \"success\"], `${state} fork=${fork}`).not.toContain("
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect([\"neutral\", \"skipped\"], sha).not.toContain(gate);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "      expect(Boolean(row.fork), sha).toBe(false);"
+          }
+        ]
+      },
+      "note": "A fork run under fork-policy fixture-only is published neutral/failure and never satisfies the required gate."
     },
     {
       "id": "INT-022",
@@ -3277,11 +3709,52 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success"
+      ],
+      "oracle": [
+        "The check output and comment are derived from the terminal snapshot and show the Run and batch links (authenticated portal pages), environment, head SHA, exclusions, first-attempt counts and freshness, escape untrusted text, and never expose local paths; completion requests resend the batch link as the check details URL."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 derives each check from the terminal snapshot and shows run, environment, SHA, exclusions, first attempt, freshness and the authenticated link"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-021 INT-022 a selection that matches nothing, a failed run or an unbound verdict never becomes success",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-020 INT-022 keeps one marker comment per pull request, edited in place, and never adopts a forged marker"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(gate?.detailsUrl).toMatch(/^https:\\/\\/testmaster\\.example\\.test\\/batches\\/bat_/u);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "      expect((completion.body as { details_url?: string }).details_url).toMatch("
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(result?.summary).not.toMatch(/\\/var\\/|\\/tmp\\//u);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-023",
@@ -3289,11 +3762,74 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 a rate limit is retried after the advertised delay, alerts once and recovers with the same check",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a revoked permission and an unavailable host are distinct states with different retry rules",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 exhausted retries dead-letter visibly and an operator retry republishes the same payload",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a 4xx rejection that retrying cannot fix goes straight to the dead letter",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a comment problem never changes a check conclusion and retries a bounded number of times",
+        "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 SEC-047 a redirect from the GitHub API is never followed and counts as an unavailable host",
+        "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict",
+        "validation/journeys/j12-github.pg.test.ts::J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry"
+      ],
+      "oracle": [
+        "Delivery problems have their own state (rate_limited, permission_revoked, host_unavailable, dead_letter), each with its own retry rule, one alert.fired per class and a visible dead letter with an operator retry that republishes the same payload; redirects are never followed, and no delivery problem changes a Run, a check conclusion or a gate."
+      ],
+      "evidence": [
+        "packages/application/src/integrations/github/github-delivery.test.ts",
+        "validation/journeys/github-portal.portal.test.ts",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 a rate limit is retried after the advertised delay, alerts once and recovers with the same check",
+          "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict",
+          "validation/journeys/j12-github.pg.test.ts::J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry"
+        ],
+        "negative": [
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a revoked permission and an unavailable host are distinct states with different retry rules",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 INT-003 exhausted retries dead-letter visibly and an operator retry republishes the same payload",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a 4xx rejection that retrying cannot fix goes straight to the dead letter",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 a comment problem never changes a check conclusion and retries a bounded number of times",
+          "packages/application/src/integrations/github/github-delivery.test.ts::INT-023 SEC-047 a redirect from the GitHub API is never followed and counts as an unavailable host"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "    expect(limited.map((row) => row.state)).toEqual([\"rate_limited\", \"rate_limited\"]);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "    expect(dead.map((row) => row.state)).toEqual([\"dead_letter\", \"dead_letter\"]);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "    expect(checkRows(w).map((row) => row.state)).toEqual([\"host_unavailable\", \"host_unavailable\"]);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "      expect(outsider).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/github-portal.portal.test.ts",
+            "assertion": "    expect(await checks.getByRole(\"button\", { name: /Retry delivery/u }).count()).toBe(0);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-024",
@@ -5074,26 +5610,34 @@
       "status": "verified",
       "scenario": [
         "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
-        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "packages/application/src/integrations/github/github-pr.test.ts::INV-014 verifies a Run's deployment only against the deployment the webhook named for that SHA and repository",
+        "packages/application/src/integrations/github/github-pr.test.ts::INV-014 marks a human-attested manual preview as such and still binds the SHA"
       ],
       "oracle": [
-        "Local frozen-SHA publisher refuses newer SHA and cannot approve unbound/empty/nonpass snapshots."
+        "Local frozen-SHA publisher refuses newer SHA and cannot approve unbound/empty/nonpass snapshots.",
+        "A Run's provenance binds as verified only when its deploymentId matches the deployment the webhook named for that exact SHA and repository; an absent, other-SHA, other-repository or self-asserted deployment stays unbound and a manual preview is labelled attested."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
-        "validation/results/m3-acceptance/hosted/public/acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/acceptance.json",
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
       ],
       "code": [
         "packages/application/src/delivery.ts",
-        "packages/application/src/provenance.ts"
+        "packages/application/src/provenance.ts",
+        "packages/application/src/integrations/github/service.ts"
       ],
       "coverage": {
         "positive": [
-          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green"
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+          "packages/application/src/integrations/github/github-pr.test.ts::INV-014 marks a human-attested manual preview as such and still binds the SHA"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
-          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green"
+          "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
+          "packages/application/src/integrations/github/github-pr.test.ts::INV-014 verifies a Run's deployment only against the deployment the webhook named for that SHA and repository"
         ],
         "criticalAssertions": [
           {
@@ -5107,20 +5651,22 @@
           {
             "path": "packages/application/src/delivery.test.ts",
             "assertion": "expect(() => validatePublication(resultFixture(), \"owner/repo\", \"c\".repeat(40))).toThrow(\n    /frozen assessed SHA/,\n  );"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(provenance).toMatchObject({ binding: \"verified\", bindingSource: \"github-deployment\" });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(provenance.limitations).toContain(\"deployment-attested-manually\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(verified.limitations).toEqual([\"deployment-bound-without-local-checkout\"]);"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "deployment binding of PR results and installed App/preview deployment handling",
-          "specQuote": {
-            "path": "specs/09-web-and-integrations.md",
-            "text": "| M4 | Web self-hosted/team, settings/sources/auth dinâmica, listas cross-project, schedules/notificações e GitHub App/previews multi-provider"
-          }
-        }
-      ],
-      "note": "M3 binds results to the commit: the frozen-SHA publisher refuses a newer SHA, unbound/empty/nonpass snapshots cannot approve, and the hosted old-A/new-B check publication ran on a public disposable repository (acceptance.json). Deployment binding and installed App/preview deployment handling are M4 scope, not proven by Checks transport."
+      "note": "M3 binds results to the commit: the frozen-SHA publisher refuses a newer SHA, unbound/empty/nonpass snapshots cannot approve, and the hosted old-A/new-B check publication ran on a public disposable repository (acceptance.json). Deployment binding and installed App/preview deployment handling are M4 scope, not proven by Checks transport. M4 binds a Run to the deployment the GitHub webhook named for the head SHA (binding source github-deployment)."
     },
     {
       "id": "INV-015",
@@ -6277,10 +6823,14 @@
         "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
         "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
         "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
-        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
+        "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
       ],
       "oracle": [
-        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict; a fork pull request is refused by policy before runtime installation and the hosted cross-owner fork run had no secret, no write token (HTTP 403 on every write API) and no execution."
+        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict; a fork pull request is refused by policy before runtime installation and the hosted cross-owner fork run had no secret, no write token (HTTP 403 on every write API) and no execution.",
+        "J12 automated part with a fake GitHub: push A then B, deployment ordering, duplicate and tampered webhooks, a malicious fork and the Docker-sandbox preview run; the real installed App is a W2 hosted proof."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
@@ -6290,20 +6840,29 @@
         "tools/src/github-action/hosted-evidence.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
         "validation/results/m3-acceptance/hosted/public/acceptance.json",
-        "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json"
+        "validation/results/m3-acceptance/hosted/public/fork-token-isolation-acceptance.json",
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j12-github.docker.test.ts",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "tools/src/github-action/inputs.ts",
         "tools/src/github-action/main.ts",
-        "packages/application/src/ci.ts"
+        "packages/application/src/ci.ts",
+        "packages/application/src/integrations/github/service.ts"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
           "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
-          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests"
+          "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
@@ -6311,7 +6870,8 @@
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
           "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
-          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution"
+          "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network"
         ],
         "criticalAssertions": [
           {
@@ -6329,6 +6889,10 @@
           {
             "path": "tools/src/github-action/main.test.ts",
             "assertion": "message: \"Fork execution is denied before runtime installation\","
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(verdict(world, SHA_B)).toEqual(SUCCESS);"
           }
         ]
       },
@@ -6350,7 +6914,7 @@
           }
         }
       ],
-      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5."
+      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5. M4 S7 adds the automated J12 journey against a fake GitHub; the real App installation remains for W2."
     },
     {
       "id": "J13",
@@ -9274,11 +9838,82 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+        "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+        "validation/journeys/j12-github.pg.test.ts::J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "validation/journeys/j12-github.docker.test.ts::J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by the sandbox egress policy and the foreign origin is never reached",
+        "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App, shows consent and labels a test delivery, accessibly at 320 px",
+        "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
+        "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued"
+      ],
+      "oracle": [
+        "A GitHub App integration receives signed webhooks, waits for the preview of the exact head SHA, runs the pull request in the Docker sandbox, publishes two checks and one comment bound to that SHA, supersedes older pushes, treats forks and internal-network previews as policy denials and keeps the required gate strictly non-green for anything but a verified pass, all through /v1 routes and an accessible portal page. Installation of the App on a real repository is the W2 hosted proof."
+      ],
+      "evidence": [
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j12-github.docker.test.ts",
+        "validation/journeys/github-portal.portal.test.ts",
+        "packages/application/src/integrations/github/github-webhooks.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts",
+        "apps/web/src/routes/github.tsx",
+        "apps/cli/src/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+          "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App, shows consent and labels a test delivery, accessibly at 320 px",
+          "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued"
+        ],
+        "negative": [
+          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+          "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+          "validation/journeys/j12-github.docker.test.ts::J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by the sandbox egress policy and the foreign origin is never reached",
+          "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(String(world.pull(SHA_A).state)).toBe(\"superseded\");"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(world.app.runs.list()).toHaveLength(0);"
+          },
+          {
+            "path": "validation/journeys/j12-github.docker.test.ts",
+            "assertion": "    expect(verdict(w, SHA_A)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "validation/journeys/github-portal.portal.test.ts",
+            "assertion": "    expect(await field.getAttribute(\"aria-invalid\")).toBe(\"true\");"
+          }
+        ]
+      },
+      "note": "Automated against a fake GitHub API and webhook sender (packages/application/src/integrations/github/testing); the Docker sandbox runs the preview Run. The installed-App proof on a real repository and the real fork case are W2 hosted evidence. Preview deployments are consumed from GitHub deployment statuses or a manual attested URL; no vendor API is called, no GitHub Enterprise Server is validated, and github.suiteId list admission is not wired until lists land."
     },
     {
       "id": "M4-08",
@@ -12206,10 +12841,14 @@
         "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
         "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
         "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
-        "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters"
+        "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
+        "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)"
       ],
       "oracle": [
-        "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted."
+        "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted.",
+        "A restored GitHub installation that was revoked stays revoked after restoring a backup taken while it was active, and one that was never revoked keeps working."
       ],
       "evidence": [
         "validation/journeys/crash-recovery.docker.test.ts",
@@ -12221,7 +12860,9 @@
         "packages/persistence/src/persistence.test.ts",
         "packages/application/src/release.test.ts",
         "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
-        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "packages/application/src/integrations/github/github-restore.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
       ],
       "code": [
         "packages/application/src/backups.ts",
@@ -12229,9 +12870,10 @@
         "apps/cli/src/backups.ts",
         "packages/application/src/scheduling/scheduler.ts",
         "packages/application/src/operations-state.ts",
-        "packages/application/src/notifications/controllers.ts"
+        "packages/application/src/notifications/controllers.ts",
+        "packages/application/src/integrations/github/service.ts"
       ],
-      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set.",
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof.",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
@@ -12241,7 +12883,8 @@
           "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
           "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
-          "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared"
+          "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
+          "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)"
         ],
         "negative": [
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
@@ -12250,7 +12893,9 @@
           "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
           "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
-          "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters"
+          "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
+          "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
+          "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests"
         ],
         "criticalAssertions": [
           {
@@ -12288,6 +12933,10 @@
           {
             "path": "packages/application/src/notifications/resilience.test.ts",
             "assertion": "    expect(await h.tick()).toEqual({ created: 0, attempted: 0 });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-restore.test.ts",
+            "assertion": "    expect(revoked?.state).toBe(\"revoked\");"
           }
         ]
       },
@@ -12786,12 +13435,17 @@
         "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
         "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
         "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
-        "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value"
+        "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
+        "validation/journeys/github-portal.portal.test.ts::OPS-035 INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result",
+        "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
+        "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent"
       ],
       "oracle": [
         "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only.",
         "The portal grant editor issues allow and deny grants by resource type, actions, projects, environments and expiry, lists them, and the server refuses grants beyond the issuer; the member editor changes roles with If-Match and refuses self-promotion.",
-        "M4 (S3) adds the auth-dynamic operator surfaces: profile, test sign-in, checkpoint and session-revocation routes, CLI commands and portal pages, each refusing callers without the role and returning no credential value."
+        "M4 (S3) adds the auth-dynamic operator surfaces: profile, test sign-in, checkpoint and session-revocation routes, CLI commands and portal pages, each refusing callers without the role and returning no credential value.",
+        "GitHub surfaces: the CLI manifest setup helper, per-repository settings (validated, administrator-only) and the portal settings form bind errors to their fields."
       ],
       "evidence": [
         "docs/operations/local-operations.md",
@@ -12807,7 +13461,13 @@
         "validation/results/m4-acceptance/s3/060-s3-cli-auth/manifest.json",
         "validation/results/m4-acceptance/s3/060-s3-cli-auth/output.log",
         "validation/results/m4-acceptance/s3/062-s3-portal-auth/manifest.json",
-        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log"
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log",
+        "validation/journeys/github-portal.portal.test.ts",
+        "apps/cli/src/github.test.ts",
+        "apps/server/src/github.routes.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
       ],
       "code": [
         "docs/operations/local-operations.md",
@@ -12823,9 +13483,12 @@
         "apps/server/src/routes/auth.ts",
         "apps/cli/src/auth-profiles.ts",
         "apps/web/src/features/auth/auth-pages.tsx",
-        "apps/web/src/routes/auth.tsx"
+        "apps/web/src/routes/auth.tsx",
+        "apps/web/src/routes/github.tsx",
+        "apps/cli/src/github.ts",
+        "apps/server/src/routes/github.ts"
       ],
-      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal.",
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal. M4 S7 adds the GitHub App setup and settings surfaces.",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -12838,7 +13501,9 @@
           "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
           "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
           "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
-          "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential"
+          "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
+          "validation/journeys/github-portal.portal.test.ts::OPS-035 INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result",
+          "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets"
         ],
         "negative": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -12847,7 +13512,9 @@
           "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
           "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ",
           "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
-          "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value"
+          "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
+          "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent"
         ],
         "criticalAssertions": [
           {
@@ -12897,6 +13564,10 @@
           {
             "path": "apps/cli/src/auth-profiles.test.ts",
             "assertion": "  expect((await stat(out)).mode & 0o777).toBe(0o600);"
+          },
+          {
+            "path": "validation/journeys/github-portal.portal.test.ts",
+            "assertion": "    expect(await field.getAttribute(\"aria-invalid\")).toBe(\"true\");"
           }
         ]
       },
@@ -12959,11 +13630,16 @@
         "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
         "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
         "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
-        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
+        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
+        "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests",
+        "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
+        "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output"
       ],
       "oracle": [
         "Local JUnit/JSON/HTML exports never call GitHub; GitHub 401 dead-letters without changing the local result; a newer SHA is refused; the execute job has no checks permission and no token in the download step; absent committed bytes produce partial without fake evidence.",
-        "A server configuration with S3 storage is refused with CAPABILITY_UNAVAILABLE for M5 at parse time and at application open, while the filesystem option is accepted."
+        "A server configuration with S3 storage is refused with CAPABILITY_UNAVAILABLE for M5 at parse time and at application open, while the filesystem option is accepted.",
+        "A revoked or suspended GitHub App installation stays revoked after restoring a backup taken while it was active (the operational_state tombstone wins, even on a row restored as active) and an installation that was never revoked keeps working; the check output links to the authenticated portal Run and batch pages and the portal lists them."
       ],
       "evidence": [
         "validation/journeys/m3-ci.docker.test.ts",
@@ -12976,14 +13652,23 @@
         "validation/results/m3-acceptance/hosted/public/21-controls-4df8ba5/acceptance.json",
         "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
         "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
-        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log"
+        "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
+        "packages/application/src/integrations/github/github-restore.test.ts",
+        "packages/application/src/integrations/github/github-delivery.test.ts",
+        "validation/journeys/github-portal.portal.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "packages/application/src/artifacts.ts",
         "apps/cli/src/ci-workflow.ts",
         "packages/application/src/server-config.ts",
-        "packages/application/src/notifications/service.ts"
+        "packages/application/src/notifications/service.ts",
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/backups.ts",
+        "apps/web/src/routes/github.tsx"
       ],
       "coverage": {
         "positive": [
@@ -12994,7 +13679,9 @@
           "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
           "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
           "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
-          "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched"
+          "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
+          "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
+          "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
@@ -13002,7 +13689,9 @@
           "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
           "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
           "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
-          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
+          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+          "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
+          "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests"
         ],
         "criticalAssertions": [
           {
@@ -13044,28 +13733,18 @@
           {
             "path": "packages/application/src/notifications/rules.test.ts",
             "assertion": "    expect(h.service.list()).toHaveLength(1);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-restore.test.ts",
+            "assertion": "    expect(revoked?.state).toBe(\"revoked\");"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "    expect(w.pull(SHA_A).state).toBe(\"closed\");"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "revoked GitHub App integration is not reactivated by restoring an old config",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "M4-07 — GitHub App e previews"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "authorized link in check output (UI surface)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "**M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility; PostgreSQL/S3 profiles"
-          }
-        }
-      ],
-      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016). M4 S8 proves notification fan-out dedupe and that a failing webhook preserves the Run and dead-letters."
+      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016). M4 S8 proves notification fan-out dedupe and that a failing webhook preserves the Run and dead-letters. M4 re-applies GitHub installation tombstones on restore and links check output to authenticated portal pages."
     },
     {
       "id": "OPS-038",
@@ -15534,11 +16213,73 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+        "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+        "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+        "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents",
+        "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output"
+      ],
+      "oracle": [
+        "A pull request in an installed repository is verified end to end: webhook, preview wait bound to the head SHA, a Run against that preview in the Docker sandbox, two checks plus one comment on the head SHA, supersede on a newer push, and fork, internal-network and failed-preview negatives that never turn the required gate green."
+      ],
+      "evidence": [
+        "validation/journeys/j12-github.pg.test.ts",
+        "validation/journeys/j12-github.docker.test.ts",
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/journeys/github-portal.portal.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/output.log",
+        "validation/results/m4-acceptance/s7/009-s7-docker-j12-v2/created/validation/results/j12-github-docker.json"
+      ],
+      "code": [
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/render.ts",
+        "packages/application/src/integrations/github/store.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/manifest.ts",
+        "packages/application/src/integrations/github/index.ts",
+        "packages/application/src/integrations/provider.ts",
+        "apps/server/src/routes/github.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
+          "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
+          "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output"
+        ],
+        "negative": [
+          "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
+          "validation/journeys/j12-github.pg.test.ts::J12 INT-021 the required gate never accepts neutral, action_required, cancelled or a pass with a failed gate across every scenario of the journey",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-015 concludes a missing preview as action_required with a failing gate at the deadline, and a late deployment starts nothing",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(verdict(world, SHA_B)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(verdict(world, SHA_A)[\"TestMaster / required-gate\"]).toBe(\"cancelled\");"
+          },
+          {
+            "path": "validation/journeys/j12-github.docker.test.ts",
+            "assertion": "    expect(verdict(w, SHA_A)).toEqual(SUCCESS);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-pr.test.ts",
+            "assertion": "    expect(pullState(w, SHA_A)).toBe(\"timed_out\");"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-034",
@@ -19582,10 +20323,20 @@
         "validation/journeys/hostile-repository.test.ts::SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers, filters, submodules or workflows and leaves remotes unchanged",
         "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
         "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment",
-        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+        "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+        "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 signs the App JWT RS256 with iat = now-60 and exp = now+540 under the App's own id",
+        "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 mints each installation token for one repository with explicit permissions, caches it in memory and re-mints before expiry",
+        "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 never persists an installation token, publishes only to the head SHA the pull request named and never reads a fork head",
+        "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 refuses while allowAgentPullRequests is off and while the installation lacks contents: write",
+        "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 requires an explicit AgentPullRequest approve grant for a non-human caller and then only creates a new testmaster/ branch and a draft pull request",
+        "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 refuses branches outside testmaster/, the base branch, workflow paths and path traversal even with the grant",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 requests the minimum permissions, points the webhook at this deployment and asks for contents: write only for agent pull requests",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 exchanges the one-time code once, stores the credentials as secrets bound to the GitHub API origin and never returns them",
+        "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents"
       ],
       "oracle": [
-        "No hook, helper, filter, submodule or workflow marker exists after fork analysis; origin and upstream config unchanged; the generated workflow denies forks before setup and uses no pull_request_target; child processes receive no provider, GitHub or loader secrets; publication refuses a newer SHA than the frozen assessed one."
+        "No hook, helper, filter, submodule or workflow marker exists after fork analysis; origin and upstream config unchanged; the generated workflow denies forks before setup and uses no pull_request_target; child processes receive no provider, GitHub or loader secrets; publication refuses a newer SHA than the frozen assessed one.",
+        "The App JWT is RS256 with iat = now-60 and exp = now+540; installation tokens are minted per use for one repository with explicit permissions, cached only in memory and never persisted; checks are published only to the head SHA the pull request named and a fork head is never read; agent branches and pull requests need allowAgentPullRequests, the installation's contents: write permission and an explicit human AgentPullRequest approve grant, and only create a new testmaster/ branch and a draft pull request."
       ],
       "evidence": [
         "validation/journeys/hostile-repository.test.ts",
@@ -19593,26 +20344,41 @@
         "tools/src/github-action/inputs.test.ts",
         "packages/application/src/delivery.test.ts",
         "validation/results/hostile-repository-boundary.json",
-        "validation/results/hostile-repository-boundary-hostile-network.json"
+        "validation/results/hostile-repository-boundary-hostile-network.json",
+        "packages/application/src/integrations/github/github-delivery.test.ts",
+        "packages/application/src/integrations/github/github-setup.test.ts",
+        "packages/application/src/integrations/github/github-pr.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log"
       ],
       "code": [
         "packages/planner/src/code/diff.ts",
         "validation/journeys/network-recorder.ts",
         "apps/cli/src/ci-workflow.ts",
         "tools/src/github-action/inputs.ts",
-        "packages/application/src/delivery.ts"
+        "packages/application/src/delivery.ts",
+        "packages/application/src/integrations/github/api.ts",
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/github/manifest.ts"
       ],
-      "note": "Fork analysis executes nothing, the generated workflow denies forks before setup, child environments are stripped and publication is bound to the assessed SHA, all verified locally. GitHub App tokens, privileged base/head separation, immutable checks and agent branch/PR creation are deferred to M4 and not simulated.",
+      "note": "Fork analysis executes nothing, the generated workflow denies forks before setup, child environments are stripped and publication is bound to the assessed SHA, all verified locally. GitHub App tokens, privileged base/head separation, immutable checks and agent branch/PR creation are deferred to M4 and not simulated. M4 proves App JWT lifetime, per-use installation tokens, base/head separation, immutable check SHA and the agent pull-request grant against a fake GitHub.",
       "coverage": {
         "positive": [
           "validation/journeys/hostile-repository.test.ts::SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers, filters, submodules or workflows and leaves remotes unchanged",
-          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 signs the App JWT RS256 with iat = now-60 and exp = now+540 under the App's own id",
+          "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 mints each installation token for one repository with explicit permissions, caches it in memory and re-mints before expiry",
+          "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 requires an explicit AgentPullRequest approve grant for a non-human caller and then only creates a new testmaster/ branch and a draft pull request",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-014 SEC-047 requests the minimum permissions, points the webhook at this deployment and asks for contents: write only for agent pull requests"
         ],
         "negative": [
           "validation/journeys/hostile-repository.test.ts::SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers, filters, submodules or workflows and leaves remotes unchanged",
           "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
           "tools/src/github-action/inputs.test.ts::strips provider, Github, node loader and Git configuration secrets from real child environment",
-          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot"
+          "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
+          "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 never persists an installation token, publishes only to the head SHA the pull request named and never reads a fork head",
+          "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 refuses while allowAgentPullRequests is off and while the installation lacks contents: write",
+          "packages/application/src/integrations/github/github-delivery.test.ts::SEC-047 refuses branches outside testmaster/, the base branch, workflow paths and path traversal even with the grant",
+          "packages/application/src/integrations/github/github-pr.test.ts::INT-018 SEC-047 runs nothing for a fork, publishes action_required plus a failing gate, and never touches repository contents"
         ],
         "criticalAssertions": [
           {
@@ -19630,27 +20396,29 @@
           {
             "path": "packages/application/src/delivery.test.ts",
             "assertion": "validatePublication(resultFixture(), \"owner/repo\", \"c\".repeat(40))"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "      exp: now / 1000 + 540,"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "      expect(body.repository_ids).toEqual([501]);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "      for (const token of issued) expect(dump, table).not.toContain(token);"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "    ).rejects.toMatchObject({ code: \"FORBIDDEN\" });"
+          },
+          {
+            "path": "packages/application/src/integrations/github/github-delivery.test.ts",
+            "assertion": "      expect((post.body as { head_sha: string }).head_sha).toBe(SHA_A);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "GitHub App installation token lifetime and permissions, base/head separation and immutable check-SHA publishing.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "Integração GitHub App em M4 usa installation token curto e permissions mínimas"
-          }
-        },
-        {
-          "milestone": "M4",
-          "scope": "Agent branch and pull-request creation authorization.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "**SEC-047 — Forks e GitHub seguro (M2–M4).**"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "SEC-048",
@@ -24489,10 +25257,13 @@
         "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
         "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
         "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
-        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
+        "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+        "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+        "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering"
       ],
       "oracle": [
-        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict."
+        "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict.",
+        "Webhook dedupe and tamper handling: a duplicate delivery is answered from the record, a reused ID with other bytes is refused as IDEMPOTENCY_CONFLICT and recorded, and bad, unsigned or oversize deliveries change nothing."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
@@ -24500,13 +25271,20 @@
         "tools/src/github-action/inputs.test.ts",
         "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-ci-cleanup-failed.json",
         "validation/results/m3-acceptance/hosted/public/acceptance.json",
-        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/journeys/j12-github.pg.test.ts",
+        "packages/application/src/integrations/github/github-webhooks.test.ts",
+        "validation/results/m4-acceptance/s7/013-s7-unit-github-v3/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
+        "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json"
       ],
       "code": [
         "packages/application/src/delivery.ts",
         "tools/src/github-action/inputs.ts",
         "packages/application/src/ci.ts",
-        "packages/application/src/notifications/service.ts"
+        "packages/application/src/notifications/service.ts",
+        "packages/application/src/integrations/github/service.ts",
+        "packages/application/src/integrations/service.ts"
       ],
       "coverage": {
         "positive": [
@@ -24514,14 +25292,17 @@
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
           "validation/journeys/m3-ci.docker.test.ts::exports real healthy and semantic-defect Runs as canonical JSON and JUnit without any model call",
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
-          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched"
+          "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
+          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing",
+          "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 answers a duplicate delivery with the original outcome and treats a reused ID with a different payload as tampering"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
           "packages/application/src/delivery.test.ts::persists 401 deliveries as dead letters without mutating or rerunning the local result",
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "validation/journeys/m3-ci.docker.test.ts::preserves a passing business assertion with required cleanup failure as nonpass JSON and JUnit",
-          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event"
+          "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
+          "validation/journeys/j12-github.pg.test.ts::J12 VAL-033 INT-014 INT-002 a duplicate delivery is answered from the record, a tampered one is refused and recorded, and bad, unsigned and oversize ones change nothing"
         ],
         "criticalAssertions": [
           {
@@ -24543,6 +25324,10 @@
           {
             "path": "packages/application/src/notifications/resilience.test.ts",
             "assertion": "    expect(runRow(h, runId)).toEqual(before);"
+          },
+          {
+            "path": "validation/journeys/j12-github.pg.test.ts",
+            "assertion": "    expect(tampered.statusCode).toBe(409);"
           }
         ]
       },
@@ -24556,7 +25341,7 @@
           }
         }
       ],
-      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5). M4 S8 added notification failure isolation and fan-out dedupe."
+      "note": "JUnit outcome/gate/cleanup, Action input injection, GitHub checks mapping, bounded delivery retries and the frozen-SHA refusal are proven locally and on a public disposable repository. Webhook dedupe, GitHub App/preview SHA checks, duplicate-delivery run creation and notification failure isolation are M4 scope (ROADMAP.md keeps VAL-033 webhook scopes in M4/M5). M4 S8 added notification failure isolation and fan-out dedupe. M4 S7 adds GitHub webhook dedupe and tamper proofs."
     },
     {
       "id": "VAL-034",
