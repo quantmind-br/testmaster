@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "inputRef"
+  ],
+  "properties": {
+    "inputRef": {
+      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "ttlSeconds": {
+      "minimum": 60,
+      "maximum": 86400,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthStateImportInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

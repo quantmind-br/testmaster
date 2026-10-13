@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "authorizationId",
+    "inputRef"
+  ],
+  "properties": {
+    "authorizationId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "inputRef": {
+      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:AuthCompleteInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

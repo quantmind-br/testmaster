@@ -1,4 +1,4 @@
-import { roles } from "./primitives.js";
+import type { roles } from "./primitives.js";
 
 export type Role = (typeof roles)[number];
 export const rbacColumns = ["read", "write", "execute", "secret", "export", "admin"] as const;

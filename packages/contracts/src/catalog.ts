@@ -1,5 +1,6 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
+import { authContracts } from "./m4/auth.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
 import * as Metrics from "./metrics.js";
@@ -513,7 +514,6 @@ const supplemental = {
     progress: Type.Number({ minimum: 0, maximum: 1 }),
   }),
   IdentityInput: P.Obj({ principal: P.Name, credentialRef: Type.Optional(P.id("sec")) }),
-  AuthContinueInput: P.Obj({ inputRef: Type.Optional(P.id("sec")) }),
   AdmissionInput: P.Obj({ action: P.Enum(["pause", "resume"]), reason: P.Description }),
   ReconcileInput: P.Obj({
     mode: P.Enum(["preview", "apply"]),
@@ -620,6 +620,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...httpInputs,
   ...integrationContracts,
   ...identityContracts,
+  ...authContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

@@ -1,0 +1,368 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "workspaceId",
+    "projectId",
+    "name",
+    "kind",
+    "originBindings",
+    "secrets",
+    "managedSecrets",
+    "config",
+    "refreshPolicy",
+    "session",
+    "version",
+    "createdAt"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "form",
+          "type": "string"
+        },
+        {
+          "const": "basic",
+          "type": "string"
+        },
+        {
+          "const": "bearer",
+          "type": "string"
+        },
+        {
+          "const": "api-key",
+          "type": "string"
+        },
+        {
+          "const": "cookie",
+          "type": "string"
+        },
+        {
+          "const": "oauth",
+          "type": "string"
+        },
+        {
+          "const": "oidc",
+          "type": "string"
+        },
+        {
+          "const": "manual",
+          "type": "string"
+        }
+      ]
+    },
+    "originBindings": {
+      "minItems": 1,
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "maxLength": 2048,
+        "type": "string"
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      }
+    },
+    "managedSecrets": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      }
+    },
+    "config": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    },
+    "refreshPolicy": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "skewSeconds",
+        "maxRefreshesPerHour",
+        "cooldownSeconds",
+        "maxConsecutiveFailures",
+        "stateTtlSeconds"
+      ],
+      "properties": {
+        "skewSeconds": {
+          "minimum": 0,
+          "maximum": 600,
+          "type": "integer"
+        },
+        "maxRefreshesPerHour": {
+          "minimum": 1,
+          "maximum": 60,
+          "type": "integer"
+        },
+        "cooldownSeconds": {
+          "minimum": 0,
+          "maximum": 3600,
+          "type": "integer"
+        },
+        "maxConsecutiveFailures": {
+          "minimum": 1,
+          "maximum": 10,
+          "type": "integer"
+        },
+        "stateTtlSeconds": {
+          "minimum": 60,
+          "maximum": 86400,
+          "type": "integer"
+        }
+      }
+    },
+    "session": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "state",
+        "reason",
+        "credentials",
+        "lastRefreshAt",
+        "refreshFailures",
+        "cooldownUntil",
+        "otpLockedUntil",
+        "pendingCheckpointId"
+      ],
+      "properties": {
+        "state": {
+          "anyOf": [
+            {
+              "const": "unauthenticated",
+              "type": "string"
+            },
+            {
+              "const": "authenticated",
+              "type": "string"
+            },
+            {
+              "const": "expired",
+              "type": "string"
+            },
+            {
+              "const": "reauth_required",
+              "type": "string"
+            },
+            {
+              "const": "revoked",
+              "type": "string"
+            },
+            {
+              "const": "locked",
+              "type": "string"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "credentials": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "role",
+              "secretId",
+              "capturedAt",
+              "expiresAt"
+            ],
+            "properties": {
+              "role": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "secretId": {
+                "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "capturedAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expiresAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "lastRefreshAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refreshFailures": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cooldownUntil": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "otpLockedUntil": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pendingCheckpointId": {
+          "anyOf": [
+            {
+              "pattern": "^acp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:AuthProfileView",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -110,6 +110,17 @@ export const RunnerEvent = Type.Union([
     Obj({ requestId: Name, secretRef: id("sec"), secretVersion: Type.Integer({ minimum: 1 }) }),
   ),
   event("agent.request", Obj({ stepId: Name, observation: Json })),
+  /**
+   * Browser storage state captured after a login phase (SEC-022). Socket-only: the supervisor hands
+   * it to the host for vault storage and never records it as an event, artifact or log line.
+   */
+  event(
+    "auth.state",
+    Obj({
+      kind: Type.Literal("storageState"),
+      data: Type.String({ minLength: 2, maxLength: 120000 }),
+    }),
+  ),
 ]);
 export const SupervisorEvent = Type.Union([
   event(
