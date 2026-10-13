@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
@@ -8,8 +7,8 @@ import { Application, scaffoldPlan } from "@testmaster/application";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { FileEvidenceStore } from "../../packages/evidence/src/index.js";
-import { cli } from "./harness.js";
 import { type ServerStack, startServerStack } from "./server-stack.js";
+import { mcpCall, remoteCli } from "./surface-clients.js";
 
 /**
  * Two organizations in one PostgreSQL database behind the real server profile (child process,
@@ -402,61 +401,8 @@ describe("tenant isolation through the server profile", () => {
   });
 
   it("SEC-030 NFR-003 M4-01 the MCP HTTP tools answer tenant B's token only about tenant B's Runs", async () => {
-    const mcp = async (token: string, tool: string, args: Record<string, unknown>) => {
-      const client = stack.anonymous();
-      const headers = bearer(token, {
-        accept: "application/json, text/event-stream",
-        origin: stack.baseUrl,
-      });
-      const parse = (text: string) => {
-        const line = text.split("\n").find((value) => value.startsWith("data:"));
-        return JSON.parse(line ? line.slice(5) : text) as {
-          result?: {
-            isError?: boolean;
-            structuredContent?: Record<string, unknown>;
-            content?: { text: string }[];
-          };
-          error?: { message: string };
-        };
-      };
-      const initialized = await client.request("POST", "/mcp", {
-        headers,
-        cookies: false,
-        body: {
-          jsonrpc: "2.0",
-          id: 1,
-          method: "initialize",
-          params: {
-            protocolVersion: "2025-06-18",
-            capabilities: {},
-            clientInfo: { name: "tenant-isolation", version: "1" },
-          },
-        },
-      });
-      expect(initialized.status).toBe(200);
-      const session = String(initialized.headers["mcp-session-id"]);
-      const sessionHeaders = {
-        ...headers,
-        "mcp-session-id": session,
-        "mcp-protocol-version": "2025-06-18",
-      };
-      await client.request("POST", "/mcp", {
-        headers: sessionHeaders,
-        cookies: false,
-        body: { jsonrpc: "2.0", method: "notifications/initialized" },
-      });
-      const called = await client.request("POST", "/mcp", {
-        headers: sessionHeaders,
-        cookies: false,
-        body: {
-          jsonrpc: "2.0",
-          id: 2,
-          method: "tools/call",
-          params: { name: tool, arguments: args },
-        },
-      });
-      return { status: called.status, ...parse(called.text), raw: called.text };
-    };
+    const mcp = (token: string, tool: string, args: Record<string, unknown>) =>
+      mcpCall(stack, token, tool, args);
     const runA = a.runIds[0] as string;
     const own = await mcp(a.token, "testmaster_get_run", { runId: runA });
     expect(own.result?.isError, own.raw).not.toBe(true);
@@ -476,35 +422,19 @@ describe("tenant isolation through the server profile", () => {
   });
 
   it("SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run", async () => {
-    const run = (token: string, args: string[]) => {
-      const { promise, resolve } = Promise.withResolvers<{
-        code: number | null;
-        document: { data?: { id?: string }; error?: { code: string } };
-      }>();
-      const child = spawn(process.execPath, [cli, "--json", "--endpoint", stack.baseUrl, ...args], {
-        env: {
-          ...process.env,
-          TESTMASTER_API_KEY: token,
-          NODE_EXTRA_CA_CERTS: caFile,
-          XDG_CONFIG_HOME: join(caDirectory, "xdg"),
-        },
-        stdio: "pipe",
-      });
-      let stdout = "";
-      child.stdout.on("data", (chunk: Buffer) => {
-        stdout += chunk.toString();
-      });
-      child.once("close", (code) => resolve({ code, document: JSON.parse(stdout) }));
-      return promise;
-    };
-    const own = await run(a.token, ["run", "get", a.runIds[0] as string]);
+    const options = { caFile, configHome: join(caDirectory, "xdg") };
+    const own = await remoteCli<{ id: string }>(stack, options, a.token, [
+      "run",
+      "get",
+      a.runIds[0] as string,
+    ]);
     expect(own.code).toBe(0);
     expect(own.document.data?.id).toBe(a.runIds[0]);
-    const foreign = await run(b.token, ["run", "get", a.runIds[0] as string]);
+    const foreign = await remoteCli(stack, options, b.token, ["run", "get", a.runIds[0] as string]);
     expect(foreign.code).not.toBe(0);
     expect(foreign.document.error?.code).toBe("NOT_FOUND");
-    const listed = await run(b.token, ["run", "list"]);
-    const ids = (listed.document.data as unknown as { id: string }[]).map((item) => item.id);
+    const listed = await remoteCli<{ id: string }[]>(stack, options, b.token, ["run", "list"]);
+    const ids = (listed.document.data ?? []).map((item) => item.id);
     expect(ids.sort()).toEqual([...b.runIds].sort());
   });
 
