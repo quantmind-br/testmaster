@@ -1,0 +1,21 @@
+# TLS terminates here (ADR-016, ADR-019). `tls internal` uses Caddy's own CA; replace it with an
+# ACME or operator certificate for a public host name. The server trusts X-Forwarded-* only from
+# the compose network's proxy address (server.trustedProxies in the server configuration).
+{
+	admin off
+	auto_https disable_redirects
+}
+
+:8443 {
+	tls internal
+	encode zstd gzip
+	reverse_proxy server:7331 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-For {remote_host}
+		health_uri /v1/health/live
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

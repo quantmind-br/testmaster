@@ -1,0 +1,27 @@
+# One worker of the local segregated pool (ADR-016). The instance name selects the server
+# configuration: `systemctl --user start testmaster-worker@production` reads
+# %E/testmaster/production.json. Workers run on the host because sandbox bind mounts need host paths,
+# and they use the operator's rootless Docker daemon (docs/operations/rootless-docker.md).
+[Unit]
+Description=TestMaster worker (%i)
+Documentation=file://%h/testmaster/deploy/compose/README.md
+After=docker.socket network-online.target
+Wants=network-online.target
+# A restart loop is the rolling-upgrade mechanism: a worker older than the database exits with
+# worker_schema_behind, and starts again once its own build is upgraded (OPS-038).
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment=DOCKER_HOST=unix://%t/docker.sock
+Environment=TESTMASTER_NO_TELEMETRY=true
+ExecStart=/usr/bin/env node %h/testmaster/apps/cli/dist/main.js worker start --mode server --config %E/testmaster/%i.json
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=90
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

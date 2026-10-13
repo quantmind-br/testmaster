@@ -1,0 +1,23 @@
+{
+  "mode": "server",
+  "database": {
+    "engine": "postgres",
+    "url": "postgres://testmaster@postgres:5432/testmaster?sslmode=verify-full",
+    "passwordFile": "/run/testmaster/db.password",
+    "caFile": "/etc/testmaster/tls/ca.crt",
+    "applicationName": "testmaster-server"
+  },
+  "storage": { "kind": "filesystem", "root": "/srv/testmaster/evidence" },
+  "server": {
+    "listen": { "host": "0.0.0.0", "port": 7331 },
+    "publicOrigin": "https://testmaster.example.com:8443",
+    "trustedProxies": ["172.16.0.0/12"],
+    "origins": ["https://testmaster.example.com:8443"]
+  },
+  "security": {
+    "masterKeyFile": "/srv/testmaster/keys/master.key",
+    "backupKeyFile": "/srv/testmaster/keys/backup.key",
+    "atRestEncryption": { "database": "operator-volume", "evidence": "operator-volume" }
+  },
+  "telemetry": { "metrics": false, "logExport": "none" }
+}
