@@ -346,10 +346,10 @@ async function withSecret(w: ScheduleWorld) {
     "EnvironmentRevision",
     w.init.workspaceId,
     String(environment.activeRevisionId),
-  );
+  ) as { targetOrigins: string[] };
   const secret = await w.app.secrets.set("schedule-token", "first-value", {
     ephemeral: true,
-    allowedOrigins: [(revision?.targetOrigins as string[])[0] as string],
+    allowedOrigins: [revision.targetOrigins[0] as string],
   });
   const plan = scaffoldPlan("backend");
   const step = plan.steps[0];
