@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 547ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 serializes two concurrent migrators on the advisory lock and applies each migration once 546ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 serializes two concurrent migrators on the advisory lock and applies each migration once
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/persistence/src/database.pg.test.ts:247:22
+    245|       blocked = Number(waiting.rows[0]?.n);
+    246|     }
+    247|     expect(finished).toBe(false);
+       |                      ^
+    248|     const waiting = await holder.query("SELECT to_regclass('schema_mig…
+    249|     expect(waiting.rows[0]?.found).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:40:19
+   Duration  1.88s (tests 79%, transform 11%, import 10%)
+

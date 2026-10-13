@@ -7,7 +7,7 @@ import { loadMigrations, PersistenceDatabase } from "./database.js";
 const roots: string[] = [];
 const connections: PersistenceDatabase[] = [];
 afterEach(async () => {
-  for (const db of connections.splice(0)) if (db.db.isOpen) db.close();
+  for (const db of connections.splice(0)) if (db.isOpen) db.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 async function fixture() {
@@ -35,14 +35,14 @@ it("denies a second actual migrator while preserving queued data and permits nor
     "CREATE TABLE migration_probe(id TEXT PRIMARY KEY);",
   );
   db.run("INSERT INTO operational_state(key,value) VALUES('upgrade:queued','durable')");
-  db.db.exec("BEGIN EXCLUSIVE");
+  db.exec("BEGIN EXCLUSIVE");
   try {
     await expect(second.migrate(directory)).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     expect(
       second.get("SELECT name FROM sqlite_master WHERE name='migration_probe'"),
     ).toBeUndefined();
   } finally {
-    db.db.exec("ROLLBACK");
+    db.exec("ROLLBACK");
   }
   expect(second.get("SELECT value FROM operational_state WHERE key='upgrade:queued'")?.value).toBe(
     "durable",

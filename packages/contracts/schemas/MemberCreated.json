@@ -1,0 +1,146 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "member",
+    "recoveryToken",
+    "recoveryExpiresAt"
+  ],
+  "properties": {
+    "member": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "principalId",
+        "login",
+        "displayName",
+        "role",
+        "projectRestrictions",
+        "disabledAt",
+        "createdAt",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^mem_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "principalId": {
+          "anyOf": [
+            {
+              "pattern": "^usr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "pattern": "^svc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          ]
+        },
+        "login": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9._@-]{2,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "displayName": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "const": "org_owner",
+              "type": "string"
+            },
+            {
+              "const": "org_admin",
+              "type": "string"
+            },
+            {
+              "const": "maintainer",
+              "type": "string"
+            },
+            {
+              "const": "runner",
+              "type": "string"
+            },
+            {
+              "const": "reviewer",
+              "type": "string"
+            },
+            {
+              "const": "viewer",
+              "type": "string"
+            },
+            {
+              "const": "service_account",
+              "type": "string"
+            }
+          ]
+        },
+        "projectRestrictions": {
+          "type": "array",
+          "items": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "disabledAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    },
+    "recoveryToken": {
+      "anyOf": [
+        {
+          "pattern": "^tm_rec_[A-Za-z0-9_-]{43}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recoveryExpiresAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:MemberCreated",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

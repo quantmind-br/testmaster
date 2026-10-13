@@ -1,0 +1,31 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |unit| packages/persistence/src/postgres/dialect.test.ts (15 tests | 1 failed) 9ms
+   ❯ PostgreSQL dialect translation (15)
+     × OPS-005 casts a null-tested parameter so PostgreSQL can infer its type 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/persistence/src/postgres/dialect.test.ts > PostgreSQL dialect translation > OPS-005 casts a null-tested parameter so PostgreSQL can infer its type
+AssertionError: expected 'SELECT 1 FROM t WHERE $1 IS NULL OR a…' to be 'SELECT 1 FROM t WHERE CAST($1 AS TEXT…' // Object.is equality
+
+Expected: "SELECT 1 FROM t WHERE CAST($1 AS TEXT) IS NULL OR a = $2"
+Received: "SELECT 1 FROM t WHERE $1 IS NULL OR a = $2"
+
+ ❯ packages/persistence/src/postgres/dialect.test.ts:23:74
+     21|
+     22|   it("OPS-005 casts a null-tested parameter so PostgreSQL can infer it…
+     23|     expect(translateSql("SELECT 1 FROM t WHERE ? IS NULL OR a = ?").sq…
+       |                                                                          ^
+     24|       "SELECT 1 FROM t WHERE CAST($1 AS TEXT) IS NULL OR a = $2",
+     25|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 passed (15)
+   Start at  10:41:51
+   Duration  213ms (transform 54%, import 38%, tests 6%, worker 1%)
+

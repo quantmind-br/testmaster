@@ -481,7 +481,7 @@ it("SEC-040 lost POST receipt reports possibly affected resource without retry a
       ).rejects.toMatchObject({ code: "POLICY_DENIED" });
       expect({ posts, deletes }).toEqual(priorRequests);
       const approval = app.approvals.create(resource.cleanupApproval);
-      const reader = app.withIdentity({ principalId: app.context.principalId, scopes: ["R"] });
+      const reader = app.forIdentity({ principalId: app.context.principalId, scopes: ["R"] });
       await expect(
         reader.resources.cleanup(resource.id, {
           approvalId: approval.id,

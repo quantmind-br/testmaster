@@ -58,7 +58,7 @@ it("denies missing approval and mismatched ownership before any compensation", a
       idempotencyKey: randomUUID(),
     }),
   ).rejects.toMatchObject({ code: "POLICY_DENIED" });
-  const reader = app.withIdentity({ principalId: app.context.principalId, scopes: ["R"] });
+  const reader = app.forIdentity({ principalId: app.context.principalId, scopes: ["R"] });
   await expect(
     reader.resources.cleanup(resource.id, { expectedVersion: 1, idempotencyKey: randomUUID() }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });

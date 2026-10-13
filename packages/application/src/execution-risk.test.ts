@@ -493,7 +493,7 @@ describe("admission risk boundaries", () => {
     async (denyFirst) => {
       const { app, init, request } = await fixture();
       const allow: PermissionGrant = {
-        resourceType: "Run",
+        resourceType: "*",
         actions: ["execute"],
         projectIds: [init.projectId],
         environmentIds: [],

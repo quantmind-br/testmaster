@@ -1,0 +1,44 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 180ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 keeps PostgreSQL DDL equivalent to the SQLite schema for tables, columns, keys, indexes and triggers 178ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 keeps PostgreSQL DDL equivalent to the SQLite schema for tables, columns, keys, indexes and triggers
+AssertionError: expected [ …(146) ] to deeply equal [ …(147) ]
+
+- Expected
++ Received
+
+@@ -1,11 +1,10 @@
+  [
+    "agent_installs(workspace_id)->workspaces",
+    "agent_installs(workspace_id,project_id)->projects",
+    "analyses(workspace_id)->workspaces",
+    "analyses(workspace_id,model_call_id)->model_calls",
+-   "analyses(workspace_id,parent_id)->analyses",
+    "analyses(workspace_id,parent_id,run_id)->analyses",
+    "analyses(workspace_id,run_id)->runs",
+    "analyses(workspace_id,snapshot_id)->snapshots",
+    "analyses(workspace_id,snapshot_id,run_id)->snapshots",
+    "approvals(workspace_id)->workspaces",
+
+ ❯ packages/persistence/src/database.pg.test.ts:529:85
+    527|     );
+    528|     expect(sqliteForeign.size).toBeGreaterThan(20);
+    529|     expect(foreign.rows.map((row) => `${row.tbl}(${row.cols})->${row.r…
+       |                                                                                     ^
+    530|       [...sqliteForeign.values()]
+    531|         .map((row) => `${row.tbl}(${row.cols.join(",")})->${row.ref}`)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:40:56
+   Duration  2.66s (transform 45%, import 29%, tests 25%, worker 1%)
+

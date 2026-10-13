@@ -626,7 +626,7 @@ describe("artifact retention maintenance", () => {
     expect(await f.service.maintenance()).toMatchObject({ expiredArtifacts: 0, removed: [] });
     expect(await fs.readFile(f.file, "utf8")).toBe("retained evidence");
     f.ctx.database.run("DELETE FROM artifacts WHERE id=?", siblingId);
-    f.ctx.database.db.exec("PRAGMA foreign_keys=OFF");
+    f.ctx.database.exec("PRAGMA foreign_keys=OFF");
     try {
       f.ctx.database.run(
         "INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-foreign','art-foreign',?,'rev-foreign','hash',1,?,'available','not_applicable')",
@@ -634,7 +634,7 @@ describe("artifact retention maintenance", () => {
         f.storageKey,
       );
     } finally {
-      f.ctx.database.db.exec("PRAGMA foreign_keys=ON");
+      f.ctx.database.exec("PRAGMA foreign_keys=ON");
     }
     expect(
       f.ctx.database.get("SELECT COUNT(*) AS n FROM artifacts WHERE storage_key=?", f.storageKey)

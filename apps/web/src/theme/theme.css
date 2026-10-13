@@ -1,0 +1,56 @@
+/*
+ * Design tokens. This file is the single token table: the contrast unit test
+ * (theme/contrast.test.ts) parses it and checks every foreground/background pair.
+ * Text pairs need >= 4.5:1, non-text pairs (borders, focus rings, icons) need >= 3:1.
+ * Keep each token on its own `--name: #rrggbb;` line so the table stays machine-readable.
+ */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --surface: #f4f6f9;
+  --surface-raised: #ffffff;
+  --text: #14171c;
+  --text-muted: #424a59;
+  --border: #66707f;
+  --divider: #d5d9e0;
+  --focus: #1a46c4;
+  --accent: #1a46c4;
+  --accent-text: #ffffff;
+  --link: #1a46c4;
+  --success-bg: #e3f4e8;
+  --success-text: #0a5a1d;
+  --warning-bg: #fff2cc;
+  --warning-text: #6b4200;
+  --danger-bg: #fde6e6;
+  --danger-text: #9a1a1a;
+  --info-bg: #e2edfc;
+  --info-text: #0f4592;
+  --neutral-bg: #e9ecf1;
+  --neutral-text: #2f3644;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1318;
+    --surface: #171c23;
+    --surface-raised: #1d232b;
+    --text: #e8ecf1;
+    --text-muted: #b2bbc8;
+    --border: #8791a1;
+    --divider: #2c343f;
+    --focus: #8cb4ff;
+    --accent: #8cb4ff;
+    --accent-text: #0b1220;
+    --link: #9bbfff;
+    --success-bg: #11301b;
+    --success-text: #8fe0a6;
+    --warning-bg: #3a2c08;
+    --warning-text: #f5cc6b;
+    --danger-bg: #401616;
+    --danger-text: #ffb0b0;
+    --info-bg: #14284a;
+    --info-text: #a9c8ff;
+    --neutral-bg: #262d37;
+    --neutral-text: #d3d9e2;
+  }
+}

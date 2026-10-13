@@ -286,6 +286,7 @@ export class RunsService {
       batchId,
       matrixCell: {
         correlationId: this.ctx.correlationId ?? randomUUID(),
+        actor: { ...this.ctx.actor },
         environmentId: environment.id,
         ...(request.repetitionIndex !== undefined
           ? { repetitionIndex: request.repetitionIndex }
@@ -889,7 +890,42 @@ export class RunsService {
       }
       return { runId: id, result: "requested" as const, status: this.get(id).status };
     };
-    return this.ctx.database.db.isTransaction ? cancel() : this.ctx.database.withTx(cancel);
+    return this.ctx.database.inTransaction ? cancel() : this.ctx.database.withTx(cancel);
+  }
+  /**
+   * Ends a queued Run as blocked because the principal that admitted it lost execute access
+   * (ADR-017). No Attempt starts; the lease is completed so no worker can claim it later.
+   */
+  blockActorRevoked(id: string): boolean {
+    const block = () => {
+      const current = this.get(id);
+      if (current.phase !== "queued") return false;
+      const next = {
+        ...current,
+        phase: "completed",
+        status: "blocked",
+        outcome: "blocked",
+        gate: "failed",
+      };
+      const changed = this.ctx.database.run(
+        "UPDATE runs SET phase='completed',status='blocked',outcome='blocked',gate='failed',data_json=?,version=version+1 WHERE workspace_id=? AND id=? AND phase='queued'",
+        JSON.stringify(next),
+        this.ctx.workspaceId,
+        id,
+      ).changes;
+      if (!changed) return false;
+      this.ctx.database.run(
+        "UPDATE job_leases SET state='completed' WHERE workspace_id=? AND resource_id=? AND state='queued'",
+        this.ctx.workspaceId,
+        id,
+      );
+      new OutboxRepository(this.ctx.database).append(this.ctx.workspaceId, id, "run.completed", {
+        outcome: "blocked",
+        reasonCode: "actor_revoked",
+      });
+      return true;
+    };
+    return this.ctx.database.inTransaction ? block() : this.ctx.database.withTx(block);
   }
   async rerun(
     id: string,
@@ -953,7 +989,12 @@ export class RunsService {
           revisionId: run.revisionId,
           environmentRevisionId: run.environmentRevisionId,
           batchId: null,
-          matrixCell: { ...structuredClone(cell), ownership, originalRunId: id },
+          matrixCell: {
+            ...structuredClone(cell),
+            actor: { ...this.ctx.actor },
+            ownership,
+            originalRunId: id,
+          },
           mode: "replay",
           phase: "queued",
           status: "queued",

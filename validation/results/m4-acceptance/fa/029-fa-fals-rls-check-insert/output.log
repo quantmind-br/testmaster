@@ -1,0 +1,40 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 387ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 row-level security rejects cross-workspace writes and leaves foreign rows untouched 386ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 row-level security rejects cross-workspace writes and leaves foreign rows untouched
+AssertionError: expected error to match asymmetric matcher
+
+- Expected
++ Received
+
+- ObjectContaining {
+-   "code": "42501",
++ Error {
++   "message": "new row for relation \"workspaces\" violates check constraint \"workspaces_check\"",
++   "code": "23514",
++   "constraint": "workspaces_check",
++   "table": "workspaces",
+  }
+
+ ❯ packages/persistence/src/database.pg.test.ts:404:7
+    402|         "server",
+    403|       ),
+    404|     ).toThrowError(expect.objectContaining({ code: "42501" }));
+       |       ^
+    405|     expect(db.get("SELECT status FROM runs WHERE id=?", b.run)?.status…
+    406|     expect(db.get("SELECT workspace_id FROM runs WHERE id=?", a.run)?.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:41:38
+   Duration  2.04s (tests 60%, transform 28%, import 12%)
+

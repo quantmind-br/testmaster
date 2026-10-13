@@ -6,7 +6,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
   type Application,
   type AuthorizationIdentity,
-  authenticateLocalToken,
+  authenticateBearer,
 } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { createMcpServer, type TestMasterMcp } from "./server.js";
@@ -44,7 +44,7 @@ export function createMcpHttpHandler(options: { roots: readonly string[]; maxSes
         application,
         roots: options.roots,
         authenticate: () => {
-          authenticateLocalToken(application, token);
+          authenticateBearer(application, token);
         },
       });
       const transport = new StreamableHTTPServerTransport({

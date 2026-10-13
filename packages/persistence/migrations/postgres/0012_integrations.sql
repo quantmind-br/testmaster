@@ -1,11 +1,11 @@
 -- M4 integrations core (C5): provider-bound integrations and the durable inbound webhook dedupe record.
--- Both tables carry workspace_id, so they enable and force the ADR-015 tenant_isolation policy themselves.
+-- Both tables carry workspace_id, so they enable the ADR-015 tenant_isolation policy through tm_enable_tenant_rls (0011).
 
 CREATE TABLE integrations (
   workspace_id TEXT NOT NULL,
   id TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1),
+  version BIGINT NOT NULL DEFAULT 1 CHECK(version>=1),
   data_json TEXT NOT NULL DEFAULT '{}',
   provider TEXT NOT NULL CHECK(provider IN ('github','slack','email','webhook')),
   name TEXT NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE inbound_webhook_deliveries (
   id TEXT NOT NULL PRIMARY KEY,
   workspace_id TEXT,
   created_at TEXT NOT NULL,
-  version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1),
+  version BIGINT NOT NULL DEFAULT 1 CHECK(version>=1),
   provider TEXT NOT NULL CHECK(provider IN ('github','slack','email','webhook')),
   delivery_id TEXT NOT NULL CHECK(length(delivery_id) BETWEEN 1 AND 200),
   integration_id TEXT,
@@ -40,7 +40,7 @@ CREATE TABLE inbound_webhook_deliveries (
   reference TEXT,
   error_code TEXT,
   original_id TEXT,
-  attempts INTEGER NOT NULL DEFAULT 1 CHECK(attempts>=1),
+  attempts BIGINT NOT NULL DEFAULT 1 CHECK(attempts>=1),
   received_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CHECK((outcome='tampered')=(original_id IS NOT NULL)),
@@ -61,14 +61,6 @@ CREATE FUNCTION protect_inbound_delivery() RETURNS trigger LANGUAGE plpgsql AS $
 
 CREATE TRIGGER inbound_webhook_deliveries_frozen BEFORE UPDATE ON inbound_webhook_deliveries FOR EACH ROW EXECUTE FUNCTION protect_inbound_delivery();
 
-ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
+SELECT tm_enable_tenant_rls('integrations');
 
-ALTER TABLE integrations FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY tenant_isolation ON integrations USING (current_setting('testmaster.workspace', true) = '*' OR workspace_id = current_setting('testmaster.workspace', true)) WITH CHECK (current_setting('testmaster.workspace', true) = '*' OR workspace_id = current_setting('testmaster.workspace', true));
-
-ALTER TABLE inbound_webhook_deliveries ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE inbound_webhook_deliveries FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY tenant_isolation ON inbound_webhook_deliveries USING (current_setting('testmaster.workspace', true) = '*' OR workspace_id = current_setting('testmaster.workspace', true)) WITH CHECK (current_setting('testmaster.workspace', true) = '*' OR workspace_id = current_setting('testmaster.workspace', true));
+SELECT tm_enable_tenant_rls('inbound_webhook_deliveries');

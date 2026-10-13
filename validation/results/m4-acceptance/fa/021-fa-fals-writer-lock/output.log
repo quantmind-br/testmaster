@@ -1,0 +1,40 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 2 failed | 16 skipped) 381ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 makes a write wait for another process's writer transaction while reads stay available 201ms
+     × OPS-005 bounds writer contention with a typed retryable error and recovers once the writer commits 178ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 makes a write wait for another process's writer transaction while reads stay available
+AssertionError: expected 1 to be greater than or equal to 1000
+ ❯ packages/persistence/src/database.pg.test.ts:630:34
+    628|     const started = Date.now();
+    629|     db.withTx(() => db.run("INSERT INTO operational_state(key,value) V…
+    630|     expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
+       |                                  ^
+    631|     expect((await holder.exited).out).toContain("released");
+    632|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 bounds writer contention with a typed retryable error and recovers once the writer commits
+AssertionError: expected 0 to be greater than or equal to 4000
+ ❯ packages/persistence/src/database.pg.test.ts:656:34
+    654|       error = caught;
+    655|     }
+    656|     expect(Date.now() - started).toBeGreaterThanOrEqual(4000);
+       |                                  ^
+    657|     expect(Date.now() - started).toBeLessThan(8000);
+    658|     expect(error).toBeInstanceOf(ContractError);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 16 skipped (18)
+   Start at  10:40:16
+   Duration  1.80s (tests 73%, transform 15%, import 13%)
+

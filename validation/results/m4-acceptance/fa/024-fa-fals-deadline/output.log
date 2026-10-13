@@ -1,0 +1,27 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 30098ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 drops a connection whose statement exceeds the deadline and marks the database broken 30097ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 drops a connection whose statement exceeds the deadline and marks the database broken
+AssertionError: expected 30002 to be less than 5000
+ ❯ packages/persistence/src/database.pg.test.ts:756:34
+    754|       error = caught;
+    755|     }
+    756|     expect(Date.now() - started).toBeLessThan(5000);
+       |                                  ^
+    757|     expect(error).toMatchObject({
+    758|       code: "UNAVAILABLE",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:40:24
+   Duration  31.42s (tests 100%)
+

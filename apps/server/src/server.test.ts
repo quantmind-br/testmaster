@@ -215,14 +215,16 @@ it("guards MCP with the same token and Origin and registers disabled milestones"
     (await f.app.inject({ method: "POST", url: "/mcp", headers: f.headers, payload: {} }))
       .statusCode,
   ).toBe(200);
-  const disabled = await f.mutate("POST", "/v1/workspaces", {});
+  const disabled = await f.mutate("POST", "/v1/schedules", {});
   expect(disabled.statusCode).toBe(422);
   expect(disabled.json().error.details.milestone).toBe("M4");
   expect(() => createServer({ application: f.application, host: "0.0.0.0" })).toThrowError(
     "127.0.0.1",
   );
   expect(() => f.app.listen({ host: "0.0.0.0", port: 0 })).toThrowError("127.0.0.1");
-  expect(() => createServer({ application: f.application, mode: "server" })).toThrowError("M4");
+  expect(() => createServer({ application: f.application, mode: "server" })).toThrowError(
+    "Server mode requires a server configuration",
+  );
 });
 it("serves a real loopback socket with no unauthenticated data", async () => {
   const f = await fixture();
@@ -401,7 +403,7 @@ it("never widens an existing token's raw grant during reuse", async () => {
   expect(reused.token).toBe(issued.token);
   expect(() =>
     f.application
-      .withIdentity(reused.identity)
+      .forIdentity(reused.identity)
       .context.authorizeRaw?.(f.init.projectId, f.init.environmentId),
   ).toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
 });

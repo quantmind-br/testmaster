@@ -9,6 +9,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "source": "./src/testing/postgres.ts",
+      "types": "./dist/testing/postgres.d.ts",
+      "default": "./dist/testing/postgres.js"
     }
   },
   "files": [
@@ -17,10 +22,10 @@
   ],
   "dependencies": {
     "@testmaster/contracts": "workspace:*",
-    "@testmaster/domain": "workspace:*"
+    "@testmaster/domain": "workspace:*",
+    "pg": "8.23.1"
   },
   "devDependencies": {
-    "pg": "8.23.1",
     "@types/pg": "8.23.1"
   }
 }

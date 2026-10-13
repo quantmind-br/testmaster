@@ -1,0 +1,36 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 1235ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 enforces row-level security so a scoped connection never reads another workspace 1233ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 enforces row-level security so a scoped connection never reads another workspace
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
+    "run_01a1357d-d247-75f1-93ea-2a21ac882caf",
++   "run_01a1357d-d5c0-7267-8c72-56d0eff6bbbd",
+  ]
+
+ ❯ packages/persistence/src/database.pg.test.ts:357:67
+    355|     const viewB = db.forWorkspace(b.ws);
+    356|
+    357|     expect(viewA.all("SELECT id FROM runs").map((row) => row.id)).toEq…
+       |                                                                   ^
+    358|     expect(viewA.all("SELECT id FROM runs WHERE workspace_id=?", b.ws)…
+    359|     expect(viewA.get("SELECT id FROM runs WHERE id=?", b.run)).toBeUnd…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:39:55
+   Duration  5.83s (tests 65%, transform 22%, import 13%)
+

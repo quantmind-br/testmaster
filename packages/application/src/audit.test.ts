@@ -25,19 +25,19 @@ async function fixture() {
 }
 it("records identified grant, secret and export denials alongside authorized operations without secret payloads", async () => {
   const { app, init, cwd } = await fixture();
-  const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const reader = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   await expect(
     reader.secrets.set("denied", "CANARY-secret", { ephemeral: true }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(reader.audit.export(join(cwd, "denied.json"))).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-  const deny = app.withIdentity({
+  const deny = app.forIdentity({
     principalId: init.principalId,
     scopes: ["R", "W", "X", "A"],
     grants: [
       {
-        resourceType: "project",
+        resourceType: "*",
         actions: ["write"],
         projectIds: [init.projectId],
         environmentIds: [],
@@ -50,12 +50,12 @@ it("records identified grant, secret and export denials alongside authorized ope
   expect(() =>
     deny.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") }),
   ).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
-  const granted = app.withIdentity({
+  const granted = app.forIdentity({
     principalId: init.principalId,
     scopes: ["R", "W"],
     grants: [
       {
-        resourceType: "project",
+        resourceType: "*",
         actions: ["write"],
         projectIds: [init.projectId],
         environmentIds: [],
@@ -102,7 +102,7 @@ it("stores audit actors and denials without the contact data that a caller suppl
   const { app, init } = await fixture();
   const contact = "buyer@example.test";
   const plan = { ...scaffoldPlan("backend"), name: `Checkout for ${contact}` };
-  const reader = app.withIdentity({ principalId: init.principalId, scopes: ["R"] });
+  const reader = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
   expect(() => reader.tests.create({ projectId: init.projectId, plan })).toThrowError(
     expect.objectContaining({ code: "FORBIDDEN" }),
   );
@@ -166,9 +166,14 @@ it("exports a consistent private ledger and verifies independently retained dige
 });
 it("fails sensitive secret writes and exports closed when mandatory audit cannot be appended", async () => {
   const { app, cwd } = await fixture();
-  app.database.run(
-    "CREATE TRIGGER reject_security_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'audit unavailable'); END",
-  );
+  if (app.database.engine === "sqlite")
+    app.database.run(
+      "CREATE TRIGGER reject_security_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'audit unavailable'); END",
+    );
+  else
+    app.database.exec(
+      "CREATE FUNCTION reject_security_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'audit unavailable'; END $$; CREATE TRIGGER reject_security_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_security_audit()",
+    );
   await expect(app.secrets.set("blocked", "secret", { ephemeral: true })).rejects.toThrow(
     "audit unavailable",
   );

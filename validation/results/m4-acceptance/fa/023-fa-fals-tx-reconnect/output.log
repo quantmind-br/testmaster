@@ -1,0 +1,41 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 153ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 reconnects after the server drops an idle connection and never commits a transaction that lost its connection 153ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 reconnects after the server drops an idle connection and never commits a transaction that lost its connection
+AssertionError: expected Error: SAVEPOINT can only be used in tran… { code: '…' } to match object { code: 'UNAVAILABLE', …(1) }
+
+- Expected
++ Received
+
+- {
+-   "code": "UNAVAILABLE",
+-   "details": {
+-     "connectionLost": true,
+-     "reasonCode": "database_unavailable",
+-   },
++ Error {
++   "code": "25P01",
+  }
+
+ ❯ packages/persistence/src/database.pg.test.ts:732:21
+    730|       failure = error;
+    731|     }
+    732|     expect(failure).toMatchObject({
+       |                     ^
+    733|       code: "UNAVAILABLE",
+    734|       details: { reasonCode: "database_unavailable", connectionLost: t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  10:40:22
+   Duration  1.46s (tests 51%, transform 26%, import 22%, worker 1%)
+

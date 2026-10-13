@@ -1,0 +1,1 @@
+-- PostgreSQL-only migration (row-level security, SQL helper functions, 64-bit columns). SQLite is the single-workspace local profile and already provides these behaviours natively.

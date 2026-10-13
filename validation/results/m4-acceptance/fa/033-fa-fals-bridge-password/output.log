@@ -1,0 +1,34 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |unit| packages/persistence/src/postgres/bridge.test.ts (6 tests | 1 failed) 7ms
+   ❯ PostgreSQL connection configuration (6)
+     × OPS-005 refuses a password embedded in the URL 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| packages/persistence/src/postgres/bridge.test.ts > PostgreSQL connection configuration > OPS-005 refuses a password embedded in the URL
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ packages/persistence/src/postgres/bridge.test.ts:24:90
+     22| describe("PostgreSQL connection configuration", () => {
+     23|   it("OPS-005 refuses a password embedded in the URL", () => {
+     24|     expect(() => resolveConnection({ url: "postgres://owner:secret@127…
+       |                                                                                          ^
+     25|       "must not contain a password",
+     26|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  10:41:52
+   Duration  202ms (transform 59%, import 35%, tests 5%, worker 1%)
+

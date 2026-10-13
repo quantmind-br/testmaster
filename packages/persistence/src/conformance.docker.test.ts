@@ -62,21 +62,21 @@ it("PostgreSQL and SQLite enforce identical constraint fixtures", async () => {
     for (const statement of constraintSeed) await client.query(statement);
     await client.query("COMMIT");
     sqlite.withTx(() => {
-      for (const statement of constraintSeed) sqlite.db.exec(statement);
+      for (const statement of constraintSeed) sqlite.exec(statement);
     });
     for (const fixture of constraintFixtures) {
       let sqliteClass = "accept";
       let pgClass = "accept";
-      sqlite.db.exec("BEGIN IMMEDIATE");
+      sqlite.exec("BEGIN IMMEDIATE");
       try {
-        for (const statement of fixture.statements) sqlite.db.exec(statement);
-        sqlite.db.exec("PRAGMA defer_foreign_keys=OFF");
+        for (const statement of fixture.statements) sqlite.exec(statement);
+        sqlite.exec("PRAGMA defer_foreign_keys=OFF");
         const errors = sqlite.all("PRAGMA foreign_key_check");
         if (errors.length) throw new Error("foreign key constraint violation");
       } catch (error) {
         sqliteClass = constraintErrorClass(error);
       } finally {
-        sqlite.db.exec("ROLLBACK");
+        sqlite.exec("ROLLBACK");
       }
       await client.query("BEGIN");
       try {
@@ -94,7 +94,7 @@ it("PostgreSQL and SQLite enforce identical constraint fixtures", async () => {
     }
     const generated = relationalFixtures(sqlite);
     await client.query("BEGIN");
-    sqlite.db.exec("BEGIN");
+    sqlite.exec("BEGIN");
     try {
       for (const fixture of generated) {
         const statement = fixtureInsert(fixture);
@@ -150,7 +150,7 @@ it("PostgreSQL and SQLite enforce identical constraint fixtures", async () => {
         }
       }
     } finally {
-      sqlite.db.exec("ROLLBACK");
+      sqlite.exec("ROLLBACK");
       await client.query("ROLLBACK");
     }
   } finally {

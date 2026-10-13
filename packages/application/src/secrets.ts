@@ -569,6 +569,7 @@ export class SecretsService {
     options: { ephemeral?: boolean; allowedOrigins?: string[]; idempotencyKey?: string } = {},
   ): Promise<SecretMetadata> {
     this.ctx.authorize("W");
+    this.ctx.authorizeColumn("secret");
     validateValue(value);
     const body = {
       name,
@@ -671,6 +672,7 @@ export class SecretsService {
   }
   private async rotateValue(idOrName: string, value: string): Promise<SecretMetadata> {
     this.ctx.authorize("W");
+    this.ctx.authorizeColumn("secret");
     validateValue(value);
     const previous = this.lookup(idOrName);
     if (previous.revokedAt) throw new ContractError("POLICY_DENIED", "Secret is revoked");
@@ -704,6 +706,7 @@ export class SecretsService {
   }
   private async removeValue(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
     this.ctx.authorize("W");
+    this.ctx.authorizeColumn("secret");
     const previous = this.lookup(idOrName);
     if (previous.revokedAt && !idempotencyKey) return previous;
     const next = {

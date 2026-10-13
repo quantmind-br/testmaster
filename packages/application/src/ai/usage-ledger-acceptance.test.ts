@@ -10,10 +10,13 @@ import {
   SqliteConsentStore,
   SqliteModelCallRecorder,
 } from "@testmaster/persistence";
+import { postgresParity } from "@testmaster/persistence/testing";
 import { expect, it } from "vitest";
 import { Application } from "../application.js";
 
-it("exports real aborted, repaired and cached calls without double billing and preserves historical prices", async () => {
+it("exports real aborted, repaired and cached calls without double billing and preserves historical prices", async (ctx) => {
+  // Not run on PostgreSQL: Spawns the CLI, which opens the SQLite data directory in its own process.
+  ctx.skip(postgresParity);
   const root = await mkdtemp(join(tmpdir(), "tm-ledger-acceptance-"));
   const home = join(root, "home");
   await mkdir(home);

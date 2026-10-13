@@ -91,7 +91,10 @@ it("plans irreversible pending migrations read-only and refuses a newer schema w
 });
 
 it("upgrades in order: preflight, drain, backup of the old schema, migrate, readiness", async () => {
-  const { root, path, db, all } = await legacyDatabase((await loadMigrations()).length - 1);
+  // The previous release stops before migration 9 (delivery_requeue), which rewrites a trigger;
+  // `all` is the release under test through that migration and `shipped` includes later no-op ones.
+  const { root, path, db, all: shipped } = await legacyDatabase(8);
+  const all = shipped.slice(0, 9);
   db.run(
     "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES('ws','wrk-old',?, 'ready',?)",
     new Date().toISOString(),
@@ -113,7 +116,7 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   expect(receipt).toMatchObject({
     upgraded: true,
     fromVersion: all.length - 1,
-    toVersion: all.length,
+    toVersion: shipped.length,
     irreversible: true,
     rollbackPlan: { appRollback: "restore-required", restoreFrom: backupDir },
   });
@@ -125,19 +128,18 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   expect(manifest.databaseVersion).toBe(all.length - 1);
   expect(versionOf(join(backupDir, "testmaster.db"))).toBe(all.length - 1);
   const snapshot = new DatabaseSync(join(backupDir, "testmaster.db"), { readOnly: true });
+  // The backup keeps the pre-migration schema: the identity tables of migration 10 do not exist yet.
   expect(
-    String(
-      snapshot.prepare("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'").get()
-        ?.sql,
-    ),
-  ).toContain("OLD.state IN ('delivered','dead_letter')");
+    snapshot.prepare("SELECT name FROM sqlite_master WHERE name='sessions'").get(),
+  ).toBeUndefined();
   snapshot.close();
   const live = await PersistenceDatabase.open(path, { migrate: false });
   try {
-    expect(live.status()).toMatchObject({ currentVersion: all.length, pending: [] });
+    expect(live.status()).toMatchObject({ currentVersion: shipped.length, pending: [] });
     expect(
       String(live.get("SELECT sql FROM sqlite_master WHERE name='deliveries_frozen_subject'")?.sql),
     ).toContain("OLD.state='dead_letter' AND NEW.state<>'pending'");
+    expect(live.get("SELECT name FROM sqlite_master WHERE name='sessions'")?.name).toBe("sessions");
     expect(live.get("SELECT value FROM operational_state WHERE key='user:state'")?.value).toBe(
       "keep-me",
     );
@@ -148,7 +150,7 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
           live.get("SELECT value FROM operational_state WHERE key=?", LAST_UPGRADE_KEY)?.value,
         ),
       ),
-    ).toMatchObject({ fromVersion: all.length - 1, toVersion: all.length, backup: backupDir });
+    ).toMatchObject({ fromVersion: all.length - 1, toVersion: shipped.length, backup: backupDir });
   } finally {
     live.close();
   }

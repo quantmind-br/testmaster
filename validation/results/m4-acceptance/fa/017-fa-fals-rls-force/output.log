@@ -1,0 +1,115 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/fa
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 2 failed | 16 skipped) 1114ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 enforces row-level security so a scoped connection never reads another workspace 1074ms
+     × OPS-005 requires row-level security and the tenant policy on every table with a workspace_id 39ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 enforces row-level security so a scoped connection never reads another workspace
+AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+  [
+    "run_01a1357d-e861-76ca-a48a-c84a87d422c2",
++   "run_01a1357d-eba7-704d-a852-aadc45bebfa6",
+  ]
+
+ ❯ packages/persistence/src/database.pg.test.ts:357:67
+    355|     const viewB = db.forWorkspace(b.ws);
+    356|
+    357|     expect(viewA.all("SELECT id FROM runs").map((row) => row.id)).toEq…
+       |                                                                   ^
+    358|     expect(viewA.all("SELECT id FROM runs WHERE workspace_id=?", b.ws)…
+    359|     expect(viewA.get("SELECT id FROM runs WHERE id=?", b.run)).toBeUnd…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 requires row-level security and the tenant policy on every table with a workspace_id
+AssertionError: expected [ 'agent_installs', 'analyses', …(56) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "agent_installs",
++   "analyses",
++   "approvals",
++   "artifacts",
++   "attempts",
++   "audit_events",
++   "auth_checkpoints",
++   "auth_profiles",
++   "backup_object_holds",
++   "batch_members",
++   "batches",
++   "blob_reference_counts",
++   "budget_limits",
++   "budget_reservations",
++   "code_snapshots",
++   "consents",
++   "cursor_signing_keys",
++   "deletion_operations",
++   "deliveries",
++   "discovery_jobs",
++   "environment_revisions",
++   "environments",
++   "evaluations",
++   "exploration_jobs",
++   "features",
++   "fixture_inputs",
++   "healing_proposals",
++   "idempotency_receipts",
++   "job_leases",
++   "memberships",
++   "memory_entries",
++   "model_calls",
++   "observations",
++   "outbox",
++   "principals",
++   "projects",
++   "proposal_batches",
++   "proposals",
++   "requirements",
++   "resources",
++   "runs",
++   "secret_references",
++   "server_tokens",
++   "snapshots",
++   "source_chunks",
++   "source_revisions",
++   "sources",
++   "steps",
++   "suite_members",
++   "suites",
++   "test_revisions",
++   "tests",
++   "token_budget_limits",
++   "upload_leases",
++   "usage_entries",
++   "variables",
++   "workers",
++   "workspaces",
++ ]
+
+ ❯ packages/persistence/src/database.pg.test.ts:422:50
+    420|       expect.arrayContaining(["workspaces", "runs", "audit_events", "a…
+    421|     );
+    422|     expect(await tablesMissingTenantRls(client)).toEqual([]);
+       |                                                  ^
+    423|     const policy = await client.query<{ qual: string; with_check: stri…
+    424|       "SELECT qual, with_check FROM pg_policies WHERE tablename='runs'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 16 skipped (18)
+   Start at  10:40:03
+   Duration  3.74s (tests 67%, transform 22%, import 11%)
+
