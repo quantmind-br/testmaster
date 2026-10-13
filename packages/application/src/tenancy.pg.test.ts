@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
@@ -6,6 +6,7 @@ import { createTestDatabase, type TestDatabase } from "@testmaster/persistence/t
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   Application,
+  auditSecurity,
   authenticateBearer,
   authenticateSession,
   type ServerConfig,
@@ -226,6 +227,77 @@ describe("tenant isolation on PostgreSQL", () => {
     expect(t.a.context.entities.get("AuthProfile", t.workspaceA, auth)).toBeNull();
     expect(t.a.context.entities.get("AuthProfile", t.workspaceB, auth)).toBeNull();
     expect(t.b.context.entities.get("AuthProfile", t.workspaceB, auth)?.id).toBe(auth);
+  });
+
+  it("SEC-037 a user's audit export holds only the events of their own workspace", async () => {
+    const t = await tenants();
+    // Each tenant records activity on its own project and Run, so a leak would carry those ids.
+    for (const [owner, data] of [
+      [t.a, t.dataA],
+      [t.b, t.dataB],
+    ] as const) {
+      auditSecurity(owner.context, "sec037.seed", data.project.id, "requested");
+      auditSecurity(owner.context, "sec037.seed", data.run.runId, "requested");
+    }
+    const exportOf = async (owner: Application, name: string) => {
+      const written = await owner.audit.export(join(t.root, name));
+      const bytes = await readFile(written.out, "utf8");
+      return {
+        written,
+        bytes,
+        parsed: JSON.parse(bytes) as { workspaceId: string; events: unknown[] },
+      };
+    };
+    const exportA = await exportOf(t.a, "audit-a.json");
+    const exportB = await exportOf(t.b, "audit-b.json");
+    // Positive control: each export holds its own tenant's history, under its own workspace.
+    expect(exportA.parsed.workspaceId).toBe(t.workspaceA);
+    expect(exportB.parsed.workspaceId).toBe(t.workspaceB);
+    expect(exportA.parsed.events.length).toBeGreaterThan(0);
+    expect(exportA.bytes).toContain(t.dataA.project.id);
+    expect(exportB.bytes).toContain(t.dataB.project.id);
+    // Negative: nothing of the other organization appears, by id, principal or secret value.
+    for (const foreign of [
+      t.workspaceB,
+      t.dataB.project.id,
+      t.dataB.run.runId,
+      t.dataB.secret.id,
+      t.identityB.principalId,
+      canary,
+    ])
+      expect(exportA.bytes, `A's export leaked ${foreign}`).not.toContain(foreign);
+    for (const foreign of [
+      t.workspaceA,
+      t.dataA.project.id,
+      t.dataA.run.runId,
+      t.identityA.principalId,
+    ])
+      expect(exportB.bytes, `B's export leaked ${foreign}`).not.toContain(foreign);
+    expect(exportA.written.events).toBe(exportA.parsed.events.length);
+  });
+
+  it("SEC-037 a report export refuses another workspace's Run and an own export carries no foreign data", async () => {
+    const t = await tenants();
+    const outA = join(t.root, "report-a.json");
+    await t.a.reports.export(t.dataA.run.runId, "json", outA);
+    const own = await readFile(outA, "utf8");
+    // Positive control: the owner's report names its own Run, test and project.
+    expect(own).toContain(t.dataA.run.runId);
+    expect(own).toContain(t.dataA.test.id);
+    // Negative: A cannot export B's Run, and nothing is written for it.
+    const outB = join(t.root, "report-b-by-a.json");
+    await expect(t.a.reports.export(t.dataB.run.runId, "json", outB)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(readFile(outB, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    for (const foreign of [
+      t.workspaceB,
+      t.dataB.run.runId,
+      t.dataB.test.id,
+      t.dataB.project.id,
+      canary,
+    ])
+      expect(own, `A's report leaked ${foreign}`).not.toContain(foreign);
   });
 
   it("SEC-027 a Run admitted by an actor whose credential was revoked ends blocked with actor_revoked", async () => {
