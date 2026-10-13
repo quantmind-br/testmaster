@@ -44,6 +44,7 @@ export * from "./scheduling/index.js";
 export * from "./secrets.js";
 export * from "./selection.js";
 export * from "./server-config.js";
+export * from "./server-profile.js";
 export * from "./suites.js";
 export * from "./team.js";
 export * from "./tokens.js";

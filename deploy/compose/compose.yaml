@@ -1,0 +1,117 @@
+# TestMaster server profile, reference single-host deployment (ADR-016).
+#
+#   caddy  -- TLS termination (tls internal), the only public port (8443)
+#   server -- API, portal, controller loops; reaches PostgreSQL with sslmode=verify-full
+#   postgres -- PostgreSQL 17 with TLS, published only on 127.0.0.1
+#
+# Workers are not part of this file: they run on the host as systemd user units
+# (deploy/systemd/testmaster-worker@.service) because sandbox bind mounts need host paths.
+# Everything is configured through the environment; see README.md and .env.example.
+name: ${TESTMASTER_COMPOSE_PROJECT:-testmaster}
+
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    entrypoint: ["/bin/sh", "/usr/local/bin/pg-tls-entrypoint.sh"]
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/run/pg-tls/server.crt
+      - -c
+      - ssl_key_file=/run/pg-tls/server.key
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - password_encryption=scram-sha-256
+    secrets:
+      - postgres_admin_password
+    volumes:
+      - ${TESTMASTER_PG_DATA:?set TESTMASTER_PG_DATA to the (volume-encrypted) database directory}:/var/lib/postgresql/data
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./pg-tls-entrypoint.sh:/usr/local/bin/pg-tls-entrypoint.sh:ro
+      - ${TESTMASTER_TLS_DIR:?set TESTMASTER_TLS_DIR}/postgres:/etc/postgresql/tls:ro
+    ports:
+      - "127.0.0.1:${TESTMASTER_PG_PORT:-55432}:5432"
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  server:
+    build:
+      context: ../..
+      dockerfile: containers/server/Dockerfile
+    image: testmaster-server:local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Container root maps to the operator's uid on a rootless daemon. Set it to the host uid:gid
+    # on a rootful daemon so the data directory keeps the operator's ownership.
+    user: "${TESTMASTER_CONTAINER_USER:-0:0}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      PGSSLROOTCERT: /etc/testmaster/tls/ca.crt
+    volumes:
+      - ${TESTMASTER_RUNTIME_DIR:?set TESTMASTER_RUNTIME_DIR to a built TestMaster checkout}:/opt/testmaster:ro
+      - ${TESTMASTER_CONFIG:?set TESTMASTER_CONFIG to the server configuration file}:/etc/testmaster/server.json:ro
+      - ${TESTMASTER_TLS_DIR}/ca.crt:/etc/testmaster/tls/ca.crt:ro
+      # The data directory is mounted at the same absolute path as on the host: worker sandboxes
+      # bind-mount host paths, so evidence paths must mean the same thing on both sides.
+      - ${TESTMASTER_DATA_DIR:?set TESTMASTER_DATA_DIR}:${TESTMASTER_DATA_DIR}
+      - ${TESTMASTER_KEY_DIR:?set TESTMASTER_KEY_DIR}:${TESTMASTER_KEY_DIR}
+      - ${TESTMASTER_BACKUP_DIR:-/var/empty}:/var/backups/testmaster
+      - ${TESTMASTER_DB_PASSWORD_FILE:?set TESTMASTER_DB_PASSWORD_FILE}:/run/testmaster/db.password:ro
+    networks: [backend, frontend]
+    healthcheck:
+      # /v1/health/live is the one unauthenticated route. Operators read full readiness with
+      # `testmaster server readiness --config <file>`.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7331/v1/health/live',{headers:{'x-forwarded-proto':'https'}}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  caddy:
+    image: caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      TESTMASTER_PUBLIC_HOST: ${TESTMASTER_PUBLIC_HOST:-localhost}
+    ports:
+      - "${TESTMASTER_PUBLIC_PORT:-8443}:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    networks: [frontend]
+
+networks:
+  # Not `internal`: an internal network cannot publish the loopback port that operators and the
+  # host workers use. Reach is limited by the loopback publish and by pg_hba.conf (TLS only).
+  backend: {}
+  frontend: {}
+
+volumes:
+  caddy_data: {}
+
+secrets:
+  postgres_admin_password:
+    file: ${TESTMASTER_PG_ADMIN_PASSWORD_FILE:?set TESTMASTER_PG_ADMIN_PASSWORD_FILE}

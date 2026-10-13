@@ -1,0 +1,31 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s2a
+
+No test files found, exiting with code 1
+
+filter: validation/journeys/rootless-daemon.docker.test.ts
+projects: docker-rootless
+
+|docker-rootless| 
+
+include: packages/sandbox/src/**/*.docker.test.ts, validation/journeys/network-boundary.docker.test.ts, validation/journeys/cleanup-quarantine.docker.test.ts, validation/journeys/resource-cleanup.docker.test.ts, validation/journeys/m1-boundaries.docker.test.ts, validation/journeys/limits-recovery.docker.test.ts, validation/journeys/recovery-controls.docker.test.ts, validation/journeys/browser-matrix.docker.test.ts, validation/journeys/postgres-tls.docker.test.ts, validation/journeys/rootless-daemon.docker.test.ts, validation/journeys/j17-server.docker.test.ts, validation/journeys/rolling-upgrade.docker.test.ts
+exclude:  **/node_modules/**, **/dist/**
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: Docker daemon at unix:///var/run/docker.sock is not rootless (SecurityOptions: ["name=seccomp,profile=builtin","name=cgroupns"]
+)
+ ❯ Object.assertRootlessDaemon [as setup] packages/sandbox/src/docker/rootless-global-setup.ts:28:11
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ TestProject._initializeGlobalSetup node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.DpLw24bj.js:12184:21
+ ❯ Vitest.initializeGlobalSetup node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.DpLw24bj.js:21286:35
+ ❯ node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.DpLw24bj.js:21126:6
+ ❯ node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.DpLw24bj.js:21155:11
+ ❯ node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.DpLw24bj.js:21017:19
+ ❯ startVitest node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/cli-api.C4x4GGip.js:369:8
+ ❯ start node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/cac.DfDGTQ9W.js:2370:15
+ ❯ CAC.run node_modules/.pnpm/vitest@5.0.3_@types+node@24.10.1_vite@8.3.4_@types+node@24.10.1_yaml@2.9.1_/node_modules/vitest/dist/chunks/cac.DfDGTQ9W.js:2346:2
+
+
+
+

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "OPS-038-rolling-upgrade",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-rootless",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:45:11.981Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [
+    "run_01a135f0-4261-770a-8c6d-a776c6e703ed",
+    "run_01a135f0-427a-75ed-a5fe-73af9dee223d",
+    "run_01a135f0-4741-758f-b822-0e8466191d36"
+  ],
+  "oracleVerdicts": [
+    {
+      "held": [
+        {
+          "runId": "run_01a135f0-4261-770a-8c6d-a776c6e703ed",
+          "fencesBefore": 1,
+          "attempts": 1
+        },
+        {
+          "runId": "run_01a135f0-427a-75ed-a5fe-73af9dee223d",
+          "fencesBefore": 1,
+          "attempts": 1
+        }
+      ],
+      "queued": {
+        "runId": "run_01a135f0-4741-758f-b822-0e8466191d36",
+        "attempts": 1
+      },
+      "oldWorker": {
+        "exitCode": 6,
+        "refusedAtStart": true
+      }
+    }
+  ],
+  "limitations": [
+    "The next release is simulated by one extra additive migration applied through migrationsDir.",
+    "The next-release worker runs in the test process; the old worker is the built CLI."
+  ]
+}

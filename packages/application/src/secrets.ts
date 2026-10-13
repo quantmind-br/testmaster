@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { type FileHandle, link, mkdir, open, readdir, rename, unlink } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { ContractError, type SecretReference } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { type EntityDocument, IdempotencyRepository } from "@testmaster/persistence";
@@ -10,6 +10,7 @@ import type { SecretRelease } from "@testmaster/sandbox";
 import { auditedOperation } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, type ServiceContext } from "./context.js";
+import { filesystemRoot, type ServerConfig } from "./server-config.js";
 
 export type SecretMetadata = SecretReference & EntityDocument & { version: number };
 export interface SecretBackendHealth {
@@ -154,7 +155,8 @@ export async function privateDirectory(path: string): Promise<FileHandle> {
         await child.close();
         throw unavailable();
       }
-      if (last) await child.chmod(0o700);
+      // A directory that is already private needs no chmod, which also lets a deployment mount it read-only.
+      if (last && (stat.mode & 0o777) !== 0o700) await child.chmod(0o700);
       await handle.close();
       handle = child;
     }
@@ -211,16 +213,58 @@ function vaultName(id: string, version: number): string {
     throw unavailable();
   return `${id}.${version}.vault`;
 }
-async function vaultKey(config: ResolvedConfig, allowCreate: boolean): Promise<Buffer> {
-  const directory = await privateDirectory(join(config.home, ".config", "testmaster"));
+/**
+ * Where the vault keeps its key and ciphertexts. The local profiles keep them under the user's
+ * home and may use the OS keychain; the server profile (ADR-019) takes its key from the operator's
+ * `security.masterKeyFile`, stores ciphertexts under the evidence root and never creates a key.
+ */
+export interface VaultLayout {
+  readonly profile: "local" | "server";
+  readonly keyDirectory: string;
+  readonly keyName: string;
+  readonly dataDirectory: string;
+  readonly lockDirectory: string;
+}
+export function serverVaultLayout(server: ServerConfig): VaultLayout {
+  const dataDirectory = join(filesystemRoot(server.storage), "secrets");
+  return {
+    profile: "server",
+    keyDirectory: dirname(server.security.masterKeyFile),
+    keyName: basename(server.security.masterKeyFile),
+    dataDirectory,
+    lockDirectory: dataDirectory,
+  };
+}
+export function vaultLayout(config: ResolvedConfig, server?: ServerConfig): VaultLayout {
+  if (server) return serverVaultLayout(server);
+  const keyDirectory = join(config.home, ".config", "testmaster");
+  return {
+    profile: "local",
+    keyDirectory,
+    keyName: "vault.key",
+    dataDirectory: join(config.home, ".local", "share", "testmaster"),
+    lockDirectory: keyDirectory,
+  };
+}
+/** A restore or a misconfigured deployment without its key must fail loudly, never mint a new one. */
+function masterKeyUnavailable(): ContractError {
+  return new ContractError("PRECONDITION_FAILED", "Master key is unavailable", {
+    reasonCode: "master_key_unavailable",
+  });
+}
+async function vaultKey(layout: VaultLayout, allowCreate: boolean): Promise<Buffer> {
+  const directory = await privateDirectory(layout.keyDirectory).catch((error: unknown) => {
+    throw layout.profile === "server" ? masterKeyUnavailable() : error;
+  });
   try {
     let key: Buffer;
     try {
-      key = await readPrivate(directory, "vault.key", 32);
+      key = await readPrivate(directory, layout.keyName, 32);
     } catch (error) {
+      if (layout.profile === "server") throw masterKeyUnavailable();
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       if (!allowCreate) throw unavailable();
-      const vault = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
+      const vault = await privateDirectory(layout.dataDirectory);
       try {
         if ((await readdir(`/proc/self/fd/${vault.fd}`)).some((name) => name.endsWith(".vault")))
           throw unavailable();
@@ -229,17 +273,17 @@ async function vaultKey(config: ResolvedConfig, allowCreate: boolean): Promise<B
       }
       const candidate = randomBytes(32);
       try {
-        await writePrivate(directory, "vault.key", candidate);
+        await writePrivate(directory, layout.keyName, candidate);
       } catch (creation) {
         if ((creation as NodeJS.ErrnoException).code !== "EEXIST") throw creation;
       } finally {
         candidate.fill(0);
       }
-      key = await readPrivate(directory, "vault.key", 32);
+      key = await readPrivate(directory, layout.keyName, 32);
     }
     if (key.length !== 32) {
       key.fill(0);
-      throw unavailable();
+      throw layout.profile === "server" ? masterKeyUnavailable() : unavailable();
     }
     return key;
   } finally {
@@ -292,10 +336,22 @@ function parseVaultEnvelope(stored: Buffer): VaultEnvelope {
   };
 }
 async function vaultLock(
-  config: ResolvedConfig,
+  layout: VaultLayout,
 ): Promise<{ directory: FileHandle; release(): Promise<void> }> {
-  const directory = await privateDirectory(join(config.home, ".config", "testmaster"));
-  const path = `/proc/self/fd/${directory.fd}/vault.lock`;
+  const directory = await privateDirectory(layout.keyDirectory);
+  let lockDirectory = directory;
+  if (layout.lockDirectory !== layout.keyDirectory)
+    try {
+      lockDirectory = await privateDirectory(layout.lockDirectory);
+    } catch (error) {
+      await directory.close();
+      throw error;
+    }
+  const closeAll = async () => {
+    if (lockDirectory !== directory) await lockDirectory.close();
+    await directory.close();
+  };
+  const path = `/proc/self/fd/${lockDirectory.fd}/vault.lock`;
   try {
     try {
       const lock = await open(
@@ -307,7 +363,7 @@ async function vaultLock(
       await lock.close();
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const pid = Number((await readPrivate(directory, "vault.lock", 32)).toString());
+      const pid = Number((await readPrivate(lockDirectory, "vault.lock", 32)).toString());
       if (!Number.isSafeInteger(pid) || pid < 1) throw unavailable();
       try {
         process.kill(pid, 0);
@@ -330,12 +386,12 @@ async function vaultLock(
         try {
           await unlink(path);
         } finally {
-          await directory.close();
+          await closeAll();
         }
       },
     };
   } catch (error) {
-    await directory.close();
+    await closeAll();
     throw error;
   }
 }
@@ -349,19 +405,19 @@ async function replacePrivate(directory: FileHandle, name: string, bytes: Buffer
   await directory.sync();
 }
 async function vaultWrite(
-  config: ResolvedConfig,
+  layout: VaultLayout,
   workspace: string,
   id: string,
   version: number,
   value: string,
   allowCreate = true,
 ): Promise<void> {
-  const lock = await vaultLock(config);
+  const lock = await vaultLock(layout);
   let key: Buffer | undefined;
   let directory: FileHandle | undefined;
   try {
-    key = await vaultKey(config, allowCreate);
-    directory = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
+    key = await vaultKey(layout, allowCreate);
+    directory = await privateDirectory(layout.dataDirectory);
     const nonce = randomBytes(12);
     const keyId = createHash("sha256").update(key).digest("hex");
     const cipher = createCipheriv("aes-256-gcm", key, nonce);
@@ -388,19 +444,24 @@ async function vaultWrite(
   }
 }
 async function vaultRead(
-  config: ResolvedConfig,
+  layout: VaultLayout,
   workspace: string,
   id: string,
   version: number,
 ): Promise<string> {
   // Missing key after restore must fail, never create a replacement key when reading.
-  const keys = await privateDirectory(join(config.home, ".config", "testmaster"));
+  const keys = await privateDirectory(layout.keyDirectory).catch((error: unknown) => {
+    throw layout.profile === "server" ? masterKeyUnavailable() : error;
+  });
   let key: Buffer | undefined;
   let directory: FileHandle | undefined;
   try {
-    key = await readPrivate(keys, "vault.key", 32);
-    if (key.length !== 32) throw unavailable();
-    directory = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
+    key = await readPrivate(keys, layout.keyName, 32).catch((error: unknown) => {
+      throw layout.profile === "server" ? masterKeyUnavailable() : error;
+    });
+    if (key.length !== 32)
+      throw layout.profile === "server" ? masterKeyUnavailable() : unavailable();
+    directory = await privateDirectory(layout.dataDirectory);
     const stored = await readPrivate(directory, vaultName(id, version), MAX_SECRET_BYTES * 2);
     let bytes = stored;
     if (stored[0] === 123) {
@@ -444,11 +505,11 @@ async function vaultRead(
     await keys.close();
   }
 }
-async function erase(config: ResolvedConfig, reference: SecretMetadata): Promise<void> {
+async function erase(layout: VaultLayout, reference: SecretMetadata): Promise<void> {
   if (reference.provider === "secret-tool") {
     await keychain("clear", reference.workspaceId, reference.id, reference.secretVersion);
   } else if (reference.provider === "vault") {
-    const directory = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
+    const directory = await privateDirectory(layout.dataDirectory);
     try {
       await unlink(
         `/proc/self/fd/${directory.fd}/${vaultName(reference.id, reference.secretVersion)}`,
@@ -460,21 +521,31 @@ async function erase(config: ResolvedConfig, reference: SecretMetadata): Promise
 }
 
 /** Writable backend probe for doctor. Never reports secret bytes or backend diagnostics. */
-export async function health(config: ResolvedConfig): Promise<SecretBackendHealth> {
+export function health(
+  config: ResolvedConfig,
+  server?: ServerConfig,
+): Promise<SecretBackendHealth> {
+  return vaultHealth(vaultLayout(config, server));
+}
+export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHealth> {
   const id = `sec_${randomBytes(16).toString("hex")}`;
   const canary = randomBytes(32).toString("hex");
+  // The server profile has no desktop keychain, and its workspace ids are real ones.
+  const probeWorkspace =
+    layout.profile === "server" ? "ws_00000000-0000-4000-8000-000000000000" : "doctor";
+  if (layout.profile === "local")
+    try {
+      await keychain("store", "doctor", id, 1, canary);
+      const matches = (await keychain("lookup", "doctor", id, 1)) === canary;
+      await keychain("clear", "doctor", id, 1);
+      if (matches) return { backend: "secret-tool", writable: true };
+    } catch {
+      /* Try the encrypted fallback, never plaintext persistence. */
+    }
   try {
-    await keychain("store", "doctor", id, 1, canary);
-    const matches = (await keychain("lookup", "doctor", id, 1)) === canary;
-    await keychain("clear", "doctor", id, 1);
-    if (matches) return { backend: "secret-tool", writable: true };
-  } catch {
-    /* Try the encrypted fallback, never plaintext persistence. */
-  }
-  try {
-    await vaultWrite(config, "doctor", id, 1, canary);
-    const matches = (await vaultRead(config, "doctor", id, 1)) === canary;
-    const directory = await privateDirectory(join(config.home, ".local", "share", "testmaster"));
+    await vaultWrite(layout, probeWorkspace, id, 1, canary, layout.profile === "local");
+    const matches = (await vaultRead(layout, probeWorkspace, id, 1)) === canary;
+    const directory = await privateDirectory(layout.dataDirectory);
     try {
       await unlink(`/proc/self/fd/${directory.fd}/${vaultName(id, 1)}`);
     } finally {
@@ -489,10 +560,14 @@ export async function health(config: ResolvedConfig): Promise<SecretBackendHealt
 
 export class SecretsService {
   private readonly ephemeral = new Map<string, string>();
+  private readonly layout: VaultLayout;
   constructor(
     private readonly ctx: ServiceContext,
-    private readonly config: ResolvedConfig,
-  ) {}
+    config: ResolvedConfig,
+    server?: ServerConfig,
+  ) {
+    this.layout = vaultLayout(config, server);
+  }
   list(): SecretMetadata[] {
     this.ctx.authorize("R");
     return allEntities(this.ctx, "SecretReference") as SecretMetadata[];
@@ -531,18 +606,26 @@ export class SecretsService {
       this.ephemeral.set(`${reference.id}:${reference.secretVersion}`, value);
       return "ephemeral";
     }
-    try {
-      await keychain("store", reference.workspaceId, reference.id, reference.secretVersion, value);
-      return "secret-tool";
-    } catch {
-      /* Fall back only to authenticated encryption. */
-    }
+    // The server profile has no desktop keychain: secrets are always envelope-encrypted.
+    if (this.layout.profile === "local")
+      try {
+        await keychain(
+          "store",
+          reference.workspaceId,
+          reference.id,
+          reference.secretVersion,
+          value,
+        );
+        return "secret-tool";
+      } catch {
+        /* Fall back only to authenticated encryption. */
+      }
     try {
       const hasVaultReferences = (
         allEntities(this.ctx, "SecretReference") as SecretMetadata[]
       ).some((entry) => entry.provider === "vault");
       await vaultWrite(
-        this.config,
+        this.layout,
         reference.workspaceId,
         reference.id,
         reference.secretVersion,
@@ -550,7 +633,8 @@ export class SecretsService {
         !hasVaultReferences,
       );
       return "vault";
-    } catch {
+    } catch (error) {
+      if (this.layout.profile === "server" && error instanceof ContractError) throw error;
       throw unavailable();
     }
   }
@@ -636,7 +720,7 @@ export class SecretsService {
       this.ctx.database.withTx(commit);
     } catch (error) {
       this.ephemeral.delete(`${reference.id}:1`);
-      await erase(this.config, reference).catch(() => {});
+      await erase(this.layout, reference).catch(() => {});
       throw error;
     }
     return reference;
@@ -660,7 +744,7 @@ export class SecretsService {
     try {
       this.ctx.entities.insert("SecretReference", reference);
     } catch (error) {
-      await erase(this.config, reference).catch(() => {});
+      await erase(this.layout, reference).catch(() => {});
       throw error;
     }
     return reference;
@@ -692,11 +776,11 @@ export class SecretsService {
       );
     } catch (error) {
       this.ephemeral.delete(`${next.id}:${next.secretVersion}`);
-      await erase(this.config, next).catch(() => {});
+      await erase(this.layout, next).catch(() => {});
       throw error;
     }
     this.ephemeral.delete(`${previous.id}:${previous.secretVersion}`);
-    await erase(this.config, previous).catch(() => {});
+    await erase(this.layout, previous).catch(() => {});
     return next;
   }
   async remove(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
@@ -738,7 +822,7 @@ export class SecretsService {
         ).receipt
       : this.ctx.database.withTx(commit);
     this.ephemeral.delete(`${previous.id}:${previous.secretVersion}`);
-    await erase(this.config, previous).catch(() => {});
+    await erase(this.layout, previous).catch(() => {});
     return receipt;
   }
   async release(id: string): Promise<SecretRelease> {
@@ -777,26 +861,7 @@ export class SecretsService {
             throw new ContractError("POLICY_DENIED", "Secret version is revoked", {
               reasonCode: "credential_revoked",
             });
-          let value: string;
-          if (reference.provider === "ephemeral") {
-            const memory = this.ephemeral.get(`${reference.id}:${reference.secretVersion}`);
-            if (memory === undefined) throw unavailable();
-            value = memory;
-          } else if (reference.provider === "secret-tool")
-            value = await keychain(
-              "lookup",
-              reference.workspaceId,
-              reference.id,
-              reference.secretVersion,
-            );
-          else if (reference.provider === "vault")
-            value = await vaultRead(
-              this.config,
-              reference.workspaceId,
-              reference.id,
-              reference.secretVersion,
-            );
-          else throw unavailable();
+          const value = await this.plaintext(reference);
           validateValue(value);
           if (await revoked())
             throw new ContractError("POLICY_DENIED", "Secret version is revoked", {
@@ -806,10 +871,42 @@ export class SecretsService {
         }),
     };
   }
+  private async plaintext(reference: SecretMetadata): Promise<string> {
+    if (reference.provider === "ephemeral") {
+      const memory = this.ephemeral.get(`${reference.id}:${reference.secretVersion}`);
+      if (memory === undefined) throw unavailable();
+      return memory;
+    }
+    if (reference.provider === "secret-tool")
+      return keychain("lookup", reference.workspaceId, reference.id, reference.secretVersion);
+    if (reference.provider === "vault")
+      return vaultRead(this.layout, reference.workspaceId, reference.id, reference.secretVersion);
+    throw unavailable();
+  }
+  /**
+   * Plaintext for a purpose other than worker execution, for example a step-up export. It needs an
+   * explicit unexpired `secrets:export` grant: no role implies it (ADR-017, ADR-019). The value is
+   * returned only to the in-process caller and is never persisted or written to the audit trail.
+   */
+  async reveal(idOrName: string): Promise<{ id: string; secretVersion: number; value: string }> {
+    return auditedOperation(this.ctx, "secret.reveal", this.auditResource(idOrName), async () => {
+      if (!this.ctx.authorizeDecrypt)
+        throw new ContractError("FORBIDDEN", "Secret decryption requires a secrets:export grant");
+      this.ctx.authorizeDecrypt();
+      const reference = this.lookup(idOrName);
+      if (reference.revokedAt)
+        throw new ContractError("POLICY_DENIED", "Secret is revoked", {
+          reasonCode: "credential_revoked",
+        });
+      const value = await this.plaintext(reference);
+      validateValue(value);
+      return { id: reference.id, secretVersion: reference.secretVersion, value };
+    });
+  }
   async keyStatus(): Promise<{ activeKeyId: string; retiredKeyIds: string[] }> {
     this.ctx.authorize("A");
-    const key = await vaultKey(this.config, false);
-    const directory = await privateDirectory(join(this.config.home, ".config", "testmaster"));
+    const key = await vaultKey(this.layout, false);
+    const directory = await privateDirectory(this.layout.keyDirectory);
     try {
       let retiredKeyIds: string[] = [];
       try {
@@ -828,12 +925,12 @@ export class SecretsService {
   async rewrapKeys(): Promise<{ activeKeyId: string; previousKeyId: string; rewrapped: number }> {
     this.ctx.authorize("A");
     return auditedOperation(this.ctx, "secret.key.rewrap", "vault", async () => {
-      const lock = await vaultLock(this.config);
+      const lock = await vaultLock(this.layout);
       let directory: FileHandle;
       let old: Buffer;
       try {
-        directory = await privateDirectory(join(this.config.home, ".local", "share", "testmaster"));
-        old = await vaultKey(this.config, false);
+        directory = await privateDirectory(this.layout.dataDirectory);
+        old = await vaultKey(this.layout, false);
       } catch (error) {
         await lock.release();
         throw error;
@@ -856,7 +953,7 @@ export class SecretsService {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
         }
-        await replacePrivate(lock.directory, "vault.key", next);
+        await replacePrivate(lock.directory, this.layout.keyName, next);
         for (const name of (await readdir(`/proc/self/fd/${directory.fd}`)).filter((name) =>
           name.endsWith(".vault"),
         )) {
@@ -934,12 +1031,12 @@ export class SecretsService {
     if (!/^[a-f0-9]{64}$/.test(keyId))
       throw new ContractError("INVALID_ARGUMENT", "Invalid vault key ID");
     return auditedOperation(this.ctx, "secret.key.retire", keyId, async () => {
-      const lock = await vaultLock(this.config);
+      const lock = await vaultLock(this.layout);
       let directory: FileHandle;
       let key: Buffer;
       try {
-        directory = await privateDirectory(join(this.config.home, ".local", "share", "testmaster"));
-        key = await vaultKey(this.config, false);
+        directory = await privateDirectory(this.layout.dataDirectory);
+        key = await vaultKey(this.layout, false);
       } catch (error) {
         await lock.release();
         throw error;
@@ -995,6 +1092,6 @@ export class SecretsService {
   }
   async health(): Promise<SecretBackendHealth> {
     this.ctx.authorize("R");
-    return health(this.config);
+    return vaultHealth(this.layout);
   }
 }

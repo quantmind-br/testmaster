@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "runtime-doctor-preconditions",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:28:56.513Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "runtime-doctor-preconditions",
+        "--base-url",
+        "http://127.0.0.1:43719",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d45003bc-1c26-40a8-9b52-53ec86ed97ea",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-arCbZR/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6437a498-5b96-4a80-90e5-98415aad2beb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "doctor",
+        "--target",
+        "http://127.0.0.1:43719",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3f2f221a-1c7d-4461-8704-f1b00692035e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "doctor",
+        "--target",
+        "http://127.0.0.1:43719",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_acd5cb4f-c61b-4d35-8ce9-1c8098609c7f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135e1-7e45-746b-afa3-6630da1f0560",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_4daba8cb-913e-47a2-8ed1-4f5a8f16fab2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "events",
+        "run_01a135e1-8b82-70c0-b8d6-70cf7a53c2d4",
+        "--format",
+        "ndjson",
+        "--output",
+        "text",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135e1-8b82-70c0-b8d6-70cf7a53c2d4"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "doctorTargetModelAndMissingSandbox",
+      "healthy": true,
+      "targetDown": {
+        "status": "FAIL",
+        "diagnostics": [
+          "target_unreachable"
+        ]
+      },
+      "modelAbsent": {
+        "status": "ABSENT",
+        "diagnostics": [
+          "model_not_configured"
+        ],
+        "requiredForReplay": false
+      },
+      "blockedRun": "run_01a135e1-8b82-70c0-b8d6-70cf7a53c2d4"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}

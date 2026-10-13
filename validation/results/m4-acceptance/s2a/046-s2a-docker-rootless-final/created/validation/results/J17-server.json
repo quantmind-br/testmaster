@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "J17-server",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-rootless-compose",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:46:18.970Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [
+    "run_01a135f0-d1e2-7702-a73f-49446d58c31a",
+    "run_01a135f0-d8a0-73bd-9565-d79ec88c16a7"
+  ],
+  "oracleVerdicts": [
+    {
+      "compose": {
+        "project": "tm-s2a-cdc08b",
+        "services": [
+          "postgres",
+          "server",
+          "caddy"
+        ]
+      },
+      "first": {
+        "runId": "run_01a135f0-d1e2-7702-a73f-49446d58c31a",
+        "outcome": "passed"
+      },
+      "second": {
+        "runId": "run_01a135f0-d8a0-73bd-9565-d79ec88c16a7",
+        "outcome": "passed",
+        "reasonCode": null,
+        "attempts": [
+          {
+            "number": 1,
+            "fence": 1,
+            "outcome": "inconclusive"
+          },
+          {
+            "number": 2,
+            "fence": 2,
+            "outcome": "passed"
+          }
+        ],
+        "attemptsBeforeRecovery": 1,
+        "nonTerminalAfterWorkerKill": true,
+        "nonTerminalAfterDatabaseRestart": true
+      },
+      "databaseOutage": {
+        "readyStatusWhileDown": 503,
+        "serverRestarted": false
+      }
+    }
+  ],
+  "limitations": [
+    "Single host: PostgreSQL, API and Caddy in compose, worker as a host process on the rootless daemon.",
+    "Filesystem evidence storage only; S3 is refused (ADR-016).",
+    "Caddy internal CA; no public ACME certificate.",
+    "Volume encryption is operator-attested and not verified."
+  ]
+}

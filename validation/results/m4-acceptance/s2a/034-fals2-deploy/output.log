@@ -1,0 +1,36 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s2a
+
+ ❯ |unit| validation/journeys/deploy-compose.test.ts (3 tests | 1 failed) 5ms
+   ❯ reference deployment files (ADR-016, ADR-019) (3)
+     × SEC-036 PostgreSQL accepts TLS only and the shipped example configuration is a valid verify-full server profile 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| validation/journeys/deploy-compose.test.ts > reference deployment files (ADR-016, ADR-019) > SEC-036 PostgreSQL accepts TLS only and the shipped example configuration is a valid verify-full server profile
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "host    all   all        0.0.0.0/0          scram-sha-256",
++ ]
+
+ ❯ validation/journeys/deploy-compose.test.ts:33:57
+     31|       .split("\n")
+     32|       .filter((line) => line && !line.startsWith("#"));
+     33|     expect(hba.filter((line) => /^host\s/u.test(line))).toEqual([]);
+       |                                                         ^
+     34|     expect(hba.filter((line) => /^hostssl\s/u.test(line)).length).toBe…
+     35|     expect(compose).toContain("ssl=on");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  12:21:42
+   Duration  699ms (transform 64%, import 34%, tests 1%)
+
