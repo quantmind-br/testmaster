@@ -1,0 +1,383 @@
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { afterEach, expect, it } from "vitest";
+import { allEntities } from "../context.js";
+import { flattenSteps } from "../plan-analysis.js";
+import { AuthoringFixture } from "./authoring-fixture.js";
+
+const fixtures: AuthoringFixture[] = [];
+afterEach(async () => {
+  for (const fixture of fixtures.splice(0)) await fixture.close();
+});
+async function open(): Promise<AuthoringFixture> {
+  const fixture = await AuthoringFixture.open();
+  fixtures.push(fixture);
+  return fixture;
+}
+const counts = (f: AuthoringFixture) => ({
+  tests: allEntities(f.app.context, "TestCase").length,
+  revisions: allEntities(f.app.context, "TestRevision").length,
+});
+
+it("UX-015 preview lists the revisions a selection would create and accepting needs no model call", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch();
+  const [a, b, c] = proposals;
+  if (!a || !b || !c || a.plan.kind !== "executable") throw new Error("Missing proposals");
+  const modelCalls = f.completions;
+  await f.stopModel();
+  const preview = f.app.proposals.preview(batch.id, [a.id, b.id]);
+  expect(preview.items).toHaveLength(2);
+  expect(preview.blocked).toBe(false);
+  expect(preview.items[0]).toMatchObject({
+    proposalId: a.id,
+    selectable: true,
+    validation: { structural: "valid", semantic: "valid", issues: [] },
+    revision: {
+      action: "create_test",
+      testName: "Scenario A",
+      ordinal: 1,
+      origin: "generated",
+      runner: "http",
+      stepCount: flattenSteps(a.plan.steps).length,
+      assertionCount: flattenSteps(a.plan.steps).filter((step) => step.kind === "assertion").length,
+    },
+  });
+  expect(preview.items[0]?.revision?.estimate.reason).toMatch(/\S/);
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+  // The provider is gone, yet a persisted valid proposal can still be accepted.
+  const receipt = f.app.proposals.accept(batch.id, {
+    proposalIds: [a.id, b.id],
+    expectedVersion: batch.version ?? 1,
+    idempotencyKey: "ux015-accept-without-model",
+  });
+  expect(receipt.accepted).toHaveLength(2);
+  expect(f.completions).toBe(modelCalls);
+});
+
+it("UX-015 an invalid proposal is blocked in the preview and never becomes a test", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch();
+  const [a, b] = proposals;
+  if (!a || !b) throw new Error("Missing proposals");
+  f.app.context.entities.update("Proposal", f.app.context.workspaceId, b.id, b.version ?? 1, {
+    ...b,
+    validation: "invalid",
+    version: (b.version ?? 1) + 1,
+  });
+  const preview = f.app.proposals.preview(batch.id, [a.id, b.id]);
+  expect(preview.blocked).toBe(true);
+  expect(preview.items.map((item) => item.selectable)).toEqual([true, false]);
+  expect(preview.items[1]?.validation).toMatchObject({
+    semantic: "invalid",
+    issues: [expect.objectContaining({ code: "proposal_invalid" })],
+  });
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [b.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "ux015-invalid-proposal",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+  expect(
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [a.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "ux015-valid-proposal",
+    }).accepted,
+  ).toHaveLength(1);
+});
+
+it("UX-016 accepting A and B retains C and an identical resend replays the receipt", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch();
+  const [a, b, c] = proposals;
+  if (!a || !b || !c) throw new Error("Missing proposals");
+  const input = {
+    proposalIds: [a.id, b.id],
+    expectedVersion: batch.version ?? 1,
+    idempotencyKey: "ux016-partial-accept-key",
+  };
+  const receipt = f.app.proposals.accept(batch.id, input);
+  expect(receipt).toMatchObject({ retained: [c.id], rejected: [] });
+  expect(receipt.accepted).toHaveLength(2);
+  expect(f.app.proposals.accept(batch.id, input)).toEqual(receipt);
+  expect(counts(f)).toEqual({ tests: 2, revisions: 2 });
+  const after = f.app.proposals.detail(batch.id);
+  expect(after.batch.state).toBe("proposed");
+  expect(
+    after.proposals
+      .map((item) => [item.plan.name, item.state])
+      .sort(([x], [y]) => String(x).localeCompare(String(y))),
+  ).toEqual([
+    ["Scenario A", "accepted"],
+    ["Scenario B", "accepted"],
+    ["Scenario C", "proposed"],
+  ]);
+  // A different request for an already decided proposal is refused, not silently repeated.
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [a.id],
+      expectedVersion: after.batch.version ?? 1,
+      idempotencyKey: "ux016-second-key-for-a",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(counts(f)).toEqual({ tests: 2, revisions: 2 });
+});
+
+it("UX-016 a partial accept that cannot complete creates nothing and leaves every proposal pending", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch();
+  // The selection is processed in stored order, so the second one fails after the first was already written.
+  const [first, second] = f.app.proposals.detail(batch.id).proposals;
+  if (!first || !second || proposals.length !== 3) throw new Error("Missing proposals");
+  f.app.context.entities.update(
+    "Proposal",
+    f.app.context.workspaceId,
+    second.id,
+    second.version ?? 1,
+    { ...second, validation: "invalid", version: (second.version ?? 1) + 1 },
+  );
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [first.id, second.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "ux016-atomic-failure",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+  const after = f.app.proposals.detail(batch.id);
+  expect(after.proposals.every((item) => item.state === "proposed")).toBe(true);
+  expect(after.batch.version).toBe(batch.version);
+  expect(
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [first.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "ux016-atomic-recovery",
+    }).accepted,
+  ).toHaveLength(1);
+});
+
+it("UX-017 provenance tells model output from human edits and carries it to the revision", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch(["A", "B"]);
+  const [a, b] = proposals;
+  if (!a || !b || b.plan.kind !== "executable") throw new Error("Missing proposals");
+  const edited = f.app.proposals.edit(
+    b.id,
+    { ...b.plan, name: "Scenario B reviewed" },
+    b.version ?? 1,
+  );
+  const preview = f.app.proposals.preview(batch.id, [a.id, edited.id]);
+  const [untouched, touched] = preview.items;
+  expect(untouched?.authorship).toMatchObject({ humanEdits: [], refinedFrom: null });
+  expect(untouched?.authorship.generatedBy).toMatch(/\S/);
+  expect(touched?.authorship.humanEdits).toEqual([
+    expect.objectContaining({ principalId: f.app.context.principalId }),
+  ]);
+  expect(touched?.authorship.generatedBy).toBe(untouched?.authorship.generatedBy);
+  const receipt = f.app.proposals.accept(batch.id, {
+    proposalIds: [a.id, edited.id],
+    expectedVersion: f.app.proposals.detail(batch.id).batch.version ?? 1,
+    idempotencyKey: "ux017-provenance-accept",
+  });
+  const named = (name: string) => receipt.accepted.find((id) => f.app.tests.get(id).name === name);
+  const testA = named("Scenario A");
+  const testB = named("Scenario B reviewed");
+  if (!testA || !testB) throw new Error("Missing accepted tests");
+  const history = (id: string) => f.app.revisionHistory.list(id)[0];
+  expect(history(testA)).toMatchObject({ authorship: "llm", humanEdited: false });
+  expect(history(testB)).toMatchObject({ authorship: "llm", humanEdited: true });
+  expect(history(testB)?.modelCallId).toBe(touched?.authorship.generatedBy);
+});
+
+it("UX-017 an exact duplicate needs an explicit decision while a merely similar plan only warns", async () => {
+  const f = await open();
+  const { batch, proposals, requirements } = await f.generatedBatch(["A"]);
+  const [original] = proposals;
+  const [requirement] = requirements;
+  if (!original || !requirement) throw new Error("Missing fixtures");
+  f.app.proposals.accept(batch.id, {
+    proposalIds: [original.id],
+    expectedVersion: batch.version ?? 1,
+    idempotencyKey: "ux017-first-acceptance",
+  });
+  // The same plan is generated again: a second test would duplicate the first.
+  const again = await f.app.proposals.generate({ projectId: f.projectId });
+  const [duplicate] = f.app.proposals.detail(again.id).proposals;
+  if (!duplicate) throw new Error("Missing duplicate");
+  const preview = f.app.proposals.preview(again.id, [duplicate.id]);
+  expect(preview.items[0]).toMatchObject({ needsDecision: true, selectable: true });
+  expect(preview.items[0]?.similar[0]).toMatchObject({ kind: "test", exactDuplicate: true });
+  const decision = {
+    proposalIds: [duplicate.id],
+    expectedVersion: again.version ?? 1,
+  };
+  expect(() =>
+    f.app.proposals.accept(again.id, { ...decision, idempotencyKey: "ux017-duplicate-no-ack" }),
+  ).toThrowError(
+    expect.objectContaining({
+      code: "PRECONDITION_FAILED",
+      details: expect.objectContaining({ reason: "duplicate_decision_required" }),
+    }),
+  );
+  expect(counts(f)).toEqual({ tests: 1, revisions: 1 });
+  // Acknowledging a proposal that is not selected is a malformed decision.
+  expect(() =>
+    f.app.proposals.accept(again.id, {
+      ...decision,
+      acknowledgedDuplicates: [original.id],
+      idempotencyKey: "ux017-duplicate-foreign-ack",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  const receipt = f.app.proposals.accept(again.id, {
+    ...decision,
+    acknowledgedDuplicates: [duplicate.id],
+    idempotencyKey: "ux017-duplicate-ack",
+    reason: "Intentional second copy for the smoke suite",
+  });
+  expect(receipt.accepted).toHaveLength(1);
+  expect(counts(f)).toEqual({ tests: 2, revisions: 2 });
+  expect(
+    f.app.database.all(
+      "SELECT resource_id FROM audit_events WHERE action='proposal.duplicate_acknowledged'",
+    ),
+  ).toEqual([{ resource_id: duplicate.id }]);
+  // A plan that differs in what it asserts is similar but never an exact duplicate.
+  f.setOutput({
+    proposals: [
+      f.planFor(requirement.id, "Scenario A variant", (plan) => {
+        const check = plan.steps.find((step) => step.id === "check-status");
+        if (check?.kind === "assertion" && check.expectation?.predicate === "statusIn")
+          check.expectation.values = [200, 204];
+      }),
+    ],
+  });
+  const variant = await f.app.proposals.generate({ projectId: f.projectId });
+  const [variantProposal] = f.app.proposals.detail(variant.id).proposals;
+  if (!variantProposal) throw new Error("Missing variant");
+  const variantPreview = f.app.proposals.preview(variant.id, [variantProposal.id]);
+  expect(variantPreview.items[0]?.needsDecision).toBe(false);
+  expect(variantPreview.items[0]?.similar.length).toBeGreaterThan(0);
+  expect(variantPreview.items[0]?.similar.every((item) => !item.exactDuplicate)).toBe(true);
+  expect(
+    f.app.proposals.accept(variant.id, {
+      proposalIds: [variantProposal.id],
+      expectedVersion: variant.version ?? 1,
+      idempotencyKey: "ux017-variant-accept",
+    }).accepted,
+  ).toHaveLength(1);
+});
+
+it("UX-018 a cancelled generation persists nothing, keeps completed phases and can be resumed", async () => {
+  const f = await open();
+  const { requirements } = await f.approvedRequirements(["A", "B"]);
+  f.setOutput({
+    proposals: requirements.map((requirement) =>
+      f.planFor(requirement.id, `Scenario ${requirement.id}`),
+    ),
+  });
+  const release = f.holdResponses();
+  const abort = new AbortController();
+  const arrived = f.completionArrived();
+  const pending = f.app.proposals.generate({ projectId: f.projectId, signal: abort.signal });
+  const settled = pending.then(
+    () => "completed",
+    (error: { code?: string }) => error.code ?? "failed",
+  );
+  await arrived;
+  abort.abort();
+  expect(await settled).not.toBe("completed");
+  release();
+  expect(f.app.proposals.summaries(f.projectId)).toEqual([]);
+  // The normalization phase survived: requirements stay approved and generation resumes from them.
+  expect(f.app.requirements.list(f.projectId).every((item) => item.approval !== null)).toBe(true);
+  const resumed = await f.app.proposals.generate({ projectId: f.projectId });
+  expect(f.app.proposals.detail(resumed.id).proposals).toHaveLength(2);
+  expect(f.app.proposals.summaries(f.projectId)).toHaveLength(1);
+});
+
+it("UX-018 a new source marks the previous generation stale and blocks accepting it until reviewed", async () => {
+  const f = await open();
+  const { batch, proposals, source } = await f.generatedBatch();
+  const [a] = proposals;
+  if (!a) throw new Error("Missing proposal");
+  expect(f.app.proposals.summaries(f.projectId)[0]).toMatchObject({
+    id: batch.id,
+    stale: false,
+    staleReason: null,
+    counts: { proposed: 3, accepted: 0, rejected: 0 },
+  });
+  await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must also report build.");
+  await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "prd.md"),
+    format: "markdown",
+    sourceId: source.source.id,
+    expectedVersion: source.source.version ?? 1,
+  });
+  const [summary] = f.app.proposals.summaries(f.projectId);
+  expect(summary).toMatchObject({ id: batch.id, state: "stale", stale: true });
+  expect(summary?.staleReason).toMatch(/^source:/);
+  const preview = f.app.proposals.preview(batch.id, [a.id]);
+  expect(preview).toMatchObject({ stale: true, blocked: true });
+  expect(preview.items[0]?.validation.issues.map((issue) => issue.code)).toContain("source_stale");
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [a.id],
+      expectedVersion: f.app.proposals.detail(batch.id).batch.version ?? 1,
+      idempotencyKey: "ux018-stale-accept",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+});
+
+it("UX-019 only an interactive human session may accept a proposal, never an API credential", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch();
+  const [a, b] = proposals;
+  if (!a || !b) throw new Error("Missing proposals");
+  const identity = (kind: "api" | "session" | "worker" | "operator") => ({
+    principalId: f.app.context.principalId,
+    workspaceId: f.app.context.workspaceId,
+    scopes: ["R", "W", "X", "A"] as ("R" | "W" | "X" | "A")[],
+    credential: { kind, id: `credential-${kind}` },
+  });
+  for (const kind of ["api", "worker", "operator"] as const) {
+    const automated = f.app.forIdentity(identity(kind));
+    expect(automated.proposals.preview(batch.id, [a.id]).policy).toMatchObject({
+      channel: "interactive",
+      canAccept: false,
+      reason: "interactive_acceptance_required",
+    });
+    expect(() =>
+      automated.proposals.accept(batch.id, {
+        proposalIds: [a.id],
+        expectedVersion: batch.version ?? 1,
+        idempotencyKey: `ux019-${kind}-credential`,
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "POLICY_DENIED",
+        details: expect.objectContaining({ reason: "interactive_acceptance_required" }),
+      }),
+    );
+  }
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+  const interactive = f.app.forIdentity(identity("session"));
+  expect(interactive.proposals.preview(batch.id, [a.id]).policy.canAccept).toBe(true);
+  const receipt = interactive.proposals.accept(batch.id, {
+    proposalIds: [a.id],
+    expectedVersion: batch.version ?? 1,
+    idempotencyKey: "ux019-session-credential",
+  });
+  expect(receipt.accepted).toHaveLength(1);
+  const [revision] = allEntities(f.app.context, "TestRevision");
+  expect(revision?.extensions?.["testmaster:acceptance"]).toMatchObject({
+    principalId: f.app.context.principalId,
+    credentialKind: "session",
+    channel: "interactive",
+  });
+});

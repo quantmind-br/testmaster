@@ -51,6 +51,7 @@ import { ExploreService } from "./ai/explore.js";
 import { HealingService } from "./ai/healing.js";
 import { ModelService } from "./ai/model.js";
 import { ProposalsService } from "./ai/proposals.js";
+import { RefinementService } from "./ai/refinement.js";
 import { RequirementsService } from "./ai/requirements.js";
 import { SourcesService, UploadsService } from "./ai/sources.js";
 import { UsageService } from "./ai/usage.js";
@@ -81,10 +82,12 @@ import { IdentityService } from "./identity.js";
 import { IntegrationsService } from "./integrations/index.js";
 import { correlationId } from "./observability.js";
 import { OnboardingService } from "./onboarding.js";
+import { PlanValidationService } from "./plan-validation.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
+import { RevisionHistoryService } from "./revision-history.js";
 import { BatchesService, RunsService } from "./runs.js";
 import { measureRuntimeIdentities } from "./runtime-identity.js";
 import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
@@ -100,6 +103,7 @@ import {
   TokensService,
   WorkspacesService,
 } from "./team.js";
+import { TestDraftsService } from "./test-drafts.js";
 import type { TokenData, TokenKind } from "./tokens.js";
 import { WorkerService } from "./worker.js";
 
@@ -182,6 +186,10 @@ export class Application {
   readonly onboarding: OnboardingService;
   readonly featureMap: FeatureMapService;
   readonly proposals: ProposalsService;
+  readonly refinements: RefinementService;
+  readonly planValidation: PlanValidationService;
+  readonly revisionHistory: RevisionHistoryService;
+  readonly testDrafts: TestDraftsService;
   readonly usage: UsageService;
   readonly explore: ExploreService;
   readonly agentMode: AgentModeService;
@@ -355,6 +363,10 @@ export class Application {
       this.sources,
       this.discovery,
     );
+    this.refinements = new RefinementService(this.context, this.model, this.requirements);
+    this.planValidation = new PlanValidationService(this.context);
+    this.revisionHistory = new RevisionHistoryService(this.context);
+    this.testDrafts = new TestDraftsService(this.context);
     this.usage = new UsageService(this.context);
     this.explore = new ExploreService(this.context, config);
     this.agentMode = new AgentModeService(this.context, config);

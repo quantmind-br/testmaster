@@ -11,10 +11,31 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { materializePlanDefaults, semanticHash } from "@testmaster/domain";
-import type { EntityDocument } from "@testmaster/persistence";
+import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 
 type Stored<T> = T & EntityDocument;
+
+/** Records which revision became current, so history can tell candidates from superseded revisions. */
+export function auditPromotion(
+  ctx: ServiceContext,
+  testId: string,
+  revisionId: string,
+  previousRevisionId: string | null,
+): void {
+  new AuditRepository(ctx.database).append({
+    workspaceId: ctx.workspaceId,
+    actor: ctx.principalId,
+    action: "revision.promoted",
+    resourceId: revisionId,
+    requestId: ctx.correlationId ?? crypto.randomUUID(),
+    beforeHash: previousRevisionId
+      ? semanticHash({ testId, revisionId: previousRevisionId })
+      : null,
+    afterHash: semanticHash({ testId, revisionId }),
+    timestamp: new Date().toISOString(),
+  });
+}
 export function authoringTransaction<T>(ctx: ServiceContext, action: () => T): T {
   return ctx.database.inTransaction ? action() : ctx.database.withTx(action);
 }
@@ -457,9 +478,10 @@ export class TestsService {
     name?: string;
     tags?: string[];
     priority?: TestCase["priority"];
+    justification?: string;
   }): Stored<TestCase> {
     this.ctx.authorize("W", input.projectId);
-    keys(input, ["projectId", "plan", "name", "tags", "priority"]);
+    keys(input, ["projectId", "plan", "name", "tags", "priority", "justification"]);
     const plan = lintPlan(JSON.stringify(input.plan));
     return authoringTransaction(this.ctx, () => {
       let projectId = input.projectId;
@@ -485,9 +507,12 @@ export class TestsService {
         archivedAt: null,
       }) as Stored<TestCase>;
       this.ctx.entities.insert("TestCase", value);
-      const revision = new RevisionsService(this.ctx).create(value.id, plan);
+      const revision = new RevisionsService(this.ctx).create(value.id, plan, undefined, {
+        ...(input.justification ? { justification: input.justification } : {}),
+      });
       const next = { ...value, activeRevisionId: revision.id, version: 2 };
       this.ctx.entities.update("TestCase", this.ctx.workspaceId, value.id, 1, next);
+      auditPromotion(this.ctx, value.id, revision.id, null);
       return next;
     });
   }
@@ -594,11 +619,17 @@ export function promoteRevisionCas(
   expected(current, expectedVersion);
   const next = { ...current, activeRevisionId: revision.id, version: expectedVersion + 1 };
   ctx.entities.update("TestCase", ctx.workspaceId, current.id, expectedVersion, next);
+  auditPromotion(ctx, current.id, revision.id, current.activeRevisionId);
   return next;
 }
 export class RevisionsService {
   constructor(readonly ctx: ServiceContext) {}
-  create(testId: string, input: ExecutablePlan, parentId?: string): Stored<TestRevision> {
+  create(
+    testId: string,
+    input: ExecutablePlan,
+    parentId?: string,
+    options: { justification?: string } = {},
+  ): Stored<TestRevision> {
     this.ctx.authorize("W");
     const plan = lintPlan(JSON.stringify(input));
     return authoringTransaction(this.ctx, () => {
@@ -628,6 +659,9 @@ export class RevisionsService {
         author: this.ctx.principalId,
         parentId: parentId ?? null,
         origin: "manual",
+        ...(options.justification
+          ? { extensions: { "testmaster:justification": options.justification } }
+          : {}),
       }) as Stored<TestRevision>;
       this.ctx.entities.insert("TestRevision", value);
       return value;

@@ -1,0 +1,256 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "ordinal",
+    "createdAt",
+    "author",
+    "origin",
+    "authorship",
+    "humanEdited",
+    "parentId",
+    "contentHash",
+    "changeKinds",
+    "assertionChanges",
+    "operationalChanges",
+    "justification",
+    "proposalId",
+    "healingProposalId",
+    "modelCallId",
+    "states",
+    "promotedAt"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "ordinal": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "author": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "origin": {
+      "anyOf": [
+        {
+          "const": "manual",
+          "type": "string"
+        },
+        {
+          "const": "generated",
+          "type": "string"
+        },
+        {
+          "const": "healed",
+          "type": "string"
+        },
+        {
+          "const": "imported",
+          "type": "string"
+        }
+      ]
+    },
+    "authorship": {
+      "anyOf": [
+        {
+          "const": "human",
+          "type": "string"
+        },
+        {
+          "const": "llm",
+          "type": "string"
+        },
+        {
+          "const": "healing",
+          "type": "string"
+        },
+        {
+          "const": "import",
+          "type": "string"
+        }
+      ]
+    },
+    "humanEdited": {
+      "type": "boolean"
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "contentHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "changeKinds": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "initial",
+            "type": "string"
+          },
+          {
+            "const": "intent_assertion",
+            "type": "string"
+          },
+          {
+            "const": "operational",
+            "type": "string"
+          },
+          {
+            "const": "source_model",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "assertionChanges": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "added",
+        "removed",
+        "changed"
+      ],
+      "properties": {
+        "added": {
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "removed": {
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "changed": {
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "operationalChanges": {
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "justification": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "proposalId": {
+      "anyOf": [
+        {
+          "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "healingProposalId": {
+      "anyOf": [
+        {
+          "pattern": "^hea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "modelCallId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "current",
+            "type": "string"
+          },
+          {
+            "const": "candidate",
+            "type": "string"
+          },
+          {
+            "const": "superseded",
+            "type": "string"
+          },
+          {
+            "const": "accepted",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "promotedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:TestHistoryEntry",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

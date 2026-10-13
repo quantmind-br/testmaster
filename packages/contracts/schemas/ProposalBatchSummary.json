@@ -1,0 +1,131 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "createdAt",
+    "projectId",
+    "state",
+    "version",
+    "origin",
+    "refinesTestId",
+    "stale",
+    "staleReason",
+    "counts",
+    "modelCallId"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "proposed",
+          "type": "string"
+        },
+        {
+          "const": "accepted",
+          "type": "string"
+        },
+        {
+          "const": "rejected",
+          "type": "string"
+        },
+        {
+          "const": "stale",
+          "type": "string"
+        }
+      ]
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "origin": {
+      "anyOf": [
+        {
+          "const": "generated",
+          "type": "string"
+        },
+        {
+          "const": "refinement",
+          "type": "string"
+        }
+      ]
+    },
+    "refinesTestId": {
+      "anyOf": [
+        {
+          "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stale": {
+      "type": "boolean"
+    },
+    "staleReason": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "counts": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "proposed",
+        "accepted",
+        "rejected"
+      ],
+      "properties": {
+        "proposed": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "accepted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rejected": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "modelCallId": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ProposalBatchSummary",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

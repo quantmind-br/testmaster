@@ -4199,6 +4199,70 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "get__projects_id_proposal_batches",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProposalBatchSummary"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/proposal-batches/{id}": {
@@ -4261,6 +4325,708 @@
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/proposal-batches/{id}/preview": {
+      "post": {
+        "operationId": "post__proposal_batches_id_preview",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProposalPreview"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalPreviewInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/proposals/{id}/refinements": {
+      "get": {
+        "operationId": "get__proposals_id_refinements",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RefinementThread"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post__proposals_id_refinements",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RefinementThread"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinementInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/plan-validations": {
+      "post": {
+        "operationId": "post__projects_id_plan_validations",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PlanValidation"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanValidationInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tests/{id}/history": {
+      "get": {
+        "operationId": "get__tests_id_history",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tests:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestHistoryEntry"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tests/{id}/draft": {
+      "get": {
+        "operationId": "get__tests_id_draft",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tests:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestDraft"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "put__tests_id_draft",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tests:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestDraft"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestDraftInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete__tests_id_draft",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tests:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestDraft"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tests/{id}/refinements": {
+      "get": {
+        "operationId": "get__tests_id_refinements",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RefinementThread"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post__tests_id_refinements",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RefinementThread"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestRefinementInput"
               }
             }
           }
@@ -58581,6 +59347,197 @@
         },
         "$defs": {}
       },
+      "PlanValidation": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "valid",
+          "runnable",
+          "issues",
+          "checked"
+        ],
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "runnable": {
+            "type": "boolean"
+          },
+          "issues": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "severity",
+                "code",
+                "field",
+                "stepId",
+                "message"
+              ],
+              "properties": {
+                "severity": {
+                  "anyOf": [
+                    {
+                      "const": "error",
+                      "type": "string"
+                    },
+                    {
+                      "const": "warning",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "code": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "field": {
+                  "maxLength": 400,
+                  "type": "string"
+                },
+                "stepId": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "message": {
+                  "maxLength": 8000,
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "checked": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "structure",
+                  "type": "string"
+                },
+                {
+                  "const": "sequence",
+                  "type": "string"
+                },
+                {
+                  "const": "types",
+                  "type": "string"
+                },
+                {
+                  "const": "references",
+                  "type": "string"
+                },
+                {
+                  "const": "assertions",
+                  "type": "string"
+                },
+                {
+                  "const": "dependencies",
+                  "type": "string"
+                },
+                {
+                  "const": "secrets",
+                  "type": "string"
+                },
+                {
+                  "const": "permissions",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "PlanValidationInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan"
+        ],
+        "properties": {
+          "plan": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PlanValidationInput/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/PlanValidationInput/$defs/T0"
+                  }
+                }
+              }
+            ]
+          },
+          "environmentId": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PlanValidationInput/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/PlanValidationInput/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
       "PortabilityInput": {
         "additionalProperties": false,
         "type": "object",
@@ -73810,6 +74767,135 @@
           }
         }
       },
+      "ProposalBatchSummary": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "projectId",
+          "state",
+          "version",
+          "origin",
+          "refinesTestId",
+          "stale",
+          "staleReason",
+          "counts",
+          "modelCallId"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "proposed",
+                "type": "string"
+              },
+              {
+                "const": "accepted",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              },
+              {
+                "const": "stale",
+                "type": "string"
+              }
+            ]
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "const": "generated",
+                "type": "string"
+              },
+              {
+                "const": "refinement",
+                "type": "string"
+              }
+            ]
+          },
+          "refinesTestId": {
+            "anyOf": [
+              {
+                "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "staleReason": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counts": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "proposed",
+              "accepted",
+              "rejected"
+            ],
+            "properties": {
+              "proposed": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "accepted": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "rejected": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            }
+          },
+          "modelCallId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {}
+      },
       "ProposalDecisionInput": {
         "additionalProperties": false,
         "type": "object",
@@ -73832,6 +74918,14 @@
           "reason": {
             "maxLength": 8000,
             "type": "string"
+          },
+          "acknowledgedDuplicates": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
           }
         },
         "$defs": {}
@@ -73860,6 +74954,510 @@
             }
           },
           "rejected": {
+            "type": "array",
+            "items": {
+              "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          }
+        },
+        "$defs": {}
+      },
+      "ProposalPreview": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "batchId",
+          "batchVersion",
+          "batchState",
+          "stale",
+          "staleReason",
+          "policy",
+          "items",
+          "blocked"
+        ],
+        "properties": {
+          "batchId": {
+            "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "batchVersion": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "batchState": {
+            "anyOf": [
+              {
+                "const": "proposed",
+                "type": "string"
+              },
+              {
+                "const": "accepted",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              },
+              {
+                "const": "stale",
+                "type": "string"
+              }
+            ]
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "staleReason": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "channel",
+              "canAccept",
+              "reason",
+              "text"
+            ],
+            "properties": {
+              "channel": {
+                "const": "interactive",
+                "type": "string"
+              },
+              "canAccept": {
+                "type": "boolean"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "text": {
+                "maxLength": 8000,
+                "type": "string"
+              }
+            }
+          },
+          "items": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "proposalId",
+                "state",
+                "selectable",
+                "validation",
+                "revision",
+                "authorship",
+                "similar",
+                "needsDecision"
+              ],
+              "properties": {
+                "proposalId": {
+                  "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "state": {
+                  "anyOf": [
+                    {
+                      "const": "proposed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "accepted",
+                      "type": "string"
+                    },
+                    {
+                      "const": "rejected",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "selectable": {
+                  "type": "boolean"
+                },
+                "validation": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "structural",
+                    "semantic",
+                    "issues"
+                  ],
+                  "properties": {
+                    "structural": {
+                      "anyOf": [
+                        {
+                          "const": "valid",
+                          "type": "string"
+                        },
+                        {
+                          "const": "invalid",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "semantic": {
+                      "anyOf": [
+                        {
+                          "const": "valid",
+                          "type": "string"
+                        },
+                        {
+                          "const": "invalid",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "issues": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "severity",
+                          "code",
+                          "field",
+                          "stepId",
+                          "message"
+                        ],
+                        "properties": {
+                          "severity": {
+                            "anyOf": [
+                              {
+                                "const": "error",
+                                "type": "string"
+                              },
+                              {
+                                "const": "warning",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "code": {
+                            "minLength": 1,
+                            "maxLength": 200,
+                            "type": "string"
+                          },
+                          "field": {
+                            "maxLength": 400,
+                            "type": "string"
+                          },
+                          "stepId": {
+                            "anyOf": [
+                              {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "message": {
+                            "maxLength": 8000,
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "revision": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "action",
+                        "testId",
+                        "testName",
+                        "ordinal",
+                        "parentRevisionId",
+                        "origin",
+                        "runner",
+                        "type",
+                        "contentHash",
+                        "stepCount",
+                        "assertionCount",
+                        "estimate"
+                      ],
+                      "properties": {
+                        "action": {
+                          "anyOf": [
+                            {
+                              "const": "create_test",
+                              "type": "string"
+                            },
+                            {
+                              "const": "create_revision",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "testId": {
+                          "anyOf": [
+                            {
+                              "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "testName": {
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "type": "string"
+                        },
+                        "ordinal": {
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "parentRevisionId": {
+                          "anyOf": [
+                            {
+                              "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "origin": {
+                          "const": "generated",
+                          "type": "string"
+                        },
+                        "runner": {
+                          "anyOf": [
+                            {
+                              "const": "playwright",
+                              "type": "string"
+                            },
+                            {
+                              "const": "http",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "type": {
+                          "anyOf": [
+                            {
+                              "const": "frontend",
+                              "type": "string"
+                            },
+                            {
+                              "const": "backend",
+                              "type": "string"
+                            },
+                            {
+                              "const": "integration",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "contentHash": {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        },
+                        "stepCount": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "assertionCount": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "estimate": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "unit",
+                            "min",
+                            "max",
+                            "reason"
+                          ],
+                          "properties": {
+                            "unit": {
+                              "const": "seconds",
+                              "type": "string"
+                            },
+                            "min": {
+                              "minimum": 0,
+                              "type": "number"
+                            },
+                            "max": {
+                              "minimum": 0,
+                              "type": "number"
+                            },
+                            "reason": {
+                              "maxLength": 8000,
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "authorship": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "generatedBy",
+                    "humanEdits",
+                    "refinedFrom"
+                  ],
+                  "properties": {
+                    "generatedBy": {
+                      "anyOf": [
+                        {
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "humanEdits": {
+                      "maxItems": 100,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "principalId",
+                          "at",
+                          "fromVersion"
+                        ],
+                        "properties": {
+                          "principalId": {
+                            "minLength": 1,
+                            "maxLength": 200,
+                            "type": "string"
+                          },
+                          "at": {
+                            "format": "date-time",
+                            "pattern": "Z$",
+                            "type": "string"
+                          },
+                          "fromVersion": {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "refinedFrom": {
+                      "anyOf": [
+                        {
+                          "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "similar": {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "id",
+                      "name",
+                      "score",
+                      "exactDuplicate"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "anyOf": [
+                          {
+                            "const": "test",
+                            "type": "string"
+                          },
+                          {
+                            "const": "proposal",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "id": {
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      "score": {
+                        "minimum": 0,
+                        "maximum": 1,
+                        "type": "number"
+                      },
+                      "exactDuplicate": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "needsDecision": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "blocked": {
+            "type": "boolean"
+          }
+        },
+        "$defs": {}
+      },
+      "ProposalPreviewInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proposalIds"
+        ],
+        "properties": {
+          "proposalIds": {
+            "minItems": 1,
+            "maxItems": 200,
+            "uniqueItems": true,
             "type": "array",
             "items": {
               "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
@@ -74953,6 +76551,168 @@
             "minLength": 12,
             "maxLength": 256,
             "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "RefinementInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message",
+          "expectedVersion"
+        ],
+        "properties": {
+          "message": {
+            "minLength": 1,
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "expectedVersion": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "$defs": {}
+      },
+      "RefinementThread": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject",
+          "turns",
+          "proposal"
+        ],
+        "properties": {
+          "subject": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "id"
+            ],
+            "properties": {
+              "kind": {
+                "anyOf": [
+                  {
+                    "const": "proposal",
+                    "type": "string"
+                  },
+                  {
+                    "const": "test",
+                    "type": "string"
+                  }
+                ]
+              },
+              "id": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              }
+            }
+          },
+          "turns": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "seq",
+                "role",
+                "content",
+                "principalId",
+                "createdAt",
+                "proposalId",
+                "modelCallId"
+              ],
+              "properties": {
+                "id": {
+                  "pattern": "^rft_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "seq": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "role": {
+                  "anyOf": [
+                    {
+                      "const": "user",
+                      "type": "string"
+                    },
+                    {
+                      "const": "assistant",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "content": {
+                  "minLength": 1,
+                  "maxLength": 8000,
+                  "type": "string"
+                },
+                "principalId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "createdAt": {
+                  "format": "date-time",
+                  "pattern": "Z$",
+                  "type": "string"
+                },
+                "proposalId": {
+                  "anyOf": [
+                    {
+                      "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "modelCallId": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "batchId"
+                ],
+                "properties": {
+                  "id": {
+                    "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "batchId": {
+                    "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -106811,6 +108571,458 @@
           }
         }
       },
+      "TestDraft": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "testId",
+          "projectId",
+          "principalId",
+          "baseRevisionId",
+          "plan",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "baseSuperseded"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^drf_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "principalId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "baseRevisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TestDraft/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/TestDraft/$defs/T0"
+                  }
+                }
+              }
+            ]
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "baseSuperseded": {
+            "type": "boolean"
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TestDraft/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/TestDraft/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "TestDraftInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "baseRevisionId",
+          "plan"
+        ],
+        "properties": {
+          "baseRevisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TestDraftInput/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/TestDraftInput/$defs/T0"
+                  }
+                }
+              }
+            ]
+          },
+          "expectedVersion": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TestDraftInput/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/TestDraftInput/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "TestHistoryEntry": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "ordinal",
+          "createdAt",
+          "author",
+          "origin",
+          "authorship",
+          "humanEdited",
+          "parentId",
+          "contentHash",
+          "changeKinds",
+          "assertionChanges",
+          "operationalChanges",
+          "justification",
+          "proposalId",
+          "healingProposalId",
+          "modelCallId",
+          "states",
+          "promotedAt"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "ordinal": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "author": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "const": "manual",
+                "type": "string"
+              },
+              {
+                "const": "generated",
+                "type": "string"
+              },
+              {
+                "const": "healed",
+                "type": "string"
+              },
+              {
+                "const": "imported",
+                "type": "string"
+              }
+            ]
+          },
+          "authorship": {
+            "anyOf": [
+              {
+                "const": "human",
+                "type": "string"
+              },
+              {
+                "const": "llm",
+                "type": "string"
+              },
+              {
+                "const": "healing",
+                "type": "string"
+              },
+              {
+                "const": "import",
+                "type": "string"
+              }
+            ]
+          },
+          "humanEdited": {
+            "type": "boolean"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentHash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "changeKinds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "initial",
+                  "type": "string"
+                },
+                {
+                  "const": "intent_assertion",
+                  "type": "string"
+                },
+                {
+                  "const": "operational",
+                  "type": "string"
+                },
+                {
+                  "const": "source_model",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "assertionChanges": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "properties": {
+              "added": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              },
+              "removed": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              },
+              "changed": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "operationalChanges": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposalId": {
+            "anyOf": [
+              {
+                "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "healingProposalId": {
+            "anyOf": [
+              {
+                "pattern": "^hea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelCallId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "current",
+                  "type": "string"
+                },
+                {
+                  "const": "candidate",
+                  "type": "string"
+                },
+                {
+                  "const": "superseded",
+                  "type": "string"
+                },
+                {
+                  "const": "accepted",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "promotedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {}
+      },
       "TestMetadataInput": {
         "additionalProperties": false,
         "type": "object",
@@ -106847,6 +109059,26 @@
                 "type": "string"
               }
             ]
+          }
+        },
+        "$defs": {}
+      },
+      "TestRefinementInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message",
+          "baseRevisionId"
+        ],
+        "properties": {
+          "message": {
+            "minLength": 1,
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "baseRevisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
           }
         },
         "$defs": {}
@@ -128029,6 +130261,10 @@
               },
               "parentId": {
                 "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "justification": {
+                "maxLength": 8000,
                 "type": "string"
               },
               "origin": {

@@ -1,3 +1,4 @@
+import { routes as authoring } from "./authoring";
 import { routes as discovery } from "./discovery";
 import { routes as featureMap } from "./feature-map";
 import { routes as home } from "./home";
@@ -22,4 +23,5 @@ export const portalRoutes: readonly PortalRoute[] = [
   ...discovery,
   ...requirements,
   ...featureMap,
+  ...authoring,
 ];

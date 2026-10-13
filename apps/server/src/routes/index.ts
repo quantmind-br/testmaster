@@ -1,4 +1,5 @@
 import { routeCatalog } from "@testmaster/contracts";
+import { authoringRoutes } from "./authoring.js";
 import { coreRoutes } from "./core.js";
 import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
@@ -15,6 +16,7 @@ export const routeModules: RouteModule[] = [
   integrationRoutes,
   settingsRoutes,
   onboardingRoutes,
+  authoringRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

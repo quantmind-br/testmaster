@@ -7,6 +7,7 @@ import {
   type TestRevisionInput,
   validateDocument,
 } from "@testmaster/contracts";
+import { abortOnDisconnect } from "./authoring.js";
 import type { RouteContext, RouteHandler, RouteModule } from "./types.js";
 
 interface Call extends Omit<RouteContext, "body" | "query"> {
@@ -121,7 +122,11 @@ const handlers: Record<string, RouteHandler> = {
     }
     if (input.origin !== "manual")
       throw new ContractError("INVALID_ARGUMENT", "Only manual plans may be authored directly");
-    return app.tests.create({ projectId: id, plan: input.plan });
+    return app.tests.create({
+      projectId: id,
+      plan: input.plan,
+      ...(input.justification ? { justification: input.justification } : {}),
+    });
   }),
   "GET /tests/{id}": h(({ app, id }) => app.tests.get(id)),
   "PATCH /tests/{id}": h(({ app, id, body, ifMatch }) => app.tests.update(id, body, ifMatch())),
@@ -139,7 +144,9 @@ const handlers: Record<string, RouteHandler> = {
     }
     if (input.origin !== "manual")
       throw new ContractError("INVALID_ARGUMENT", "Only manual plans may be authored directly");
-    return app.revisions.create(id, input.plan, input.parentId);
+    return app.revisions.create(id, input.plan, input.parentId, {
+      ...(input.justification ? { justification: input.justification } : {}),
+    });
   }),
   "POST /tests/{id}/promote": h(({ app, id, body, ifMatch }) => {
     const current = app.tests.get(id);
@@ -278,7 +285,7 @@ const handlers: Record<string, RouteHandler> = {
     app.discovery.retry(id, { ...body, idempotencyKey: key }),
   ),
   "POST /discovery/{id}/cancel": h(({ app, id }) => app.discovery.cancel(id)),
-  "POST /projects/{id}/proposal-batches": h(({ app, id, body, key }) => {
+  "POST /projects/{id}/proposal-batches": h(({ app, id, body, key, reply }) => {
     const scope = body.scope as string[];
     if (
       new Set(scope).size !== scope.length ||
@@ -305,9 +312,11 @@ const handlers: Record<string, RouteHandler> = {
           )
           .map((requirement) => requirement.id)
       : undefined;
+    // UX-018: a client that gives up closes the connection; the model call is aborted and nothing is persisted.
     return app.proposals.generate({
       projectId: id,
       idempotencyKey: key,
+      signal: abortOnDisconnect(reply),
       budget: body.budget as { deadlineMs?: number },
       ...(type ? { type } : {}),
       ...(requirementIds ? { requirementIds } : {}),
@@ -336,6 +345,10 @@ const handlers: Record<string, RouteHandler> = {
       proposalIds: body.proposalIds as string[],
       expectedVersion,
       idempotencyKey: key,
+      ...(body.acknowledgedDuplicates
+        ? { acknowledgedDuplicates: body.acknowledgedDuplicates as string[] }
+        : {}),
+      ...(body.reason ? { reason: body.reason as string } : {}),
     });
   }),
   "POST /proposal-batches/{id}/reject": h(({ app, id, body, key, ifMatch }) => {

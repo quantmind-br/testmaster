@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "message",
+    "baseRevisionId"
+  ],
+  "properties": {
+    "message": {
+      "minLength": 1,
+      "maxLength": 4000,
+      "type": "string"
+    },
+    "baseRevisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:TestRefinementInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

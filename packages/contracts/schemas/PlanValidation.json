@@ -1,0 +1,114 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "valid",
+    "runnable",
+    "issues",
+    "checked"
+  ],
+  "properties": {
+    "valid": {
+      "type": "boolean"
+    },
+    "runnable": {
+      "type": "boolean"
+    },
+    "issues": {
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "severity",
+          "code",
+          "field",
+          "stepId",
+          "message"
+        ],
+        "properties": {
+          "severity": {
+            "anyOf": [
+              {
+                "const": "error",
+                "type": "string"
+              },
+              {
+                "const": "warning",
+                "type": "string"
+              }
+            ]
+          },
+          "code": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "field": {
+            "maxLength": 400,
+            "type": "string"
+          },
+          "stepId": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checked": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "structure",
+            "type": "string"
+          },
+          {
+            "const": "sequence",
+            "type": "string"
+          },
+          {
+            "const": "types",
+            "type": "string"
+          },
+          {
+            "const": "references",
+            "type": "string"
+          },
+          {
+            "const": "assertions",
+            "type": "string"
+          },
+          {
+            "const": "dependencies",
+            "type": "string"
+          },
+          {
+            "const": "secrets",
+            "type": "string"
+          },
+          {
+            "const": "permissions",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:PlanValidation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

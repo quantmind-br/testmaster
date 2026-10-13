@@ -1,11 +1,15 @@
 import {
   ContractError,
   type ExecutablePlan,
+  type PlanIssue,
   type Proposal,
   type ProposalBatch,
+  type ProposalBatchSummary,
+  type ProposalPreview,
   type Requirement,
   type TestCase,
   type TestRevision,
+  validate,
 } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import {
@@ -20,8 +24,10 @@ import {
   validateGeneratedProposals,
   validateProposalPlan,
 } from "@testmaster/planner";
-import { authoringTransaction } from "../authoring.js";
+import { auditPromotion, authoringTransaction } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
+import { estimateDuration, flattenSteps, planSimilarity } from "../plan-analysis.js";
+import { stepIdAt } from "../plan-validation.js";
 import type { ModelService } from "./model.js";
 import type { RequirementsService } from "./requirements.js";
 
@@ -235,6 +241,7 @@ export class ProposalsService {
           ...item,
           state: "proposed",
           validation: "valid",
+          extensions: { "testmaster:authorship": { kind: "llm", modelCallId: output.modelCallId } },
         }) as StoredProposal;
         this.ctx.entities.insert("Proposal", proposal);
       }
@@ -331,7 +338,26 @@ export class ProposalsService {
         current.requirementRefs,
         evidenceRefs,
       );
-      const next = { ...current, plan, version: expectedVersion + 1 };
+      const edits =
+        ((current.extensions as Record<string, unknown> | undefined)?.["testmaster:edits"] as
+          | unknown[]
+          | undefined) ?? [];
+      const next = {
+        ...current,
+        plan,
+        version: expectedVersion + 1,
+        extensions: {
+          ...current.extensions,
+          "testmaster:edits": [
+            ...edits,
+            {
+              principalId: this.ctx.principalId,
+              at: new Date().toISOString(),
+              fromVersion: expectedVersion,
+            },
+          ],
+        },
+      } as StoredProposal;
       this.ctx.entities.update("Proposal", this.ctx.workspaceId, id, expectedVersion, next);
       this.ctx.entities.update(
         "ProposalBatch",
@@ -346,13 +372,23 @@ export class ProposalsService {
   }
   accept(
     id: string,
-    input: { proposalIds: string[]; expectedVersion: number; idempotencyKey: string },
+    input: {
+      proposalIds: string[];
+      expectedVersion: number;
+      idempotencyKey: string;
+      acknowledgedDuplicates?: string[];
+      reason?: string;
+    },
   ): ProposalReceipt {
     return this.review(id, {
       acceptIds: input.proposalIds,
       rejectIds: [],
       expectedVersion: input.expectedVersion,
       idempotencyKey: input.idempotencyKey,
+      ...(input.acknowledgedDuplicates
+        ? { acknowledgedDuplicates: input.acknowledgedDuplicates }
+        : {}),
+      ...(input.reason ? { reason: input.reason } : {}),
     });
   }
   reject(
@@ -373,6 +409,8 @@ export class ProposalsService {
       rejectIds: string[];
       expectedVersion: number;
       idempotencyKey: string;
+      acknowledgedDuplicates?: string[];
+      reason?: string;
     },
   ): ProposalReceipt {
     const batch = this.get(id);
@@ -416,6 +454,15 @@ export class ProposalsService {
           )
         )
           throw new ContractError("INVALID_ARGUMENT", "Unknown or already decided proposal");
+        if (input.acceptIds.length) {
+          this.requireAcceptancePolicy();
+          this.requireDuplicateDecisions(
+            current,
+            proposals,
+            input.acceptIds,
+            input.acknowledgedDuplicates ?? [],
+          );
+        }
         const accepted: string[] = [];
         const rejected: string[] = [];
         for (const proposal of proposals) {
@@ -431,33 +478,69 @@ export class ProposalsService {
               );
             for (const requirementId of proposal.requirementRefs)
               this.requireApproved(this.requirements.get(requirementId), snapshot.conflicts);
-            const test = entity(this.ctx, "tst", {
-              projectId: current.projectId,
-              name: proposal.plan.name,
-              activeRevisionId: null,
-              tags: proposal.plan.tags ?? [],
-              priority: proposal.plan.priority ?? "normal",
-              archivedAt: null,
-            }) as TestCase & EntityDocument;
-            this.ctx.entities.insert("TestCase", test);
+            const refined = this.refinedTest(current);
+            let test: TestCase & EntityDocument;
+            let ordinal = 1;
+            if (refined) {
+              // A refinement of an existing test adds a candidate revision; the active revision never moves here.
+              test = requireEntity(this.ctx, "TestCase", refined.testId) as TestCase &
+                EntityDocument;
+              if (test.archivedAt)
+                throw new ContractError(
+                  "PRECONDITION_FAILED",
+                  "Archived resource cannot be modified",
+                );
+              ordinal = Number(
+                this.ctx.database.get(
+                  "SELECT COALESCE(MAX(ordinal),0)+1 AS ordinal FROM test_revisions WHERE workspace_id=? AND test_id=?",
+                  this.ctx.workspaceId,
+                  test.id,
+                )?.ordinal,
+              );
+            } else {
+              test = entity(this.ctx, "tst", {
+                projectId: current.projectId,
+                name: proposal.plan.name,
+                activeRevisionId: null,
+                tags: proposal.plan.tags ?? [],
+                priority: proposal.plan.priority ?? "normal",
+                archivedAt: null,
+              }) as TestCase & EntityDocument;
+              this.ctx.entities.insert("TestCase", test);
+            }
             const revision = entity(this.ctx, "rev", {
               testId: test.id,
-              ordinal: 1,
+              ordinal,
               contentHash: semanticHash(proposal.plan, "plan"),
               plan: proposal.plan,
               codeArtifactId: null,
               runnerKind: proposal.plan.runner,
               author: this.ctx.principalId,
-              parentId: null,
+              parentId: refined?.baseRevisionId ?? null,
               origin: "generated",
-              extensions: { "testmaster:proposalId": proposal.id, "testmaster:batchId": id },
+              extensions: {
+                "testmaster:proposalId": proposal.id,
+                "testmaster:batchId": id,
+                "testmaster:authorship": this.authorshipOf(current, proposal),
+                "testmaster:acceptance": {
+                  principalId: this.ctx.principalId,
+                  credentialKind: this.ctx.actor.credentialKind ?? "local",
+                  channel: "interactive",
+                  at: new Date().toISOString(),
+                  batchVersion: current.version,
+                },
+                ...(input.reason ? { "testmaster:justification": input.reason } : {}),
+              },
             }) as TestRevision & EntityDocument;
             this.ctx.entities.insert("TestRevision", revision);
-            this.ctx.entities.update("TestCase", this.ctx.workspaceId, test.id, 1, {
-              ...test,
-              activeRevisionId: revision.id,
-              version: 2,
-            });
+            if (!refined) {
+              this.ctx.entities.update("TestCase", this.ctx.workspaceId, test.id, 1, {
+                ...test,
+                activeRevisionId: revision.id,
+                version: 2,
+              });
+              auditPromotion(this.ctx, test.id, revision.id, null);
+            }
             this.ctx.entities.update(
               "Proposal",
               this.ctx.workspaceId,
@@ -473,6 +556,10 @@ export class ProposalsService {
                 },
               },
             );
+            if (input.acknowledgedDuplicates?.includes(proposal.id))
+              this.audit("proposal.duplicate_acknowledged", proposal.id, null, {
+                revisionId: revision.id,
+              });
             accepted.push(test.id);
           } else if (input.rejectIds.includes(proposal.id)) {
             this.ctx.entities.update(
@@ -507,6 +594,324 @@ export class ProposalsService {
         return receipt;
       },
     ).receipt;
+  }
+  /**
+   * UX-019: accepting a proposal makes a test active, so it is an interactive act by an enabled human
+   * principal. Service accounts, API/worker/operator credentials and controller scopes never inherit it.
+   */
+  acceptancePolicy(): { allowed: boolean; reason: string | null } {
+    const principal = this.ctx.entities.get(
+      "Principal",
+      this.ctx.workspaceId,
+      this.ctx.principalId,
+    );
+    if (principal?.kind !== "human" || principal.disabledAt)
+      return { allowed: false, reason: "human_acceptance_required" };
+    const kind = this.ctx.actor.credentialKind;
+    if (kind !== null && kind !== "session" && kind !== "local")
+      return { allowed: false, reason: "interactive_acceptance_required" };
+    return { allowed: true, reason: null };
+  }
+  private requireAcceptancePolicy(): void {
+    const decision = this.acceptancePolicy();
+    if (!decision.allowed)
+      throw new ContractError(
+        "POLICY_DENIED",
+        "Accepting generated proposals is an interactive act by a human; automation never inherits it",
+        { reason: decision.reason },
+      );
+  }
+  private refinedTest(batch: StoredBatch): { testId: string; baseRevisionId: string } | null {
+    const value = (batch.extensions as Record<string, unknown> | undefined)?.[
+      "testmaster:refinesTest"
+    ] as { testId: string; baseRevisionId: string } | undefined;
+    return value ?? null;
+  }
+  private authorshipOf(
+    batch: StoredBatch,
+    proposal: StoredProposal,
+  ): {
+    generatedBy: string | null;
+    humanEdits: { principalId: string; at: string; fromVersion: number }[];
+    refinedFrom: string | null;
+  } {
+    const extensions = proposal.extensions as Record<string, unknown> | undefined;
+    const llm = extensions?.["testmaster:authorship"] as { modelCallId?: string } | undefined;
+    const batchCall = (batch.extensions as Record<string, unknown> | undefined)?.[
+      "testmaster:modelCallId"
+    ];
+    const refines = extensions?.["testmaster:refines"];
+    return {
+      generatedBy: llm?.modelCallId ?? (typeof batchCall === "string" ? batchCall : null),
+      humanEdits:
+        (extensions?.["testmaster:edits"] as
+          | { principalId: string; at: string; fromVersion: number }[]
+          | undefined) ?? [],
+      refinedFrom: typeof refines === "string" ? refines : null,
+    };
+  }
+  /** Existing tests and other selected proposals that look like this proposal (UX-017). */
+  private similarities(
+    batch: StoredBatch,
+    proposal: StoredProposal,
+    siblings: readonly StoredProposal[],
+    selectedIds: readonly string[],
+  ): ProposalPreview["items"][number]["similar"] {
+    if (proposal.plan.kind !== "executable") return [];
+    const own = {
+      plan: proposal.plan,
+      requirements: [...new Set([...proposal.requirementRefs, ...proposal.plan.requirementRefs])],
+    };
+    const found: ProposalPreview["items"][number]["similar"] = [];
+    const refined = this.refinedTest(batch)?.testId;
+    for (const test of allEntities(this.ctx, "TestCase") as (TestCase & EntityDocument)[]) {
+      if (test.projectId !== batch.projectId || test.archivedAt || !test.activeRevisionId) continue;
+      if (test.id === refined) continue;
+      const plan = this.ctx.entities.get(
+        "TestRevision",
+        this.ctx.workspaceId,
+        test.activeRevisionId,
+      )?.plan as ExecutablePlan | null | undefined;
+      if (!plan) continue;
+      const result = planSimilarity(own, { plan, requirements: plan.requirementRefs });
+      if (result.score >= 0.5)
+        found.push({ kind: "test", id: test.id, name: test.name, ...result });
+    }
+    for (const sibling of siblings) {
+      if (sibling.id === proposal.id || sibling.state !== "proposed") continue;
+      if (sibling.plan.kind !== "executable") continue;
+      const result = planSimilarity(own, {
+        plan: sibling.plan,
+        requirements: [...new Set([...sibling.requirementRefs, ...sibling.plan.requirementRefs])],
+      });
+      if (result.score >= 0.5)
+        found.push({
+          kind: "proposal",
+          id: sibling.id,
+          name: sibling.plan.name,
+          score: result.score,
+          // Only another proposal accepted in the same operation would create the duplicate.
+          exactDuplicate: result.exactDuplicate && selectedIds.includes(sibling.id),
+        });
+    }
+    return found.sort((a, b) => b.score - a.score).slice(0, 20);
+  }
+  private requireDuplicateDecisions(
+    batch: StoredBatch,
+    proposals: readonly StoredProposal[],
+    acceptIds: readonly string[],
+    acknowledged: readonly string[],
+  ): void {
+    if (acknowledged.some((id) => !acceptIds.includes(id)))
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Acknowledged duplicate is not part of the selection",
+      );
+    const unresolved = acceptIds.flatMap((proposalId) => {
+      const proposal = proposals.find((item) => item.id === proposalId);
+      if (!proposal || acknowledged.includes(proposalId)) return [];
+      const exact = this.similarities(batch, proposal, proposals, acceptIds).filter(
+        (item) => item.exactDuplicate,
+      );
+      return exact.length ? [{ proposalId, duplicates: exact }] : [];
+    });
+    if (unresolved.length)
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Selected proposals duplicate existing content; accepting them needs an explicit decision",
+        { reason: "duplicate_decision_required", duplicates: unresolved },
+      );
+  }
+  /** Batches of a project with their decision counts and staleness, newest first (UX-018). */
+  summaries(projectId: string): ProposalBatchSummary[] {
+    const batches = this.list(projectId);
+    const proposals = allEntities(this.ctx, "Proposal") as StoredProposal[];
+    return batches.map((batch) => {
+      const own = proposals.filter((proposal) => proposal.batchId === batch.id);
+      const extensions = (batch.extensions as Record<string, unknown> | undefined) ?? {};
+      const refined = this.refinedTest(batch);
+      const reason = extensions["testmaster:invalidatedBy"];
+      const call = extensions["testmaster:modelCallId"];
+      return {
+        id: batch.id,
+        createdAt: String(batch.createdAt),
+        projectId: batch.projectId,
+        state: batch.state,
+        version: batch.version ?? 1,
+        origin: refined ? "refinement" : "generated",
+        refinesTestId: refined?.testId ?? null,
+        stale: batch.state === "stale",
+        staleReason: typeof reason === "string" ? reason : null,
+        counts: {
+          proposed: own.filter((proposal) => proposal.state === "proposed").length,
+          accepted: own.filter((proposal) => proposal.state === "accepted").length,
+          rejected: own.filter((proposal) => proposal.state === "rejected").length,
+        },
+        modelCallId: typeof call === "string" ? call : null,
+      };
+    });
+  }
+  /**
+   * What accepting a selection would create, with structural and semantic validation, similarity and
+   * who wrote what. It reads only persisted state, so an unavailable model never blocks acceptance (UX-015).
+   */
+  preview(id: string, proposalIds: readonly string[]): ProposalPreview {
+    const { batch, proposals } = this.detail(id);
+    const selected = proposalIds.map((proposalId) => {
+      const found = proposals.find((proposal) => proposal.id === proposalId);
+      if (!found)
+        throw new ContractError("INVALID_ARGUMENT", "Proposal does not belong to this batch", {
+          proposalId,
+        });
+      return found;
+    });
+    const extensions = (batch.extensions as Record<string, unknown> | undefined) ?? {};
+    const reason = extensions["testmaster:invalidatedBy"];
+    const stale = batch.state === "stale";
+    const snapshot = this.requirements.snapshot(batch.projectId);
+    const refined = this.refinedTest(batch);
+    const nextOrdinal = refined
+      ? Number(
+          this.ctx.database.get(
+            "SELECT COALESCE(MAX(ordinal),0)+1 AS ordinal FROM test_revisions WHERE workspace_id=? AND test_id=?",
+            this.ctx.workspaceId,
+            refined.testId,
+          )?.ordinal,
+        )
+      : 1;
+    let created = 0;
+    const items = selected.map((proposal): ProposalPreview["items"][number] => {
+      const structural: PlanIssue[] = [];
+      const semantic: PlanIssue[] = [];
+      const failure = (code: string, error: unknown, into: PlanIssue[]): void => {
+        if (!(error instanceof ContractError)) throw error;
+        const list = error.issues.length
+          ? error.issues
+          : [{ path: "", rule: "", message: error.message }];
+        for (const item of list)
+          into.push({
+            severity: "error",
+            code: item.rule ? `${code}_${item.rule}` : code,
+            field: item.path,
+            stepId: stepIdAt(proposal.plan, item.path),
+            message: item.message,
+          });
+      };
+      let plan: ExecutablePlan | null = null;
+      if (proposal.plan.kind !== "executable")
+        structural.push({
+          severity: "error",
+          code: "intent_plan_not_executable",
+          field: "/kind",
+          stepId: null,
+          message: "Only an executable plan can become a test; edit the proposal first.",
+        });
+      else
+        try {
+          plan = validate<ExecutablePlan>("ExecutablePlan", proposal.plan);
+        } catch (error) {
+          failure("schema", error, structural);
+        }
+      if (plan)
+        try {
+          validateProposalPlan(plan);
+        } catch (error) {
+          failure("assertion", error, semantic);
+        }
+      if (proposal.validation !== "valid")
+        semantic.push({
+          severity: "error",
+          code: "proposal_invalid",
+          field: "",
+          stepId: null,
+          message: "The proposal did not pass validation when it was stored.",
+        });
+      if (proposal.state !== "proposed")
+        semantic.push({
+          severity: "error",
+          code: "already_decided",
+          field: "",
+          stepId: null,
+          message: `The proposal was already ${proposal.state}.`,
+        });
+      if (stale)
+        semantic.push({
+          severity: "error",
+          code: "source_stale",
+          field: "",
+          stepId: null,
+          message: "Source inputs changed after generation; regenerate or review the sources.",
+        });
+      for (const requirementId of proposal.requirementRefs)
+        try {
+          this.requireApproved(this.requirements.get(requirementId), snapshot.conflicts);
+        } catch (error) {
+          failure("requirement", error, semantic);
+        }
+      if (!stale && snapshot.fingerprint !== batch.sourceSnapshotId)
+        semantic.push({
+          severity: "error",
+          code: "requirements_changed",
+          field: "",
+          stepId: null,
+          message: "The approved requirements changed after generation.",
+        });
+      const selectable = !structural.length && !semantic.length;
+      const similar = this.similarities(batch, proposal, proposals, proposalIds);
+      const steps = plan ? flattenSteps(plan.steps) : [];
+      return {
+        proposalId: proposal.id,
+        state: proposal.state,
+        selectable,
+        validation: {
+          structural: structural.length ? "invalid" : "valid",
+          semantic: semantic.length ? "invalid" : "valid",
+          issues: [...structural, ...semantic],
+        },
+        revision: plan
+          ? {
+              action: refined ? "create_revision" : "create_test",
+              testId: refined?.testId ?? null,
+              testName: plan.name,
+              ordinal: refined ? nextOrdinal + created++ : 1,
+              parentRevisionId: refined?.baseRevisionId ?? null,
+              origin: "generated",
+              runner: plan.runner,
+              type: plan.type,
+              contentHash: semanticHash(plan, "plan"),
+              stepCount: steps.length,
+              assertionCount: steps.filter((step) => step.kind === "assertion").length,
+              estimate: estimateDuration(plan),
+            }
+          : null,
+        authorship: this.authorshipOf(batch, proposal),
+        similar,
+        needsDecision: similar.some((item) => item.exactDuplicate),
+      };
+    });
+    const policy = this.acceptancePolicy();
+    let permitted = true;
+    try {
+      this.ctx.authorize("W", batch.projectId);
+    } catch (error) {
+      if (!(error instanceof ContractError) || error.code !== "FORBIDDEN") throw error;
+      permitted = false;
+    }
+    return {
+      batchId: batch.id,
+      batchVersion: batch.version ?? 1,
+      batchState: batch.state,
+      stale,
+      staleReason: typeof reason === "string" ? reason : null,
+      policy: {
+        channel: "interactive",
+        canAccept: policy.allowed && permitted,
+        reason: policy.reason ?? (permitted ? null : "write_permission_required"),
+        text: "A generated proposal becomes an active test only when a human accepts it in an interactive session. CI, API tokens and service accounts cannot accept proposals.",
+      },
+      items,
+      blocked: items.some((item) => !item.selectable),
+    };
   }
   private audit(action: string, resourceId: string, before: unknown, after: unknown): void {
     new AuditRepository(this.ctx.database).append({

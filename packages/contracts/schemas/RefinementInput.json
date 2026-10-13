@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "message",
+    "expectedVersion"
+  ],
+  "properties": {
+    "message": {
+      "minLength": 1,
+      "maxLength": 4000,
+      "type": "string"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RefinementInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

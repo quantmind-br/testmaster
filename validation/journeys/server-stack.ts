@@ -49,6 +49,8 @@ export interface ServerStackOptions {
   readonly profiles?: unknown;
   /** Extra environment for every spawned TestMaster process (for example a fake provider key). */
   readonly extraEnv?: Readonly<Record<string, string>>;
+  /** Extra environment for the server, the worker and the in-process application. */
+  readonly env?: Readonly<Record<string, string>>;
 }
 
 export interface ServerStack {
@@ -80,6 +82,10 @@ export interface ServerStack {
   ): Promise<string>;
   /** Controller-scoped Application on the same database, for seeding and assertions. */
   scope(): Promise<Application>;
+  /** The unscoped Application on the same database; use `forWorkspaceSystem` to seed one workspace. */
+  application(): Promise<Application>;
+  /** Working directory of the server processes; sources imported by path live here. */
+  readonly cwd: string;
   /** Fresh anonymous client that trusts only the stack CA. */
   anonymous(): HttpsClient;
   logs(): string;
@@ -224,6 +230,7 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
     TESTMASTER_NO_TELEMETRY: "true",
     CI: "true",
     ...options.extraEnv,
+    ...options.env,
   };
   for (const name of [
     "TESTMASTER_ENDPOINT",
@@ -425,6 +432,11 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
         if (issued.status !== 201 && issued.status !== 200)
           throw new Error(`token issue failed: ${issued.status} ${issued.text}`);
         return expectString(issued.json(), /^tm_(api|local|op|wrk)_/, "bearer token");
+      },
+      cwd,
+      async application() {
+        application ??= await Application.open({ cwd, home, env, server: config });
+        return application;
       },
       async scope() {
         application ??= await Application.open({ cwd, home, env, server: config });
