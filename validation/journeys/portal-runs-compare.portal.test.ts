@@ -690,6 +690,10 @@ describe("quarantine", () => {
     const { page, diagnostics } = await portal();
     await quarantineVia(page);
     await page.getByRole("button", { name: "Review quarantine" }).waitFor();
+    // The test list loads after the form renders; type-ahead needs the options to exist.
+    await page
+      .locator("#quarantine-testId option", { hasText: "Bulk" })
+      .waitFor({ state: "attached" });
     const keyboard = await keyboardOnly(page);
     await keyboard.tabTo(
       (element) => element.tag === "select" && element.id === "quarantine-testId",
