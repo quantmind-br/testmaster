@@ -51814,24 +51814,31 @@
                   "outcome": {
                     "anyOf": [
                       {
-                        "const": "passed",
-                        "type": "string"
+                        "anyOf": [
+                          {
+                            "const": "passed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "blocked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "inconclusive",
+                            "type": "string"
+                          }
+                        ]
                       },
                       {
-                        "const": "failed",
-                        "type": "string"
-                      },
-                      {
-                        "const": "blocked",
-                        "type": "string"
-                      },
-                      {
-                        "const": "cancelled",
-                        "type": "string"
-                      },
-                      {
-                        "const": "inconclusive",
-                        "type": "string"
+                        "type": "null"
                       }
                     ]
                   },

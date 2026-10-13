@@ -325,7 +325,12 @@ const supplemental = {
     }),
     risk: P.Risk,
     verification: Type.Union([
-      P.Obj({ runId: P.id("run"), outcome: P.Outcome, gate: P.Gate }),
+      // Null while the verification Run has not reached a verdict (queued, running, collecting).
+      P.Obj({
+        runId: P.id("run"),
+        outcome: Type.Union([P.Outcome, Type.Null()]),
+        gate: P.Gate,
+      }),
       Type.Null(),
     ]),
     approval: P.Obj({
