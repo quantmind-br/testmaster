@@ -15,6 +15,20 @@ import type { EgressOptions } from "../notifications/https.js";
 import { verifyNotification } from "../notifications/signature.js";
 
 const exec = promisify(execFile);
+interface Lifecycle {
+  listen(port: number, host: string, callback: () => void): unknown;
+  close(callback: () => void): unknown;
+}
+function listening(server: Lifecycle): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  server.listen(0, "127.0.0.1", resolve);
+  return promise;
+}
+function closed(server: Lifecycle): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  server.close(resolve);
+  return promise;
+}
 function portOf(server: { address(): AddressInfo | string | null }): number {
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Fixture server is not listening");
@@ -175,7 +189,7 @@ export async function startHttpsReceiver(tls: TestTls, path = "/hook"): Promise<
       });
     },
   );
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await listening(server);
   const port = portOf(server);
   return {
     origin: `https://127.0.0.1:${port}`,
@@ -185,12 +199,11 @@ export async function startHttpsReceiver(tls: TestTls, path = "/hook"): Promise<
     behave: (next) => {
       decide = next;
     },
-    close: () =>
-      new Promise<void>((resolve) => {
-        for (const release of hanging) release();
-        server.closeAllConnections();
-        server.close(() => resolve());
-      }),
+    close: () => {
+      for (const release of hanging) release();
+      server.closeAllConnections();
+      return closed(server);
+    },
   };
 }
 
@@ -227,7 +240,7 @@ export async function startSmtpServer(
   let dataReply = options.dataReply ?? (() => "250 queued");
   const context = createSecureContext({ key: tls.keyPem, cert: tls.certPem });
 
-  function converse(socket: Socket, secured: boolean) {
+  function converse(socket: Socket, secured: boolean, greeting = true) {
     let buffer = "";
     let mode: "command" | "data" | "auth-user" | "auth-pass" = "command";
     let from = "";
@@ -244,8 +257,11 @@ export async function startSmtpServer(
         send("235 authenticated");
       } else send("535 authentication failed");
     };
-    send("220 test ESMTP");
-    sessions += 1;
+    // A STARTTLS upgrade restarts the session without a second greeting.
+    if (greeting) {
+      send("220 test ESMTP");
+      sessions += 1;
+    }
     socket.on("data", (chunk: Buffer) => {
       buffer += chunk.toString("utf8");
       for (;;) {
@@ -290,7 +306,7 @@ export async function startSmtpServer(
           socket.removeAllListeners("data");
           const upgraded = new TLSSocket(socket, { isServer: true, secureContext: context });
           sockets.add(upgraded);
-          converse(upgraded, true);
+          converse(upgraded, true, false);
           return;
         } else if (upper.startsWith("AUTH PLAIN")) {
           const [, name = "", password = ""] = decode(line.slice(11)).split("\0");
@@ -331,7 +347,7 @@ export async function startSmtpServer(
           sockets.add(socket);
           converse(socket, false);
         });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await listening(server);
   return {
     port: portOf(server),
     messages,
@@ -339,11 +355,10 @@ export async function startSmtpServer(
     setDataReply: (reply) => {
       dataReply = reply;
     },
-    close: () =>
-      new Promise<void>((resolve) => {
-        for (const socket of sockets) socket.destroy();
-        server.close(() => resolve());
-      }),
+    close: () => {
+      for (const socket of sockets) socket.destroy();
+      return closed(server);
+    },
   };
 }
 

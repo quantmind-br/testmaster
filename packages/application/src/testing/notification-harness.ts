@@ -16,6 +16,7 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { OutboxRepository } from "@testmaster/persistence";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
+import { requireEntity } from "../context.js";
 import { integrationProviders } from "../integrations/registry.js";
 import type { EgressOptions } from "../notifications/https.js";
 import {
@@ -104,6 +105,13 @@ export interface NotificationHarness {
   ): Promise<IntegrationMetadata>;
   /** A terminal Run plus its `run.completed` outbox event, exactly as the worker leaves them. */
   completedRun(options?: RunFixtureOptions): { runId: string; eventId: string };
+  /** An orphaned-resource outbox event against a Run, as the worker records it when cleanup fails. */
+  orphanedResource(runId: string): { eventId: string };
+  /** A Batch whose member Runs have all finished with the given outcomes; returns the Batch and Run ids. */
+  completedBatch(
+    members: RunFixtureOptions[],
+    data?: { suiteId?: string },
+  ): { batchId: string; runIds: string[] };
   /** One service pass at the current fake time. */
   tick(): Promise<{ created: number; attempted: number }>;
   /** Passes until nothing is due, advancing the fake clock past each backoff. */
@@ -263,6 +271,59 @@ export async function createNotificationHarness(
         }),
       );
       return { runId, eventId: event.id };
+    },
+    orphanedResource(runId) {
+      const event = app.database.withTx(() =>
+        outbox.append(init.workspaceId, `res_${nextId()}`, "resource.orphaned", {
+          runId,
+          state: "orphaned",
+        }),
+      );
+      return { eventId: event.id };
+    },
+    completedBatch(members, data = {}) {
+      const batchId = uuidV7IdGenerator.next("bat");
+      app.context.entities.insert("BatchRun", {
+        id: batchId,
+        workspaceId: init.workspaceId,
+        createdAt: new Date().toISOString(),
+        version: 1,
+        selectionSnapshot: {
+          hash: "0".repeat(64),
+          rejections: [],
+          duplicates: 0,
+          requestedRunIds: [],
+        },
+        requestedCount: members.length,
+        memberRuns: [],
+        rejectedMembers: [],
+        commit: null,
+        aggregate: {
+          counts: { passed: 0, failed: 0, blocked: 0, cancelled: 0, inconclusive: 0, inFlight: 0 },
+          gate: "pending",
+        },
+      });
+      const runIds = members.map((member) => harness.completedRun({ ...member, batchId }).runId);
+      const stored = requireEntity(app.context, "BatchRun", batchId);
+      app.context.entities.update("BatchRun", init.workspaceId, batchId, Number(stored.version), {
+        ...stored,
+        memberRuns: runIds,
+        selectionSnapshot: { ...(stored.selectionSnapshot as object), requestedRunIds: runIds },
+      });
+      if (data.suiteId) {
+        const row = app.database.get(
+          "SELECT data_json FROM batches WHERE workspace_id=? AND id=?",
+          init.workspaceId,
+          batchId,
+        );
+        app.database.run(
+          "UPDATE batches SET data_json=? WHERE workspace_id=? AND id=?",
+          JSON.stringify({ ...JSON.parse(String(row?.data_json)), suiteId: data.suiteId }),
+          init.workspaceId,
+          batchId,
+        );
+      }
+      return { batchId, runIds };
     },
     tick: () => service.tick(),
     async settle(maxPasses = 40) {

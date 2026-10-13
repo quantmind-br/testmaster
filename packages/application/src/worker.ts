@@ -1431,6 +1431,17 @@ export class WorkerService {
         JSON.parse(String(row.data_json)),
       );
       const state = resource.state === "planned" ? "uncertain" : "orphaned";
+      const attempt = this.ctx.database.get(
+        "SELECT run_id FROM attempts WHERE workspace_id=? AND id=?",
+        this.ctx.workspaceId,
+        attemptId,
+      );
+      new OutboxRepository(this.ctx.database).append(
+        this.ctx.workspaceId,
+        String(resource.id),
+        "resource.orphaned",
+        { resourceId: resource.id, runId: attempt ? String(attempt.run_id) : null, state },
+      );
       const next = { ...resource, state, version: Number(resource.version ?? 1) + 1 };
       this.ctx.database.run(
         "UPDATE resources SET state=?,data_json=?,version=version+1 WHERE workspace_id=? AND id=? AND version=?",

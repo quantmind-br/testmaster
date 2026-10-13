@@ -34,6 +34,7 @@ const notifiableOutboxTypes = [
   "schedule.paused",
   "alert.fired",
   "worker.offline",
+  "resource.orphaned",
   "delivery.dead_letter",
 ] as const;
 const scanLimit = 500;
@@ -413,6 +414,8 @@ export class NotificationsService {
             },
           },
         ];
+      case "resource.orphaned":
+        return this.classifyOrphan(row, payload);
       case "worker.offline":
         return [
           {
@@ -470,7 +473,7 @@ export class NotificationsService {
     const batch = batchId
       ? this.batchCompletion(batchId, projectId, environmentId, String(row.created_at), memo)
       : null;
-    events.push({
+    const primary: Notifiable = {
       type: outcome === "passed" || outcome === "cancelled" ? "run.completed" : "run.failed",
       eventRef: String(row.id),
       occurredAt: String(row.created_at),
@@ -486,9 +489,57 @@ export class NotificationsService {
         reasonCode: reason !== null && reasonCodes.includes(reason) ? reason : null,
         linkPath: `/runs/${runId}`,
       },
-    });
+    };
+    events.push(primary);
+    if (outcome === "passed" && this.recoveredFrom(runId, environmentId))
+      events.push({ ...primary, type: "run.recovered", eventRef: `recovered:${String(row.id)}` });
     if (batch) events.push(batch);
     return events;
+  }
+
+  /** A resource whose cleanup is unknown (REQ-042 orphans): reported against the Run that created it. */
+  private classifyOrphan(row: Row, payload: Record<string, unknown>): Notifiable[] {
+    const runId = text(payload.runId);
+    const owner = runId
+      ? this.ctx.database.get(
+          "SELECT t.project_id FROM runs r JOIN tests t ON t.workspace_id=r.workspace_id AND t.id=r.test_id WHERE r.workspace_id=? AND r.id=?",
+          this.ctx.workspaceId,
+          runId,
+        )
+      : undefined;
+    const projectId = owner ? String(owner.project_id) : null;
+    return [
+      {
+        type: "resource.orphaned",
+        eventRef: String(row.id),
+        occurredAt: String(row.created_at),
+        projectId,
+        environmentId: null,
+        suiteId: null,
+        source: {
+          projectId,
+          runId: owner ? runId : null,
+          reasonCode: "cleanup_inconclusive",
+          linkPath: owner ? `/runs/${runId}` : "/resources",
+        },
+      },
+    ];
+  }
+
+  /** The previous finished Run of the same test and environment, when it did not pass. */
+  private recoveredFrom(runId: string, environmentId: string | null): boolean {
+    const earlier = this.ctx.database.all(
+      "SELECT r.outcome,r.data_json FROM runs r WHERE r.workspace_id=? AND r.phase='completed' AND r.id<? AND r.test_id=(SELECT test_id FROM runs WHERE workspace_id=? AND id=?) ORDER BY r.id DESC LIMIT 20",
+      this.ctx.workspaceId,
+      runId,
+      this.ctx.workspaceId,
+      runId,
+    );
+    const previous = earlier.find(
+      (candidate) =>
+        text(record(parse(candidate.data_json).matrixCell).environmentId) === environmentId,
+    );
+    return previous !== undefined && !["passed", "cancelled"].includes(String(previous.outcome));
   }
 
   private suiteOf(batchId: string): string | null {

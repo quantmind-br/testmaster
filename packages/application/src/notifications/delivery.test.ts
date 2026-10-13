@@ -96,8 +96,7 @@ describe("INT-027 outbound webhooks are signed over the original bytes", () => {
     const receiver = await h.receiver();
     const previous = await h.secret("whsec-previous", "whsec_previous", [receiver.origin]);
     const current = await h.secret("whsec-current", "whsec_current", [receiver.origin]);
-    // The adapter reads the real clock, so the window is short enough to let expire.
-    const windowEnd = new Date(Date.now() + 2_000).toISOString();
+    const windowEnd = new Date(Date.now() + 3_600_000).toISOString();
     const integration = await h.app.integrations.create({
       provider: "webhook",
       name: "rotating",
@@ -126,7 +125,19 @@ describe("INT-027 outbound webhooks are signed over the original bytes", () => {
     ).toBe(200);
 
     // After the window closes only the current secret signs.
-    await new Promise((resolve) => setTimeout(resolve, 2_100));
+    const closed = h.app.integrations.update(
+      integration.id,
+      {
+        settings: {
+          url: receiver.url,
+          signingSecretRef: current,
+          previousSigningSecretRef: previous,
+          previousSecretUntil: new Date(Date.now() - 1_000).toISOString(),
+        },
+      },
+      integration.version,
+    );
+    expect(closed.version).toBeGreaterThan(integration.version);
     h.completedRun();
     await h.settle();
     const outside = receiver.requests.at(-1);
@@ -153,7 +164,7 @@ describe("INT-027 outbound webhooks are signed over the original bytes", () => {
               previousSecretUntil: tooLong,
             },
           },
-          integration.version,
+          closed.version,
         ),
       ),
     ).toBe("INVALID_ARGUMENT");
@@ -168,7 +179,7 @@ describe("INT-027 outbound webhooks are signed over the original bytes", () => {
               previousSigningSecretRef: previous,
             },
           },
-          integration.version,
+          closed.version,
         ),
       ),
     ).toBe("INVALID_ARGUMENT");
