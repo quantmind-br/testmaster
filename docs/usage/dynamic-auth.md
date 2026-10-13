@@ -56,7 +56,8 @@ any secret is released to an Attempt the profile signs in, or refreshes, as need
 
 - **TOTP** (RFC 6238) is generated from a `totpSeed` vault secret next to its use, never logged, and is not
   retried: after `otp.maxFailures` failed codes in `otp.windowSeconds` the profile locks (no brute force). If
-  a code is rejected and the target's clock differs from the host's, the reason says the clock drifted.
+  a code is rejected and the target's clock differs from the host's by more than one time step, the Run is
+  blocked with the detail `clock_skew` and the measured drift, instead of the plain `otp_rejected`.
 - **CAPTCHA, WebAuthn, push approval and email OTP** are never solved, bypassed or collected through a public
   URL. A profile with `config.challenge` (or a sign-in that hits one) creates a pending **checkpoint**.
   - A Run started from the CLI, API or MCP in an interactive session waits up to five minutes (never past its
@@ -74,7 +75,7 @@ any secret is released to an Attempt the profile signs in, or refreshes, as need
   When it expires the next Run reauthenticates, or creates a checkpoint if the profile needs a
   person. States above 64 KiB are refused.
 - Export (`auth-profile export-state <id> --out <file> [--ttl <seconds>]`) needs the `export` permission on `SecretReference`, the
-  caller's password again, and a lifetime of 60 to 900 seconds. The CLI writes the state only to a new file with
+  caller's password again (except for the local CLI on the host, which has no login), and a lifetime of 60 to 900 seconds. The CLI writes the state only to a new file with
   mode 0600 and never to stdout. Bearer tokens need an explicit `export` grant.
 
 ## Revocation
