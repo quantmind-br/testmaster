@@ -5,6 +5,7 @@ import {
   type Attempt,
   type BundleMeta,
   ContractError,
+  type ExecutionMetrics,
   type RunResult,
   type RuntimeTiming,
   type StepResult,
@@ -19,6 +20,7 @@ import {
   UnsafePathError,
   verifyBundle,
 } from "@testmaster/evidence";
+import type { EntityDocument } from "@testmaster/persistence";
 import {
   executionMetrics,
   exportAllure,
@@ -442,10 +444,36 @@ export class ReportsService {
     readonly artifacts: ArtifactsService,
     readonly analysis?: Pick<AnalysisService, "get">,
   ) {}
+  /** Execution metrics over an arbitrary set of Runs (for example a dashboard window). */
+  async metrics(runIds: readonly string[]): Promise<ExecutionMetrics> {
+    this.ctx.authorize("R");
+    const entries = await this.runEntries(runIds);
+    return executionMetrics({
+      schemaVersion: "1.0.0",
+      committedAt: new Date().toISOString(),
+      snapshotId: `window:${semanticHash(runIds)}`,
+      title: "Run window",
+      runs: entries,
+      selection: {
+        requested: runIds.length,
+        requestedRunIds: runIds,
+        duplicates: 0,
+        notDispatched: [],
+        excluded: [],
+        allowEmpty: true,
+        ...(runIds.length ? {} : { emptyReason: "No Runs in the window" }),
+      },
+      completeness: { state: "complete", reasons: [] },
+    });
+  }
   async snapshot(id: string): Promise<ReportSnapshot> {
     this.ctx.authorize("R");
     const batch = id.startsWith("bat_") ? requireEntity(this.ctx, "BatchRun", id) : null;
     const runIds = batch ? (batch.memberRuns as string[]) : [id];
+    const entries = await this.runEntries(runIds);
+    return this.assemble(batch, runIds, entries);
+  }
+  private async runEntries(runIds: readonly string[]): Promise<ReportRun[]> {
     const entries: ReportRun[] = [];
     for (const runId of runIds) {
       const run = this.runs.get(runId);
@@ -605,6 +633,13 @@ export class ReportsService {
         durationMs: recordedTimings.length === attempts.length ? timings.executionDuration : null,
       });
     }
+    return entries;
+  }
+  private async assemble(
+    batch: EntityDocument | null,
+    runIds: readonly string[],
+    entries: ReportRun[],
+  ): Promise<ReportSnapshot> {
     const missing = entries.flatMap((entry) =>
       entry.evidenceState === "unavailable"
         ? [...entry.evidenceErrors]

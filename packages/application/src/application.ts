@@ -55,6 +55,7 @@ import { RequirementsService } from "./ai/requirements.js";
 import { SourcesService, UploadsService } from "./ai/sources.js";
 import { UsageService } from "./ai/usage.js";
 import { ApprovalsService } from "./approvals.js";
+import { ArtifactLinksService } from "./artifact-links.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
 import { AuditService, auditSecurity } from "./audit.js";
 import {
@@ -76,13 +77,14 @@ import { entity, type RunActor, type Scope, type ServiceContext } from "./contex
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
-import { IntegrationsService } from "./integrations/index.js";
 import { IdentityService } from "./identity.js";
+import { IntegrationsService } from "./integrations/index.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
+import { RunViewsService } from "./run-views.js";
 import { BatchesService, RunsService } from "./runs.js";
 import { measureRuntimeIdentities } from "./runtime-identity.js";
 import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
@@ -159,6 +161,8 @@ export class Application {
   readonly worker: WorkerService;
   readonly artifacts: ArtifactsService;
   readonly reports: ReportsService;
+  readonly runViews: RunViewsService;
+  readonly artifactLinks: ArtifactLinksService;
   readonly ci: CiService;
   readonly delivery: DeliveryService;
   readonly integrations: IntegrationsService;
@@ -324,6 +328,8 @@ export class Application {
       this.artifacts,
       this.analysis,
     );
+    this.runViews = new RunViewsService(this.context, this.runs, this.reports, this.quarantine);
+    this.artifactLinks = new ArtifactLinksService(this.context, this.runs);
     this.ci = new CiService(
       this.selection,
       this.batches,

@@ -160,6 +160,7 @@ const handlers: Record<string, RouteHandler> = {
         .filter(
           (run) =>
             (!query.testId || run.testId === query.testId) &&
+            (!query.batchId || run.batchId === query.batchId) &&
             (!query.status || run.status === query.status) &&
             (!query.since || String(run.createdAt) >= query.since) &&
             (!query.projectId || app.tests.get(run.testId).projectId === query.projectId),
