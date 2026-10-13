@@ -91,6 +91,28 @@ it("rotation invalidates pinned releases and revocation retains a metadata tombs
   await expect(service.release(next.id)).rejects.toMatchObject({ code: "POLICY_DENIED" });
 });
 
+it("audits rotate, revoke and release by reference id and never by secret name", async () => {
+  const { service, ctx } = await fixture();
+  const name = "SENSITIVE-secret-name";
+  const metadata = await service.set(name, "first", { allowedOrigins: ["https://shop.example"] });
+  await service.release(name);
+  await service.rotate(name, "second");
+  await service.remove(name);
+  await expect(service.rotate(name, "third")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  const rows = ctx.database.all(
+    "SELECT action,resource_id FROM audit_events WHERE action LIKE 'secret.%' ORDER BY created_at,id",
+  ) as { action: string; resource_id: string }[];
+  expect(JSON.stringify(rows)).not.toContain(name);
+  const rotated = rows.filter((row) => row.action.startsWith("secret.rotate."));
+  expect(new Set(rotated.map((row) => row.resource_id))).toEqual(
+    new Set([metadata.id, "secret-reference"]),
+  );
+  for (const prefix of ["secret.revoke.", "secret.release."])
+    expect(
+      new Set(rows.filter((row) => row.action.startsWith(prefix)).map((row) => row.resource_id)),
+    ).toEqual(new Set([metadata.id]));
+});
+
 it("requires authorized origins and rejects origin paths or credential-bearing URLs", async () => {
   const { service } = await fixture();
   await expect(

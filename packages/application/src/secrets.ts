@@ -501,6 +501,14 @@ export class SecretsService {
     this.ctx.authorize("R");
     return this.lookup(idOrName);
   }
+  /** Audit resource id: the resolved reference id, never the caller-supplied secret name. */
+  private auditResource(idOrName: string): string {
+    try {
+      return this.lookup(idOrName).id;
+    } catch {
+      return "secret-reference";
+    }
+  }
   private lookup(idOrName: string): SecretMetadata {
     const byId = this.ctx.entities.get<SecretMetadata>(
       "SecretReference",
@@ -657,7 +665,7 @@ export class SecretsService {
     return reference;
   }
   async rotate(idOrName: string, value: string): Promise<SecretMetadata> {
-    return auditedOperation(this.ctx, "secret.rotate", idOrName, () =>
+    return auditedOperation(this.ctx, "secret.rotate", this.auditResource(idOrName), () =>
       this.rotateValue(idOrName, value),
     );
   }
@@ -690,7 +698,7 @@ export class SecretsService {
     return next;
   }
   async remove(idOrName: string, idempotencyKey?: string): Promise<SecretMetadata> {
-    return auditedOperation(this.ctx, "secret.revoke", idOrName, () =>
+    return auditedOperation(this.ctx, "secret.revoke", this.auditResource(idOrName), () =>
       this.removeValue(idOrName, idempotencyKey),
     );
   }
@@ -719,7 +727,7 @@ export class SecretsService {
           {
             workspaceId: this.ctx.workspaceId,
             actorScope: this.ctx.principalId,
-            operation: `secret.remove:${idOrName}`,
+            operation: `secret.remove:${previous.id}`,
             key: idempotencyKey,
             body: {},
           },
@@ -731,7 +739,9 @@ export class SecretsService {
     return receipt;
   }
   async release(id: string): Promise<SecretRelease> {
-    return auditedOperation(this.ctx, "secret.release", id, () => this.releaseValue(id));
+    return auditedOperation(this.ctx, "secret.release", this.auditResource(id), () =>
+      this.releaseValue(id),
+    );
   }
   private async releaseValue(id: string): Promise<SecretRelease> {
     this.ctx.authorize("X");

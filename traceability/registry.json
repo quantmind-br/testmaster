@@ -16073,7 +16073,7 @@
           }
         }
       ],
-      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret names used by revoke/rotate are recorded as audit resource ids when addressed by name; callers should address secrets by id when names are sensitive."
+      "note": "Artifact retention is enforced and tombstoned deletion is idempotent, hold-aware and restore-safe; metadata (90 d) and audit (365 d) classes are declared policies that nothing purges, by design (history immutability), reported as metadataRetentionPurge/auditRetentionPurge M4 in the effective config. Audit stores actors, actions, resource ids and hashes only; bytes are never retained because a hash exists (references are keyed by storage key and workspace). Secret rotate/revoke/release record the resolved reference id as the audit resource id, or the constant secret-reference when the secret cannot be resolved, never the name the caller used (secrets.test.ts: audits rotate, revoke and release by reference id and never by secret name)."
     },
     {
       "id": "SEC-038",
