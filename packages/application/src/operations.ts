@@ -33,6 +33,12 @@ export interface DlqSource {
 }
 
 export const isolationKey = "restore:isolated";
+
+/** Reads a JSON document kept in `operational_state`; the writer of each key owns its shape. */
+export function stateJson<T>(database: PersistenceDatabase, key: string): T | null {
+  const row = database.get("SELECT value FROM operational_state WHERE key=?", key);
+  return row ? JSON.parse(String(row.value)) : null;
+}
 const admissionKey = (workspaceId: string): string => `ops:admission:${workspaceId}`;
 const upsert =
   "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value";
@@ -89,9 +95,7 @@ const operationColumns =
 export interface OperationsDeps {
   /** The deployment configuration; absent in the local profile. */
   server?: ServerConfig;
-  /** Unscoped connection used only to read and write instance-level state. */
-  root: PersistenceDatabase;
-  reconcile(dryRun: boolean): Promise<unknown>;
+  reconcile(options: { dryRun: boolean }): Promise<unknown>;
   deliveries(): DeliveryService;
 }
 
@@ -121,11 +125,7 @@ export class OperationsService {
 
   admissionState(): AdmissionState | null {
     if (!this.ctx.workspaceId) return null;
-    const row = this.ctx.database.get(
-      "SELECT value FROM operational_state WHERE key=?",
-      admissionKey(this.ctx.workspaceId),
-    );
-    return row ? (JSON.parse(String(row.value)) as AdmissionState) : null;
+    return stateJson<AdmissionState>(this.ctx.database, admissionKey(this.ctx.workspaceId));
   }
 
   /** Refuses new admissions while the workspace is paused or draining; running work is untouched. */
@@ -212,21 +212,11 @@ export class OperationsService {
     const activeRuns = count(
       "SELECT COUNT(*) AS n FROM runs WHERE workspace_id=? AND phase<>'completed'",
     );
-    const state = (key: string): { at?: string } | null => {
-      const row = database.get("SELECT value FROM operational_state WHERE key=?", key);
-      return row ? (JSON.parse(String(row.value)) as { at?: string }) : null;
-    };
-    const purge = database.get(
-      "SELECT value FROM operational_state WHERE key=?",
+    const state = (key: string) => stateJson<{ at?: string }>(database, key);
+    const purged = stateJson<{ at: string; runsPurged: number; auditEventsPurged: number }>(
+      database,
       `purge:last:${workspaceId}`,
     );
-    const purged = purge
-      ? (JSON.parse(String(purge.value)) as {
-          at: string;
-          runsPurged: number;
-          auditEventsPurged: number;
-        })
-      : null;
     return validate<OperationsStatus>("OperationsStatus", {
       admission: {
         state: admission?.state ?? "enabled",
@@ -339,7 +329,7 @@ export class OperationsService {
     approval?: string;
   }): Promise<AdminOperation> {
     this.ctx.authorize("A");
-    const result = await this.deps.reconcile(input.mode === "preview");
+    const result = await this.deps.reconcile({ dryRun: input.mode === "preview" });
     return this.ctx.database.withTx(() => {
       auditSecurity(this.ctx, `ops.reconcile.${input.mode}`, this.ctx.workspaceId, "allowed");
       return this.insert(
