@@ -1,9 +1,11 @@
 import { routeCatalog } from "@testmaster/contracts";
 import { coreRoutes } from "./core.js";
+import { deliveryRoutes } from "./deliveries.js";
 import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
 import type { RouteHandler, RouteModule } from "./types.js";
+import { workerRoutes } from "./workers.js";
 
 export type { RouteContext, RouteHandler, RouteModule } from "./types.js";
 export const routeModules: RouteModule[] = [
@@ -11,6 +13,8 @@ export const routeModules: RouteModule[] = [
   eventRoutes,
   identityRoutes,
   integrationRoutes,
+  deliveryRoutes,
+  workerRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

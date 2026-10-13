@@ -45,7 +45,16 @@ export interface ServerOptions {
   mcpRoots?: readonly string[];
   /** Serve the built portal same-origin. `false` disables it; default: `apps/web/dist` if built. */
   portal?: false | PortalOptions;
+  /** Mutation budgets (token buckets); the defaults suit a single team, tests tighten them. */
+  rateLimits?: { actor?: RateBudget; tenant?: RateBudget };
 }
+/** `burst` tokens, refilled at `perSecond`; each mutating request costs one. */
+export interface RateBudget {
+  burst: number;
+  perSecond: number;
+}
+const defaultActorBudget: RateBudget = { burst: 20, perSecond: 1 };
+const defaultTenantBudget: RateBudget = { burst: 200, perSecond: 20 };
 export interface McpHttpContext {
   request: FastifyRequest;
   reply: FastifyReply;
@@ -118,6 +127,32 @@ export function createServer(options: ServerOptions): FastifyInstance {
     options.now ?? Date.now,
   );
   const buckets = new Map<string, { tokens: number; at: number }>();
+  const tenantBuckets = new Map<string, { tokens: number; at: number }>();
+  const actorBudget = options.rateLimits?.actor ?? defaultActorBudget;
+  const tenantBudget = options.rateLimits?.tenant ?? defaultTenantBudget;
+  /** Spends one token; refuses with the seconds until the next one is available. */
+  const spend = (
+    store: Map<string, { tokens: number; at: number }>,
+    key: string,
+    budget: RateBudget,
+    message: string,
+    scope: "actor" | "tenant",
+  ) => {
+    const at = Date.now();
+    const bucket = store.get(key) ?? { tokens: budget.burst, at };
+    bucket.tokens = Math.min(
+      budget.burst,
+      bucket.tokens + ((at - bucket.at) / 1000) * budget.perSecond,
+    );
+    bucket.at = at;
+    store.set(key, bucket);
+    if (bucket.tokens < 1)
+      throw new ContractError("RATE_LIMITED", message, {
+        scope,
+        retryAfterSeconds: Math.max(1, Math.ceil((1 - bucket.tokens) / budget.perSecond)),
+      });
+    bucket.tokens--;
+  };
   const allowedOrigins = [
     ...(options.origins ?? []),
     ...(server ? [...server.server.origins, server.server.publicOrigin] : []),
@@ -245,14 +280,15 @@ export function createServer(options: ServerOptions): FastifyInstance {
     );
     identities.set(request, identity);
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
-      const now = Date.now();
-      const bucket = buckets.get(identity.principalId) ?? { tokens: 20, at: now };
-      bucket.tokens = Math.min(20, bucket.tokens + (now - bucket.at) / 1000);
-      bucket.at = now;
-      if (bucket.tokens < 1)
-        throw new ContractError("RATE_LIMITED", "Actor admission rate exceeded");
-      bucket.tokens--;
-      buckets.set(identity.principalId, bucket);
+      spend(buckets, identity.principalId, actorBudget, "Actor admission rate exceeded", "actor");
+      // One tenant's burst never consumes another tenant's budget.
+      spend(
+        tenantBuckets,
+        identity.workspaceId,
+        tenantBudget,
+        "Tenant admission rate exceeded",
+        "tenant",
+      );
     }
   });
   app.setErrorHandler((error, request, reply) => {
@@ -282,7 +318,10 @@ export function createServer(options: ServerOptions): FastifyInstance {
         request.id,
       );
     }
-    if (failure.code === "RATE_LIMITED") reply.header("Retry-After", "1");
+    if (failure.code === "RATE_LIMITED") {
+      const wait = Number(failure.details.retryAfterSeconds);
+      reply.header("Retry-After", String(Number.isInteger(wait) && wait > 0 ? wait : 1));
+    }
     reply.code(metadata.httpStatus).send({
       schemaVersion: "1.0.0",
       requestId: request.id,
