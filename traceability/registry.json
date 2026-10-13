@@ -6086,33 +6086,75 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
+      "status": "verified",
       "scenario": [
-        "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies",
-        "packages/application/src/notifications/rules.test.ts::INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field"
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 M4-03 a test account with a one-time-password seed signs in with a fresh code and the Run passes",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-023 M4-03 an expired target token is an inconclusive authentication result, then the next Run signs in once more",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 M4-03 a failed assertion stays failed and stays understandable when the values it compared are withheld",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an expired target session is re-established once and a revoked session refuses use",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-022 SEC-023 rotating the account password blocks the Run as an authentication failure until the profile points at the new secret",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 UX-046 the old and the new password, the one-time code and the token are nowhere in forms, browser storage, URLs, API views or retained evidence",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 SEC-030 a checkpoint that expired cannot be resumed and another tenant can neither see nor confirm it",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-024 a failing assertion stays failed while rejected credentials block without reaching the target"
       ],
-      "oracle": [],
+      "oracle": [
+        "Admin-configured accounts with a one-time-password seed sign in inside isolated Runs; an expired token is an inconclusive authentication result followed by one re-login, a rotated password blocks as an authentication failure until the profile points at the new secret, and a failed assertion stays failed while remaining understandable when compared values are withheld.",
+        "Neither the old nor the new password, the one-time code nor the token appears in forms, browser storage, URLs, API views or uncompressed retained evidence; an expired checkpoint does not resume and another tenant can neither see nor confirm it. Notification sanitization is contributed by S8; native export is M6."
+      ],
       "evidence": [
-        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/output.log",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/manifest.json",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/output.log"
       ],
       "code": [
-        "packages/application/src/notifications/payload.ts"
+        "packages/application/src/auth",
+        "packages/application/src/secrets.ts",
+        "packages/application/src/worker.ts",
+        "apps/server/src/routes/auth.ts",
+        "apps/web/src/features/auth/auth-pages.tsx",
+        "apps/web/src/routes/auth.tsx",
+        "packages/runner/src/browser.ts",
+        "packages/sandbox/src",
+        "fixtures/reference-auth"
       ],
       "coverage": {
         "positive": [
-          "packages/application/src/notifications/resilience.test.ts::J10 INT-025 a canary token in a failing Run's title, message and log is absent from the Slack, webhook and email bodies"
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 M4-03 a test account with a one-time-password seed signs in with a fresh code and the Run passes",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-023 M4-03 an expired target token is an inconclusive authentication result, then the next Run signs in once more",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 M4-03 a failed assertion stays failed and stays understandable when the values it compared are withheld",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an expired target session is re-established once and a revoked session refuses use"
         ],
         "negative": [
-          "packages/application/src/notifications/rules.test.ts::INT-025 the default payload validates against NotificationPayload and has no title, log, screenshot or token field"
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-022 SEC-023 rotating the account password blocks the Run as an authentication failure until the profile points at the new secret",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 UX-046 the old and the new password, the one-time code and the token are nowhere in forms, browser storage, URLs, API views or retained evidence",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 SEC-030 a checkpoint that expired cannot be resumed and another tenant can neither see nor confirm it",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-024 a failing assertion stays failed while rejected credentials block without reaching the target"
         ],
         "criticalAssertions": [
           {
-            "path": "packages/application/src/notifications/resilience.test.ts",
-            "assertion": "      expect(body).not.toContain(canary);"
+            "path": "validation/journeys/j10-auth-secrets.portal.test.ts",
+            "assertion": "    expect(await stateOf()).toBe(\"expired\");"
+          },
+          {
+            "path": "validation/journeys/j10-auth-secrets.portal.test.ts",
+            "assertion": "    expect(late.status).toBeGreaterThanOrEqual(400);"
+          },
+          {
+            "path": "validation/journeys/j10-auth-secrets.portal.test.ts",
+            "assertion": "        for (const value of secrets) expect(response.text, route).not.toContain(value);"
+          },
+          {
+            "path": "validation/journeys/auth-dynamic.docker.test.ts",
+            "assertion": "        expect(pending.some((checkpoint) => checkpoint.kind === \"captcha\")).toBe(true);"
           }
         ]
       },
-      "note": "M4 S8 proves a known secret pattern in a failing Run never reaches Slack, email or webhook bodies."
+      "note": "Automated against a local reference identity provider and the server-profile worker. The notification-sanitization clause of J10 is evidenced by S8; native export is M6 (specs/10-validation.md J10 trace). No real SaaS identity provider, hardware key or push approval is exercised."
     },
     {
       "id": "J11",
@@ -8897,11 +8939,128 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "Execution",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/auth/runs.test.ts::M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-022 test-login authenticates through the vault and saves no draft, revision or proposal",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 stores a token login as a bearer credential and reauthenticates after the session expires",
+        "packages/application/src/auth/identity.pg.test.ts::M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login",
+        "packages/application/src/auth/oauth.test.ts::M4-03 SEC-023 refreshes once for simultaneous executions and does not corrupt a rotating refresh token",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+        "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 M4-03 a test account with a one-time-password seed signs in with a fresh code and the Run passes",
+        "packages/application/src/auth/otp.test.ts::M4-03 SEC-024 an expired code is rejected once, counted, and the profile locks instead of brute forcing",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 a secret that lost its authorization for the login origin is never released to the target",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 M4-03 refuses endpoints on another origin and never contacts that origin with a secret",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks before any dependent action",
+        "packages/application/src/auth/runs.test.ts::M4-03 a revoked session refuses new Runs before any secret is released",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a target that rejects the managed credential makes the next Run sign in again instead of replaying it",
+        "validation/journeys/auth-pages.portal.test.ts::M4-03 a rejected sign-in is reported as an authentication failure and saves nothing",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 reports a rejected login and does not hammer the target while it cools down",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure",
+        "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
+        "validation/journeys/auth-pages.portal.test.ts::SEC-023 M4-03 revoking a session asks for confirmation, erases the credentials and is keyboard operable",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-023 M4-03 an expired target token is an inconclusive authentication result, then the next Run signs in once more"
+      ],
+      "oracle": [
+        "Target dynamic authentication works end to end: the test sign-in saves no draft, revision or proposal, an expired one-time password blocks without brute force, concurrent refreshes share one request and never use a secret on another origin, and a CAPTCHA remains a recorded checkpoint instead of being bypassed.",
+        "The same behaviour is reachable through the catalog /v1 routes, the CLI and the portal pages, and Runs in the isolated worker sign in before the Attempt and never leak the managed credential."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/output.log",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/output.log",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/output.log",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/manifest.json",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/output.log",
+        "validation/results/m4-acceptance/s3/043-s3-image-runner-final/manifest.json",
+        "validation/results/m4-acceptance/s3/043-s3-image-runner-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/auth",
+        "packages/application/src/secrets.ts",
+        "packages/application/src/worker.ts",
+        "packages/contracts/src/m4/auth.ts",
+        "apps/server/src/routes/auth.ts",
+        "apps/cli/src/auth-profiles.ts",
+        "apps/web/src/features/auth/auth-pages.tsx",
+        "apps/web/src/routes/auth.tsx",
+        "packages/runner/src/browser.ts",
+        "packages/sandbox/src",
+        "fixtures/reference-auth"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/auth/runs.test.ts::M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-022 test-login authenticates through the vault and saves no draft, revision or proposal",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 stores a token login as a bearer credential and reauthenticates after the session expires",
+          "packages/application/src/auth/identity.pg.test.ts::M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login",
+          "packages/application/src/auth/oauth.test.ts::M4-03 SEC-023 refreshes once for simultaneous executions and does not corrupt a rotating refresh token",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+          "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 M4-03 a test account with a one-time-password seed signs in with a fresh code and the Run passes"
+        ],
+        "negative": [
+          "packages/application/src/auth/otp.test.ts::M4-03 SEC-024 an expired code is rejected once, counted, and the profile locks instead of brute forcing",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 a secret that lost its authorization for the login origin is never released to the target",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 M4-03 refuses endpoints on another origin and never contacts that origin with a secret",
+          "packages/application/src/auth/runs.test.ts::M4-03 SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks before any dependent action",
+          "packages/application/src/auth/runs.test.ts::M4-03 a revoked session refuses new Runs before any secret is released",
+          "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a target that rejects the managed credential makes the next Run sign in again instead of replaying it",
+          "validation/journeys/auth-pages.portal.test.ts::M4-03 a rejected sign-in is reported as an authentication failure and saves nothing",
+          "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 reports a rejected login and does not hammer the target while it cools down"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(tables.map((table) => rowCount(current, table))).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(receipt.detail).toContain(\"origin_denied\");"
+          },
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(current.site.counters.logins).toBe(loginsBefore);"
+          },
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(current.site.counters.loginFailures).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  expect(current.app.authProfiles.get(profile.id).session).toMatchObject({ state: \"locked\" });"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  await expect(ensure()).rejects.toMatchObject({ details: { authFailure: \"otp_locked\" } });"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  expect(current.site.counters.codeExchanges).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  expect(current.site.counters.refreshes).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  expect(current.site.counters.refreshReuse).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/auth/runs.test.ts",
+            "assertion": "  expect(lab.executions).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/auth/identity.pg.test.ts",
+            "assertion": "  expect(lab.site.counters.logins).toBe(1);"
+          }
+        ]
+      }
     },
     {
       "id": "M4-04",
@@ -12622,11 +12781,17 @@
         "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
         "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
         "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
-        "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ"
+        "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ",
+        "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
+        "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+        "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
+        "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
+        "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value"
       ],
       "oracle": [
         "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only.",
-        "The portal grant editor issues allow and deny grants by resource type, actions, projects, environments and expiry, lists them, and the server refuses grants beyond the issuer; the member editor changes roles with If-Match and refuses self-promotion."
+        "The portal grant editor issues allow and deny grants by resource type, actions, projects, environments and expiry, lists them, and the server refuses grants beyond the issuer; the member editor changes roles with If-Match and refuses self-promotion.",
+        "M4 (S3) adds the auth-dynamic operator surfaces: profile, test sign-in, checkpoint and session-revocation routes, CLI commands and portal pages, each refusing callers without the role and returning no credential value."
       ],
       "evidence": [
         "docs/operations/local-operations.md",
@@ -12636,7 +12801,13 @@
         "validation/journeys/runtime-control.docker.test.ts",
         "validation/journeys/recovery-controls.docker.test.ts",
         "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
-        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log"
+        "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/output.log",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/output.log",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log"
       ],
       "code": [
         "docs/operations/local-operations.md",
@@ -12648,9 +12819,13 @@
         "apps/web/src/team/members.tsx",
         "apps/web/src/routes/team.tsx",
         "apps/server/src/routes/workers.ts",
-        "apps/server/src/routes/deliveries.ts"
+        "apps/server/src/routes/deliveries.ts",
+        "apps/server/src/routes/auth.ts",
+        "apps/cli/src/auth-profiles.ts",
+        "apps/web/src/features/auth/auth-pages.tsx",
+        "apps/web/src/routes/auth.tsx"
       ],
-      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal.",
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal.",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -12660,14 +12835,19 @@
           "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
           "validation/journeys/team.portal.test.ts::UX-005 REQ-039 an owner adds a member, shares the one-time recovery token, changes the role and removes the member, each as one request",
           "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
-          "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter"
+          "apps/server/src/workers-deliveries.test.ts::INT-026 OPS-011 the deliveries routes list check and notification deliveries together, filter them and requeue a dead letter",
+          "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
+          "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+          "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential"
         ],
         "negative": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
           "packages/application/src/governance-runtime.test.ts::refuses a viewer image revocation and secret removal without changing revocation state",
           "apps/cli/src/runbook.test.ts::tabletop record names the unexercised incidents and the resumption decider",
           "validation/journeys/team.portal.test.ts::SEC-027 UX-005 a token is shown once, its grants are listed, a deny grant narrows it and the server refuses grants beyond the issuer",
-          "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ"
+          "packages/application/src/notifications/resilience.test.ts::OPS-011 a read-only identity reads deliveries but can neither requeue a dead letter nor enumerate the DLQ",
+          "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
+          "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value"
         ],
         "criticalAssertions": [
           {
@@ -12705,6 +12885,18 @@
           {
             "path": "packages/application/src/notifications/resilience.test.ts",
             "assertion": "    expect(h.service.get(dead.id).state).toBe(\"dead_letter\");"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "  expect(anonymous.statusCode).toBe(401);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "    expect(response.body).not.toContain(targetPassword);"
+          },
+          {
+            "path": "apps/cli/src/auth-profiles.test.ts",
+            "assertion": "  expect((await stat(out)).mode & 0o777).toBe(0o600);"
           }
         ]
       },
@@ -14089,11 +14281,143 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 creates every auth kind with its own roles and lists no credential value",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 derives a Basic header from vault secrets and sends static credentials only as configured",
+        "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault",
+        "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request",
+        "packages/application/src/auth/otp.test.ts::REQ-018 SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed",
+        "packages/application/src/auth/state.test.ts::REQ-018 SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL",
+        "packages/application/src/auth/runs.test.ts::M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret",
+        "packages/application/src/auth/runs.test.ts::REQ-018 SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes",
+        "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
+        "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
+        "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 refuses malformed profiles, foreign roles and secrets that are not authorized for the receiving origin",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 reports a rejected login and does not hammer the target while it cools down",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 attaches profiles to an environment only inside the profile's origin bindings and project",
+        "packages/application/src/auth/state.test.ts::SEC-022 refuses storage states that are malformed, oversized or bound to another origin",
+        "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure",
+        "validation/journeys/auth-pages.portal.test.ts::M4-03 a rejected sign-in is reported as an authentication failure and saves nothing",
+        "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 validates OAuth redirect URIs, scopes and the OIDC openid scope",
+        "apps/server/src/auth-routes.test.ts::SEC-023 profile updates need the current ETag and refuse a stale one",
+        "apps/server/src/auth-routes.test.ts::SEC-022 exporting a storage state over HTTP needs the caller's password and an explicit grant",
+        "apps/cli/src/auth-profiles.test.ts::SEC-022 the CLI exports a storage state only to a new private file and keeps it out of the output",
+        "validation/journeys/auth-pages.portal.test.ts::UX-051 UX-052 the authentication pages are axe clean and reflow at 320 px and 200 % zoom"
+      ],
+      "oracle": [
+        "Profiles of every kind (HTTP form, browser form, basic, bearer, api-key, cookie, OAuth/OIDC with PKCE and refresh rotation, Cognito, manual) are created through service, HTTP, CLI and portal; a Run signs in before any credential is released and the Attempt receives only managed vault references, while views, route bodies, CLI output and retained evidence contain no credential value.",
+        "Malformed profiles, secrets without the destination origin, environments outside the bindings and rejected logins are refused or cooled down without contacting the target repeatedly; TOTP seeds are used next to the request and never exposed, and a checkpoint is the only path for steps a person must do."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/output.log",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/output.log",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/output.log",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/output.log",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log"
+      ],
+      "code": [
+        "packages/application/src/auth",
+        "packages/application/src/secrets.ts",
+        "packages/application/src/worker.ts",
+        "packages/contracts/src/m4/auth.ts",
+        "apps/server/src/routes/auth.ts",
+        "apps/cli/src/auth-profiles.ts",
+        "apps/web/src/features/auth/auth-pages.tsx",
+        "apps/web/src/routes/auth.tsx",
+        "packages/runner/src/browser.ts",
+        "packages/sandbox/src",
+        "fixtures/reference-auth"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 creates every auth kind with its own roles and lists no credential value",
+          "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 derives a Basic header from vault secrets and sends static credentials only as configured",
+          "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault",
+          "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request",
+          "packages/application/src/auth/otp.test.ts::REQ-018 SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed",
+          "packages/application/src/auth/state.test.ts::REQ-018 SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL",
+          "packages/application/src/auth/runs.test.ts::M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret",
+          "packages/application/src/auth/runs.test.ts::REQ-018 SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes",
+          "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
+          "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
+          "validation/journeys/auth-pages.portal.test.ts::UX-046 M4-03 an admin creates a profile, tests the sign-in and never sees a credential value",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an HTTP login runs before the Attempt and the managed token never reaches evidence",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint"
+        ],
+        "negative": [
+          "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 refuses malformed profiles, foreign roles and secrets that are not authorized for the receiving origin",
+          "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 reports a rejected login and does not hammer the target while it cools down",
+          "packages/application/src/auth/profiles.test.ts::M4-03 REQ-018 attaches profiles to an environment only inside the profile's origin bindings and project",
+          "packages/application/src/auth/state.test.ts::SEC-022 refuses storage states that are malformed, oversized or bound to another origin",
+          "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
+          "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure",
+          "validation/journeys/auth-pages.portal.test.ts::M4-03 a rejected sign-in is reported as an authentication failure and saves nothing"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(tables.map((table) => rowCount(current, table))).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  await expect(complete.replay()).rejects.toMatchObject(refused(\"state_mismatch\"));"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  expect(view).not.toContain(defaults.totpSeed);"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  expect(view).not.toContain(sentCode);"
+          },
+          {
+            "path": "packages/application/src/auth/state.test.ts",
+            "assertion": "  ).rejects.toMatchObject({ code: \"INVALID_ARGUMENT\" });"
+          },
+          {
+            "path": "packages/application/src/auth/state.test.ts",
+            "assertion": "  expect(audit).not.toContain(\"exported-cookie\");"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "  expect(anonymous.statusCode).toBe(401);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "    expect(response.body).not.toContain(targetPassword);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "  expect(stale.statusCode).toBe(412);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "  expect(refused.statusCode).toBe(403);"
+          },
+          {
+            "path": "apps/cli/src/auth-profiles.test.ts",
+            "assertion": "  expect((await stat(out)).mode & 0o777).toBe(0o600);"
+          },
+          {
+            "path": "apps/cli/src/auth-profiles.test.ts",
+            "assertion": "  expect(exported.stdout).not.toContain(\"cli-export-cookie\");"
+          },
+          {
+            "path": "packages/application/src/auth/runs.test.ts",
+            "assertion": "  expect(lab.executions).toHaveLength(0);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-019",
@@ -17387,33 +17711,60 @@
         "packages/runner/src/http.test.ts::refuses storage-state input as unsupported before any HTTP request",
         "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects",
         "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name",
-        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B"
+        "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B",
+        "packages/application/src/auth/state.test.ts::REQ-018 SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL",
+        "packages/application/src/auth/state.test.ts::SEC-022 refuses storage states that are malformed, oversized or bound to another origin",
+        "packages/application/src/auth/state.test.ts::SEC-022 an expired storage state is never reused and asks for re-authentication instead of looping",
+        "packages/application/src/auth/state.test.ts::SEC-022 exporting a storage state needs the step-up password, is audited, and caps the state's own lifetime",
+        "packages/application/src/auth/state.test.ts::SEC-022 revoking a session deletes the stored storage state",
+        "packages/application/src/auth/identity.pg.test.ts::SEC-022 exporting a storage state needs the export permission, the caller's password and a bounded lifetime",
+        "apps/server/src/auth-routes.test.ts::SEC-022 exporting a storage state over HTTP needs the caller's password and an explicit grant",
+        "apps/cli/src/auth-profiles.test.ts::SEC-022 the CLI exports a storage state only to a new private file and keeps it out of the output",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint"
       ],
       "oracle": [
         "Credential positive/negative independent HTTP controls; fresh browser cookies at each new Attempt and different target; absent secret reference blocks before typing; Chromium launches with the basic password store and mock keychain; storage-state input is refused as unsupported before any browser or HTTP effect.",
-        "A secret or auth profile of one organization can never be referenced, listed, deleted or shadowed from another, by identifier or by name; the same name resolves to each organization's own secret."
+        "A secret or auth profile of one organization can never be referenced, listed, deleted or shadowed from another, by identifier or by name; the same name resolves to each organization's own secret.",
+        "M4 adds browser storage-state import with an explicit TTL (encrypted vault secret, size and origin checks), expired-state reauthentication instead of reuse, and export only after the export permission, the caller's password and a 60-900 second lifetime, written by the CLI to a new 0600 file."
       ],
       "evidence": [
         "validation/journeys/browser-matrix.docker.test.ts",
         "packages/runner/src/browser.test.ts",
         "packages/runner/src/http.test.ts",
         "docs/security/threat-model.md",
-        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log"
+        "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/output.log",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/output.log",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/output.log",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/output.log",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/output.log"
       ],
       "code": [
         "packages/runner/src/browser.ts",
         "packages/runner/src/http.ts",
         "packages/runner/src/runtime.ts",
         "packages/application/src/secrets.ts",
-        "packages/persistence/migrations/postgres/0011_tenant_rls.sql"
+        "packages/persistence/migrations/postgres/0011_tenant_rls.sql",
+        "packages/application/src/auth/state.ts",
+        "packages/application/src/auth/profiles.ts",
+        "apps/cli/src/auth-profiles.ts"
       ],
-      "note": "Static secret bindings, form login, cookie non-reuse, cross-origin credential stripping, absent-secret blocking and password-store/keychain isolation verified; the flags are asserted at the launch boundary, not against a running host password manager. Storage-state input is refused as unsupported_capability; import, TTL and reauthentication are deferred to M4. M4 proved that credentials are never shared across organizations (tenancy.pg.test.ts, tenant-isolation.pg.test.ts).",
+      "note": "Static secret bindings, form login, cookie non-reuse, cross-origin credential stripping, absent-secret blocking and password-store/keychain isolation verified; the flags are asserted at the launch boundary, not against a running host password manager. Storage-state input is refused as unsupported_capability; import, TTL and reauthentication are deferred to M4. M4 proved that credentials are never shared across organizations (tenancy.pg.test.ts, tenant-isolation.pg.test.ts). M4 (S3) added browser storage-state import, TTL, expired-state reauthentication, step-up export and revocation erasing the derived state.",
       "coverage": {
         "positive": [
           "validation/journeys/browser-matrix.docker.test.ts::executes all six static authentication bindings against independent HTTP oracles",
           "validation/journeys/browser-matrix.docker.test.ts::captures real frame, popup, upload/download, hook/wait and opt-in evidence channels",
           "packages/runner/src/browser.test.ts::launches Chromium with explicit password-store and keychain isolation and no default-arg override",
-          "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name"
+          "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name",
+          "packages/application/src/auth/state.test.ts::REQ-018 SEC-022 imports a storage state encrypted at rest as a managed secret with an explicit TTL",
+          "packages/application/src/auth/state.test.ts::SEC-022 exporting a storage state needs the step-up password, is audited, and caps the state's own lifetime",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint",
+          "apps/cli/src/auth-profiles.test.ts::SEC-022 the CLI exports a storage state only to a new private file and keeps it out of the output"
         ],
         "negative": [
           "validation/journeys/browser-matrix.docker.test.ts::never reuses cookie/profile state between attempts or staging and production targets",
@@ -17423,7 +17774,12 @@
           "packages/runner/src/http.test.ts::refuses storage-state input as unsupported before any HTTP request",
           "packages/runner/src/http.test.ts::strips authorization/cookies/API keys on allowed cross-origin redirects",
           "packages/application/src/tenancy.pg.test.ts::SEC-022 a credential of one organization is never referenced from another, by id or by name",
-          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B"
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B",
+          "packages/application/src/auth/state.test.ts::SEC-022 refuses storage states that are malformed, oversized or bound to another origin",
+          "packages/application/src/auth/state.test.ts::SEC-022 an expired storage state is never reused and asks for re-authentication instead of looping",
+          "packages/application/src/auth/state.test.ts::SEC-022 revoking a session deletes the stored storage state",
+          "packages/application/src/auth/identity.pg.test.ts::SEC-022 exporting a storage state needs the export permission, the caller's password and a bounded lifetime",
+          "apps/server/src/auth-routes.test.ts::SEC-022 exporting a storage state over HTTP needs the caller's password and an explicit grant"
         ],
         "criticalAssertions": [
           {
@@ -17453,19 +17809,29 @@
           {
             "path": "validation/journeys/tenant-isolation.pg.test.ts",
             "assertion": "    expect(deleted.status).toBe(404);"
+          },
+          {
+            "path": "packages/application/src/auth/state.test.ts",
+            "assertion": "  await expect(ensure()).rejects.toMatchObject({ details: { authFailure: \"state_expired\" } });"
+          },
+          {
+            "path": "packages/application/src/auth/state.test.ts",
+            "assertion": "  ).rejects.toMatchObject({ code: \"INVALID_ARGUMENT\" });"
+          },
+          {
+            "path": "packages/application/src/auth/state.test.ts",
+            "assertion": "  expect(audit).not.toContain(\"exported-cookie\");"
+          },
+          {
+            "path": "packages/application/src/auth/state.test.ts",
+            "assertion": "  expect(revoked.session).toMatchObject({ state: \"revoked\", credentials: [] });"
+          },
+          {
+            "path": "apps/cli/src/auth-profiles.test.ts",
+            "assertion": "  expect((await stat(out)).mode & 0o777).toBe(0o600);"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M4",
-          "scope": "Browser storage-state import, TTL and expired-state reauthentication.",
-          "specQuote": {
-            "path": "specs/07-security.md",
-            "text": "checkpoint autorizado em M4"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "SEC-023",
@@ -17473,11 +17839,154 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M4",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/auth/jwt.test.ts::SEC-023 accepts a correctly signed RS256 and ES256 identity token and returns its claims",
+        "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault",
+        "packages/application/src/auth/oauth.test.ts::M4-03 SEC-023 refreshes once for simultaneous executions and does not corrupt a rotating refresh token",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 revoking an OAuth session revokes the refresh token at the provider and deletes derived credentials",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 two simultaneous logins of one profile share a single login against the target",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 stores a token login as a bearer credential and reauthenticates after the session expires",
+        "packages/application/src/auth/identity.pg.test.ts::M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an expired target session is re-established once and a revoked session refuses use",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a target that rejects the managed credential makes the next Run sign in again instead of replaying it",
+        "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request",
+        "validation/journeys/auth-pages.portal.test.ts::SEC-023 M4-03 an authorization started from the page hands out a PKCE address and completes only with the person's redirect",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-023 M4-03 an expired target token is an inconclusive authentication result, then the next Run signs in once more",
+        "packages/application/src/auth/jwt.test.ts::SEC-023 rejects wrong issuer, audience, nonce and lifetime with a machine-readable check",
+        "packages/application/src/auth/jwt.test.ts::SEC-023 refuses alg none, HMAC confusion, tampered payloads and unknown keys",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 refuses a callback whose state does not match and never exchanges the code",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 refuses an external issuer in discovery before any credential is sent",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 M4-03 refuses endpoints on another origin and never contacts that origin with a secret",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 an expired refresh token ends in a checkpoint request and is never retried in a loop",
+        "packages/application/src/auth/oauth.test.ts::SEC-023 form profiles on an unrelated site never reuse an OAuth credential",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 a secret that lost its authorization for the login origin is never released to the target",
+        "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 revoking a session deletes derived credentials and blocks runs until an explicit login",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure",
+        "validation/journeys/auth-pages.portal.test.ts::SEC-023 M4-03 revoking a session asks for confirmation, erases the credentials and is keyboard operable",
+        "packages/application/src/auth/runs.test.ts::M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and hands the Attempt the managed secret",
+        "apps/server/src/auth-routes.test.ts::REQ-018 SEC-023 M4-03 auth profile routes require authentication and the right role",
+        "apps/server/src/auth-routes.test.ts::SEC-023 SEC-022 no route response contains a credential value",
+        "apps/server/src/auth-routes.test.ts::SEC-023 profile updates need the current ETag and refuse a stale one",
+        "apps/cli/src/auth-profiles.test.ts::REQ-018 SEC-023 M4-03 the CLI creates a profile, signs in and never prints a credential",
+        "packages/application/src/auth/runs.test.ts::M4-03 a revoked session refuses new Runs before any secret is released"
+      ],
+      "oracle": [
+        "Authorization-code flows verify issuer, audience, nonce, state, redirect URI and PKCE; tokens live only in the vault; refresh is single-flight inside a process and across server processes sharing one database, rotating refresh tokens are never reused, and revocation asks the provider and erases every derived credential.",
+        "A mismatching state, nonce or audience, an external issuer, an endpoint or secret outside the allowed origins, an expired refresh token and a credential the target rejected are refused, blocked or re-established once, with no credential sent to another origin and no retry loop."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/output.log",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/output.log",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/output.log",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/output.log",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/output.log",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/manifest.json",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/output.log"
+      ],
+      "code": [
+        "packages/application/src/auth",
+        "packages/application/src/secrets.ts",
+        "packages/application/src/worker.ts",
+        "packages/contracts/src/m4/auth.ts",
+        "apps/server/src/routes/auth.ts",
+        "apps/cli/src/auth-profiles.ts",
+        "apps/web/src/features/auth/auth-pages.tsx",
+        "apps/web/src/routes/auth.tsx",
+        "packages/runner/src/browser.ts",
+        "packages/sandbox/src",
+        "fixtures/reference-auth"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/auth/jwt.test.ts::SEC-023 accepts a correctly signed RS256 and ES256 identity token and returns its claims",
+          "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 M4-03 completes an OIDC authorization-code flow with PKCE, state and nonce and keeps tokens only in the vault",
+          "packages/application/src/auth/oauth.test.ts::M4-03 SEC-023 refreshes once for simultaneous executions and does not corrupt a rotating refresh token",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 revoking an OAuth session revokes the refresh token at the provider and deletes derived credentials",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 two simultaneous logins of one profile share a single login against the target",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 stores a token login as a bearer credential and reauthenticates after the session expires",
+          "packages/application/src/auth/identity.pg.test.ts::M4-03 SEC-023 two server processes sharing one database sign in once and never double-spend a login",
+          "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-023 an expired target session is re-established once and a revoked session refuses use",
+          "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a target that rejects the managed credential makes the next Run sign in again instead of replaying it",
+          "packages/application/src/auth/oauth.test.ts::REQ-018 SEC-023 a Cognito profile signs in with a TOTP code and reports an unavailable adapter as a checkpoint request",
+          "validation/journeys/auth-pages.portal.test.ts::SEC-023 M4-03 an authorization started from the page hands out a PKCE address and completes only with the person's redirect",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-023 M4-03 an expired target token is an inconclusive authentication result, then the next Run signs in once more"
+        ],
+        "negative": [
+          "packages/application/src/auth/jwt.test.ts::SEC-023 rejects wrong issuer, audience, nonce and lifetime with a machine-readable check",
+          "packages/application/src/auth/jwt.test.ts::SEC-023 refuses alg none, HMAC confusion, tampered payloads and unknown keys",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 refuses a callback whose state does not match and never exchanges the code",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 refuses an external issuer in discovery before any credential is sent",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 M4-03 refuses endpoints on another origin and never contacts that origin with a secret",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 an expired refresh token ends in a checkpoint request and is never retried in a loop",
+          "packages/application/src/auth/oauth.test.ts::SEC-023 form profiles on an unrelated site never reuse an OAuth credential",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 a secret that lost its authorization for the login origin is never released to the target",
+          "packages/application/src/auth/profiles.test.ts::M4-03 SEC-023 revoking a session deletes derived credentials and blocks runs until an explicit login",
+          "packages/application/src/auth/runs.test.ts::M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure",
+          "validation/journeys/auth-pages.portal.test.ts::SEC-023 M4-03 revoking a session asks for confirmation, erases the credentials and is keyboard operable"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/auth/jwt.test.ts",
+            "assertion": "  expect(rejection(rs256(claims({ aud: \"another-client\" })))).toBe(\"audience\");"
+          },
+          {
+            "path": "packages/application/src/auth/jwt.test.ts",
+            "assertion": "  expect(rejection(rs256(claims({ iss: \"https://evil.example\" })))).toBe(\"issuer\");"
+          },
+          {
+            "path": "packages/application/src/auth/jwt.test.ts",
+            "assertion": "  expect(rejection(rs256(claims({ nonce: \"replayed\" })))).toBe(\"nonce\");"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  await expect(complete.replay()).rejects.toMatchObject(refused(\"state_mismatch\"));"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  await expect(complete()).rejects.toMatchObject(refused(\"state_mismatch\"));"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  expect(current.site.counters.codeExchanges).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  expect(current.site.counters.refreshes).toBe(1);"
+          },
+          {
+            "path": "packages/application/src/auth/oauth.test.ts",
+            "assertion": "  expect(current.site.counters.refreshReuse).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(receipt.detail).toContain(\"origin_denied\");"
+          },
+          {
+            "path": "packages/application/src/auth/profiles.test.ts",
+            "assertion": "  expect(current.site.counters.logins).toBe(loginsBefore);"
+          },
+          {
+            "path": "packages/application/src/auth/identity.pg.test.ts",
+            "assertion": "  expect(lab.site.counters.logins).toBe(1);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "  expect(anonymous.statusCode).toBe(401);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "    expect(response.body).not.toContain(targetPassword);"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-024",
@@ -17485,11 +17994,139 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M4",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/auth/totp.test.ts::SEC-024 generates every RFC 6238 appendix B vector for SHA-1, SHA-256 and SHA-512",
+        "packages/application/src/auth/otp.test.ts::REQ-018 SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed",
+        "packages/application/src/auth/otp.test.ts::SEC-024 a human-supplied one-time code is used once and then discarded",
+        "packages/application/src/auth/runs.test.ts::REQ-018 SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes",
+        "packages/application/src/auth/identity.pg.test.ts::SEC-024 an admin of the workspace can cancel a checkpoint somebody else's Run is waiting on",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 M4-03 a test account with a one-time-password seed signs in with a fresh code and the Run passes",
+        "packages/application/src/auth/totp.test.ts::SEC-024 diagnoses a clock that is more than one step away from the target instead of guessing",
+        "packages/application/src/auth/otp.test.ts::SEC-024 diagnoses a skewed clock instead of trying neighbouring codes",
+        "packages/application/src/auth/otp.test.ts::M4-03 SEC-024 an expired code is rejected once, counted, and the profile locks instead of brute forcing",
+        "packages/application/src/auth/otp.test.ts::SEC-024 without a seed or a human supplied code no login is attempted",
+        "packages/application/src/auth/runs.test.ts::M4-03 SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks before any dependent action",
+        "packages/application/src/auth/runs.test.ts::SEC-024 an expired checkpoint ends the Run as blocked and cannot be resumed later",
+        "packages/application/src/auth/runs.test.ts::SEC-024 a pending checkpoint past its deadline reads as expired and cannot be continued",
+        "packages/application/src/auth/identity.pg.test.ts::SEC-024 only the requester or an admin of the same workspace can resolve a checkpoint",
+        "packages/application/src/auth/identity.pg.test.ts::SEC-024 SEC-030 a checkpoint of another tenant is invisible and cannot be resolved",
+        "apps/server/src/auth-routes.test.ts::SEC-024 an unknown checkpoint is not found and cannot be continued",
+        "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
+        "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 SEC-030 a checkpoint that expired cannot be resumed and another tenant can neither see nor confirm it",
+        "packages/application/src/auth/totp.test.ts::SEC-024 reads base32 and otpauth seeds and never echoes a rejected seed",
+        "packages/application/src/auth/runs.test.ts::SEC-024 cancelling a checkpoint ends the waiting Run as blocked",
+        "apps/cli/src/auth-profiles.test.ts::SEC-024 the CLI lists no checkpoints for a fresh project and validates dry runs without state",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, reused, and CAPTCHA stays a recorded checkpoint",
+        "validation/journeys/auth-dynamic.docker.test.ts::J10 M4-03 SEC-024 a failing assertion stays failed while rejected credentials block without reaching the target"
+      ],
+      "oracle": [
+        "TOTP codes come from an authorized vault seed, match the RFC 6238 vectors, are generated next to the request, never appear in views, audit or evidence, and a code the target rejects is counted once and locks the profile instead of being retried; a clock more than one step off is diagnosed instead of guessed.",
+        "CAPTCHA and every human-only step create a pending checkpoint inside the Run deadline and are never solved or bypassed; CI runs block before any dependent action; an expired checkpoint cannot resume; only the requester or an admin of the same workspace can continue or cancel and another tenant sees NOT_FOUND."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/058-s3-unit-auth/output.log",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/061-s3-pg-auth/output.log",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/059-s3-route-auth/output.log",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/060-s3-cli-auth/output.log",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/064-s3-docker-auth/output.log",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/manifest.json",
+        "validation/results/m4-acceptance/s3/062-s3-portal-auth/output.log",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/manifest.json",
+        "validation/results/m4-acceptance/s3/073-s3-j10-final4/output.log"
+      ],
+      "code": [
+        "packages/application/src/auth",
+        "packages/application/src/secrets.ts",
+        "packages/application/src/worker.ts",
+        "packages/contracts/src/m4/auth.ts",
+        "apps/server/src/routes/auth.ts",
+        "apps/cli/src/auth-profiles.ts",
+        "apps/web/src/features/auth/auth-pages.tsx",
+        "apps/web/src/routes/auth.tsx",
+        "packages/runner/src/browser.ts",
+        "packages/sandbox/src",
+        "fixtures/reference-auth"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/auth/totp.test.ts::SEC-024 generates every RFC 6238 appendix B vector for SHA-1, SHA-256 and SHA-512",
+          "packages/application/src/auth/otp.test.ts::REQ-018 SEC-024 generates the one-time password from the vault seed next to its use and never exposes the seed",
+          "packages/application/src/auth/otp.test.ts::SEC-024 a human-supplied one-time code is used once and then discarded",
+          "packages/application/src/auth/runs.test.ts::REQ-018 SEC-024 an interactive Run waits for the requester to continue the checkpoint and then executes",
+          "packages/application/src/auth/identity.pg.test.ts::SEC-024 an admin of the workspace can cancel a checkpoint somebody else's Run is waiting on",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 M4-03 a test account with a one-time-password seed signs in with a fresh code and the Run passes"
+        ],
+        "negative": [
+          "packages/application/src/auth/totp.test.ts::SEC-024 diagnoses a clock that is more than one step away from the target instead of guessing",
+          "packages/application/src/auth/otp.test.ts::SEC-024 diagnoses a skewed clock instead of trying neighbouring codes",
+          "packages/application/src/auth/otp.test.ts::M4-03 SEC-024 an expired code is rejected once, counted, and the profile locks instead of brute forcing",
+          "packages/application/src/auth/otp.test.ts::SEC-024 without a seed or a human supplied code no login is attempted",
+          "packages/application/src/auth/runs.test.ts::M4-03 SEC-024 a CAPTCHA in a non-interactive Run records a checkpoint and blocks before any dependent action",
+          "packages/application/src/auth/runs.test.ts::SEC-024 an expired checkpoint ends the Run as blocked and cannot be resumed later",
+          "packages/application/src/auth/runs.test.ts::SEC-024 a pending checkpoint past its deadline reads as expired and cannot be continued",
+          "packages/application/src/auth/identity.pg.test.ts::SEC-024 only the requester or an admin of the same workspace can resolve a checkpoint",
+          "packages/application/src/auth/identity.pg.test.ts::SEC-024 SEC-030 a checkpoint of another tenant is invisible and cannot be resolved",
+          "apps/server/src/auth-routes.test.ts::SEC-024 an unknown checkpoint is not found and cannot be continued",
+          "validation/journeys/auth-pages.portal.test.ts::SEC-024 M4-03 a Run blocked on a CAPTCHA leaves a pending checkpoint that only a confirmed cancel stops",
+          "validation/journeys/j10-auth-secrets.portal.test.ts::J10 SEC-024 SEC-030 a checkpoint that expired cannot be resumed and another tenant can neither see nor confirm it"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/auth/totp.test.ts",
+            "assertion": "  expect(totpCode(seeds.SHA1, at, { digits: 8 })).toBe(sha1);"
+          },
+          {
+            "path": "packages/application/src/auth/totp.test.ts",
+            "assertion": "  expect(diagnoseClock(header(-95), now).status).toBe(\"skewed\");"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  expect(view).not.toContain(defaults.totpSeed);"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  expect(view).not.toContain(sentCode);"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  expect(current.app.authProfiles.get(profile.id).session).toMatchObject({ state: \"locked\" });"
+          },
+          {
+            "path": "packages/application/src/auth/otp.test.ts",
+            "assertion": "  await expect(ensure()).rejects.toMatchObject({ details: { authFailure: \"otp_locked\" } });"
+          },
+          {
+            "path": "packages/application/src/auth/runs.test.ts",
+            "assertion": "  expect(lab.executions).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/auth/runs.test.ts",
+            "assertion": "  expect(blocked).toMatchObject({ outcome: \"blocked\", reasonCode: \"auth_checkpoint_expired\" });"
+          },
+          {
+            "path": "packages/application/src/auth/runs.test.ts",
+            "assertion": "  expect(lab.current.app.authCheckpoints.get(String(pending?.id)).state).toBe(\"expired\");"
+          },
+          {
+            "path": "packages/application/src/auth/identity.pg.test.ts",
+            "assertion": "    await expect(outsider.authCheckpoints.continue(id)).rejects.toMatchObject({\n      code: \"FORBIDDEN\","
+          },
+          {
+            "path": "packages/application/src/auth/identity.pg.test.ts",
+            "assertion": "  expect(globex.owner.database.all(\"SELECT id FROM auth_checkpoints\")).toEqual([]);"
+          },
+          {
+            "path": "apps/server/src/auth-routes.test.ts",
+            "assertion": "  expect(anonymous.statusCode).toBe(401);"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-025",
