@@ -1,9 +1,12 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExecutablePlan } from "@testmaster/contracts";
+import { assertionsHash } from "@testmaster/planner";
 import { afterEach, describe, expect, it } from "vitest";
 import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
+import { entity } from "./context.js";
 import { seedRun } from "./run-seed.testing.js";
 
 const roots: string[] = [];
@@ -79,12 +82,76 @@ describe("run views", () => {
 
   it("UX-040 healing proposals are listed only for the Run they were proposed for", async () => {
     const { app, init, test } = await fixture();
-    const first = await seedRun(app, {
+    const failed = await seedRun(app, {
+      testId: test.id,
+      environmentId: init.environmentId,
+      attempts: [
+        {
+          outcome: "failed",
+          steps: [{ stepId: "step-1", status: "failed", reasonCode: "assertion_mismatch" }],
+        },
+      ],
+    });
+    const other = await seedRun(app, {
+      testId: test.id,
+      environmentId: init.environmentId,
+      attempts: [
+        {
+          outcome: "failed",
+          steps: [{ stepId: "step-1", status: "failed", reasonCode: "assertion_mismatch" }],
+        },
+      ],
+    });
+    const untouched = await seedRun(app, {
       testId: test.id,
       environmentId: init.environmentId,
       attempts: [{ outcome: "passed" }],
     });
-    expect(app.runViews.healingProposals(first.runId)).toEqual([]);
+    expect(app.runViews.healingProposals(failed.runId)).toEqual([]);
+
+    const base = app.revisions.get(String(test.activeRevisionId));
+    const { id: _id, ...baseFields } = base;
+    const propose = (runId: string, ordinal: number, status: "proposed" | "rejected") => {
+      const candidate = entity(app.context, "rev", {
+        ...baseFields,
+        ordinal,
+        parentId: base.id,
+        origin: "healed",
+      });
+      app.context.entities.insert("TestRevision", candidate);
+      const proposal = entity(app.context, "hea", {
+        failedRunId: runId,
+        testId: test.id,
+        analysisId: null,
+        baseRevisionId: base.id,
+        candidateRevisionId: candidate.id,
+        diff: "Controlled candidate",
+        changes: [],
+        evidenceRefs: [],
+        preservedAssertionsHash: assertionsHash(base.plan as ExecutablePlan),
+        risk: "read",
+        status,
+        approvalMode: null,
+        reviewerId: null,
+        policyHash: null,
+        verificationRunId: null,
+        modelCallId: null,
+        limitations: [],
+      });
+      app.context.entities.insert("HealingProposal", proposal);
+      return proposal;
+    };
+    const mine = propose(failed.runId, 2, "proposed");
+    const theirs = propose(other.runId, 3, "rejected");
+
+    expect(app.runViews.healingProposals(failed.runId)).toMatchObject([
+      { id: mine.id, failedRunId: failed.runId, status: "proposed", risk: "read" },
+    ]);
+    expect(app.runViews.healingProposals(other.runId)).toMatchObject([
+      { id: theirs.id, failedRunId: other.runId, status: "rejected" },
+    ]);
+    // Negative controls: a Run nobody proposed for stays empty and an unknown Run is an error.
+    expect(app.runViews.healingProposals(untouched.runId)).toEqual([]);
     expect(() => app.runViews.healingProposals("run_missing")).toThrow();
   }, 60_000);
 
