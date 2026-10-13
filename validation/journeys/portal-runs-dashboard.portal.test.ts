@@ -557,11 +557,17 @@ describe("run data flow (REQ-053)", () => {
     );
     // Node text carries the status and the latency, so no meaning rests on colour.
     const nodeText = (id: string) => graph.locator(`[data-node="${id}"]`).textContent();
-    const createNode = await nodeText("create-order");
-    expect(createNode).toContain("Passed · 41 ms");
-    expect(createNode).toContain("sensitive");
-    expect(await nodeText("resource:create-order")).toContain("Orphaned");
-    expect(await nodeText("check-status")).toContain("Passed · 2 ms");
+    // Steps and resources load after the plan, so the node text settles asynchronously.
+    await expect
+      .poll(() => nodeText("create-order"), { timeout: 30_000 })
+      .toContain("Passed · 41 ms");
+    expect(await nodeText("create-order")).toContain("sensitive");
+    await expect
+      .poll(() => nodeText("resource:create-order"), { timeout: 30_000 })
+      .toContain("Orphaned");
+    await expect
+      .poll(() => nodeText("check-status"), { timeout: 30_000 })
+      .toContain("Passed · 2 ms");
 
     // The table lists the same flows.
     const table = page.getByRole("table", { name: "Data flow, as a table" });
