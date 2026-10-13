@@ -161,7 +161,7 @@ export function renderChecks(pull: PullRecord, origin: string | null): DesiredCh
           ? computed
           : name === "TestMaster / required-gate"
             ? "failure"
-            : computed === "success"
+            : stored.ci.gate === "passed"
               ? "neutral"
               : computed;
         return {

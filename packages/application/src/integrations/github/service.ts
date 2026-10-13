@@ -521,11 +521,12 @@ export class GithubService {
     pull: PullRecord,
     patch: Parameters<GithubStore["updatePull"]>[1],
   ): PullRecord {
-    return this.scope.database.withTx(() => {
+    const change = () => {
       const fresh = this.globalStore.updatePull(pull, patch, this.now());
       this.syncChecks(integration, fresh);
       return fresh;
-    });
+    };
+    return this.scope.database.inTransaction ? change() : this.scope.database.withTx(change);
   }
   private syncChecks(integration: GithubIntegration, pull: PullRecord): void {
     const store = this.globalStore;
@@ -770,8 +771,13 @@ export class GithubService {
     const acting = this.actingApp(integration);
     let profile = "public";
     try {
-      profile = String(this.baseRevision(acting, repository)?.networkProfile ?? "public");
-      if (profile === "private") profile = "public";
+      // Only a loopback preview in a loopback-profile project keeps that profile; a preview on any
+      // other host is a public target and must pass the public egress rules.
+      const loopbackHost = ["127.0.0.1", "[::1]"].includes(new URL(target.url).hostname);
+      profile =
+        loopbackHost && this.baseRevision(acting, repository)?.networkProfile === "local-loopback"
+          ? "local-loopback"
+          : "public";
       await this.authorizePreview(target.url, profile);
     } catch (error) {
       if (error instanceof PolicyDenied || error instanceof TypeError) return this.deny(integration, pull, "preview_url_denied");
@@ -857,6 +863,10 @@ export class GithubService {
   /** Resolves when every ephemeral worker started by this process has finished (tests and shutdown). */
   async settle(): Promise<void> {
     while (this.pendingWork.size) await Promise.allSettled([...this.pendingWork]);
+  }
+  /** Installation tokens held in memory right now; they are never persisted. */
+  activeTokens(): number {
+    return this.runtime.api.cachedTokenCount();
   }
 
   // ---------------------------------------------------------------- check and comment publication
@@ -1244,7 +1254,7 @@ export class GithubService {
         installationId: installation.installationId,
         repositoryId: input.repositoryId,
         fullName: repository.fullName,
-        deploymentId: `manual-${randomUUID()}`,
+        deploymentId: `manual-${randomUUID().replaceAll("-", "")}`,
         sha: input.headSha,
         environment: "manual",
         state: "success",

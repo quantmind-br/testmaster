@@ -712,7 +712,7 @@ export class GithubStore {
       { seq, status: input.status, conclusion: input.conclusion, at: now },
     ].slice(-historyLimit);
     const changed = this.db.run(
-      "UPDATE github_checks SET status=?,conclusion=?,title=?,summary=?,details_url=?,seq=?,state='pending',attempts=0,first_failed_at=NULL,next_attempt_at=NULL,last_error=NULL,history_json=?,updated_at=?,version=version+1 WHERE workspace_id=? AND id=? AND version=?",
+      "UPDATE github_checks SET status=?,conclusion=?,title=?,summary=?,details_url=?,seq=?,state=CASE WHEN state IN ('rate_limited','host_unavailable','permission_revoked') THEN state ELSE 'pending' END,attempts=CASE WHEN state IN ('rate_limited','host_unavailable','permission_revoked') THEN attempts ELSE 0 END,first_failed_at=CASE WHEN state IN ('rate_limited','host_unavailable','permission_revoked') THEN first_failed_at ELSE NULL END,next_attempt_at=CASE WHEN state IN ('rate_limited','host_unavailable','permission_revoked') THEN next_attempt_at ELSE NULL END,last_error=CASE WHEN state IN ('rate_limited','host_unavailable','permission_revoked') THEN last_error ELSE NULL END,history_json=?,updated_at=?,version=version+1 WHERE workspace_id=? AND id=? AND version=?",
       input.status,
       input.conclusion,
       input.title,

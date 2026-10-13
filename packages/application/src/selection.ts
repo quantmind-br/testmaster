@@ -116,7 +116,9 @@ export class SelectionService {
     });
   }
   private async resolve(input: SelectionInput, strict = false): Promise<Resolution> {
-    validate("SelectionInput", input);
+    // `origin` is set by trusted callers (the GitHub App) and is never part of the wire schema.
+    const { origin: _origin, ...wire } = input;
+    validate("SelectionInput", wire);
     this.ctx.authorize("R", input.projectId);
     const modes = [
       input.testIds !== undefined,

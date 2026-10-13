@@ -1,4 +1,4 @@
-import { createHmac, createPublicKey, createVerify, generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
+import { createHmac, createVerify, generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -127,7 +127,7 @@ export class FakeGithub {
     this.tokenTtlMs = options.tokenTtlMs ?? 3_600_000;
     const pair = generateKeyPairSync("rsa", { modulusLength: 2048 });
     this.privateKeyPem = pair.privateKey.export({ type: "pkcs8", format: "pem" }).toString();
-    this.publicKeyPem = createPublicKey(pair.publicKey).export({ type: "spki", format: "pem" }).toString();
+    this.publicKeyPem = pair.publicKey.export({ type: "spki", format: "pem" }).toString();
   }
   static async start(options: FakeGithubOptions = {}): Promise<FakeGithub> {
     const server = createServer();
@@ -193,6 +193,10 @@ export class FakeGithub {
   clearFaults(): void {
     this.faults.length = 0;
   }
+  /** Every installation token value the fake has handed out, for proving none is ever persisted. */
+  issuedTokens(): string[] {
+    return [...this.tokens.keys()];
+  }
   registerManifestCode(code: string): void {
     this.manifestCodes.set(code, true);
   }
@@ -220,6 +224,29 @@ export class FakeGithub {
   }
 
   // ------------------------------------------------------------------ webhooks
+  /** The headers and raw bytes GitHub would send, for callers that hand them straight to the receiver. */
+  signedRequest(
+    event: string,
+    payload: unknown,
+    options: DeliverOptions = {},
+  ): { headers: Record<string, string>; rawBody: Buffer; deliveryId: string } {
+    const deliveryId = options.deliveryId ?? randomUUID();
+    const raw = options.alteredBody ?? JSON.stringify(payload);
+    const signed = JSON.stringify(payload);
+    return {
+      deliveryId,
+      rawBody: Buffer.from(raw),
+      headers: {
+        "content-type": options.contentType ?? "application/json",
+        "x-github-event": event,
+        "x-github-delivery": deliveryId,
+        "x-hub-signature-256":
+          options.signature ??
+          `sha256=${createHmac("sha256", options.secret ?? this.webhookSecret).update(signed).digest("hex")}`,
+        "x-github-hook-installation-target-id": String(options.appId ?? this.appId),
+      },
+    };
+  }
   /** Signs `payload` like GitHub and posts it to a TestMaster webhook endpoint. */
   async deliver(url: string, event: string, payload: unknown, options: DeliverOptions = {}): Promise<DeliveryResult> {
     const deliveryId = options.deliveryId ?? randomUUID();
