@@ -511,7 +511,7 @@ function RunDetail({ runId }: { runId: string }): ReactNode {
       deepLinkHandled.current = deepLinked;
       const viewer = selectArtifactViewer(entry).viewers[0];
       if (viewer && viewer !== "restricted" && viewer !== "unavailable")
-        select({ attemptId, artifactId: deepLinked, viewer });
+        select({ attemptId, artifactId: deepLinked, viewer, fromAddress: true });
       return;
     }
   }, [deepLinked, bundles, select]);

@@ -47,6 +47,11 @@ export interface ArtifactSelection {
   readonly attemptId: string;
   readonly artifactId: string;
   readonly viewer: ViewerKind;
+  /**
+   * True when the address opened the viewer (a deep link) rather than a person: loading a page
+   * must not move keyboard focus into the middle of it, so the panel leaves focus where it is.
+   */
+  readonly fromAddress?: boolean;
   /** A new value remounts the viewer so a repeated click mints a fresh link. */
   readonly nonce: number;
 }
@@ -350,6 +355,7 @@ function ArtifactPanel(props: {
   entry: ManifestEntry;
   viewer: ViewerKind;
   attemptNumber: number | null;
+  fromAddress: boolean;
   onClose: () => void;
 }): ReactNode {
   const { entry, viewer } = props;
@@ -357,7 +363,11 @@ function ArtifactPanel(props: {
   const headingId = useId();
   const [link, setLink] = useState<LinkState>({ status: "minting" });
   const [renewals, setRenewals] = useState(0);
-  useEffect(() => heading.current?.focus(), []);
+  const { fromAddress } = props;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focus moves once, when the panel opens
+  useEffect(() => {
+    if (!fromAddress) heading.current?.focus();
+  }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `renewals` mints a fresh link on demand
   useEffect(() => {
     const controller = new AbortController();
@@ -643,6 +653,7 @@ export function ArtifactSection(props: {
           entry={selectedEntry}
           viewer={selected.viewer}
           attemptNumber={selectedAttempt?.number ?? null}
+          fromAddress={selected.fromAddress === true}
           onClose={props.onClose}
         />
       ) : null}
