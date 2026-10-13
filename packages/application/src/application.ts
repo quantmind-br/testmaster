@@ -76,8 +76,8 @@ import { entity, type RunActor, type Scope, type ServiceContext } from "./contex
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
-import { IntegrationsService } from "./integrations/index.js";
 import { IdentityService } from "./identity.js";
+import { IntegrationsService } from "./integrations/index.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
@@ -552,10 +552,11 @@ export class Application {
     projectId: string | undefined,
     resourceTypes: readonly string[],
     environmentId?: string | null,
+    grantAction?: PermissionGrant["actions"][number],
   ): { allowed: boolean; granted: boolean; grants: number } {
     const grants = this.identity?.grants ?? [];
     for (const grant of grants) validate("PermissionGrant", grant);
-    const action = columnGrantAction[column] as PermissionGrant["actions"][number];
+    const action = grantAction ?? (columnGrantAction[column] as PermissionGrant["actions"][number]);
     const matching = grants.filter(
       (grant) =>
         resourceTypes.includes(grant.resourceType) &&
@@ -676,7 +677,14 @@ export class Application {
         Artifact: ["Artifact", "artifacts", "*"],
       };
       const column: RbacColumn = action === "approve" ? "write" : "admin";
-      const decision = this.decide(column, role, projectId, aliases[resourceType], environmentId);
+      const decision = this.decide(
+        column,
+        role,
+        projectId,
+        aliases[resourceType],
+        environmentId,
+        action,
+      );
       const allowed = this.identity
         ? decision.allowed && decision.granted
         : rbacMatrix[role][column] === "allow";
