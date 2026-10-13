@@ -274,10 +274,21 @@ export class Scheduler {
   private systemApplication(workspaceId: string, apps: Map<string, Application>): Application {
     let application = apps.get(workspaceId);
     if (!application) {
-      application = this.scope.forWorkspaceSystem(workspaceId);
+      // The single-user local workspace has no controller principal; its in-process scope reads.
+      application =
+        this.scope.database.engine === "sqlite" && !this.hasControllerPrincipal(workspaceId)
+          ? this.scope
+          : this.scope.forWorkspaceSystem(workspaceId);
       apps.set(workspaceId, application);
     }
     return application;
+  }
+  private hasControllerPrincipal(workspaceId: string): boolean {
+    const row = this.scope.database.get(
+      "SELECT 1 AS present FROM operational_state WHERE key=?",
+      `system-principal:${workspaceId}`,
+    );
+    return Boolean(row);
   }
 
   private pause(

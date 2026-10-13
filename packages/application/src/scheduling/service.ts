@@ -431,6 +431,7 @@ export class SchedulesService {
         state: "paused",
         pauseReason: "manual",
         pausedAt: at,
+        nextFireAt: null,
         version: expectedVersion + 1,
         updatedAt: at,
       };
