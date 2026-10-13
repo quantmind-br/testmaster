@@ -366,8 +366,11 @@ export const mcpTools = {
     input: Obj({
       testIds: Type.Optional(Type.Array(id("tst"))),
       suiteId: Type.Optional(id("sui")),
-      environmentId: id("env"),
+      /** Required with testIds; a list (suiteId) carries an explicit environment per project. */
+      environmentId: Type.Optional(id("env")),
       mode: Name,
+      /** Lists only: exclusion keys the caller accepts so the dispatchable subset runs. */
+      confirmedExclusions: Type.Optional(Type.Array(Name, { maxItems: 600 })),
       limits: Type.Optional(Json),
       jobId: Type.Optional(id("bat")),
       idempotencyKey: Type.Optional(Type.String({ minLength: 16, maxLength: 128 })),

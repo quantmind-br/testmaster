@@ -2,7 +2,6 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
-    "environmentId",
     "mode"
   ],
   "properties": {
@@ -25,6 +24,15 @@
       "minLength": 1,
       "maxLength": 200,
       "type": "string"
+    },
+    "confirmedExclusions": {
+      "maxItems": 600,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
     },
     "limits": {
       "anyOf": [

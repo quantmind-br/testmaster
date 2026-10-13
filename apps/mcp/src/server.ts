@@ -29,6 +29,7 @@ import {
   jsonSchema,
   mcpToolCatalog,
   type RunResult,
+  type SuiteRunInput,
   validate,
   validateDocument,
 } from "@testmaster/contracts";
@@ -440,20 +441,41 @@ export class TestMasterMcp {
         let receipt: BatchReceipt;
         if (args.jobId) receipt = this.receipt(String(args.jobId));
         else {
-          if (args.suiteId) unavailable("suites", "M4");
-          const request = validate<BatchRequest>("BatchRequest", {
-            selection: ((args.testIds as string[]) ?? []).map((testId) => ({
-              testId,
-              environmentId: args.environmentId,
-              mode: args.mode,
-              origin: "mcp",
-              ...(args.limits ? { limits: args.limits } : {}),
-            })),
-          });
-          receipt = await app.batches.admit(request, {
-            wait: true,
-            ...(args.idempotencyKey ? { idempotencyKey: String(args.idempotencyKey) } : {}),
-          });
+          const idempotency = args.idempotencyKey
+            ? { idempotencyKey: String(args.idempotencyKey) }
+            : {};
+          if (args.suiteId) {
+            if (args.testIds && (args.testIds as string[]).length)
+              throw new ContractError("INVALID_ARGUMENT", "Name testIds or suiteId, not both");
+            if (args.mode !== "replay")
+              throw new ContractError("INVALID_ARGUMENT", "Lists run in replay mode only");
+            receipt = await app.suites.run(
+              String(args.suiteId),
+              {
+                mode: "replay",
+                ...(args.limits
+                  ? { limits: args.limits as NonNullable<SuiteRunInput["limits"]> }
+                  : {}),
+                ...(args.confirmedExclusions
+                  ? { confirmedExclusions: args.confirmedExclusions as string[] }
+                  : {}),
+              },
+              { origin: "mcp", wait: true, ...idempotency },
+            );
+          } else {
+            if (!args.environmentId)
+              throw new ContractError("INVALID_ARGUMENT", "environmentId is required with testIds");
+            const request = validate<BatchRequest>("BatchRequest", {
+              selection: ((args.testIds as string[]) ?? []).map((testId) => ({
+                testId,
+                environmentId: args.environmentId,
+                mode: args.mode,
+                origin: "mcp",
+                ...(args.limits ? { limits: args.limits } : {}),
+              })),
+            });
+            receipt = await app.batches.admit(request, { wait: true, ...idempotency });
+          }
           if (!app.worker.live()) {
             const job = app.worker
               .run({ ephemeral: true, runIds: receipt.allMembers })
