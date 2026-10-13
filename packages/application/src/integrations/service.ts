@@ -69,7 +69,7 @@ const DETAIL_LIMIT = 500;
 const defaultReceivedStaleMs = 300_000;
 
 function inTx<T>(ctx: ServiceContext, action: () => T): T {
-  return ctx.database.db.isTransaction ? action() : ctx.database.withTx(action);
+  return ctx.database.inTransaction ? action() : ctx.database.withTx(action);
 }
 function expectVersion(current: StoredIntegration, expectedVersion: number): void {
   if (expectedVersion === undefined || expectedVersion === null)
@@ -359,7 +359,7 @@ export class IntegrationsService {
     const deliveryId = `tst_${randomUUID()}`;
     const correlationId = this.ctx.correlationId ?? randomUUID();
     const context = {
-      ...this.integrationContext(correlationId),
+      ...this.integrationContext(correlationId, true),
       workspaceId: this.ctx.workspaceId,
       test: { test: true, deliveryId, label: TEST_LABEL },
     } as const;
@@ -519,14 +519,19 @@ export class IntegrationsService {
     }
   }
 
-  private integrationContext(correlationId: string): IntegrationContext {
+  /** `ownWorkspaceOnly` confines lookups to this service's workspace (configuration paths); webhook intake spans all. */
+  private integrationContext(correlationId: string, ownWorkspaceOnly = false): IntegrationContext {
     return {
       workspaceId: null,
       correlationId,
       now: this.now,
       findIntegrations: (provider: IntegrationProviderIdValue) =>
         this.ctx.database
-          .all("SELECT * FROM integrations WHERE provider=? ORDER BY created_at,id", provider)
+          .all(
+            `SELECT * FROM integrations WHERE provider=? ${ownWorkspaceOnly ? "AND workspace_id=?" : ""} ORDER BY created_at,id`,
+            provider,
+            ...(ownWorkspaceOnly ? [this.ctx.workspaceId] : []),
+          )
           .map(decode),
     };
   }
