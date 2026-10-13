@@ -77,7 +77,7 @@ it("capabilities HTTP endpoint refuses to advertise missing runner images and di
         }
         expect(
           features
-            .filter((f) => ["visualMatches", "schedules"].includes(f.id))
+            .filter((f) => ["visualMatches", "tunnels"].includes(f.id))
             .every((f) => !f.enabled),
         ).toBe(true);
         session.oracles.push({
