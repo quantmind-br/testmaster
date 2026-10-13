@@ -225,6 +225,12 @@ describe("GitHub integration pages on the server profile", () => {
       (await page.evaluate(() => document.activeElement?.className ?? "")).includes("button"),
     ).toBe(true);
     await keyboard.press("Enter");
+    await page
+      .getByRole("status")
+      .filter({
+        hasText: `Delivery of TestMaster / result on ${SHA_B.slice(0, 7)} was queued again.`,
+      })
+      .waitFor();
     await keyboard.tabTo(
       (element) =>
         element.tag === "button" &&
@@ -232,7 +238,12 @@ describe("GitHub integration pages on the server profile", () => {
       200,
     );
     await keyboard.press("Enter");
-    await checks.getByRole("row").filter({ hasText: "Queued" }).first().waitFor();
+    await page
+      .getByRole("status")
+      .filter({
+        hasText: `Delivery of TestMaster / required-gate on ${SHA_B.slice(0, 7)} was queued again.`,
+      })
+      .waitFor();
     await world.runtime.controllerScope().github.reconcile();
     await page.reload();
     await checks
