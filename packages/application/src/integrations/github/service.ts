@@ -840,8 +840,8 @@ export class GithubService {
           .run({ ephemeral: true, runIds: members })
           .catch(() => undefined)
           .finally(() => this.runtime.driving.delete(pull.id));
-        this.pendingWork.add(work);
-        void work.finally(() => this.pendingWork.delete(work));
+        this.runtime.pendingWork.add(work);
+        void work.finally(() => this.runtime.pendingWork.delete(work));
       }
       return pull;
     }
@@ -859,10 +859,9 @@ export class GithubService {
       reportHash: stored.ci.reportHash,
     });
   }
-  private readonly pendingWork = new Set<Promise<unknown>>();
   /** Resolves when every ephemeral worker started by this process has finished (tests and shutdown). */
   async settle(): Promise<void> {
-    while (this.pendingWork.size) await Promise.allSettled([...this.pendingWork]);
+    while (this.runtime.pendingWork.size) await Promise.allSettled([...this.runtime.pendingWork]);
   }
   /** Installation tokens held in memory right now; they are never persisted. */
   activeTokens(): number {

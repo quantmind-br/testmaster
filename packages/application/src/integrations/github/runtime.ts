@@ -21,6 +21,8 @@ export class GithubRuntime {
   readonly random: () => number;
   /** Pulls whose ephemeral worker is already running in this process. */
   readonly driving = new Set<string>();
+  /** Ephemeral workers in flight in this process, across every scoped `Application`. */
+  readonly pendingWork = new Set<Promise<unknown>>();
   constructor(options: GithubRuntimeOptions = {}) {
     const clock = options.now ?? Date.now;
     this.api = new GithubApi({

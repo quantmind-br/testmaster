@@ -12,16 +12,23 @@ import {
 } from "@testmaster/contracts";
 import { Application } from "../../../application.js";
 import { scaffoldPlan } from "../../../authoring.js";
+import { authenticateSession } from "../../../identity.js";
+import type { ServerConfig } from "../../../server-config.js";
 import { type DeliverOptions, FakeGithub, type FakeRepository } from "./fake-github.js";
 
 export interface WorldOptions {
+  /** Run on PostgreSQL as a server-profile deployment: one workspace and an owner session. */
+  server?: ServerConfig;
   /** Add `contents: write` to the installation and `allowAgentPullRequests` to the integration. */
   agentPullRequests?: boolean;
   installationPermissions?: Record<string, "read" | "write">;
 }
 /** A complete GitHub App deployment against the fake: Application, fake GitHub, preview target and clock. */
 export interface GithubWorld {
+  /** The application the test acts through: the root instance on SQLite, the owner's workspace-bound one on PostgreSQL. */
   app: Application;
+  /** The process-wide instance (controller scopes, HTTP server). */
+  runtime: Application;
   fake: FakeGithub;
   clock: { t: number };
   /** The preview origin every deployment points at; `healthy` flips `/health` to a 500. */
@@ -97,10 +104,11 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   target.origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const fake = await FakeGithub.start({ now: () => clock.t });
-  const app = await Application.open({
+  const runtime = await Application.open({
     cwd: root,
     home,
     env: { TESTMASTER_EXECUTOR: "process" },
+    ...(options.server ? { server: options.server } : {}),
     github: {
       apiBaseUrl: fake.url,
       now: () => clock.t,
@@ -109,11 +117,12 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
       random: () => 0.5,
     },
   });
+  const app = options.server ? await signInOwner(runtime) : runtime;
   // The acting application of an integration is a separate instance, so the stub lives on the class
   // for the lifetime of the world: the process executor here replaces Docker only inside tests.
   const originalPreflight = Application.prototype.preflight;
   Application.prototype.preflight = async () => {};
-  const init = await app.init();
+  const init = options.server ? seedServerProject(app) : await app.init();
   const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
   const origin = new URL(fake.url).origin;
   const privateKeyRef = (await app.secrets.set("github-private-key", fake.privateKeyPem, { allowedOrigins: [origin] })).id;
@@ -164,9 +173,10 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     installationId,
     secrets: { privateKeyRef, webhookSecretRef },
     resolutions,
+    runtime,
     send: (event, payload, deliver) => {
       const request = fake.signedRequest(event, payload, deliver);
-      return app.controllerScope().integrations.receiveWebhook("github", request);
+      return runtime.controllerScope().integrations.receiveWebhook("github", request);
     },
     async install() {
       const installation = fake.installations.get(installationId);
@@ -213,9 +223,9 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     async drive(maxTicks = 8) {
       for (let tick = 0; tick < maxTicks; tick++) {
         const before = JSON.stringify(app.database.all("SELECT id,state FROM github_pulls ORDER BY id"));
-        await app.github.reconcile();
+        await runtime.controllerScope().github.reconcile();
         await app.github.settle();
-        await app.github.reconcile();
+        await runtime.controllerScope().github.reconcile();
         const rows = app.database.all("SELECT state FROM github_pulls WHERE state IN ('awaiting_preview','running')");
         const after = JSON.stringify(app.database.all("SELECT id,state FROM github_pulls ORDER BY id"));
         if (!rows.length || (before === after && tick > 1)) return;
@@ -224,11 +234,40 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     async stop() {
       await app.github.settle();
       Application.prototype.preflight = originalPreflight;
-      app.close();
+      runtime.close();
       await fake.stop();
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await rm(root, { recursive: true, force: true });
     },
   };
   return world;
+}
+
+/** A server-profile project with a default environment: `init` is a single-user local command. */
+function seedServerProject(app: Application): { projectId: string; environmentId: string } {
+  const project = app.projects.create({ name: "github-project" });
+  const environment = app.environments.create({
+    projectId: project.id,
+    name: "local",
+    baseUrl: "http://127.0.0.1:3000",
+    networkProfile: "local-loopback",
+    locale: "en-US",
+    timezone: "UTC",
+  });
+  app.environments.setDefault(project.id, environment.id, project.version ?? 1);
+  return { projectId: project.id, environmentId: environment.id };
+}
+
+const ownerLogin = "github-owner";
+const ownerPassword = "correct horse battery staple";
+/** Bootstraps the first workspace of a server-profile database and returns the owner's workspace-bound application. */
+async function signInOwner(runtime: Application): Promise<Application> {
+  const boot = runtime.operator.bootstrap({ workspaceName: "GitHub Acme", ownerLogin });
+  await runtime.identityService.recover({
+    principal: ownerLogin,
+    recoveryToken: boot.ownerRecovery.recoveryToken,
+    newPassword: ownerPassword,
+  });
+  const login = await runtime.identityService.login({ principal: ownerLogin, password: ownerPassword });
+  return runtime.forIdentity(authenticateSession(runtime, login.sessionToken));
 }
