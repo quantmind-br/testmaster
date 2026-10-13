@@ -83,7 +83,11 @@ function BatchView({
         : unresolvedDuplicates.length > 0
           ? "Decide on the duplicate proposals you selected."
           : null;
-  const acceptBlocked = blockedReason ?? (policy && !policy.canAccept ? policy.text : null);
+  const policyText =
+    policy?.reason === "write_permission_required"
+      ? "Your role can read this batch but not accept it. Ask a maintainer or an administrator to review it."
+      : (policy?.text ?? "");
+  const acceptBlocked = blockedReason ?? (policy && !policy.canAccept ? policyText : null);
 
   function toggle(set: ReadonlySet<string>, id: string, on: boolean): ReadonlySet<string> {
     const next = new Set(set);
@@ -167,7 +171,7 @@ function BatchView({
           data-testid="policy"
         >
           <Icon shape={policy.canAccept ? "info" : "lock"} />
-          <span>{policy.text}</span>
+          <span>{policyText}</span>
         </p>
       ) : null}
       {previewError ? (

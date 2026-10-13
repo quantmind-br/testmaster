@@ -890,6 +890,13 @@ export class ProposalsService {
       };
     });
     const policy = this.acceptancePolicy();
+    let permitted = true;
+    try {
+      this.ctx.authorize("W", batch.projectId);
+    } catch (error) {
+      if (!(error instanceof ContractError) || error.code !== "FORBIDDEN") throw error;
+      permitted = false;
+    }
     return {
       batchId: batch.id,
       batchVersion: batch.version ?? 1,
@@ -898,8 +905,8 @@ export class ProposalsService {
       staleReason: typeof reason === "string" ? reason : null,
       policy: {
         channel: "interactive",
-        canAccept: policy.allowed,
-        reason: policy.reason,
+        canAccept: policy.allowed && permitted,
+        reason: policy.reason ?? (permitted ? null : "write_permission_required"),
         text: "A generated proposal becomes an active test only when a human accepts it in an interactive session. CI, API tokens and service accounts cannot accept proposals.",
       },
       items,
