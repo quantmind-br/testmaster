@@ -325,8 +325,9 @@ describe("OPS-033 a tenant with thousands of queued jobs cannot starve another t
       });
     });
     const view = app.database.forWorkspace("*");
-    const now = new Date(Date.now() + 1_000);
     enqueue(fixture, 2500);
+    // Taken after the enqueue: on a slower engine inserting 2500 rows may outlast a clock read made before it.
+    const now = new Date(Date.now() + 1_000);
     // Nobody competes yet: the busy tenant may use every slot.
     expect(fairShareCap({ database: view, workspaceId, now })).toBeUndefined();
 
