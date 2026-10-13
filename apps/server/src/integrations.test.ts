@@ -338,3 +338,32 @@ it("INT-002 the signed webhook route keeps the caller's rate limit", async () =>
   expect(limited.statusCode).toBe(429);
   expect(limited.headers["retry-after"]).toBe("1");
 });
+
+it("OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both", async () => {
+  const f = await fixture();
+  const created = (await f.send("POST", "/v1/integrations", f.input())).json().data;
+  const patch = (state: string, token: string, version: number) =>
+    f.send(
+      "PATCH",
+      `/v1/integrations/${created.id}`,
+      { state },
+      { ...f.authorize(token), "if-match": `"${version}"` },
+    );
+  const stateOf = async () => {
+    const listed = await f.app.inject({
+      url: "/v1/integrations",
+      headers: f.authorize(f.admin.token),
+    });
+    return listed.json().data.items.find((item: { id: string }) => item.id === created.id).state;
+  };
+  for (const state of ["paused", "revoked"]) {
+    const refused = await patch(state, f.reader.token, 1);
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json().error.code).toBe("FORBIDDEN");
+    expect(await stateOf()).toBe("active");
+  }
+  expect((await patch("paused", f.admin.token, 1)).statusCode).toBe(200);
+  expect(await stateOf()).toBe("paused");
+  expect((await patch("revoked", f.admin.token, 2)).statusCode).toBe(200);
+  expect(await stateOf()).toBe("revoked");
+});
