@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ContractError } from "@testmaster/contracts";
 import { AuxiliaryLeaseRepository } from "@testmaster/persistence";
+import { postgresParity } from "@testmaster/persistence/testing";
 import { expect, it } from "vitest";
 import { Application } from "./application.js";
 import type { CiResult } from "./ci.js";
@@ -492,126 +493,136 @@ it("keeps delivered rows frozen and lets a dead letter change only by reopening 
 });
 
 // The next two tests spawn a child that imports the built package: run them after `pnpm build`.
-it("keeps a committed delivery pending after SIGKILL before send and delivers it on the next process", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "tm-delivery-"));
-  const methods: string[] = [];
-  const server = await listen((req, res) => {
-    methods.push(`${req.method} ${req.url?.split("?")[0]}`);
-    res.setHeader("content-type", "application/json");
-    if (req.method === "GET") res.end('{"check_runs":[]}');
-    else {
-      res.statusCode = 201;
-      res.end('{"id":41}');
-    }
-  });
-  let app: Application | undefined;
-  try {
-    app = await openFresh(cwd);
-    app.close();
-    app = undefined;
-    const script = `import { Application, ChecksClient } from './packages/application/dist/index.js'; ChecksClient.prototype.publish = async () => { process.kill(process.pid, 'SIGKILL'); }; const app = await Application.open({ cwd: process.argv[1], home: process.argv[1] }); await app.delivery.publish(JSON.parse(process.argv[3]), 'owner/repo', '${sha}', 'test', { apiUrl: process.argv[2] });`;
-    const child = await spawnChild(script, [cwd, server.apiUrl, JSON.stringify(resultFixture())])
-      .exit;
-    expect(child.signal).toBe("SIGKILL");
-    app = await Application.open({ cwd, home: cwd });
-    const stored = allEntities(app.context, "Delivery");
-    expect(stored.map((row) => row.state)).toEqual(["pending"]);
-    expect(stored[0]?.attempts).toBe(0);
-    expect(methods).toEqual([]);
-    const eventId = stored[0]?.eventId;
-    // The dead process still holds a 15 minute lease; recovery expires it as the worker would.
-    new AuxiliaryLeaseRepository(app.database).expire(
-      new Date(Date.now() + 16 * 60_000).toISOString(),
-    );
-    const rows = await app.delivery.publish(resultFixture(), "owner/repo", sha, "test", {
-      apiUrl: server.apiUrl,
-      sleep: async () => {},
-    });
-    expect(rows.map((row) => row.state)).toEqual(["delivered", "delivered"]);
-    expect(rows[0]?.eventId).toBe(eventId);
-    expect(methods.filter((method) => method.startsWith("POST"))).toHaveLength(2);
-  } finally {
-    app?.close();
-    await server.close();
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
-it("reconciles a check created before SIGKILL instead of posting it twice and keeps the event id", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "tm-delivery-"));
-  const created: { id: number; name: string; head_sha: string; external_id: string }[] = [];
-  const methods: string[] = [];
-  let victim: ChildProcess | undefined;
-  let killed = false;
-  const server = await listen((req, res) => {
-    const url = new URL(req.url ?? "/", "http://127.0.0.1");
-    methods.push(`${req.method} ${url.pathname}`);
-    res.setHeader("content-type", "application/json");
-    if (req.method === "GET") {
-      res.end(
-        JSON.stringify({
-          check_runs: created.filter((item) => item.name === url.searchParams.get("check_name")),
-        }),
-      );
-      return;
-    }
-    let body = "";
-    req.on("data", (chunk) => {
-      body += String(chunk);
-    });
-    req.on("end", () => {
-      if (req.method === "POST") {
-        const input = JSON.parse(body);
-        created.push({
-          id: 40 + created.length + 1,
-          name: input.name,
-          head_sha: input.head_sha,
-          external_id: input.external_id,
-        });
-        if (!killed) {
-          // GitHub created the check, but the acknowledgement is lost with the sender.
-          killed = true;
-          victim?.kill("SIGKILL");
-          return;
-        }
+// Not run on PostgreSQL: Kills a child process that opens the SQLite data directory by path; the PostgreSQL crash cases live in database.pg.test.ts.
+it.skipIf(postgresParity)(
+  "keeps a committed delivery pending after SIGKILL before send and delivers it on the next process",
+  async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "tm-delivery-"));
+    const methods: string[] = [];
+    const server = await listen((req, res) => {
+      methods.push(`${req.method} ${req.url?.split("?")[0]}`);
+      res.setHeader("content-type", "application/json");
+      if (req.method === "GET") res.end('{"check_runs":[]}');
+      else {
+        res.statusCode = 201;
+        res.end('{"id":41}');
       }
-      res.statusCode = req.method === "POST" ? 201 : 200;
-      res.end(JSON.stringify({ id: Number(url.pathname.split("/").pop()) || 40 + created.length }));
     });
-  });
-  let app: Application | undefined;
-  try {
-    app = await openFresh(cwd);
-    app.close();
-    app = undefined;
-    const script = `import { Application } from './packages/application/dist/index.js'; const app = await Application.open({ cwd: process.argv[1], home: process.argv[1] }); await app.delivery.publish(JSON.parse(process.argv[3]), 'owner/repo', '${sha}', 'test', { apiUrl: process.argv[2], sleep: async () => {} });`;
-    const spawned = spawnChild(script, [cwd, server.apiUrl, JSON.stringify(resultFixture())]);
-    victim = spawned.process;
-    const child = await spawned.exit;
-    expect(child.signal).toBe("SIGKILL");
-    expect(created).toHaveLength(1);
-    app = await Application.open({ cwd, home: cwd });
-    const stored = allEntities(app.context, "Delivery");
-    expect(stored.map((row) => row.state)).toEqual(["pending"]);
-    const eventId = stored[0]?.eventId;
-    const sent = created[0]?.external_id;
-    new AuxiliaryLeaseRepository(app.database).expire(
-      new Date(Date.now() + 16 * 60_000).toISOString(),
-    );
-    const rows = await app.delivery.publish(resultFixture(), "owner/repo", sha, "test", {
-      apiUrl: server.apiUrl,
-      sleep: async () => {},
+    let app: Application | undefined;
+    try {
+      app = await openFresh(cwd);
+      app.close();
+      app = undefined;
+      const script = `import { Application, ChecksClient } from './packages/application/dist/index.js'; ChecksClient.prototype.publish = async () => { process.kill(process.pid, 'SIGKILL'); }; const app = await Application.open({ cwd: process.argv[1], home: process.argv[1] }); await app.delivery.publish(JSON.parse(process.argv[3]), 'owner/repo', '${sha}', 'test', { apiUrl: process.argv[2] });`;
+      const child = await spawnChild(script, [cwd, server.apiUrl, JSON.stringify(resultFixture())])
+        .exit;
+      expect(child.signal).toBe("SIGKILL");
+      app = await Application.open({ cwd, home: cwd });
+      const stored = allEntities(app.context, "Delivery");
+      expect(stored.map((row) => row.state)).toEqual(["pending"]);
+      expect(stored[0]?.attempts).toBe(0);
+      expect(methods).toEqual([]);
+      const eventId = stored[0]?.eventId;
+      // The dead process still holds a 15 minute lease; recovery expires it as the worker would.
+      new AuxiliaryLeaseRepository(app.database).expire(
+        new Date(Date.now() + 16 * 60_000).toISOString(),
+      );
+      const rows = await app.delivery.publish(resultFixture(), "owner/repo", sha, "test", {
+        apiUrl: server.apiUrl,
+        sleep: async () => {},
+      });
+      expect(rows.map((row) => row.state)).toEqual(["delivered", "delivered"]);
+      expect(rows[0]?.eventId).toBe(eventId);
+      expect(methods.filter((method) => method.startsWith("POST"))).toHaveLength(2);
+    } finally {
+      app?.close();
+      await server.close();
+      await rm(cwd, { recursive: true, force: true });
+    }
+  },
+);
+// Not run on PostgreSQL: Kills a child process that opens the SQLite data directory by path; the PostgreSQL crash cases live in database.pg.test.ts.
+it.skipIf(postgresParity)(
+  "reconciles a check created before SIGKILL instead of posting it twice and keeps the event id",
+  async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "tm-delivery-"));
+    const created: { id: number; name: string; head_sha: string; external_id: string }[] = [];
+    const methods: string[] = [];
+    let victim: ChildProcess | undefined;
+    let killed = false;
+    const server = await listen((req, res) => {
+      const url = new URL(req.url ?? "/", "http://127.0.0.1");
+      methods.push(`${req.method} ${url.pathname}`);
+      res.setHeader("content-type", "application/json");
+      if (req.method === "GET") {
+        res.end(
+          JSON.stringify({
+            check_runs: created.filter((item) => item.name === url.searchParams.get("check_name")),
+          }),
+        );
+        return;
+      }
+      let body = "";
+      req.on("data", (chunk) => {
+        body += String(chunk);
+      });
+      req.on("end", () => {
+        if (req.method === "POST") {
+          const input = JSON.parse(body);
+          created.push({
+            id: 40 + created.length + 1,
+            name: input.name,
+            head_sha: input.head_sha,
+            external_id: input.external_id,
+          });
+          if (!killed) {
+            // GitHub created the check, but the acknowledgement is lost with the sender.
+            killed = true;
+            victim?.kill("SIGKILL");
+            return;
+          }
+        }
+        res.statusCode = req.method === "POST" ? 201 : 200;
+        res.end(
+          JSON.stringify({ id: Number(url.pathname.split("/").pop()) || 40 + created.length }),
+        );
+      });
     });
-    expect(rows.map((row) => row.state)).toEqual(["delivered", "delivered"]);
-    expect(rows[0]?.eventId).toBe(eventId);
-    expect(rows[0]?.externalId).toBe("41");
-    // The lost acknowledgement never produced a second POST for the same external id.
-    expect(created.filter((item) => item.external_id === sent)).toHaveLength(1);
-    expect(methods.filter((method) => method.startsWith("PATCH"))).toEqual([
-      "PATCH /repos/owner/repo/check-runs/41",
-    ]);
-  } finally {
-    app?.close();
-    await server.close();
-    await rm(cwd, { recursive: true, force: true });
-  }
-});
+    let app: Application | undefined;
+    try {
+      app = await openFresh(cwd);
+      app.close();
+      app = undefined;
+      const script = `import { Application } from './packages/application/dist/index.js'; const app = await Application.open({ cwd: process.argv[1], home: process.argv[1] }); await app.delivery.publish(JSON.parse(process.argv[3]), 'owner/repo', '${sha}', 'test', { apiUrl: process.argv[2], sleep: async () => {} });`;
+      const spawned = spawnChild(script, [cwd, server.apiUrl, JSON.stringify(resultFixture())]);
+      victim = spawned.process;
+      const child = await spawned.exit;
+      expect(child.signal).toBe("SIGKILL");
+      expect(created).toHaveLength(1);
+      app = await Application.open({ cwd, home: cwd });
+      const stored = allEntities(app.context, "Delivery");
+      expect(stored.map((row) => row.state)).toEqual(["pending"]);
+      const eventId = stored[0]?.eventId;
+      const sent = created[0]?.external_id;
+      new AuxiliaryLeaseRepository(app.database).expire(
+        new Date(Date.now() + 16 * 60_000).toISOString(),
+      );
+      const rows = await app.delivery.publish(resultFixture(), "owner/repo", sha, "test", {
+        apiUrl: server.apiUrl,
+        sleep: async () => {},
+      });
+      expect(rows.map((row) => row.state)).toEqual(["delivered", "delivered"]);
+      expect(rows[0]?.eventId).toBe(eventId);
+      expect(rows[0]?.externalId).toBe("41");
+      // The lost acknowledgement never produced a second POST for the same external id.
+      expect(created.filter((item) => item.external_id === sent)).toHaveLength(1);
+      expect(methods.filter((method) => method.startsWith("PATCH"))).toEqual([
+        "PATCH /repos/owner/repo/check-runs/41",
+      ]);
+    } finally {
+      app?.close();
+      await server.close();
+      await rm(cwd, { recursive: true, force: true });
+    }
+  },
+);

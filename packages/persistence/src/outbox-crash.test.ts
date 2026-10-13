@@ -11,7 +11,7 @@ import { EntityRepository, OutboxRepository } from "./repositories.js";
 const directories: string[] = [];
 const connections: PersistenceDatabase[] = [];
 afterEach(async () => {
-  for (const db of connections.splice(0)) if (db.db.isOpen) db.close();
+  for (const db of connections.splice(0)) if (db.isOpen) db.close();
   for (const directory of directories.splice(0))
     await rm(directory, { recursive: true, force: true });
 });

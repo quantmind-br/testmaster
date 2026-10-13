@@ -733,7 +733,7 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
       expect(run).toMatchObject({ outcome: "passed", gate: "passed" });
       const rows = failureRows(app, run.id);
       const manifest = (await app.artifacts.get(run.id)).manifest;
-      expect(app.database.db.isTransaction).toBe(false);
+      expect(app.database.inTransaction).toBe(false);
       app.close();
       app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
       const partial = await session.command([

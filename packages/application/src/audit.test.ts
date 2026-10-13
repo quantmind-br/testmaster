@@ -166,9 +166,14 @@ it("exports a consistent private ledger and verifies independently retained dige
 });
 it("fails sensitive secret writes and exports closed when mandatory audit cannot be appended", async () => {
   const { app, cwd } = await fixture();
-  app.database.run(
-    "CREATE TRIGGER reject_security_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'audit unavailable'); END",
-  );
+  if (app.database.engine === "sqlite")
+    app.database.run(
+      "CREATE TRIGGER reject_security_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'audit unavailable'); END",
+    );
+  else
+    app.database.exec(
+      "CREATE FUNCTION reject_security_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'audit unavailable'; END $$; CREATE TRIGGER reject_security_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_security_audit()",
+    );
   await expect(app.secrets.set("blocked", "secret", { ephemeral: true })).rejects.toThrow(
     "audit unavailable",
   );

@@ -59,7 +59,10 @@ it("doctor fails closed on an unsupported Node major and on an unwritable data d
   expect(healthy.status).toBe("PASS");
   expect(healthy.checks.node).toMatchObject({ status: "PASS", required: ">=24 <25" });
   expect(healthy.checks.writablePaths).toEqual({ status: "PASS" });
-  expect(healthy.checks.database).toMatchObject({ status: "PASS", journalMode: "wal" });
+  if (app.database.engine === "sqlite")
+    expect(healthy.checks.database).toMatchObject({ status: "PASS", journalMode: "wal" });
+  else
+    expect(healthy.checks.database).toEqual({ status: "PASS", schemaVersion: expect.any(Number) });
 
   const oldNode = await app.doctor({ nodeVersion: "25.0.0" });
   expect(oldNode.status).toBe("FAIL");

@@ -91,7 +91,9 @@ it("plans irreversible pending migrations read-only and refuses a newer schema w
 });
 
 it("upgrades in order: preflight, drain, backup of the old schema, migrate, readiness", async () => {
-  const { root, path, db, all } = await legacyDatabase((await loadMigrations()).length - 1);
+  // Migration 9 (delivery_requeue) rewrites a trigger, so the previous release is the schema at version 8.
+  const previous = 8;
+  const { root, path, db, all } = await legacyDatabase(previous);
   db.run(
     "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES('ws','wrk-old',?, 'ready',?)",
     new Date().toISOString(),
@@ -112,18 +114,18 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
   expect([...times].sort()).toEqual(times);
   expect(receipt).toMatchObject({
     upgraded: true,
-    fromVersion: all.length - 1,
+    fromVersion: previous,
     toVersion: all.length,
     irreversible: true,
     rollbackPlan: { appRollback: "restore-required", restoreFrom: backupDir },
   });
   expect(receipt.rollbackPlan.command).toContain(backupDir);
-  expect(receipt.backup).toMatchObject({ databaseVersion: all.length - 1, evidenceComplete: true });
+  expect(receipt.backup).toMatchObject({ databaseVersion: previous, evidenceComplete: true });
 
   // The backup is the pre-migration schema; the live database is migrated and keeps its state.
   const manifest = JSON.parse(await readFile(join(backupDir, "manifest.json"), "utf8"));
-  expect(manifest.databaseVersion).toBe(all.length - 1);
-  expect(versionOf(join(backupDir, "testmaster.db"))).toBe(all.length - 1);
+  expect(manifest.databaseVersion).toBe(previous);
+  expect(versionOf(join(backupDir, "testmaster.db"))).toBe(previous);
   const snapshot = new DatabaseSync(join(backupDir, "testmaster.db"), { readOnly: true });
   expect(
     String(
@@ -148,7 +150,7 @@ it("upgrades in order: preflight, drain, backup of the old schema, migrate, read
           live.get("SELECT value FROM operational_state WHERE key=?", LAST_UPGRADE_KEY)?.value,
         ),
       ),
-    ).toMatchObject({ fromVersion: all.length - 1, toVersion: all.length, backup: backupDir });
+    ).toMatchObject({ fromVersion: previous, toVersion: all.length, backup: backupDir });
   } finally {
     live.close();
   }

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
+import { postgresParity } from "@testmaster/persistence/testing";
 import { afterEach, expect, it, vi } from "vitest";
 import { BackupsService } from "./backups.js";
 import { type ResolvedConfig, resolveConfig } from "./config.js";
@@ -190,55 +191,63 @@ it("authorizes public methods and reauthorizes every deferred release", async ()
   await expect(release.resolve()).rejects.toBe(denied);
 });
 
-it("SEC-036 restores real backup metadata but missing vault key denies release without replacement", async () => {
-  const { service, ctx, home, config } = await fixture();
-  const secret = await service.set("restored", "backup-canary", {
-    allowedOrigins: ["https://shop.example"],
-  });
-  const backup = join(home, "backup");
-  await ctx.database.backup(backup);
-  const isolated = join(home, "restore");
-  const restored = await PersistenceDatabase.restore(backup, isolated);
-  databases.push(restored.database);
-  await rm(join(home, ".config", "testmaster", "vault.key"));
-  const restoredService = new SecretsService(
-    { ...ctx, database: restored.database, entities: new EntityRepository(restored.database) },
-    config,
-  );
-  await expect((await restoredService.release(secret.id)).resolve()).rejects.toMatchObject({
-    code: "PRECONDITION_FAILED",
-  });
-  await expect(stat(join(home, ".config", "testmaster", "vault.key"))).rejects.toMatchObject({
-    code: "ENOENT",
-  });
-  expect(
-    restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-  ).toBe("suspended_restore");
-});
+// Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
+it.skipIf(postgresParity)(
+  "SEC-036 restores real backup metadata but missing vault key denies release without replacement",
+  async () => {
+    const { service, ctx, home, config } = await fixture();
+    const secret = await service.set("restored", "backup-canary", {
+      allowedOrigins: ["https://shop.example"],
+    });
+    const backup = join(home, "backup");
+    await ctx.database.backup(backup);
+    const isolated = join(home, "restore");
+    const restored = await PersistenceDatabase.restore(backup, isolated);
+    databases.push(restored.database);
+    await rm(join(home, ".config", "testmaster", "vault.key"));
+    const restoredService = new SecretsService(
+      { ...ctx, database: restored.database, entities: new EntityRepository(restored.database) },
+      config,
+    );
+    await expect((await restoredService.release(secret.id)).resolve()).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+    });
+    await expect(stat(join(home, ".config", "testmaster", "vault.key"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    expect(
+      restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+    ).toBe("suspended_restore");
+  },
+);
 
-it("SEC-036 backup files alone cannot reveal secrets and never contain the vault key", async () => {
-  const { service, ctx, home, config } = await fixture();
-  const secret = await service.set("backup-probe", "backup-canary-sec036", {
-    allowedOrigins: ["https://shop.example"],
-  });
-  const backup = join(home, "backup-sec036");
-  await new BackupsService(ctx, config, service).create(backup);
-  const key = await readFile(join(home, ".config", "testmaster", "vault.key"));
-  const files = (await readdir(backup, { recursive: true })) as string[];
-  expect(files.filter((name) => /vault/u.test(name))).toEqual([]);
-  for (const name of files) {
-    if (!(await stat(join(backup, name))).isFile()) continue;
-    const bytes = await readFile(join(backup, name));
-    expect(bytes.includes(Buffer.from("backup-canary-sec036"))).toBe(false);
-    expect(bytes.includes(key)).toBe(false);
-  }
-  expect(JSON.parse(await readFile(join(backup, "manifest.json"), "utf8")).secretIncluded).toBe(
-    false,
-  );
-  expect(await readdir(join(home, ".local", "share", "testmaster"))).toContain(
-    `${secret.id}.1.vault`,
-  );
-});
+// Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
+it.skipIf(postgresParity)(
+  "SEC-036 backup files alone cannot reveal secrets and never contain the vault key",
+  async () => {
+    const { service, ctx, home, config } = await fixture();
+    const secret = await service.set("backup-probe", "backup-canary-sec036", {
+      allowedOrigins: ["https://shop.example"],
+    });
+    const backup = join(home, "backup-sec036");
+    await new BackupsService(ctx, config, service).create(backup);
+    const key = await readFile(join(home, ".config", "testmaster", "vault.key"));
+    const files = (await readdir(backup, { recursive: true })) as string[];
+    expect(files.filter((name) => /vault/u.test(name))).toEqual([]);
+    for (const name of files) {
+      if (!(await stat(join(backup, name))).isFile()) continue;
+      const bytes = await readFile(join(backup, name));
+      expect(bytes.includes(Buffer.from("backup-canary-sec036"))).toBe(false);
+      expect(bytes.includes(key)).toBe(false);
+    }
+    expect(JSON.parse(await readFile(join(backup, "manifest.json"), "utf8")).secretIncluded).toBe(
+      false,
+    );
+    expect(await readdir(join(home, ".local", "share", "testmaster"))).toContain(
+      `${secret.id}.1.vault`,
+    );
+  },
+);
 
 it("SEC-036 rewraps all vault ciphertexts before key retirement and refuses restored retired-key bytes", async () => {
   const { service, home } = await fixture();

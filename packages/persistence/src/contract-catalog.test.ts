@@ -212,14 +212,14 @@ it("every public entity has catalog-generated DTO/null/default/enum/limit/event 
         );
         if (columns.find((column) => column.name === rule.column)?.notnull) mutations.push(null);
         for (const mutation of mutations) {
-          db.db.exec("BEGIN");
+          db.exec("BEGIN");
           try {
-            db.db.exec("SAVEPOINT contract_fixture");
+            db.exec("SAVEPOINT contract_fixture");
             for (const trigger of db.all<{ name: string }>(
               "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name=? AND name NOT LIKE 'contract_%'",
               fixture.table,
             ))
-              db.db.exec(`DROP TRIGGER ${trigger.name}`);
+              db.exec(`DROP TRIGGER ${trigger.name}`);
             expect(
               () =>
                 db.run(
@@ -230,7 +230,7 @@ it("every public entity has catalog-generated DTO/null/default/enum/limit/event 
               `${fixture.kind}.${rule.column}`,
             ).toThrow();
           } finally {
-            db.db.exec("ROLLBACK");
+            db.exec("ROLLBACK");
           }
         }
       }

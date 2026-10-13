@@ -22,12 +22,14 @@ import {
   OutboxRepository,
   StaleFenceError,
 } from "./repositories.js";
+import { postgresParity } from "./testing/postgres.js";
+import { seedQueuedRun } from "./testing/seed.js";
 import { SqliteBudgetLedger, SqliteConsentStore, SqliteModelCallRecorder } from "./usage.js";
 
 const directories: string[] = [];
 const connections: PersistenceDatabase[] = [];
 afterEach(async () => {
-  for (const db of connections.splice(0)) if (db.db.isOpen) db.close();
+  for (const db of connections.splice(0)) if (db.isOpen) db.close();
   for (const directory of directories.splice(0))
     await rm(directory, { recursive: true, force: true });
 });
@@ -47,98 +49,7 @@ async function createSeeded(): Promise<{
   environmentRevision: string;
 }> {
   const db = await createDatabase();
-  const entities = new EntityRepository(db);
-  const ws = uuidV7IdGenerator.next("ws");
-  const project = uuidV7IdGenerator.next("prj");
-  const test = uuidV7IdGenerator.next("tst");
-  const revision = uuidV7IdGenerator.next("rev");
-  const environment = uuidV7IdGenerator.next("env");
-  const environmentRevision = uuidV7IdGenerator.next("evr");
-  const run = uuidV7IdGenerator.next("run");
-  db.withTx(() => {
-    entities.insert("Workspace", {
-      workspaceId: ws,
-      id: ws,
-      name: "Local",
-      mode: "single-user",
-      settingsVersion: 1,
-      quotaPolicyId: "local",
-    });
-    entities.insert("Project", {
-      workspaceId: ws,
-      id: project,
-      name: "Project",
-      slug: "project",
-      defaultEnvironmentId: null,
-      archivedAt: null,
-    });
-    entities.insert("Environment", {
-      workspaceId: ws,
-      id: environment,
-      projectId: project,
-      name: "local",
-      activeRevisionId: environmentRevision,
-      archivedAt: null,
-    });
-    entities.insert(
-      "EnvironmentRevision",
-      {
-        workspaceId: ws,
-        id: environmentRevision,
-        targetOrigins: ["http://127.0.0.1:3000"],
-        networkProfile: "local-loopback",
-        authProfileRefs: [],
-        locale: "en-US",
-        timezone: "UTC",
-        variables: {},
-        production: false,
-      },
-      { environmentId: environment },
-    );
-    entities.insert("TestCase", {
-      workspaceId: ws,
-      id: test,
-      projectId: project,
-      name: "health",
-      activeRevisionId: revision,
-      tags: [],
-      priority: "normal",
-      archivedAt: null,
-    });
-    entities.insert("TestRevision", {
-      workspaceId: ws,
-      id: revision,
-      testId: test,
-      ordinal: 1,
-      contentHash: "a".repeat(64),
-      plan: null,
-      codeArtifactId: null,
-      runnerKind: "http",
-      author: "local",
-      parentId: null,
-      origin: "manual",
-    });
-    entities.insert("Run", {
-      workspaceId: ws,
-      id: run,
-      testId: test,
-      revisionId: revision,
-      environmentRevisionId: environmentRevision,
-      batchId: null,
-      matrixCell: {},
-      mode: "replay",
-      phase: "queued",
-      status: "queued",
-      outcome: null,
-      origin: "manual",
-      gatePolicy: {},
-      gate: "pending",
-      cleanupOutcome: "not_required",
-      analysisStatus: "not_requested",
-    });
-    new LeaseRepository(db).enqueue(ws, run, "http");
-  });
-  return { db, ws, project, run, revision, environmentRevision };
+  return { db, ...seedQueuedRun(db) };
 }
 function child(script: string, args: string[]): Promise<string> {
   const { promise, resolve, reject } = Promise.withResolvers<string>();
@@ -173,7 +84,8 @@ describe("SQLite persistence", () => {
     await writeFile(join(dir, "0001_initial.sql"), `${migration.sql}\n-- changed`);
     await expect(db.migrate(dir)).rejects.toBeInstanceOf(MigrationChecksumError);
   });
-  it("rolls back a migration that dies after DDL", async () => {
+  // Not run on PostgreSQL: Inspects sqlite_master after a failed migration; database.pg.test.ts proves PostgreSQL migration rollback.
+  it.skipIf(postgresParity)("rolls back a migration that dies after DDL", async () => {
     const db = await createDatabase();
     const dir = join(directories[0] ?? "", "upgrade");
     await mkdir(dir);
@@ -193,87 +105,95 @@ describe("SQLite persistence", () => {
     expect(db.get("SELECT name FROM sqlite_master WHERE name='transient'")).toBeUndefined();
     expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
   });
-  it("upgrades populated evidence while preserving code artifact foreign keys", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "tm-artifact-upgrade-"));
-    directories.push(directory);
-    const initialDirectory = join(directory, "initial");
-    await mkdir(initialDirectory);
-    const initial = (await loadMigrations())[0];
-    if (!initial) throw new Error("missing initial migration");
-    await writeFile(
-      join(initialDirectory, `${String(initial.version).padStart(4, "0")}_${initial.name}.sql`),
-      initial.sql,
-    );
-    const db = await PersistenceDatabase.open(join(directory, "testmaster.db"), {
-      migrationsDir: initialDirectory,
-    });
-    connections.push(db);
-    db.withTx(() => {
-      for (const statement of constraintSeed) db.run(statement);
-      db.run(
-        "INSERT INTO artifacts(workspace_id,id,created_at,run_id,attempt_id,revision_id,snapshot_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-existing','2026-10-05T00:00:00.000Z','run-a','att-a','rev-a','snp-a','hash',1,'existing','available','not_applicable')",
+  // Not run on PostgreSQL: Rebuilds SQLite tables under PRAGMA foreign_keys; PostgreSQL migrations are transactional DDL.
+  it.skipIf(postgresParity)(
+    "upgrades populated evidence while preserving code artifact foreign keys",
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), "tm-artifact-upgrade-"));
+      directories.push(directory);
+      const initialDirectory = join(directory, "initial");
+      await mkdir(initialDirectory);
+      const initial = (await loadMigrations())[0];
+      if (!initial) throw new Error("missing initial migration");
+      await writeFile(
+        join(initialDirectory, `${String(initial.version).padStart(4, "0")}_${initial.name}.sql`),
+        initial.sql,
       );
-      db.run(
-        "INSERT INTO test_revisions(workspace_id,id,created_at,test_id,ordinal,content_hash,runner_kind,origin,code_artifact_id) VALUES('ws-a','rev-code','2026-10-05T00:00:00.000Z','tst-a',2,'hash','playwright','imported','art-existing')",
+      const db = await PersistenceDatabase.open(join(directory, "testmaster.db"), {
+        migrationsDir: initialDirectory,
+      });
+      connections.push(db);
+      db.withTx(() => {
+        for (const statement of constraintSeed) db.run(statement);
+        db.run(
+          "INSERT INTO artifacts(workspace_id,id,created_at,run_id,attempt_id,revision_id,snapshot_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-existing','2026-10-05T00:00:00.000Z','run-a','att-a','rev-a','snp-a','hash',1,'existing','available','not_applicable')",
+        );
+        db.run(
+          "INSERT INTO test_revisions(workspace_id,id,created_at,test_id,ordinal,content_hash,runner_kind,origin,code_artifact_id) VALUES('ws-a','rev-code','2026-10-05T00:00:00.000Z','tst-a',2,'hash','playwright','imported','art-existing')",
+        );
+      });
+      await db.migrate();
+      expect(
+        db.get("SELECT code_artifact_id FROM test_revisions WHERE id='rev-code'")?.code_artifact_id,
+      ).toBe("art-existing");
+      expect(db.get("SELECT storage_key FROM artifacts WHERE id='art-existing'")?.storage_key).toBe(
+        "existing",
       );
-    });
-    await db.migrate();
-    expect(
-      db.get("SELECT code_artifact_id FROM test_revisions WHERE id='rev-code'")?.code_artifact_id,
-    ).toBe("art-existing");
-    expect(db.get("SELECT storage_key FROM artifacts WHERE id='art-existing'")?.storage_key).toBe(
-      "existing",
-    );
-    expect(db.all("PRAGMA foreign_key_check")).toEqual([]);
-    expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
-    db.withTx(() =>
-      db.run(
-        "INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-authored-new','2026-10-05T00:00:00.000Z','rev-code','hash',1,'authored','available','not_applicable')",
-      ),
-    );
-  });
-  it("rolls back an invalid rebuild upgrade and restores runtime foreign keys", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "tm-invalid-upgrade-"));
-    directories.push(directory);
-    const initialDirectory = join(directory, "initial");
-    const upgradeDirectory = join(directory, "upgrade");
-    await mkdir(initialDirectory);
-    await mkdir(upgradeDirectory);
-    const migrations = await loadMigrations();
-    const initial = migrations[0];
-    if (!initial) throw new Error("missing initial migration");
-    await writeFile(join(initialDirectory, "0001_initial.sql"), initial.sql);
-    for (const migration of migrations)
+      expect(db.all("PRAGMA foreign_key_check")).toEqual([]);
+      expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
+      db.withTx(() =>
+        db.run(
+          "INSERT INTO artifacts(workspace_id,id,created_at,revision_id,hash,bytes,storage_key,state,redaction_status) VALUES('ws-a','art-authored-new','2026-10-05T00:00:00.000Z','rev-code','hash',1,'authored','available','not_applicable')",
+        ),
+      );
+    },
+  );
+  // Not run on PostgreSQL: Rebuilds SQLite tables under PRAGMA foreign_keys; PostgreSQL migrations are transactional DDL.
+  it.skipIf(postgresParity)(
+    "rolls back an invalid rebuild upgrade and restores runtime foreign keys",
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), "tm-invalid-upgrade-"));
+      directories.push(directory);
+      const initialDirectory = join(directory, "initial");
+      const upgradeDirectory = join(directory, "upgrade");
+      await mkdir(initialDirectory);
+      await mkdir(upgradeDirectory);
+      const migrations = await loadMigrations();
+      const initial = migrations[0];
+      if (!initial) throw new Error("missing initial migration");
+      await writeFile(join(initialDirectory, "0001_initial.sql"), initial.sql);
+      for (const migration of migrations)
+        await writeFile(
+          join(
+            upgradeDirectory,
+            `${String(migration.version).padStart(4, "0")}_${migration.name}.sql`,
+          ),
+          migration.sql,
+        );
       await writeFile(
         join(
           upgradeDirectory,
-          `${String(migration.version).padStart(4, "0")}_${migration.name}.sql`,
+          `${String(migrations.length + 1).padStart(4, "0")}_invalid_reference.sql`,
         ),
-        migration.sql,
+        "INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('missing-ws','bad','2026-10-05T00:00:00.000Z','missing-project','Invalid')",
       );
-    await writeFile(
-      join(
-        upgradeDirectory,
-        `${String(migrations.length + 1).padStart(4, "0")}_invalid_reference.sql`,
-      ),
-      "INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('missing-ws','bad','2026-10-05T00:00:00.000Z','missing-project','Invalid')",
-    );
-    const db = await PersistenceDatabase.open(join(directory, "testmaster.db"), {
-      migrationsDir: initialDirectory,
-    });
-    connections.push(db);
-    await expect(db.migrate(upgradeDirectory)).rejects.toThrow("foreign key violation");
-    expect(db.status().currentVersion).toBe(1);
-    expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
-    expect(db.get("SELECT id FROM tests WHERE id='bad'")).toBeUndefined();
-    expect(() =>
-      db.withTx(() =>
-        db.run(
-          "INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('missing-ws','bad','2026-10-05T00:00:00.000Z','missing-project','Invalid')",
+      const db = await PersistenceDatabase.open(join(directory, "testmaster.db"), {
+        migrationsDir: initialDirectory,
+      });
+      connections.push(db);
+      await expect(db.migrate(upgradeDirectory)).rejects.toThrow("foreign key violation");
+      expect(db.status().currentVersion).toBe(1);
+      expect(db.get("PRAGMA foreign_keys")?.foreign_keys).toBe(1);
+      expect(db.get("SELECT id FROM tests WHERE id='bad'")).toBeUndefined();
+      expect(() =>
+        db.withTx(() =>
+          db.run(
+            "INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('missing-ws','bad','2026-10-05T00:00:00.000Z','missing-project','Invalid')",
+          ),
         ),
-      ),
-    ).toThrow();
-  });
+      ).toThrow();
+    },
+  );
   it("same key replays the original receipt, changed request conflicts", async () => {
     const { db, ws } = await createSeeded();
     const repo = new IdempotencyRepository(db);
@@ -343,7 +263,8 @@ describe("SQLite persistence", () => {
     ).toBe(true);
     expect(db.get("SELECT outcome FROM runs WHERE id=?", run)?.outcome).toBe("passed");
   });
-  it("allows exactly one of two OS processes to claim", async () => {
+  // Not run on PostgreSQL: Claims through two OS processes that open the SQLite file by path; database.pg.test.ts proves the PostgreSQL writer lock across processes.
+  it.skipIf(postgresParity)("allows exactly one of two OS processes to claim", async () => {
     const { db, ws } = await createSeeded();
     const script = `import {PersistenceDatabase,LeaseRepository} from './packages/persistence/dist/index.js'; const db=await PersistenceDatabase.open(process.argv[1]); const result=new LeaseRepository(db).claim({workspaceId:process.argv[2],owner:process.argv[3],queue:'http'}); console.log(result?'winner':'empty'); db.close();`;
     const results = await Promise.all([
@@ -353,43 +274,47 @@ describe("SQLite persistence", () => {
     expect(results.filter((text) => text.includes("winner"))).toHaveLength(1);
     expect(db.all("SELECT * FROM attempts")).toHaveLength(1);
   });
-  it("bounds writer contention with a typed retryable error and succeeds once the writer commits", async () => {
-    const db = await createDatabase();
-    const other = await PersistenceDatabase.open(db.path);
-    connections.push(other);
-    expect(other.get("PRAGMA busy_timeout")?.timeout).toBe(5000);
-    other.db.exec("PRAGMA busy_timeout=50");
-    const holder = new DatabaseSync(db.path);
-    try {
-      holder.exec("PRAGMA busy_timeout=5000; BEGIN IMMEDIATE");
-      const started = Date.now();
-      let ran = false;
-      let error: unknown;
+  // Not run on PostgreSQL: Writer contention is SQLite busy_timeout; database.pg.test.ts proves the PostgreSQL lock timeout.
+  it.skipIf(postgresParity)(
+    "bounds writer contention with a typed retryable error and succeeds once the writer commits",
+    async () => {
+      const db = await createDatabase();
+      const other = await PersistenceDatabase.open(db.path);
+      connections.push(other);
+      expect(other.get("PRAGMA busy_timeout")?.timeout).toBe(5000);
+      other.exec("PRAGMA busy_timeout=50");
+      const holder = new DatabaseSync(db.path);
       try {
-        other.withTx(() => {
-          ran = true;
+        holder.exec("PRAGMA busy_timeout=5000; BEGIN IMMEDIATE");
+        const started = Date.now();
+        let ran = false;
+        let error: unknown;
+        try {
+          other.withTx(() => {
+            ran = true;
+          });
+        } catch (caught) {
+          error = caught;
+        }
+        expect(Date.now() - started).toBeLessThan(2000);
+        expect(error).toMatchObject({
+          code: "UNAVAILABLE",
+          details: { reasonCode: "writer_contention", retryable: true },
         });
-      } catch (caught) {
-        error = caught;
+        expect(ran).toBe(false);
+        expect(other.inTransaction).toBe(false);
+        holder.exec("COMMIT");
+      } finally {
+        holder.close();
       }
-      expect(Date.now() - started).toBeLessThan(2000);
-      expect(error).toMatchObject({
-        code: "UNAVAILABLE",
-        details: { reasonCode: "writer_contention", retryable: true },
-      });
-      expect(ran).toBe(false);
-      expect(other.db.isTransaction).toBe(false);
-      holder.exec("COMMIT");
-    } finally {
-      holder.close();
-    }
-    other.withTx(() =>
-      other.run("INSERT INTO operational_state(key,value) VALUES('contention-probe','ok')"),
-    );
-    expect(
-      other.get("SELECT value FROM operational_state WHERE key='contention-probe'")?.value,
-    ).toBe("ok");
-  });
+      other.withTx(() =>
+        other.run("INSERT INTO operational_state(key,value) VALUES('contention-probe','ok')"),
+      );
+      expect(
+        other.get("SELECT value FROM operational_state WHERE key='contention-probe'")?.value,
+      ).toBe("ok");
+    },
+  );
   it("enforces audit append-only even with direct SQL", async () => {
     const { db, ws, run } = await createSeeded();
     const id = new AuditRepository(db).append({
@@ -594,175 +519,197 @@ describe("SQLite persistence", () => {
       '"inputTokens":null',
     );
   });
-  it("backs up WAL consistently and restores in suspended isolation preserving IDs", async () => {
-    const { db, ws, run } = await createSeeded();
-    const root = directories[0] ?? "";
-    const backupDir = join(root, "backup");
-    const manifest = await db.backup(backupDir);
-    expect(manifest.files).toHaveLength(2);
-    expect(manifest.files[0]?.sha256).toBe(await fileSha256(join(backupDir, "testmaster.db")));
-    const restored = await PersistenceDatabase.restore(backupDir, join(root, "restore"));
-    connections.push(restored.database);
-    expect(
-      restored.database.get("SELECT id FROM runs WHERE workspace_id=? AND id=?", ws, run)?.id,
-    ).toBe(run);
-    expect(
-      new LeaseRepository(restored.database).claim({
+  // Not run on PostgreSQL: Uses the SQLite online backup API; PostgreSQL backups are pg_dump based (M4-02).
+  it.skipIf(postgresParity)(
+    "backs up WAL consistently and restores in suspended isolation preserving IDs",
+    async () => {
+      const { db, ws, run } = await createSeeded();
+      const root = directories[0] ?? "";
+      const backupDir = join(root, "backup");
+      const manifest = await db.backup(backupDir);
+      expect(manifest.files).toHaveLength(2);
+      expect(manifest.files[0]?.sha256).toBe(await fileSha256(join(backupDir, "testmaster.db")));
+      const restored = await PersistenceDatabase.restore(backupDir, join(root, "restore"));
+      connections.push(restored.database);
+      expect(
+        restored.database.get("SELECT id FROM runs WHERE workspace_id=? AND id=?", ws, run)?.id,
+      ).toBe(run);
+      expect(
+        new LeaseRepository(restored.database).claim({
+          workspaceId: ws,
+          owner: "worker",
+          queue: "http",
+        }),
+      ).toBeNull();
+      expect(new OutboxRepository(restored.database).pending(ws)).toHaveLength(0);
+      expect(restored.requiresOperatorReview).toBe(true);
+      expect(
+        restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+      ).toBe("suspended_restore");
+      const raw = await readFile(join(backupDir, "testmaster.db"));
+      raw[0] = 0;
+      await writeFile(join(backupDir, "testmaster.db"), raw);
+      await expect(
+        PersistenceDatabase.restore(backupDir, join(root, "tampered-restore")),
+      ).rejects.toThrow("integrity");
+    },
+  );
+  // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
+  it.skipIf(postgresParity)(
+    "OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
+    async () => {
+      const { db, ws, project, environmentRevision } = await createSeeded();
+      const entities = new EntityRepository(db);
+      const principal = uuidV7IdGenerator.next("usr");
+      const kept = uuidV7IdGenerator.next("apr");
+      const revoked = uuidV7IdGenerator.next("apr");
+      const approval = (id: string) => ({
+        id,
         workspaceId: ws,
-        owner: "worker",
-        queue: "http",
-      }),
-    ).toBeNull();
-    expect(new OutboxRepository(restored.database).pending(ws)).toHaveLength(0);
-    expect(restored.requiresOperatorReview).toBe(true);
-    expect(
-      restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-    ).toBe("suspended_restore");
-    const raw = await readFile(join(backupDir, "testmaster.db"));
-    raw[0] = 0;
-    await writeFile(join(backupDir, "testmaster.db"), raw);
-    await expect(
-      PersistenceDatabase.restore(backupDir, join(root, "tampered-restore")),
-    ).rejects.toThrow("integrity");
-  });
-  it("OPS-025 replays post-backup consent and approval revocations and invalidates server tokens", async () => {
-    const { db, ws, project, environmentRevision } = await createSeeded();
-    const entities = new EntityRepository(db);
-    const principal = uuidV7IdGenerator.next("usr");
-    const kept = uuidV7IdGenerator.next("apr");
-    const revoked = uuidV7IdGenerator.next("apr");
-    const approval = (id: string) => ({
-      id,
-      workspaceId: ws,
-      createdAt: new Date().toISOString(),
-      version: 1,
-      actorId: principal,
-      reviewerId: principal,
-      actionSet: ["run"],
-      revisionHash: "b".repeat(64),
-      environmentRevisionId: environmentRevision,
-      originSet: ["http://127.0.0.1:3000"],
-      expiresAt: new Date(Date.now() + 1_800_000).toISOString(),
-      revokedAt: null,
-      policyHash: "c".repeat(64),
-    });
-    db.withTx(() => {
-      entities.insert("Principal", {
-        id: principal,
-        workspaceId: ws,
-        kind: "human",
-        displayName: "Owner",
-        disabledAt: null,
+        createdAt: new Date().toISOString(),
+        version: 1,
+        actorId: principal,
+        reviewerId: principal,
+        actionSet: ["run"],
+        revisionHash: "b".repeat(64),
+        environmentRevisionId: environmentRevision,
+        originSet: ["http://127.0.0.1:3000"],
+        expiresAt: new Date(Date.now() + 1_800_000).toISOString(),
+        revokedAt: null,
+        policyHash: "c".repeat(64),
       });
-      entities.insert("Approval", approval(kept));
-      entities.insert("Approval", approval(revoked));
-      db.run(
-        "INSERT INTO server_tokens(workspace_id,id,created_at,principal_id,token_hash) VALUES(?,?,?,?,?)",
-        ws,
-        "tok-1",
-        new Date().toISOString(),
+      db.withTx(() => {
+        entities.insert("Principal", {
+          id: principal,
+          workspaceId: ws,
+          kind: "human",
+          displayName: "Owner",
+          disabledAt: null,
+        });
+        entities.insert("Approval", approval(kept));
+        entities.insert("Approval", approval(revoked));
+        db.run(
+          "INSERT INTO server_tokens(workspace_id,id,created_at,principal_id,token_hash) VALUES(?,?,?,?,?)",
+          ws,
+          "tok-1",
+          new Date().toISOString(),
+          principal,
+          "d".repeat(64),
+        );
+      });
+      new SqliteConsentStore(db).grant(
+        { workspaceId: ws, projectId: project, providerId: "fake" },
+        ["documents"],
         principal,
-        "d".repeat(64),
       );
-    });
-    new SqliteConsentStore(db).grant(
-      { workspaceId: ws, projectId: project, providerId: "fake" },
-      ["documents"],
-      principal,
-    );
-    const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
-    const root = directories[0] ?? "";
-    const backupDir = join(root, "backup-ledger");
-    await db.backup(backupDir);
-    const revokedAt = new Date().toISOString();
-    db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
-    db.withTx(() =>
-      entities.update("Approval", ws, revoked, 1, { ...approval(revoked), revokedAt, version: 2 }),
-    );
-    const restored = await PersistenceDatabase.restore(backupDir, join(root, "restore-ledger"), {
-      consentRevocations: db.all(
-        "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
-      ),
-      approvalRevocations: db.all(
-        "SELECT workspace_id,id,revoked_at FROM approvals WHERE revoked_at IS NOT NULL",
-      ),
-    });
-    connections.push(restored.database);
-    const target = restored.database;
-    expect(target.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at).toBe(
-      revokedAt,
-    );
-    expect(target.get("SELECT revoked_at FROM approvals WHERE id=?", revoked)?.revoked_at).toBe(
-      revokedAt,
-    );
-    expect(
-      JSON.parse(
-        String(target.get("SELECT data_json FROM approvals WHERE id=?", revoked)?.data_json),
-      ).revokedAt,
-    ).toBe(revokedAt);
-    expect(target.get("SELECT revoked_at FROM approvals WHERE id=?", kept)?.revoked_at).toBeNull();
-    expect(target.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(0);
-    expect(db.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(1);
-    expect(restored).toMatchObject({ postBackupLedger: "replayed", exclusionsGuaranteed: true });
-  });
-  it("OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it", async () => {
-    const { db, ws, project } = await createSeeded();
-    new SqliteConsentStore(db).grant(
-      { workspaceId: ws, projectId: project, providerId: "fake" },
-      ["documents"],
-      "owner",
-    );
-    const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
-    const revokedAt = "2026-01-01T00:00:00.000Z";
-    db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
-    const root = directories[0] ?? "";
-    await db.backup(join(root, "backup-prior"));
-    db.run("UPDATE consents SET revoked_at=NULL WHERE id=?", consentId);
-    const restored = await PersistenceDatabase.restore(
-      join(root, "backup-prior"),
-      join(root, "restore-prior"),
-      {
+      const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
+      const root = directories[0] ?? "";
+      const backupDir = join(root, "backup-ledger");
+      await db.backup(backupDir);
+      const revokedAt = new Date().toISOString();
+      db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
+      db.withTx(() =>
+        entities.update("Approval", ws, revoked, 1, {
+          ...approval(revoked),
+          revokedAt,
+          version: 2,
+        }),
+      );
+      const restored = await PersistenceDatabase.restore(backupDir, join(root, "restore-ledger"), {
         consentRevocations: db.all(
           "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
         ),
-      },
-    );
-    connections.push(restored.database);
-    expect(
-      restored.database.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at,
-    ).toBe(revokedAt);
-  });
-  it("OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended", async () => {
-    const { db } = await createSeeded();
-    const root = directories[0] ?? "";
-    await db.backup(join(root, "backup-noledger"));
-    const restored = await PersistenceDatabase.restore(
-      join(root, "backup-noledger"),
-      join(root, "restore-noledger"),
-      { ledgerAvailable: false },
-    );
-    connections.push(restored.database);
-    expect(restored).toMatchObject({
-      postBackupLedger: "unavailable",
-      exclusionsGuaranteed: false,
-    });
-    expect(
-      restored.database.get("SELECT value FROM operational_state WHERE key='restore_review'")
-        ?.value,
-    ).toBe("post_backup_ledger_unavailable");
-    expect(
-      restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-    ).toBe("suspended_restore");
-  });
+        approvalRevocations: db.all(
+          "SELECT workspace_id,id,revoked_at FROM approvals WHERE revoked_at IS NOT NULL",
+        ),
+      });
+      connections.push(restored.database);
+      const target = restored.database;
+      expect(target.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at).toBe(
+        revokedAt,
+      );
+      expect(target.get("SELECT revoked_at FROM approvals WHERE id=?", revoked)?.revoked_at).toBe(
+        revokedAt,
+      );
+      expect(
+        JSON.parse(
+          String(target.get("SELECT data_json FROM approvals WHERE id=?", revoked)?.data_json),
+        ).revokedAt,
+      ).toBe(revokedAt);
+      expect(
+        target.get("SELECT revoked_at FROM approvals WHERE id=?", kept)?.revoked_at,
+      ).toBeNull();
+      expect(target.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(0);
+      expect(db.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(1);
+      expect(restored).toMatchObject({ postBackupLedger: "replayed", exclusionsGuaranteed: true });
+    },
+  );
+  // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
+  it.skipIf(postgresParity)(
+    "OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
+    async () => {
+      const { db, ws, project } = await createSeeded();
+      new SqliteConsentStore(db).grant(
+        { workspaceId: ws, projectId: project, providerId: "fake" },
+        ["documents"],
+        "owner",
+      );
+      const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
+      const revokedAt = "2026-01-01T00:00:00.000Z";
+      db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
+      const root = directories[0] ?? "";
+      await db.backup(join(root, "backup-prior"));
+      db.run("UPDATE consents SET revoked_at=NULL WHERE id=?", consentId);
+      const restored = await PersistenceDatabase.restore(
+        join(root, "backup-prior"),
+        join(root, "restore-prior"),
+        {
+          consentRevocations: db.all(
+            "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
+          ),
+        },
+      );
+      connections.push(restored.database);
+      expect(
+        restored.database.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at,
+      ).toBe(revokedAt);
+    },
+  );
+  // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
+  it.skipIf(postgresParity)(
+    "OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
+    async () => {
+      const { db } = await createSeeded();
+      const root = directories[0] ?? "";
+      await db.backup(join(root, "backup-noledger"));
+      const restored = await PersistenceDatabase.restore(
+        join(root, "backup-noledger"),
+        join(root, "restore-noledger"),
+        { ledgerAvailable: false },
+      );
+      connections.push(restored.database);
+      expect(restored).toMatchObject({
+        postBackupLedger: "unavailable",
+        exclusionsGuaranteed: false,
+      });
+      expect(
+        restored.database.get("SELECT value FROM operational_state WHERE key='restore_review'")
+          ?.value,
+      ).toBe("post_backup_ledger_unavailable");
+      expect(
+        restored.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
+      ).toBe("suspended_restore");
+    },
+  );
   it.each(constraintFixtures)("constraint fixture: $name", async (fixture) => {
     const db = await createDatabase();
     db.withTx(() => {
-      for (const sql of constraintSeed) db.db.exec(sql);
+      for (const sql of constraintSeed) db.exec(sql);
     });
     let actual: string = "accept";
     try {
       db.withTx(() => {
-        for (const sql of fixture.statements) db.db.exec(sql);
+        for (const sql of fixture.statements) db.exec(sql);
       });
     } catch (error) {
       actual = constraintErrorClass(error);
