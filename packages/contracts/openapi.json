@@ -6899,6 +6899,486 @@
         }
       }
     },
+    "/artifacts/{id}/content": {
+      "get": {
+        "operationId": "get__artifacts_id_content",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "signature",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Binary"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artifacts/{id}/links": {
+      "post": {
+        "operationId": "post__artifacts_id_links",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "artifacts:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ArtifactLink"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArtifactLinkInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/attempts": {
+      "get": {
+        "operationId": "get__runs_id_attempts",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "runs:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AttemptView"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/healing-proposals": {
+      "get": {
+        "operationId": "get__runs_id_healing_proposals",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "healing:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HealingProposal"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post__runs_id_healing_proposals",
+        "tags": [
+          "M3"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "healing:W",
+        "x-milestone": "M3",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HealingProposal"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealingInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/metrics": {
+      "get": {
+        "operationId": "get__projects_id_metrics",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "runs:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProjectMetrics"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/quarantine": {
+      "get": {
+        "operationId": "get__projects_id_quarantine",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tests:R",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/QuarantineRecord"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runs/{id}/analysis": {
       "get": {
         "operationId": "get__runs_id_analysis",
@@ -7033,82 +7513,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AnalysisInput"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/runs/{id}/healing-proposals": {
-      "post": {
-        "operationId": "post__runs_id_healing_proposals",
-        "tags": [
-          "M3"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "x-scope": "healing:W",
-        "x-milestone": "M3",
-        "responses": {
-          "200": {
-            "description": "Successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "schemaVersion",
-                    "requestId",
-                    "data",
-                    "warnings"
-                  ],
-                  "properties": {
-                    "schemaVersion": {
-                      "const": "1.0.0"
-                    },
-                    "requestId": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/HealingProposal"
-                    },
-                    "warnings": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Canonical error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/HealingInput"
               }
             }
           }
@@ -28920,6 +29324,74 @@
           }
         }
       },
+      "ArtifactLink": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "artifactId",
+          "method",
+          "disposition",
+          "url",
+          "expiresAt",
+          "ttlSeconds"
+        ],
+        "properties": {
+          "artifactId": {
+            "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "method": {
+            "const": "GET",
+            "type": "string"
+          },
+          "disposition": {
+            "anyOf": [
+              {
+                "const": "inline",
+                "type": "string"
+              },
+              {
+                "const": "attachment",
+                "type": "string"
+              }
+            ]
+          },
+          "url": {
+            "minLength": 1,
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "ttlSeconds": {
+            "const": 300,
+            "type": "number"
+          }
+        },
+        "$defs": {}
+      },
+      "ArtifactLinkInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "disposition": {
+            "anyOf": [
+              {
+                "const": "inline",
+                "type": "string"
+              },
+              {
+                "const": "attachment",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "$defs": {}
+      },
       "ArtifactManifest": {
         "additionalProperties": false,
         "type": "object",
@@ -29364,6 +29836,390 @@
             ]
           }
         }
+      },
+      "AttemptView": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "runId",
+          "number",
+          "workerId",
+          "phase",
+          "startedAt",
+          "endedAt",
+          "outcome",
+          "kind",
+          "policy",
+          "retry"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "number": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "workerId": {
+            "anyOf": [
+              {
+                "pattern": "^wrk_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "const": "queued",
+                "type": "string"
+              },
+              {
+                "const": "preparing",
+                "type": "string"
+              },
+              {
+                "const": "running",
+                "type": "string"
+              },
+              {
+                "const": "collecting",
+                "type": "string"
+              },
+              {
+                "const": "analyzing",
+                "type": "string"
+              },
+              {
+                "const": "completed",
+                "type": "string"
+              }
+            ]
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "initial",
+                "type": "string"
+              },
+              {
+                "const": "retry",
+                "type": "string"
+              }
+            ]
+          },
+          "policy": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "maxAttempts"
+            ],
+            "properties": {
+              "maxAttempts": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            }
+          },
+          "retry": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "previousAttemptId",
+                  "previousOutcome",
+                  "category",
+                  "reasonCode"
+                ],
+                "properties": {
+                  "previousAttemptId": {
+                    "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "previousOutcome": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "const": "passed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "blocked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "inconclusive",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "category": {
+                    "anyOf": [
+                      {
+                        "const": "infrastructure",
+                        "type": "string"
+                      },
+                      {
+                        "const": "diagnostic",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "reasonCode": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "const": "assertions_satisfied",
+                            "type": "string"
+                          },
+                          {
+                            "const": "assertion_mismatch",
+                            "type": "string"
+                          },
+                          {
+                            "const": "assertion_timeout",
+                            "type": "string"
+                          },
+                          {
+                            "const": "missing_secret",
+                            "type": "string"
+                          },
+                          {
+                            "const": "actor_revoked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "credential_revoked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "manual_auth_required",
+                            "type": "string"
+                          },
+                          {
+                            "const": "auth_checkpoint_expired",
+                            "type": "string"
+                          },
+                          {
+                            "const": "upstream_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "dependency_cycle",
+                            "type": "string"
+                          },
+                          {
+                            "const": "ambiguous_producer",
+                            "type": "string"
+                          },
+                          {
+                            "const": "unsupported_capability",
+                            "type": "string"
+                          },
+                          {
+                            "const": "security_precondition_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "approval_required",
+                            "type": "string"
+                          },
+                          {
+                            "const": "egress_denied",
+                            "type": "string"
+                          },
+                          {
+                            "const": "worker_lost",
+                            "type": "string"
+                          },
+                          {
+                            "const": "worker_lease_expired",
+                            "type": "string"
+                          },
+                          {
+                            "const": "execution_deadline",
+                            "type": "string"
+                          },
+                          {
+                            "const": "attempt_timeout",
+                            "type": "string"
+                          },
+                          {
+                            "const": "insufficient_evidence",
+                            "type": "string"
+                          },
+                          {
+                            "const": "oracle_uncertain",
+                            "type": "string"
+                          },
+                          {
+                            "const": "retry_unsafe_external_effect",
+                            "type": "string"
+                          },
+                          {
+                            "const": "user_cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "deadline_cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "tunnel_lost",
+                            "type": "string"
+                          },
+                          {
+                            "const": "artifact_limit_exceeded",
+                            "type": "string"
+                          },
+                          {
+                            "const": "storage_unavailable",
+                            "type": "string"
+                          },
+                          {
+                            "const": "artifact_expired",
+                            "type": "string"
+                          },
+                          {
+                            "const": "redaction_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "budget_exhausted",
+                            "type": "string"
+                          },
+                          {
+                            "const": "quota_exceeded",
+                            "type": "string"
+                          },
+                          {
+                            "const": "schedule_misfire",
+                            "type": "string"
+                          },
+                          {
+                            "const": "schedule_overlap",
+                            "type": "string"
+                          },
+                          {
+                            "const": "owner_revoked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cleanup_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cleanup_inconclusive",
+                            "type": "string"
+                          },
+                          {
+                            "const": "optional_step_skipped",
+                            "type": "string"
+                          },
+                          {
+                            "const": "stopped_after_failure",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cancelled_before_step",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "$defs": {}
       },
       "AuditEntry": {
         "additionalProperties": false,
@@ -54268,24 +55124,31 @@
                   "outcome": {
                     "anyOf": [
                       {
-                        "const": "passed",
-                        "type": "string"
+                        "anyOf": [
+                          {
+                            "const": "passed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "blocked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "inconclusive",
+                            "type": "string"
+                          }
+                        ]
                       },
                       {
-                        "const": "failed",
-                        "type": "string"
-                      },
-                      {
-                        "const": "blocked",
-                        "type": "string"
-                      },
-                      {
-                        "const": "cancelled",
-                        "type": "string"
-                      },
-                      {
-                        "const": "inconclusive",
-                        "type": "string"
+                        "type": "null"
                       }
                     ]
                   },
@@ -61717,6 +62580,231 @@
           "defaultEnvironmentId": {
             "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "ProjectMetrics": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "projectId",
+          "window",
+          "considered",
+          "truncated",
+          "metrics",
+          "quarantined",
+          "limitations"
+        ],
+        "properties": {
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "window": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "since",
+              "until"
+            ],
+            "properties": {
+              "since": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "until": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              }
+            }
+          },
+          "considered": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "metrics": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "counts",
+              "rates",
+              "exclusions",
+              "blockedReasons",
+              "retryPolicy"
+            ],
+            "properties": {
+              "counts": {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                }
+              },
+              "rates": {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "numerator",
+                      "denominator",
+                      "denominatorState",
+                      "state",
+                      "value",
+                      "definition",
+                      "scope"
+                    ],
+                    "properties": {
+                      "numerator": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "denominator": {
+                        "anyOf": [
+                          {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "denominatorState": {
+                        "anyOf": [
+                          {
+                            "const": "known",
+                            "type": "string"
+                          },
+                          {
+                            "const": "unknown",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "state": {
+                        "anyOf": [
+                          {
+                            "const": "available",
+                            "type": "string"
+                          },
+                          {
+                            "const": "notApplicable",
+                            "type": "string"
+                          },
+                          {
+                            "const": "insufficientData",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "minimum": 0,
+                            "maximum": 1,
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "definition": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "exclusions": {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                }
+              },
+              "blockedReasons": {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                }
+              },
+              "retryPolicy": {
+                "type": "string"
+              }
+            }
+          },
+          "quarantined": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "testId",
+                "owner",
+                "reason",
+                "expiresAt",
+                "active",
+                "runsInWindow",
+                "failedRunsInWindow"
+              ],
+              "properties": {
+                "testId": {
+                  "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "owner": {
+                  "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "format": "date-time",
+                  "pattern": "Z$",
+                  "type": "string"
+                },
+                "active": {
+                  "type": "boolean"
+                },
+                "runsInWindow": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "failedRunsInWindow": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "maxLength": 8000,
+              "type": "string"
+            }
           }
         },
         "$defs": {}

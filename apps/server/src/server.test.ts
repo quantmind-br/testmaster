@@ -497,3 +497,91 @@ it("REST healing review returns immutable changes and refuses project-scoped rea
   expect(denied.statusCode).toBe(403);
   expect(denied.json().error.code).toBe("FORBIDDEN");
 });
+
+it("UX-040 REST healing review stays readable while the verification Run is queued and reports the verdict once it finishes", async () => {
+  const f = await fixture();
+  const plan = scaffoldPlan("backend");
+  const test = f.application.tests.create({ projectId: f.init.projectId, plan });
+  const base = f.application.revisions.get(String(test.activeRevisionId));
+  // One approved proposal per candidate revision; its verification Run is queued or finished.
+  const approvedProposal = (literal: string, finished: boolean) => {
+    const failed = f.application.runs.resolve({
+      testId: test.id,
+      environmentId: f.init.environmentId,
+    });
+    Object.assign(failed, {
+      phase: "completed",
+      outcome: "failed",
+      status: "failed",
+      gate: "failed",
+    });
+    f.application.context.entities.insert("Run", failed);
+    const changed = structuredClone(plan);
+    const request = changed.steps[0];
+    if (request?.operation !== "request") throw new Error("request");
+    request.input.pathSegments = [{ literal }];
+    const candidate = f.application.revisions.create(test.id, changed, base.id);
+    const verification = f.application.runs.resolve({
+      testId: test.id,
+      environmentId: f.init.environmentId,
+      revisionId: candidate.id,
+      origin: "verification",
+    });
+    if (finished)
+      Object.assign(verification, {
+        phase: "completed",
+        outcome: "passed",
+        status: "passed",
+        gate: "passed",
+      });
+    f.application.context.entities.insert("Run", verification);
+    const id = `hea_${randomUUID()}`;
+    f.application.context.entities.insert("HealingProposal", {
+      id,
+      workspaceId: f.application.context.workspaceId,
+      createdAt: new Date().toISOString(),
+      version: 2,
+      failedRunId: failed.id,
+      testId: test.id,
+      analysisId: null,
+      baseRevisionId: base.id,
+      candidateRevisionId: candidate.id,
+      diff: "Recorded route drift",
+      changes: [{ stepId: "get-health", path: "/input/pathSegments", value: [{ literal }] }],
+      evidenceRefs: [],
+      preservedAssertionsHash: "a".repeat(64),
+      risk: "read",
+      status: "approved",
+      approvalMode: "manual",
+      reviewerId: f.application.context.principalId,
+      policyHash: null,
+      verificationRunId: verification.id,
+      modelCallId: null,
+      limitations: [],
+      extensions: {},
+    });
+    return { id, verification };
+  };
+  const queued = approvedProposal("health-v2", false);
+  const pending = await f.app.inject({
+    url: `/v1/healing-proposals/${queued.id}/review`,
+    headers: f.headers,
+  });
+  expect(pending.statusCode).toBe(200);
+  expect(pending.json().data.verification).toEqual({
+    runId: queued.verification.id,
+    outcome: null,
+    gate: queued.verification.gate,
+  });
+  const done = approvedProposal("health-v3", true);
+  const finished = await f.app.inject({
+    url: `/v1/healing-proposals/${done.id}/review`,
+    headers: f.headers,
+  });
+  expect(finished.statusCode).toBe(200);
+  expect(finished.json().data.verification).toEqual({
+    runId: done.verification.id,
+    outcome: "passed",
+    gate: "passed",
+  });
+});

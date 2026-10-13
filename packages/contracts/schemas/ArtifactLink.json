@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "artifactId",
+    "method",
+    "disposition",
+    "url",
+    "expiresAt",
+    "ttlSeconds"
+  ],
+  "properties": {
+    "artifactId": {
+      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "method": {
+      "const": "GET",
+      "type": "string"
+    },
+    "disposition": {
+      "anyOf": [
+        {
+          "const": "inline",
+          "type": "string"
+        },
+        {
+          "const": "attachment",
+          "type": "string"
+        }
+      ]
+    },
+    "url": {
+      "minLength": 1,
+      "maxLength": 2048,
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "ttlSeconds": {
+      "const": 300,
+      "type": "number"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ArtifactLink",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

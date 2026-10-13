@@ -6,6 +6,7 @@ export * from "./m4/authoring.js";
 export * from "./m4/integrations.js";
 export * from "./m4/lists.js";
 export * from "./m4/onboarding.js";
+export * from "./m4/runs.js";
 export * from "./m4/schedules.js";
 export * from "./m4/settings.js";
 export * from "./m4/sources.js";

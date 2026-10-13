@@ -1,4 +1,5 @@
 import { routeCatalog } from "@testmaster/contracts";
+import { artifactGatewayRoutes } from "./artifact-gateway.js";
 import { auditRoutes } from "./audit.js";
 import { authoringRoutes } from "./authoring.js";
 import { coreRoutes } from "./core.js";
@@ -6,6 +7,7 @@ import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
 import { onboardingRoutes } from "./onboarding.js";
+import { runViewRoutes } from "./run-views.js";
 import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { suiteRoutes } from "./suites.js";
@@ -23,6 +25,8 @@ export const routeModules: RouteModule[] = [
   scheduleRoutes,
   suiteRoutes,
   auditRoutes,
+  artifactGatewayRoutes,
+  runViewRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;

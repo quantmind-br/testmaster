@@ -1,0 +1,32 @@
+
+ RUN  v5.0.3 /var/tmp/tm-m4/s5a
+
+ ❯ |postgres| packages/persistence/src/database.pg.test.ts (18 tests | 1 failed | 17 skipped) 171ms
+   ❯ PostgreSQL engine (18)
+     × OPS-005 reconnects after the server drops an idle connection and never commits a transaction that lost its connection 170ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |postgres| packages/persistence/src/database.pg.test.ts > PostgreSQL engine > OPS-005 reconnects after the server drops an idle connection and never commits a transaction that lost its connection
+ContractError: PostgreSQL is unavailable: terminating connection due to administrator command
+ ❯ PostgresBridge.failure packages/persistence/src/postgres/bridge.ts:262:14
+    260|       );
+    261|     if (unavailable)
+    262|       return new ContractError("UNAVAILABLE", `PostgreSQL is unavailab…
+       |              ^
+    263|         reasonCode: "database_unavailable",
+    264|         retryable: true,
+ ❯ PostgresBridge.execute packages/persistence/src/postgres/bridge.ts:242:31
+ ❯ PersistenceDatabase.bridge packages/persistence/src/database.ts:264:26
+ ❯ PersistenceDatabase.pgQuery packages/persistence/src/database.ts:308:27
+ ❯ PersistenceDatabase.get packages/persistence/src/database.ts:370:54
+ ❯ packages/persistence/src/database.pg.test.ts:754:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  12:54:43
+   Duration  1.86s (tests 44%, transform 31%, import 24%, worker 1%)
+

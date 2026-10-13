@@ -58,7 +58,7 @@ export function healingReviewText(review: HealingReview): string {
     `Assertion hash: ${review.preservedAssertions.hash}`,
     `Assertion steps: ${review.preservedAssertions.stepIds.join(", ") || "none"}`,
     review.verification
-      ? `Verification: ${review.verification.runId} — ${review.verification.outcome}/${review.verification.gate}`
+      ? `Verification: ${review.verification.runId} — ${review.verification.outcome ?? "not finished"}/${review.verification.gate}`
       : "Verification: not recorded",
     "",
     "Approval is bound to this proposal, candidate revision and expected version:",

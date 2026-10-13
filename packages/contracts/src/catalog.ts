@@ -6,6 +6,7 @@ import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
 import { listContracts } from "./m4/lists.js";
 import { onboardingContracts } from "./m4/onboarding.js";
+import { runViewContracts } from "./m4/runs.js";
 import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
 import { sourceInsightContracts } from "./m4/sources.js";
@@ -336,7 +337,12 @@ const supplemental = {
     }),
     risk: P.Risk,
     verification: Type.Union([
-      P.Obj({ runId: P.id("run"), outcome: P.Outcome, gate: P.Gate }),
+      // Null while the verification Run has not reached a verdict (queued, running, collecting).
+      P.Obj({
+        runId: P.id("run"),
+        outcome: Type.Union([P.Outcome, Type.Null()]),
+        gate: P.Gate,
+      }),
       Type.Null(),
     ]),
     approval: P.Obj({
@@ -639,6 +645,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...sourceInsightContracts,
   ...listContracts,
   ...scheduleContracts,
+  ...runViewContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),
