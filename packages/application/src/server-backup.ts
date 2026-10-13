@@ -47,7 +47,7 @@ import {
 } from "./backup-crypto.js";
 import { filesystemRoot, type ServerConfig } from "./server-config.js";
 
-/**
+/*
  * Server-profile backup and restore (ADR-019, OPS-024).
  *
  * Backup layout: `<destination>/<UTC timestamp>-<backupId>/` holds `manifest.json` (authenticated
