@@ -38,6 +38,16 @@ import {
 import { runtimeIdentity } from "./runtime-identity.js";
 import { clockDomain, timingBoundary } from "./timing.js";
 
+export interface BatchProvenance {
+  suiteId: string | null;
+  scheduleId: string | null;
+  /** Expansion, revisions and per-project mapping resolved before dispatch; never secret values. */
+  snapshot: Record<string, unknown>;
+  /** Members the caller confirmed to leave out; declared on the BatchRun so its gate stays failed. */
+  rejected: { memberKey: string; reasonCode: string }[];
+  /** Runs inside the admission transaction; a scheduler that lost its lease throws here. */
+  guard?: () => void;
+}
 export interface AdmissionOptions {
   wait?: boolean;
   idempotencyKey?: string;
@@ -49,6 +59,8 @@ export interface AdmissionOptions {
     revalidate(): Promise<void>;
     validate(): void;
   };
+  /** Provenance of a list or schedule request; the snapshot is frozen on the BatchRun (UX-041, OPS-016). */
+  provenance?: BatchProvenance;
 }
 export interface RunHost {
   config: ResolvedConfig;
@@ -1119,7 +1131,8 @@ export class BatchesService {
         key,
         body: request,
       },
-      () => this.insertPrepared(request, key, securityFailure, options.selection),
+      () =>
+        this.insertPrepared(request, key, securityFailure, options.selection, options.provenance),
     ).receipt;
   }
   insertPrepared(
@@ -1127,10 +1140,12 @@ export class BatchesService {
     key: string,
     securityFailure?: ContractError,
     selectionOptions?: AdmissionOptions["selection"],
+    provenance?: BatchProvenance,
   ): BatchReceipt {
+    provenance?.guard?.();
     selectionOptions?.validate();
     const batchId = entity(this.ctx, "bat", {}).id;
-    const rejected: { memberKey: string; reasonCode: "upstream_failed" }[] = [];
+    const rejected: { memberKey: string; reasonCode: string }[] = [];
     const rejections: {
       memberKey: string;
       code: string;
@@ -1162,6 +1177,15 @@ export class BatchesService {
           });
           return false;
         }
+      });
+    }
+    for (const member of provenance?.rejected ?? []) {
+      rejected.push(member);
+      rejections.push({
+        memberKey: member.memberKey,
+        code: "FORBIDDEN",
+        message: "Member left out of the confirmed subset",
+        details: { reasonCode: member.reasonCode },
       });
     }
     const { ordered, requestedIds } = this.runs.prepareClosure(
@@ -1204,12 +1228,17 @@ export class BatchesService {
               ),
             }
           : {}),
-        duplicates: request.selection.length - requestedIds.size - rejected.length,
+        ...(provenance ? { suite: provenance.snapshot } : {}),
+        duplicates:
+          request.selection.length -
+          requestedIds.size -
+          (rejected.length - (provenance?.rejected.length ?? 0)),
         hash: semanticHash(request),
         rejections,
         requestedRunIds: [...requestedIds],
       },
       requestedCount: requestedIds.size + rejected.length,
+      ...(provenance ? { suiteId: provenance.suiteId, scheduleId: provenance.scheduleId } : {}),
       memberRuns: ordered.map((run) => run.id),
       rejectedMembers: rejected,
       commit: null,

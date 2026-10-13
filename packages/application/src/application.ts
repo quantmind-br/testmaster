@@ -84,6 +84,9 @@ import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
+import { schedulerController } from "./scheduling/scheduler.js";
+import { SchedulesService } from "./scheduling/service.js";
+import { SuitesService } from "./suites.js";
 import { measureRuntimeIdentities } from "./runtime-identity.js";
 import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
 import { SecretsService } from "./secrets.js";
@@ -162,6 +165,8 @@ export class Application {
   readonly ci: CiService;
   readonly delivery: DeliveryService;
   readonly integrations: IntegrationsService;
+  readonly suites: SuitesService;
+  readonly schedules: SchedulesService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
   readonly analysis: AnalysisService;
@@ -334,6 +339,8 @@ export class Application {
     );
     this.delivery = new DeliveryService(this.context);
     this.integrations = new IntegrationsService(this.context);
+    this.suites = new SuitesService(this.context, this.batches);
+    this.schedules = new SchedulesService(this.context, this.suites, this.integrations);
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
     this.proposals = new ProposalsService(this.context, this.model, this.requirements);
     this.usage = new UsageService(this.context);
@@ -387,7 +394,7 @@ export class Application {
         database.close();
         throw error;
       }
-    return new Application(
+    const application = new Application(
       config,
       database,
       options.identity,
@@ -398,6 +405,8 @@ export class Application {
       undefined,
       options.server,
     );
+    application.controllers.register(schedulerController());
+    return application;
   }
   close(): void {
     this.root.close();
