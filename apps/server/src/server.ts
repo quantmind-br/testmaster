@@ -31,6 +31,7 @@ import fastify, {
   type FastifyRequest,
   type HTTPMethods,
 } from "fastify";
+import { isPortalRequest, loadPortal, type PortalOptions, registerPortal } from "./portal.js";
 
 export interface ServerOptions {
   application: Application;
@@ -41,6 +42,8 @@ export interface ServerOptions {
   now?: () => number;
   mcp?: false;
   mcpRoots?: readonly string[];
+  /** Serve the built portal same-origin. `false` disables it; default: `apps/web/dist` if built. */
+  portal?: false | PortalOptions;
 }
 export interface McpHttpContext {
   request: FastifyRequest;
@@ -89,6 +92,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   });
   const identities = new WeakMap<FastifyRequest, AuthorizationIdentity>();
   contexts.set(app, { options, identities });
+  const portal = options.portal === false ? null : loadPortal(options.portal);
   const codec = new SignedCursorCodec(
     options.application,
     options.cursorTtlMs ?? 300000,
@@ -127,6 +131,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
     request.id = correlationId();
     request.id = correlationId(request.headers["x-correlation-id"] ?? request.id);
     reply.header("X-Correlation-ID", request.id);
+    if (portal && isPortalRequest(request.method, request.url)) return;
     const origin = request.headers.origin;
     if (origin && !(options.origins ?? []).includes(origin))
       throw new ContractError("FORBIDDEN", "Origin is not allowed");
@@ -503,6 +508,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
         return { schemaVersion: "1.0.0", requestId: request.id, data, warnings: [] };
       },
     });
+  if (portal) registerPortal(app, portal);
   if (options.mcp !== false) {
     const adapter = createMcpHttpHandler({
       roots: options.mcpRoots ?? [options.application.config.cwd],

@@ -40,7 +40,7 @@ The acceptance checker derives the real executors, transports and capabilities f
 
 | Boundary | Components |
 |---|---|
-| B-01 | `transport:cli`, `transport:server`, `transport:mcp`, `capability:mcp` |
+| B-01 | `transport:cli`, `transport:server`, `transport:mcp`, `transport:web`, `capability:mcp` |
 | B-02 | `capability:source-markdown`, `capability:source-text`, `capability:source-pdf`, `capability:source-openapi`, `capability:source-postman`, `capability:source-graphql`, `capability:code-summary`, `capability:code-diff`, `capability:code-import`, `capability:code-export` |
 | B-03 | `capability:normalize`, `capability:plan`, `capability:resolve_action`, `capability:generate_code`, `capability:agent-mode`, `capability:analysis`, `capability:healing`, `capability:integration-planning` |
 | B-04 | `capability:model-accounting` |
