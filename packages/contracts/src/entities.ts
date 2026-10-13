@@ -1,4 +1,5 @@
 import { type TSchema, Type } from "@sinclair/typebox";
+import { SuiteSelection, suiteStates } from "./m4/lists.js";
 import {
   ArtifactManifest,
   BatchCounts,
@@ -8,7 +9,6 @@ import {
   StepResult,
   VariableCapture,
 } from "./operations.js";
-import { SuiteSelection, suiteStates } from "./m4/lists.js";
 import { CodeReference, ExecutablePlan, IntentPlan } from "./plans.js";
 import {
   AnalysisStatus,

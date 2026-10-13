@@ -84,15 +84,15 @@ import { revokedImageIds, revokeImage } from "./release.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { BatchesService, RunsService } from "./runs.js";
-import { schedulerController } from "./scheduling/scheduler.js";
-import { SchedulesService } from "./scheduling/service.js";
-import { SuitesService } from "./suites.js";
 import { measureRuntimeIdentities } from "./runtime-identity.js";
 import { isValidTimeZone, nodeSupport } from "./runtime-support.js";
+import { schedulerController } from "./scheduling/scheduler.js";
+import { SchedulesService } from "./scheduling/service.js";
 import { SecretsService } from "./secrets.js";
 import { SelectionService } from "./selection.js";
 import type { ServerConfig } from "./server-config.js";
 import { filesystemRoot } from "./server-config.js";
+import { SuitesService } from "./suites.js";
 import {
   MembersService,
   OperatorService,
