@@ -3,6 +3,7 @@ import { coreRoutes } from "./core.js";
 import { eventRoutes } from "./events.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
+import { settingsRoutes } from "./settings.js";
 import type { RouteHandler, RouteModule } from "./types.js";
 
 export type { RouteContext, RouteHandler, RouteModule } from "./types.js";
@@ -11,6 +12,7 @@ export const routeModules: RouteModule[] = [
   eventRoutes,
   identityRoutes,
   integrationRoutes,
+  settingsRoutes,
 ];
 export interface ResolvedRoute {
   handler: RouteHandler;
